@@ -1,0 +1,21 @@
+{
+  "name": "seventen-functional-tests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/710labs/seventen-functional-tests.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/710labs/seventen-functional-tests/issues"
+  },
+  "homepage": "https://github.com/710labs/seventen-functional-tests#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.18.1"
+  }
+}
