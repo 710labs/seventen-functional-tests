@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test:dev":"npx playwright test --headed --config=configs/dev.config.ts",
+    "ci:test:dev":"npx playwright test --config=configs/dev.config.ts",
+    "test:staging":"npx playwright test --headed --config=configs/staging.config.ts",
+    "test:prod":"npx playwright test --headed --config=configs/prod.config.ts"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/710labs/seventen-functional-tests.git"
