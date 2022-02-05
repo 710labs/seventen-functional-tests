@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
 
   /* Maximum time one test can run for. */
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
 
   expect: {
     /**
@@ -38,7 +38,7 @@ const config: PlaywrightTestConfig = {
     // baseURL: 'http://localhost:3000',
     baseURL: "https://dev.710labs.com",
     launchOptions: {
-      slowMo: 2000,
+      slowMo: 200,
     },
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',

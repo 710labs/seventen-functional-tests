@@ -4,10 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test:dev":"npx playwright test --headed --config=configs/dev.config.ts",
-    "ci:test:dev":"npx playwright test --config=configs/dev.config.ts",
-    "test:staging":"npx playwright test --headed --config=configs/staging.config.ts",
-    "test:prod":"npx playwright test --headed --config=configs/prod.config.ts"
+    "test:dev": "npx playwright test --config=configs/dev.config.ts --headed --project=chromium --workers=1",
+    "test:staging": "npx playwright test --config=configs/staging.config.ts --headed --project=chromium --workers=1",
+    "test:prod": "npx playwright test --config=configs/prod.config.ts --headed --project=chromium --workers=1",
+    "ci:test:dev": "npx playwright test --config=configs/dev.config.ts",
+    "ci:test:staging": "npx playwright test --config=configs/staging.config.ts",
+    "ci:test:prod": "npx playwright test --config=configs/prod.config.ts"
+
   },
   "repository": {
     "type": "git",
@@ -21,6 +24,9 @@
   },
   "homepage": "https://github.com/710labs/seventen-functional-tests#readme",
   "devDependencies": {
-    "@playwright/test": "^1.18.1"
-  }
+    "@faker-js/faker": "^6.0.0-alpha.5",
+    "@playwright/test": "^1.18.1",
+    "uuid": "^8.3.2"
+  },
+  "dependencies": {}
 }
