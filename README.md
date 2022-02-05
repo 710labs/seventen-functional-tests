@@ -11,9 +11,13 @@ npm install
 ```
 
 ## Example Test
-
+Here is a very simple test that goes throug hthe age gate user journey. For more complex testing scenarios the Page Object Model is used to centralize page interactions. 
 ```javascript
-
+    await this.page.goto('/');
+    await this.page.click("text=I'm not 21 yet or don't qualify");
+    await expect(this.page.locator('.age-gate-error-message')).toHaveText(
+      'You are not old enough to view this content'
+    );
 ```
 
 ## Cannabis Tax Calculation
@@ -136,12 +140,23 @@ Order Total = $427.23
 ```
 
 ## Test Execution 
-Local:
-```bash
 
+Local:
+
+This will run the tests in a headed(browser will show on screen) and slightly delayed to allow for easier debugging. These will only run in desktop chrome browser.
+```powershell
+npm run test:dev
+npm run test:staging
+npm run test:prod
 ```
 CI:
-```bash
+
+These will run in headless mode and will execute in a variety of browsers and viewport sizes
+
+```powershell
+npm run ci:test:dev
+npm run ci:test:staging
+npm run ci:test:prod
 
 ```
 
