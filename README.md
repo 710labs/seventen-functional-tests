@@ -155,10 +155,7 @@ CI:
 These will run in headless mode and will execute in a variety of browsers and viewport sizes
 
 ```powershell
-npm run ci:test:de
-
-
-v
+npm run ci:test:dev
 npm run ci:test:staging
 npm run ci:test:prod
 
