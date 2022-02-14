@@ -18,9 +18,7 @@ jobs:
     - name: Install Playwright
       run: npx playwright install --with-deps
     - name: Set Env Varaibles
-      shell: bash
-      env:
-        API_KEY: ${{ secrets.API_KEY }}
+      run: echo "API_KEY=$(echo $GITHUB_API_KEY)" >> $GITHUB_ENV
     - name: Run Playwright tests
       run: npm run ci:test:staging 
     - uses: actions/upload-artifact@v2
