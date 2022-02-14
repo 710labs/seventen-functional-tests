@@ -32,6 +32,7 @@ const config: PlaywrightTestConfig = {
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
+    acceptDownloads: true,
     actionTimeout: 0,
 
     /* Base URL to use in actions like `await page.goto('/')`. */
