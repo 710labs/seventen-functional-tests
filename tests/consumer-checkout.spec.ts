@@ -29,6 +29,7 @@ test.describe('Recreational Exisitng Consumer Checkout Tests', () => {
       page,
       browserName,
     }, workerInfo) => {
+      test.skip(browserName === 'mobile-safari', 'Browser Specific Issues')
       const cartPage = new CartPage(page, browserName, workerInfo);
       var cartTotals = await cartPage.verifyCart(zipcode);
       await expect(page).toHaveURL('/checkout/');
@@ -61,6 +62,7 @@ test.describe('Recreational New Consumer Checkout Tests', () => {
       page,
       browserName,
     }, workerInfo) => {
+      test.skip(browserName === 'mobile-safari', 'Browser Specific Issues')
       const cartPage = new CartPage(page, browserName, workerInfo);
       var cartTotals = await cartPage.verifyCart(zipcode);
       await expect(page).toHaveURL('/checkout/');
