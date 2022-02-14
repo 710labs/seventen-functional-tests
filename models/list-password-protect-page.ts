@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import test, { Page, expect } from '@playwright/test';
 
 export class ListPasswordPage {
   page: Page;
@@ -9,17 +9,14 @@ export class ListPasswordPage {
     this.page = page;
   }
 
-  async submitPassword([password]: string) {
-    // Click input[name="post_password"]
-    await this.page.click('input[name="post_password"]');
-
-    // Fill input[name="post_password"]
-    await this.page.fill('input[name="post_password"]', 'qatester');
-
-    // Press Enter
-    await this.page.press('input[name="post_password"]', 'Enter');
-
-    await expect(this.page).toHaveURL('/my-account/');
+  async submitPassword(password: string) {
+    await test.step('Enter List Password', async () => {
+      await this.page.click('input[name="post_password"]');
+      await this.page.fill('input[name="post_password"]', password);
+    });
+    await test.step('Submit List Password', async () => {
+      await this.page.press('input[name="post_password"]', 'Enter');
+    });
   }
 }
 module.exports = { ListPasswordPage };

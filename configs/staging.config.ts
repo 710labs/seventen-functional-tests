@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
 
   /* Maximum time one test can run for. */
-  timeout: 60 * 1000,
+  timeout: 15 * 1000,
 
   expect: {
     /**
@@ -96,7 +96,7 @@ const config: PlaywrightTestConfig = {
   ],
 
   /* Folder for test artifacts such as screenshots, videos, traces, etc. */
-  outputDir: '../test-results/',
+  outputDir: 'test-results/',
 
   /* Run your local dev server before starting the tests */
   // webServer: {

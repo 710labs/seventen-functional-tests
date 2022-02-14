@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
 
   /* Maximum time one test can run for. */
-  timeout: 60 * 1000,
+  timeout: 90 * 1000,
 
   expect: {
     /**
@@ -36,7 +36,7 @@ const config: PlaywrightTestConfig = {
 
     /* Base URL to use in actions like `await page.goto('/')`. */
     // baseURL: 'http://localhost:3000',
-    baseURL: "https://dev.710labs.com",
+    baseURL: 'https://dev.710labs.com',
     launchOptions: {
       slowMo: 200,
     },
@@ -52,28 +52,14 @@ const config: PlaywrightTestConfig = {
         ...devices['Desktop Chrome'],
       },
     },
-
     {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
-
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-      },
-    },
-    {
-      name: 'Mobile Chrome',
+      name: 'mobile-chrome',
       use: {
         ...devices['Pixel 5'],
       },
     },
     {
-      name: 'Mobile Safari',
+      name: 'mobile-safari',
       use: {
         ...devices['iPhone 12'],
       },
