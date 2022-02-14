@@ -11,9 +11,13 @@ npm install
 ```
 
 ## Example Test
-
+Here is a very simple test that goes throug hthe age gate user journey. For more complex testing scenarios the Page Object Model is used to centralize page interactions. 
 ```javascript
-
+    await this.page.goto('/');
+    await this.page.click("text=I'm not 21 yet or don't qualify");
+    await expect(this.page.locator('.age-gate-error-message')).toHaveText(
+      'You are not old enough to view this content'
+    );
 ```
 
 ## Cannabis Tax Calculation
@@ -136,13 +140,58 @@ Order Total = $427.23
 ```
 
 ## Test Execution 
-Local:
-```bash
+https://user-images.githubusercontent.com/4185025/152637976-501f19f4-76da-4b87-8e9f-aa64b76a2a91.mp4
 
+Local:
+
+This will run the tests in a headed(browser will show on screen) and slightly delayed to allow for easier debugging. These will only run in desktop chrome browser.
+```powershell
+npm run test:dev
+npm run test:staging
+npm run test:prod
+```
+
+Debug:
+```
+//Set break point in test
+//Set Env Variable $env:PWDEBUG=1
+//Execute tests npm run test:dev
+$env:PWDEBUG=1
+npm run test:dev
 ```
 CI:
-```bash
+
+These will run in headless mode and will execute in a variety of browsers and viewport sizes
+
+```powershell
+npm run ci:test:dev
+npm run ci:test:staging
+npm run ci:test:prod
 
 ```
 
-## Contributing
+## Test Tools
+### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)
+
+Postman collection with examples of endpoints used for grabbing data used in test assertions.
+### GET Tax Rates By Zip
+This API endpoint will return all tax rates (standard/medical, gross, excise, and sales) by zipcode query param. Could also use this [Playwright Script](https://gist.github.com/onlyunusedname/c75e8fa21e4516c687202c26c3cfdd76) to grab info from WordPress directly (more accurate)
+### GET Product Info
+Returns product info based on the following query params. These params are used in the following hierarchy if all are supplied. Only one query param is used per search.
+
+- productId
+- productSku
+- productName
+
+### POST User
+This endpoint will automate the process of creating new and legacy users that can be used in tests. Users created via this endpoint will be cleaned up every 48 hours automatically. 
+
+### Test Tool Security 
+Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://dev.710labs.com/wp-admin/options-general.php?page=svntn-testing-api).
+
+
+## CI/CD
+- Currently will run in GitHub Actions nightly and on push to the main branch of the repo
+- [In-Progress] Working on tests executing + gating merges to dev + staging
+
+
