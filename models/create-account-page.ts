@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from '@playwright/test';
+import test, { expect, Locator, Page } from '@playwright/test';
 
 export class CreateAccountPage {
   readonly page: Page;
@@ -21,72 +21,87 @@ export class CreateAccountPage {
     this.userNameField = page.locator('input[name="email"]');
     this.passwordField = page.locator('input[name="password"]');
     this.usageType = page.locator('input[name="svntn_last_usage_type"]');
-    this.zipCode = page.locator('input[name="svntn_core_registration_zip"]')
+    this.zipCode = page.locator('input[name="svntn_core_registration_zip"]');
     this.birthMonth = page.locator('select[name="date_\\[month\\]"]');
     this.birthDay = page.locator('select[name="date_\\[day\\]"]');
     this.birthYear = page.locator('select[name="date_\\[year\\]"]');
-    this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license');
-    this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
+    this.driversLicenseUpload = page.locator(
+      '#wccf_user_field_drivers_license'
+    );
+    this.medicalCardUpload = page.locator('#wccf_user_field_medical_card');
   }
 
   async create(
     username: string,
     password: string,
     zipcode: string,
-    type: number
+    type: number,
+    logout: boolean = false
   ) {
-    await this.page.click('text=create an account');
-    await expect(this.page).toHaveURL('/register/');
+    await test.step('Click Register Link', async () => {
+      await this.page.click('text=create an account');
+      await expect(this.page).toHaveURL('/register/');
+    });
 
-    // Fill input[name="email"]
-    await this.userNameField.click();
-    await this.userNameField.fill(username);
+    await test.step('Enter Username', async () => {
+      await this.userNameField.click();
+      await this.userNameField.fill(username);
+    });
 
-    // Fill input[name="password"]
-    await this.passwordField.click();
-    await this.passwordField.fill(password);
+    await test.step('Enter Passowrd', async () => {
+      await this.passwordField.click();
+      await this.passwordField.fill(password);
+    });
 
-    // Fill input[name="svntn_last_usage_type"]
-    await this.page.locator(`input[name="svntn_last_usage_type"] >> nth=${type}`).check();
+    await test.step('Select Usage Type', async () => {
+      await this.page
+        .locator(`input[name="svntn_last_usage_type"] >> nth=${type}`)
+        .check();
+    });
 
-    // Click input[name="svntn_core_registration_zip"]
-    await this.zipCode.click();
-    await this.zipCode.fill(zipcode);
+    await test.step('Enter Zip Code', async () => {
+      await this.zipCode.click();
+      await this.zipCode.fill(zipcode);
+    });
 
-    // Select 12
-    await this.birthMonth.selectOption('12');
+    await test.step('Enter Birthdate', async () => {
+      await this.birthMonth.selectOption('12');
+      await this.birthDay.selectOption('16');
+      await this.birthYear.selectOption('1988');
+    });
 
-    // Select 16
-    await this.birthDay.selectOption('16');
+    await test.step('Upload Drivers License', async () => {
+      const dlUploadButton = await this.page.waitForSelector(
+        '#wccf_user_field_drivers_license'
+      );
+      const [driversLicenseChooser] = await Promise.all([
+        this.page.waitForEvent('filechooser'),
+        dlUploadButton.click(),
+      ]);
+      await driversLicenseChooser.setFiles('CA-DL.jpg');
+      await driversLicenseChooser.page();
+    });
 
-    // Select 1988
-    await this.birthYear.selectOption('1988');
+    await test.step('Upload Medical Card', async () => {
+      const medicalCardButton = await this.page.waitForSelector(
+        '#wccf_user_field_medical_card'
+      );
+      const [medicalCardChooser] = await Promise.all([
+        this.page.waitForEvent('filechooser'),
+        medicalCardButton.click(),
+      ]);
+      await medicalCardChooser.setFiles('Medical-Card.png');
+      await medicalCardChooser.page();
+    });
 
-    // Upload CA-DL.jpg
-    const dlUploadButton = await this.page.waitForSelector(
-      '#wccf_user_field_drivers_license'
-    );
-    const [driversLicenseChooser] = await Promise.all([
-      this.page.waitForEvent('filechooser'),
-      dlUploadButton.click(),
-    ]);
-    await driversLicenseChooser.setFiles('CA-DL.jpg');
-    await driversLicenseChooser.page();
-
-    // Upload Sample-Medical-Marijuana-Card-PA-1.png
-    const medicalCardButton = await this.page.waitForSelector(
-      '#wccf_user_field_medical_card'
-    );
-    const [medicalCardChooser] = await Promise.all([
-      this.page.waitForEvent('filechooser'),
-      medicalCardButton.click(),
-    ]);
-    await medicalCardChooser.setFiles('Medical-Card.png');
-    await medicalCardChooser.page();
-
-    // Click button:has-text("Register")
-    await this.page.waitForTimeout(1000);
-    await this.page.click('button:has-text("Register")');
-    await this.page.waitForTimeout(1000);
+    await test.step('Submit New Customer Form', async () => {
+      await this.page.waitForTimeout(2000);
+      await this.page.click('button:has-text("Register")');
+      await this.page.waitForTimeout(1000);
+    });
+    if (logout) {
+      await this.page.goto('/my-account');
+      await this.page.locator('text=Logout').click();
+    }
   }
 }

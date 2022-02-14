@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from '@playwright/test';
+import test, { expect, Locator, Page } from '@playwright/test';
 
 export class LoginPage {
   readonly page: Page;
@@ -19,20 +19,20 @@ export class LoginPage {
   }
 
   async login(username: string, password: string) {
-    // Click input[name="username"]
-    await this.userNameField.click();
+    await test.step('Enter Username', async () => {
+      await this.userNameField.click();
+      await this.userNameField.fill(username);
+    });
 
-    // Fill input[name="username"]
-    await this.userNameField.fill(username);
+    await test.step('Enter Password', async () => {
+      await this.passwordField.click();
 
-    // Click input[name="password"]
-    await this.passwordField.click();
+      await this.passwordField.fill(password);
+    });
 
-    // Fill input[name="password"]
-    await this.passwordField.fill(password);
-
-    // Click button:has-text("Login")
-    await this.loginButton.click();
-    await expect(this.page).toHaveURL('/');
+    await test.step('Click Login Button', async () => {
+      await this.loginButton.click();
+      await expect(this.page).toHaveURL('/');
+    });
   }
 }
