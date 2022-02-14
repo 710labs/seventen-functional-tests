@@ -6,32 +6,31 @@ import { ShopPage } from '../models/shop-page';
 import { CreateAccountPage } from '../models/create-account-page';
 import { v4 as uuidv4 } from 'uuid';
 import { CheckoutPage } from '../models/checkout-page';
-
+import { CartPage } from '../models/cart-page';
 
 test.describe('Admin Split Order', () => {
-  test.beforeEach(async  ({ page, browserName }, workerInfo) => {
+  const zipCode = '95376';
+  test.beforeEach(async ({ page, browserName }, workerInfo) => {
     const ageGatePage = new AgeGatePage(page);
     const listPassword = new ListPasswordPage(page);
     const createAccountPage = new CreateAccountPage(page);
     const shopPage = new ShopPage(page, browserName, workerInfo);
-    const checkOutPage = new CheckoutPage(page);
-    await checkOutPage.confirmCheckout("90210");
 
     await ageGatePage.passAgeGate();
     await listPassword.submitPassword('qatester');
     await createAccountPage.create(
       `test+${uuidv4()}@710labs.com`,
       'test1234!',
-      '95376',
+      zipCode,
       0
     );
     await shopPage.addProductsToCart(8);
   });
-    test.skip(`User Can Split Order`, async ({
-      page,
-    }) => {
-      await page.click('text=Proceed to checkout');
-      await expect(page).toHaveURL('/checkout/');
-    
-    });
+  test.skip(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
+    const cartPage = new CartPage(page, browserName, workerInfo);
+    var cartTotals = await cartPage.verifyCart(zipCode);
+    await expect(page).toHaveURL('/checkout/');
+    const checkOutPage = new CheckoutPage(page);
+    await checkOutPage.confirmCheckout(zipCode, cartTotals);
+  });
 });
