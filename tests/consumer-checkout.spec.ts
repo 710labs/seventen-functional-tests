@@ -57,7 +57,7 @@ test.describe('Recreational New Consumer Checkout Tests', () => {
     await shopPage.addProductsToCart(8);
   });
   zipcodes.forEach((zipcode) => {
-    test.only(`Checkout New Customer Zipcode:${zipcode}`, async ({
+    test(`Checkout New Customer Zipcode:${zipcode}`, async ({
       page,
       browserName,
     }, workerInfo) => {
