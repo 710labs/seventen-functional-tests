@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
 
   /* Maximum time one test can run for. */
-  timeout: 120 * 1000,
+  timeout: 60 * 1000,
 
   expect: {
     /**
@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 3 : 0,
 
   /* Opt out of parallel tests on CI. */
-  //workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 6 : undefined,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
