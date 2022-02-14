@@ -7,6 +7,7 @@ import { CreateAccountPage } from '../models/create-account-page';
 import { v4 as uuidv4 } from 'uuid';
 import { CheckoutPage } from '../models/checkout-page';
 import { CartPage } from '../models/cart-page';
+import { MyAccountPage } from '../models/my-account-page';
 
 test.describe('Admin Split Order', () => {
   const zipCode = '95376';
@@ -28,9 +29,13 @@ test.describe('Admin Split Order', () => {
   });
   test.skip(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
     const cartPage = new CartPage(page, browserName, workerInfo);
+    const checkOutPage = new CheckoutPage(page);
+    const myAccountPage = new MyAccountPage(page);
+
     var cartTotals = await cartPage.verifyCart(zipCode);
     await expect(page).toHaveURL('/checkout/');
-    const checkOutPage = new CheckoutPage(page);
     await checkOutPage.confirmCheckout(zipCode, cartTotals);
+    await myAccountPage.logout()
+
   });
 });
