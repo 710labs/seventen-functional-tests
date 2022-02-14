@@ -20,7 +20,7 @@ jobs:
     - name: Set Env Varaibles
       run: echo "API_KEY=$(echo $GITHUB_API_KEY)" >> $GITHUB_ENV
     - name: Run Playwright tests
-      run: npm run ci:test:staging 
+      run: npm run ci:test:dev 
     - uses: actions/upload-artifact@v2
       if: always()
       with:
