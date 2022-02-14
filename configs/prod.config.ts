@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
 
   /* Maximum time one test can run for. */
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
 
   expect: {
     /**
@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 2 : 0,
 
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  //workers: process.env.CI ? 1 : undefined,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
@@ -32,6 +32,7 @@ const config: PlaywrightTestConfig = {
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
+    acceptDownloads: true,
     actionTimeout: 0,
 
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -41,7 +42,7 @@ const config: PlaywrightTestConfig = {
       slowMo: 2000,
     },
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
 
   /* Configure projects for major browsers */
@@ -95,7 +96,7 @@ const config: PlaywrightTestConfig = {
   ],
 
   /* Folder for test artifacts such as screenshots, videos, traces, etc. */
-  // outputDir: 'test-results/',
+  outputDir: '../test-results/',
 
   /* Run your local dev server before starting the tests */
   // webServer: {
