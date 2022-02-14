@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, devices } from '@playwright/test';
 import { ListPasswordPage } from '../models/list-password-protect-page';
 import { AgeGatePage } from '../models/age-gate-page';
 import { LoginPage } from '../models/login-page';
@@ -29,7 +29,10 @@ test.describe('Recreational Exisitng Consumer Checkout Tests', () => {
       page,
       browserName,
     }, workerInfo) => {
-      test.skip(browserName === 'mobile-safari', 'Browser Specific Issues')
+      test.skip(
+        workerInfo.project.name === 'mobile-safari',
+        'Browser Specific Issues'
+      );
       const cartPage = new CartPage(page, browserName, workerInfo);
       var cartTotals = await cartPage.verifyCart(zipcode);
       await expect(page).toHaveURL('/checkout/');
@@ -62,7 +65,10 @@ test.describe('Recreational New Consumer Checkout Tests', () => {
       page,
       browserName,
     }, workerInfo) => {
-      test.skip(browserName === 'mobile-safari', 'Browser Specific Issues')
+      test.skip(
+        workerInfo.project.name === 'mobile-safari',
+        'Browser Specific Issues'
+      );
       const cartPage = new CartPage(page, browserName, workerInfo);
       var cartTotals = await cartPage.verifyCart(zipcode);
       await expect(page).toHaveURL('/checkout/');
