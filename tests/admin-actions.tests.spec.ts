@@ -28,7 +28,7 @@ test.describe('Admin Split Order', () => {
     );
     await shopPage.addProductsToCart(8);
   });
-  test.only(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
+  test(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
     const cartPage = new CartPage(page, browserName, workerInfo);
     const checkOutPage = new CheckoutPage(page);
     const myAccountPage = new MyAccountPage(page);
