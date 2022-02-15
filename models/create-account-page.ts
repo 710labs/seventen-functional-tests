@@ -9,6 +9,9 @@ export class CreateAccountPage {
   readonly birthMonth: Locator;
   readonly birthDay: Locator;
   readonly birthYear: Locator;
+  readonly updateBirthMonth: Locator;
+  readonly updateBirthDay: Locator;
+  readonly updateBirthYear: Locator;
   readonly driversLicenseUpload: Locator;
   readonly medicalCardUpload: Locator;
   readonly lostPasswordLink: Locator;
@@ -22,9 +25,13 @@ export class CreateAccountPage {
     this.passwordField = page.locator('input[name="password"]');
     this.usageType = page.locator('input[name="svntn_last_usage_type"]');
     this.zipCode = page.locator('input[name="svntn_core_registration_zip"]');
-    this.birthMonth = page.locator('select[name="date_\\[month\\]"]');
-    this.birthDay = page.locator('select[name="date_\\[day\\]"]');
-    this.birthYear = page.locator('select[name="date_\\[year\\]"]');
+    this.birthMonth = page.locator('select[name="svntn_core_dob_month_sbmt"]');
+    this.birthDay = page.locator('select[name="svntn_core_dob_day_sbmt"]');
+    this.birthYear = page.locator('select[name="svntn_core_dob_year_sbmt"]');
+    this.updateBirthMonth = page.locator('select[name="svntn_core_dob_month"]');
+    this.updateBirthDay = page.locator('select[name="svntn_core_dob_day"]');
+    this.updateBirthYear = page.locator('select[name="svntn_core_dob_year"]');
+
     this.driversLicenseUpload = page.locator(
       '#wccf_user_field_drivers_license'
     );
@@ -36,7 +43,8 @@ export class CreateAccountPage {
     password: string,
     zipcode: string,
     type: number,
-    logout: boolean = false
+    logout: boolean = false,
+    bypassCardUpload: boolean = false
   ) {
     await test.step('Click Register Link', async () => {
       await this.page.click('text=create an account');
@@ -70,9 +78,15 @@ export class CreateAccountPage {
       await this.birthYear.selectOption('1988');
     });
 
+    await test.step('Submit New Customer Form', async () => {
+      await this.page.waitForTimeout(2000);
+      await this.page.click('button:has-text("Register")');
+      await this.page.waitForTimeout(1000);
+    });
+
     await test.step('Upload Drivers License', async () => {
       const dlUploadButton = await this.page.waitForSelector(
-        '#wccf_user_field_drivers_license'
+        'input[name="svntn_core_personal_doc"]'
       );
       const [driversLicenseChooser] = await Promise.all([
         this.page.waitForEvent('filechooser'),
@@ -82,23 +96,25 @@ export class CreateAccountPage {
       await driversLicenseChooser.page();
     });
 
-    await test.step('Upload Medical Card', async () => {
-      const medicalCardButton = await this.page.waitForSelector(
-        '#wccf_user_field_medical_card'
-      );
-      const [medicalCardChooser] = await Promise.all([
-        this.page.waitForEvent('filechooser'),
-        medicalCardButton.click(),
-      ]);
-      await medicalCardChooser.setFiles('Medical-Card.png');
-      await medicalCardChooser.page();
+    if (type == 1) {
+      await test.step('Upload Medical Card', async () => {
+        const medicalCardButton = await this.page.waitForSelector(
+          'input[name="svntn_core_medical_doc"]'
+        );
+        const [medicalCardChooser] = await Promise.all([
+          this.page.waitForEvent('filechooser'),
+          medicalCardButton.click(),
+        ]);
+        await medicalCardChooser.setFiles('Medical-Card.png');
+        await medicalCardChooser.page();
+      });
+    }
+
+    await test.step('Complete Usage Type Form', async () => {
+      await (await this.page.$('text=Proceed')).click();
+      await expect(this.page).toHaveURL('/');
     });
 
-    await test.step('Submit New Customer Form', async () => {
-      await this.page.waitForTimeout(2000);
-      await this.page.click('button:has-text("Register")');
-      await this.page.waitForTimeout(1000);
-    });
     if (logout) {
       await this.page.goto('/my-account');
       await this.page.locator('text=Logout').click();
