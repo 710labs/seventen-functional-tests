@@ -9,7 +9,7 @@ export class AdminLogin {
   constructor(page: Page) {
     this.page = page;
     this.userNameField = page.locator('input[name="log"]');
-    this.passwordField = page.locator('text=Addresses');
+    this.passwordField = page.locator('input[name="pwd"]');
     this.loginButton = page.locator('text=Log In');
   }
 

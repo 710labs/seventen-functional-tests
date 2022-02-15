@@ -1,11 +1,11 @@
-name: Playwright Tests
+name: seventen-functional-tests
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
 jobs:
-  test:
+  test-dev:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -17,8 +17,12 @@ jobs:
       run: npm ci
     - name: Install Playwright
       run: npx playwright install --with-deps
-    - name: Set Env Varaibles
+    - name: Set API_KEY
       run: echo "API_KEY=$(echo $GITHUB_API_KEY)" >> $GITHUB_ENV
+    - name: Set ADMIN_USER
+      run: echo "ADMIN_USER=$(echo $GITHUB_ADMIN_USER)" >> $GITHUB_ENV
+    - name: Set ADMIN_PW
+      run: echo "ADMIN_PW=$(echo $GITHUB_ADMIN_PW)" >> $GITHUB_ENV
     - name: Run Playwright tests
       run: npm run ci:test:dev 
     - uses: actions/upload-artifact@v2

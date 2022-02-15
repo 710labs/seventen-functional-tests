@@ -145,7 +145,19 @@ https://user-images.githubusercontent.com/4185025/152637976-501f19f4-76da-4b87-8
 Local:
 
 This will run the tests in a headed(browser will show on screen) and slightly delayed to allow for easier debugging. These will only run in desktop chrome browser.
+
+Set the following env vars in a .env file before running the tests against a local instance. 
+
+```
+BASE_URL=
+API_KEY=
+ADMIN_USER=
+ADMIN_PW=
+
+```
+
 ```powershell
+npm run test:local
 npm run test:dev
 npm run test:staging
 npm run test:prod
@@ -153,11 +165,7 @@ npm run test:prod
 
 Debug:
 ```
-//Set break point in test
-//Set Env Variable $env:PWDEBUG=1
-//Execute tests npm run test:dev
-$env:PWDEBUG=1
-npm run test:dev
+npm run test:dev -- --debug
 ```
 CI:
 

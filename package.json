@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test:local": "npx playwright test --config=configs/local.config.ts --headed --project=chromium --workers=1",
     "test:dev": "npx playwright test --config=configs/dev.config.ts --headed --project=chromium --workers=1",
     "test:staging": "npx playwright test --config=configs/staging.config.ts --headed --project=chromium --workers=1",
     "test:prod": "npx playwright test --config=configs/prod.config.ts --headed --project=chromium --workers=1",
@@ -25,6 +26,9 @@
   "devDependencies": {
     "@faker-js/faker": "^6.0.0-alpha.5",
     "@playwright/test": "^1.19.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.0.0",
+    "find-config": "^1.0.0",
     "node-fetch": "^3.2.0",
     "playwright": "^1.19.0",
     "uuid": "^8.3.2"
