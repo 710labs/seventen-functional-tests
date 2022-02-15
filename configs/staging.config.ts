@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
 
   /* Maximum time one test can run for. */
-  timeout: 15 * 1000,
+  timeout: 60 * 1000,
 
   expect: {
     /**
@@ -52,20 +52,6 @@ const config: PlaywrightTestConfig = {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-      },
-    },
-
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
-
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
       },
     },
     {
