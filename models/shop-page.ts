@@ -53,6 +53,7 @@ export class ShopPage {
         await addToCartButtons[0].click();
         await this.page.waitForTimeout(750);
       }
+      await this.page.waitForTimeout(2000);
       await this.page.keyboard.press('PageUp');
 
       await this.page
