@@ -18,6 +18,7 @@ jobs:
     - name: Install Playwright
       run: npx playwright install --with-deps
     - name: Set Env Vars
+      run: echo "${BASE_URL}"
       env:
           ADMIN_USER: ${{ secrets.ADMIN_USER }}
           ADMIN_PW: ${{ secrets.ADMIN_PW }}
