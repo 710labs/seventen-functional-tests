@@ -17,12 +17,10 @@ jobs:
       run: npm ci
     - name: Install Playwright
       run: npx playwright install --with-deps
-    - name: Set API_KEY
-      run: echo "API_KEY=$(echo $GITHUB_API_KEY)" >> $GITHUB_ENV
-    - name: Set ADMIN_USER
-      run: echo "ADMIN_USER=$(echo $GITHUB_ADMIN_USER)" >> $GITHUB_ENV
-    - name: Set ADMIN_PW
-      run: echo "ADMIN_PW=$(echo $GITHUB_ADMIN_PW)" >> $GITHUB_ENV
+    - name: Set Env Vars
+        env:
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PW: ${{ secrets.ADMIN_PW }}
     - name: Run Playwright tests
       run: npm run ci:test:dev 
     - uses: actions/upload-artifact@v2
