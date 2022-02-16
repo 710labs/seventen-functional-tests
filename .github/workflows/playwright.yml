@@ -17,8 +17,17 @@ jobs:
         run: npm ci
       - name: Install Playwright
         run: npx playwright install --with-deps
+      - name: Set env
+        run: |
+          echo Setting Env Vars:
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PW: ${{ secrets.ADMIN_PW }}
+          API_KEY: ${{ secrets.API_KEY }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+
+          echo Default Base_URL:$BASE_URL
       - name: Set Env Vars
-        run: echo "${BASE_URL}"
+        run: echo ${BASE_URL}
         env:
           ADMIN_USER: ${{ secrets.ADMIN_USER }}
           ADMIN_PW: ${{ secrets.ADMIN_PW }}
