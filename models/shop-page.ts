@@ -38,7 +38,7 @@ export class ShopPage {
 
       await this.page
         .locator(`[title="View your shopping cart"] >> visible=true`)
-        .click();
+        .click({ force: true });
     });
   }
   async addSameProductToCart(itemCount: number) {
