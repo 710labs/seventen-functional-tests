@@ -53,16 +53,18 @@ export class CartPage {
     for (let i = 0; i < productItems.length; i++) {
       cartSubTotal += Number(productItems[i].subTota1);
 
-      var grossTax = Number(productItems[i].subTota1) * grossRate;
-      grossTaxAmount += grossTax;
-      total = grossTax + Number(productItems[i].subTota1);
+      var grossTax = await this.bankersRound(
+        Number(productItems[i].subTota1) * grossRate
+      );
+      grossTaxAmount += Number(grossTax);
+      total = Number(grossTax) + Number(productItems[i].subTota1);
 
-      var exciseTax = total * exciseRate;
-      total = exciseTax + total;
-      exciseTaxAmount += exciseTax;
+      var exciseTax = await this.bankersRound(total * exciseRate);
+      total = Number(exciseTax) + total;
+      exciseTaxAmount += Number(exciseTax);
 
-      var salesTax = total * salesRate;
-      salesTaxAmount += salesTax;
+      var salesTax = await this.bankersRound(total * salesRate);
+      salesTaxAmount += Number(salesTax);
       total = grossTaxAmount + exciseTaxAmount + salesTaxAmount + cartSubTotal;
     }
 
@@ -87,7 +89,7 @@ export class CartPage {
     const apiContext = await request.newContext({
       baseURL: 'https://dev.710labs.com',
       extraHTTPHeaders: {
-        'x-api-token': `${process.env.API_TOKEN}`,
+        'x-api-key': `${process.env.API_KEY}`,
       },
     });
     await test.step('Verify Cart Totals', async () => {

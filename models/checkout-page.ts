@@ -34,16 +34,9 @@ export class CheckoutPage {
   }
 
   async calculateTaxTotals(ApizipCode: string, productSubTotals: any) {
-    //Calculate Tax Rate Using Custom Api's + Tax Calculation Form
-    //Look up tax class by productName, productId, or productSku via https://dev.710labs.com/wp-content/plugins/seventen-info-interface/products/?productName=Pielatti<br> (Living Soil)
-    //Look up tax rates by zipCode ${baseURI}wp-content/plugins/seventen-info-interface/rates/?postCode=${postCode}`
-    //Calculate tax total and total price for each item.
-    //Add up total Excise, Gross, and Sales for Cart
-    //Return Entire Object and parse through it in testCase.
-    //inputJsonString
-    //"{\n  \"rates\": {\n    \"amuse_lax1\": {\n      \"recreational\": {\n        \"grossRate\": 0.05,\n        \"exciseRate\": 0.15,\n        \"salesRate\": 0.095\n      },\n      \"medical\": {\n        \"grossRate\": 0.05,\n        \"exciseRate\": 0.15,\n        \"salesRate\": 0.095\n      },\n      \"mmic\": {\n        \"grossRate\": 0.05,\n        \"exciseRate\": 0.15,\n        \"salesRate\": 0\n      }\n    },\n    \"nxtlvl_oak1\": {\n      \"recreational\": {\n        \"grossRate\": 0.065,\n        \"exciseRate\": 0.15,\n        \"salesRate\": 0.0925\n      },\n      \"medical\": {\n        \"grossRate\": 0.05,\n        \"exciseRate\": 0.15,\n        \"salesRate\": 0.0925\n      },\n      \"mmic\": {\n        \"grossRate\": 0.05,\n        \"exciseRate\": 0.15,\n        \"salesRate\": 0\n      }\n    }\n  },\n  \"lineItems\": [\n    {\n      \"name\": \"Lemon Tree - 10-Pack Joints\",\n      \"total\": 300\n    },\n    {\n      \"name\": \"Lemon Tree - 10-Pack Joints\",\n      \"total\": 60\n    }\n  ]\n}"
+    //Create Shared Logic for calculating tax totals +use here. Use cart-page.ts for reference.
   }
-  async confirmCheckout(zipcode: string, cartTotals: any) {
+  async confirmCheckout(zipcode: string, cartTotals: any): Promise<any> {
     await test.step('Fill in First Name', async () => {
       await this.firstNameInput.click();
       await this.firstNameInput.fill(faker.name.firstName());
@@ -79,9 +72,9 @@ export class CheckoutPage {
       await this.comments.fill(faker.random.randomWords(30));
     });
 
-    await test.step('Submit New Customer Form', async () => {
+    await test.step('Submit New Customer Order', async () => {
       await this.placeOrderButton.click();
-      return ['string', 'string'];
     });
+    return cartTotals;
   }
 }

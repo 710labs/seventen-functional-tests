@@ -4,13 +4,13 @@ require('dotenv').config({ path: require('find-config')('.env') })
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
   testDir: './../tests',
-  timeout: 120 * 1000,
+  timeout: 300 * 1000,
   expect: {
     timeout: 5000,
   },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 6 : undefined,
+  workers: process.env.CI ? 12 : undefined,
   reporter: 'html',
   use: {
     acceptDownloads: true,
@@ -41,6 +41,6 @@ const config: PlaywrightTestConfig = {
       },
     },
   ],
-  outputDir: 'test-results/',
+  outputDir: '../test-results/',
 };
 export default config;
