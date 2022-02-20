@@ -9,9 +9,12 @@ import { CheckoutPage } from '../models/checkout-page';
 import { CartPage } from '../models/cart-page';
 import { MyAccountPage } from '../models/my-account-page';
 import { AdminLogin } from '../models/admin-login-page';
+import { OrderReceivedPage } from '../models/order-recieved-page';
+import { EditOrderPage } from '../models/edit-order-page';
 
 test.describe('Admin Split Order', () => {
   const zipCode = '95376';
+  const orderQuanity = 8;
   test.beforeEach(async ({ page, browserName }, workerInfo) => {
     const ageGatePage = new AgeGatePage(page);
     const listPassword = new ListPasswordPage(page);
@@ -26,19 +29,36 @@ test.describe('Admin Split Order', () => {
       zipCode,
       0
     );
-    await shopPage.addProductsToCart(8);
+    await shopPage.addProductsToCart(orderQuanity);
   });
   test(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
     const cartPage = new CartPage(page, browserName, workerInfo);
+    const orderReceived = new OrderReceivedPage(page);
     const checkOutPage = new CheckoutPage(page);
     const myAccountPage = new MyAccountPage(page);
     const adminLoginPage = new AdminLogin(page);
+    const editOrderPage = new EditOrderPage(page);
+    var orderTotals;
+    var orderNumber;
 
     var cartTotals = await cartPage.verifyCart(zipCode);
-    await expect(page).toHaveURL('/checkout/');
-    await checkOutPage.confirmCheckout(zipCode, cartTotals);
-    await myAccountPage.logout()
-    await adminLoginPage.login();
-    await expect(page).toHaveURL('/wp-admin/')
+    await test.step('Verify Checkout Page Totals + Taxes', async () => {
+      await expect(page).toHaveURL('/checkout/');
+      orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals);
+    });
+
+    await test.step('Comfirm Order Details on /order-received', async () => {
+      orderNumber = await orderReceived.confirmOrderDetail(orderTotals);
+    });
+
+    await test.step('Logout Consumer', async () => {
+      await myAccountPage.logout();
+    });
+    await test.step('Login Admin', async () => {
+      await adminLoginPage.login();
+    });
+    await test.step('Admin Split Order', async () => {
+      await editOrderPage.splitOrder(orderNumber, orderQuanity);
+    });
   });
 });

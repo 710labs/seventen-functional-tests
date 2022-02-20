@@ -8,6 +8,11 @@ jobs:
   test-dev:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    env:
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -16,23 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright
-        run: npx playwright install --with-deps
-      - name: Set env
-        run: |
-          echo Setting Env Vars:
-          ADMIN_USER: ${{ secrets.ADMIN_USER }}
-          ADMIN_PW: ${{ secrets.ADMIN_PW }}
-          API_KEY: ${{ secrets.API_KEY }}
-          BASE_URL: ${{ secrets.BASE_URL }}
-
-          echo Default Base_URL:$BASE_URL
+        run: npx playwright install --with-deps    
       - name: Set Env Vars
         run: echo ${BASE_URL}
-        env:
-          ADMIN_USER: ${{ secrets.ADMIN_USER }}
-          ADMIN_PW: ${{ secrets.ADMIN_PW }}
-          API_KEY: ${{ secrets.API_KEY }}
-          BASE_URL: ${{ secrets.BASE_URL }}
       - name: Run Playwright tests
         run: npm run ci:test:dev
       - uses: actions/upload-artifact@v2
