@@ -4,12 +4,12 @@ require('dotenv').config({ path: require('find-config')('.env') });
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
   testDir: './../tests',
-  timeout: 120 * 1000,
+  timeout: 300 * 1000,
   expect: {
     timeout: 5000,
   },
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? 0 : 0,
   workers: process.env.CI ? 12 : undefined,
   reporter: 'html',
   use: {
@@ -34,12 +34,12 @@ const config: PlaywrightTestConfig = {
         ...devices['Pixel 5'],
       },
     },
-    {
-      name: 'mobile-safari',
-      use: {
-        ...devices['iPhone 12'],
-      },
-    },
+    // {
+    //   name: 'mobile-safari',
+    //   use: {
+    //     ...devices['iPhone 12'],
+    //   },
+    // },
   ],
   outputDir: '../test-results/',
 };
