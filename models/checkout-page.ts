@@ -33,7 +33,7 @@ export class CheckoutPage {
       .elementHandles();
   }
 
-  async calculateTaxTotals(ApizipCode: string, productSubTotals: any) {
+  async calculateTaxTotals(zipCode: string, productSubTotals: any) {
     //Create Shared Logic for calculating tax totals +use here. Use cart-page.ts for reference.
   }
   async confirmCheckout(zipcode: string, cartTotals: any): Promise<any> {

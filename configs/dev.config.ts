@@ -1,10 +1,10 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test';
-require('dotenv').config({ path: require('find-config')('.env') })
+require('dotenv').config({ path: require('find-config')('.env') });
 
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
   testDir: './../tests',
-  timeout: 300 * 1000,
+  timeout: 120 * 1000,
   expect: {
     timeout: 5000,
   },
@@ -15,7 +15,7 @@ const config: PlaywrightTestConfig = {
   use: {
     acceptDownloads: true,
     actionTimeout: 0,
-    baseURL: "https://dev.710labs.com",
+    baseURL: 'https://dev.710labs.com',
     launchOptions: {
       slowMo: 200,
     },
