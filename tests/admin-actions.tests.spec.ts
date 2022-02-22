@@ -43,7 +43,6 @@ test.describe('Admin Split Order', () => {
 
     var cartTotals = await cartPage.verifyCart(zipCode);
     await test.step('Verify Checkout Page Totals + Taxes', async () => {
-      await expect(page).toHaveURL('/checkout/');
       orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals);
     });
 

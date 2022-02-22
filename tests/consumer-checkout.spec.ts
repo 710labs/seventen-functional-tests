@@ -35,7 +35,6 @@ test.describe('Recreational Exisitng Consumer Checkout Tests', () => {
       // );
       const cartPage = new CartPage(page, browserName, workerInfo);
       var cartTotals = await cartPage.verifyCart(zipcode);
-      await expect(page).toHaveURL('/checkout/');
       const checkOutPage = new CheckoutPage(page);
       await checkOutPage.confirmCheckout(zipcode, cartTotals);
     });
@@ -71,7 +70,6 @@ test.describe('Recreational New Consumer Checkout Tests', () => {
       // );
       const cartPage = new CartPage(page, browserName, workerInfo);
       var cartTotals = await cartPage.verifyCart(zipcode);
-      await expect(page).toHaveURL('/checkout/');
       const checkOutPage = new CheckoutPage(page);
       await checkOutPage.confirmCheckout(zipcode, cartTotals);
     });
