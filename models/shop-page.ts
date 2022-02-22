@@ -35,7 +35,7 @@ export class ShopPage {
         await this.page.waitForTimeout(750);
       }
       await this.page.keyboard.press('PageUp');
-
+      await this.page.waitForTimeout(2000);
       await this.page
         .locator(`[title="View your shopping cart"] >> visible=true`)
         .click({ force: true });
@@ -53,13 +53,11 @@ export class ShopPage {
         await addToCartButtons[0].click();
         await this.page.waitForTimeout(750);
       }
-      await this.page.waitForTimeout(6000);
       await this.page.keyboard.press('PageUp');
-      //await this.page.waitForTimeout(3000);
+      await this.page.waitForTimeout(2000);
       await this.page
         .locator(`[title="View your shopping cart"] >> visible=true`)
         .click();
-      await this.page.waitForTimeout(6000);
     });
   }
 }
