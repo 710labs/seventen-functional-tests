@@ -15,13 +15,18 @@ export class CartPage {
   cartTotal: any;
   usageType: any;
 
-  constructor(page: Page, browserName: any, workerInfo: TestInfo, usageType = 0) {
+  constructor(
+    page: Page,
+    browserName: any,
+    workerInfo: TestInfo,
+    usageType = 0
+  ) {
     this.page = page;
     this.browserName = browserName;
     this.workerInfo = workerInfo;
     this.checkoutButton = this.page.locator('text=Proceed to checkout');
     this.cartItems = new Array();
-    this.usageType = usageType; 
+    this.usageType = usageType;
   }
   async formatNumbers(value: string): Promise<string> {
     return value.replace(/(<([^>]+)>)/gi, '').replace(/\$|,/g, '');
