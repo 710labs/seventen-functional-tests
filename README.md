@@ -146,14 +146,13 @@ Local:
 
 This will run the tests in a headed(browser will show on screen) and slightly delayed to allow for easier debugging. These will only run in desktop chrome browser.
 
-Set the following env vars in a .env file before running the tests against a local instance. 
+Set the following in a .env file before running the tests against a local instance. 
 
 ```
-BASE_URL=
-API_KEY=
-ADMIN_USER=
-ADMIN_PW=
-
+BASE_URL (https://local.710labs.com)
+API_KEY (slack me for the value) 
+ADMIN_USER
+ADMIN_PW
 ```
 
 ```powershell
@@ -172,6 +171,7 @@ CI:
 These will run in headless mode and will execute in a variety of browsers and viewport sizes
 
 ```powershell
+npm run ci:test:local
 npm run ci:test:dev
 npm run ci:test:staging
 npm run ci:test:prod
