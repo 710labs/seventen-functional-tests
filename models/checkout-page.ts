@@ -62,7 +62,6 @@ export class CheckoutPage {
         const taxRateResponseBody: any = await taxRateResponse.json();
 
         this.taxRates = taxRateResponseBody;
-        console.log(this.taxRates);
       });
       await test.step('GET Product Info', async () => {
         //Get ProductItem Info
