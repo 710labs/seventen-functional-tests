@@ -5,19 +5,20 @@
   "main": "index.js",
   "scripts": {
     "test:local": "npx playwright test --config=configs/local.config.ts --headed --project=chromium --workers=1",
+    "ci:test:local": "npx playwright test --config=configs/local.config.ts --workers=8",
     "test:dev": "npx playwright test --config=configs/dev.config.ts --headed --project=chromium --workers=1",
     "test:staging": "npx playwright test --config=configs/staging.config.ts --headed --project=chromium --workers=1",
     "test:prod": "npx playwright test --config=configs/prod.config.ts --headed --project=chromium --workers=1",
-    "ci:test:dev": "npx playwright test --config=configs/dev.config.ts --workers=12",
-    "ci:test:staging": "npx playwright test --config=configs/staging.config.ts",
-    "ci:test:prod": "npx playwright test --config=configs/prod.config.ts"
+    "ci:test:dev": "npx playwright test --config=configs/dev.config.ts --workers=8",
+    "ci:test:staging": "npx playwright test --config=configs/staging.config.ts --workers=8",
+    "ci:test:prod": "npx playwright test --config=configs/prod.config.ts --workers=8"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/710labs/seventen-functional-tests.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["Playwright","Function Tests"],
+  "author": "LaDell Erby",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/710labs/seventen-functional-tests/issues"

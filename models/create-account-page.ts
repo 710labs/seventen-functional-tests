@@ -115,6 +115,13 @@ export class CreateAccountPage {
       await expect(this.page).toHaveURL('/');
     });
 
+    console.log({
+      username,
+      password,
+      type,
+      zipcode,
+    });
+
     if (logout) {
       await this.page.goto('/my-account');
       await this.page.locator('text=Logout').click();

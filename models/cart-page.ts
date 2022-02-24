@@ -5,6 +5,7 @@ import test, {
   expect,
   request,
 } from '@playwright/test';
+import { calculateCartTotals, formatNumbers } from '../utils/order-calculations';
 
 export class CartPage {
   page: Page;
@@ -28,70 +29,7 @@ export class CartPage {
     this.cartItems = new Array();
     this.usageType = usageType;
   }
-  async formatNumbers(value: string): Promise<string> {
-    return value.replace(/(<([^>]+)>)/gi, '').replace(/\$|,/g, '');
-  }
 
-  async bankersRound(num) {
-    return (Math.round(num * 100) / 100).toFixed(2);
-  }
-  async calculateCartTotals(taxRates: any, productItems: any[]): Promise<any> {
-    var taxRate = await new Array();
-    taxRate = await taxRates.rates.standard;
-    var expectedCartTotal;
-    var total = 0;
-    var cartSubTotal = 0;
-    var grossTaxAmount = 0;
-    var exciseTaxAmount = 0;
-    var salesTaxAmount = 0;
-    var grossRate =
-      taxRate.find((tax) => {
-        return tax.label === 'County Gross Tax';
-      }).rate / 100;
-    var exciseRate =
-      taxRate.find((tax) => {
-        return tax.label === 'California Excise Tax';
-      }).rate / 100;
-    var salesRate =
-      taxRate.find((tax) => {
-        return tax.label === 'Sales';
-      }).rate / 100;
-
-    for (let i = 0; i < productItems.length; i++) {
-      cartSubTotal += Number(productItems[i].subTota1);
-
-      var grossTax = await this.bankersRound(
-        Number(productItems[i].subTota1) * grossRate
-      );
-      grossTaxAmount += Number(grossTax);
-      total = Number(grossTax) + Number(productItems[i].subTota1);
-
-      var exciseTax = await this.bankersRound(total * exciseRate);
-      total = Number(exciseTax) + total;
-      exciseTaxAmount += Number(exciseTax);
-
-      var salesTax = await this.bankersRound(total * salesRate);
-      salesTaxAmount += Number(salesTax);
-      total = grossTaxAmount + exciseTaxAmount + salesTaxAmount + cartSubTotal;
-    }
-
-    var expectedCartSubTotal = await this.bankersRound(cartSubTotal);
-    var expectedGrossTaxAmount = await this.bankersRound(grossTaxAmount);
-    var expectedExciseTaxAmount = await this.bankersRound(exciseTaxAmount);
-    var expectedSalesTaxAmount = await this.bankersRound(salesTaxAmount);
-    var expectedTotal = await this.bankersRound(total);
-
-    expectedCartTotal = {
-      expectedCartSubTotal,
-      expectedGrossTaxAmount,
-      expectedExciseTaxAmount,
-      expectedSalesTaxAmount,
-      expectedTotal,
-    };
-    console.log(expectedCartTotal);
-
-    return expectedCartTotal;
-  }
   async verifyCart(zipcode: string): Promise<any> {
     const apiContext = await request.newContext({
       baseURL: 'https://dev.710labs.com',
@@ -123,9 +61,9 @@ export class CartPage {
           await productRows[i].$('.product-price >> bdi')
         ).innerHTML();
 
-        unitPrice = await this.formatNumbers(unitPrice);
+        unitPrice = await formatNumbers(unitPrice);
         var quanity = await (await productRows[i].$('.qty')).inputValue();
-        var amount = await this.formatNumbers(
+        var amount = await formatNumbers(
           await (await productRows[i].$('.product-subtotal >> bdi')).innerHTML()
         );
         var name = await (
@@ -147,7 +85,7 @@ export class CartPage {
           unitPrice,
           taxClass,
           quanity,
-          subTota1: amount,
+          subTotal: amount,
         });
       }
       //Get CartTotal object (actual cart)
@@ -155,27 +93,45 @@ export class CartPage {
       var cartSubTotal = await (
         await this.page.$('.shop_table >> .cart-subtotal >> bdi')
       ).innerHTML();
-      cartSubTotal = await this.formatNumbers(cartSubTotal);
+      cartSubTotal = await formatNumbers(cartSubTotal);
+      if (this.usageType === 0) {
+        var grossTaxAmount = await (
+          await this.page.$('.tax-rate-us-ca-county-gross-tax-1 >> .amount')
+        ).innerHTML();
+        grossTaxAmount = await formatNumbers(grossTaxAmount);
 
-      var grossTaxAmount = await (
-        await this.page.$('.tax-rate-us-ca-county-gross-tax-1 >> .amount')
-      ).innerHTML();
-      grossTaxAmount = await this.formatNumbers(grossTaxAmount);
+        var exciseTaxAmount = await (
+          await this.page.$(
+            '.tax-rate-us-ca-california-excise-tax-2 >> .amount'
+          )
+        ).innerHTML();
+        exciseTaxAmount = await formatNumbers(exciseTaxAmount);
 
-      var exciseTaxAmount = await (
-        await this.page.$('.tax-rate-us-ca-california-excise-tax-2 >> .amount')
-      ).innerHTML();
-      exciseTaxAmount = await this.formatNumbers(exciseTaxAmount);
+        var salesTaxAmount = await (
+          await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
+        ).innerHTML();
+        salesTaxAmount = await formatNumbers(salesTaxAmount);
+      } else {
+        var grossTaxAmount = await (
+          await this.page.$('.tax-rate-us-ca-gross-1 >> .amount')
+        ).innerHTML();
+        grossTaxAmount = await formatNumbers(grossTaxAmount);
 
-      var salesTaxAmount = await (
-        await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
-      ).innerHTML();
-      salesTaxAmount = await this.formatNumbers(salesTaxAmount);
+        var exciseTaxAmount = await (
+          await this.page.$('.tax-rate-us-ca-excise-2 >> .amount')
+        ).innerHTML();
+        exciseTaxAmount = await formatNumbers(exciseTaxAmount);
+
+        var salesTaxAmount = await (
+          await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
+        ).innerHTML();
+        salesTaxAmount = await formatNumbers(salesTaxAmount);
+      }
 
       var total = await (
         await this.page.$('.shop_table >> .order-total >> .amount')
       ).innerHTML();
-      total = await this.formatNumbers(total);
+      total = await formatNumbers(total);
 
       this.cartTotal = {
         cartSubTotal,
@@ -186,9 +142,10 @@ export class CartPage {
       };
       console.log(this.cartTotal);
 
-      var expectedCartTotal = await this.calculateCartTotals(
+      var expectedCartTotal = await calculateCartTotals(
         taxRates,
-        this.cartItems
+        this.cartItems,
+        this.usageType
       );
       await expect(this.cartTotal.total).toBe(expectedCartTotal.expectedTotal);
     });
