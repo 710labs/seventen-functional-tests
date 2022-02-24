@@ -5,7 +5,10 @@ import test, {
   expect,
   request,
 } from '@playwright/test';
-import { calculateCartTotals, formatNumbers } from '../utils/order-calculations';
+import {
+  calculateCartTotals,
+  formatNumbers,
+} from '../utils/order-calculations';
 
 export class CartPage {
   page: Page;
@@ -47,7 +50,6 @@ export class CartPage {
       const taxRateResponseBody: any = await taxRateResponse.json();
 
       taxRates = taxRateResponseBody;
-      console.log(taxRates);
 
       //Get ProductItem info Info
       await this.page.waitForSelector('.cart_item');
