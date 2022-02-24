@@ -16,6 +16,7 @@ test.describe('Admin Split Order', () => {
   const zipCode = '95376';
   const orderQuanity = 8;
   test.beforeEach(async ({ page, browserName }, workerInfo) => {
+    test.skip(workerInfo.project.name === 'mobile-chrome');
     const ageGatePage = new AgeGatePage(page);
     const listPassword = new ListPasswordPage(page);
     const createAccountPage = new CreateAccountPage(page);
