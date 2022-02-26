@@ -3,4 +3,6 @@ test-results/
 playwright-report/
 tests/examples
 .env
+allure-results/
+allure-report/
 
