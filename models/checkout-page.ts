@@ -31,6 +31,34 @@ export class CheckoutPage {
   };
   checkoutButton: any;
   taxRates: any;
+  zipcodes: string[] = [
+    '91331', 
+    // '90011',
+    // '92683',
+    // '91710',
+    // '94806',
+    // '94544',
+    // '94080',
+    // '94112',
+    // '94403',
+    //'94062',
+    // '95051',
+    // '95035',
+    // '94207',
+    // '95376',
+    // '95992',
+    // '94533',
+    // '92130',
+    // '92126',
+    // '92105',
+    // '92021',
+    // '91911',
+    // '92040',
+    // '95403',
+    // '94565',
+    // '93902',
+    // '95037',
+  ];
 
   constructor(page: Page) {
     this.page = page;
@@ -46,6 +74,7 @@ export class CheckoutPage {
   }
 
   async verifyCheckoutTotals(zipcode: string, usageType: number): Promise<any> {
+    this.cartItems = [];
     const apiContext = await request.newContext({
       baseURL: 'https://dev.710labs.com',
       extraHTTPHeaders: {
@@ -55,6 +84,7 @@ export class CheckoutPage {
     await test.step('GET Tax Rates + Product Info', async () => {
       await test.step('GET Tax Rate', async () => {
         //Get Tax Rates
+        console.log(zipcode);
 
         const taxRateResponse = await apiContext.get(
           `/wp-content/plugins/seventen-info-interface/rates/?postCode=${zipcode}`
@@ -244,10 +274,15 @@ export class CheckoutPage {
     });
     return this.cartTotal;
   }
-  async confirmCheckout(zipcode: string, cartTotals: any, usageType:number): Promise<any> {
+  async confirmCheckout(
+    zipcode: string,
+    cartTotals: any,
+    usageType: number
+  ): Promise<any> {
     const firstName = faker.name.firstName();
     const lastName = faker.name.lastName();
     await test.step('Fill in First Name', async () => {
+      await this.page.waitForTimeout(3000)
       await this.firstNameInput.click();
       await this.firstNameInput.fill(firstName);
     });
@@ -282,9 +317,21 @@ export class CheckoutPage {
       await this.comments.fill(faker.random.randomWords(30));
     });
 
-    await test.step('Verify Order Total', async () => {
-      await this.verifyCheckoutTotals(zipcode, usageType);
-    });
+    for (let i = 0; i < this.zipcodes.length; i++) {
+      await test.step(
+        `Verify Order Total for ${this.zipcodes[i]}`,
+        async () => {
+          await this.zipCodeInput.click();
+          await this.zipCodeInput.fill(this.zipcodes[i]);
+          await this.zipCodeInput.press('Enter');
+          await this.page.waitForTimeout(1000);
+          cartTotals = await this.verifyCheckoutTotals(
+            this.zipcodes[i],
+            usageType
+          );
+        }
+      );
+    }
 
     await test.step('Submit New Customer Order', async () => {
       await this.placeOrderButton.click();

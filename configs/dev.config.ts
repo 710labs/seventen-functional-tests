@@ -4,7 +4,7 @@ require('dotenv').config({ path: require('find-config')('.env') });
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
   testDir: './../tests',
-  timeout: 120 * 1000,
+  timeout: 90 * 1000,
   expect: {
     timeout: 5000,
   },

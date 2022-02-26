@@ -148,13 +148,19 @@ Local:
 
 This will run the tests in a headed(browser will show on screen) and slightly delayed to allow for easier debugging. These will only run in desktop chrome browser.
 
-Set the following in a .env file before running the tests against a local instance. 
+Set the following in a .env file before running the tests against a local instance OR pass via command line. 
 
 ```
+.env file 
+
 BASE_URL (https://local.710labs.com)
 API_KEY (slack me for the value) 
 ADMIN_USER
 ADMIN_PW
+```
+via Command Line 
+```powershell
+cross-env BASE_URL=https://cnn.com ADMIN_USER=admin@710labs.com ADMIN_PW=supersecure!API_KEY=topsecretkey npm run test:local
 ```
 
 ```powershell
@@ -197,7 +203,7 @@ Returns product info based on the following query params. These params are used 
 This endpoint will automate the process of creating new and legacy users that can be used in tests. Users created via this endpoint will be cleaned up every 48 hours automatically. 
 
 ### Test Tool Security 
-Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://dev.710labs.com/wp-admin/options-general.php?page=svntn-testing-api).
+Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://dev.710labs.com/wp-admin/options-general.php?page=svntn-tladellesting-api).
 
 
 ## CI/CD

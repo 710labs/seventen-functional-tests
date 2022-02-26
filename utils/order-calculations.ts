@@ -12,7 +12,7 @@ export async function calculateCartTotals(
   usageType
 ): Promise<any> {
   var taxRate = await new Array();
-  if (usageType == 0) {
+  if (usageType === 0) {
     taxRate = await taxRates.rates.standard;
     var grossRate =
       taxRate.find((tax) => {
