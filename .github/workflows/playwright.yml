@@ -34,10 +34,12 @@ jobs:
           name: playwright-report
           path: playwright-report/
       - name: Copy Test Results
+        if: always()
         run: |
           mkdir public
           cp -r playwright-report
       - name: Publish 710 Labs Test Report
+        if: always()
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -45,5 +47,6 @@ jobs:
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
       - name: Report Url
+        if: always()
         run: echo "https://710labs.github.io/seventen-functional-tests/"
         shell: bash
