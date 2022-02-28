@@ -5,6 +5,8 @@ import {
   formatNumbers,
 } from '../utils/order-calculations';
 
+import zipcodes from '../utils/zipcodes.json';
+
 export class CheckoutPage {
   readonly page: Page;
   readonly firstNameInput: Locator;
@@ -31,34 +33,7 @@ export class CheckoutPage {
   };
   checkoutButton: any;
   taxRates: any;
-  zipcodes: string[] = [
-    '91331', 
-    // '90011',
-    // '92683',
-    // '91710',
-    // '94806',
-    // '94544',
-    // '94080',
-    // '94112',
-    // '94403',
-    //'94062',
-    // '95051',
-    // '95035',
-    // '94207',
-    // '95376',
-    // '95992',
-    // '94533',
-    // '92130',
-    // '92126',
-    // '92105',
-    // '92021',
-    // '91911',
-    // '92040',
-    // '95403',
-    // '94565',
-    // '93902',
-    // '95037',
-  ];
+  zipcodes = zipcodes;
 
   constructor(page: Page) {
     this.page = page;
@@ -282,7 +257,7 @@ export class CheckoutPage {
     const firstName = faker.name.firstName();
     const lastName = faker.name.lastName();
     await test.step('Fill in First Name', async () => {
-      await this.page.waitForTimeout(3000)
+      await this.page.waitForTimeout(3000);
       await this.firstNameInput.click();
       await this.firstNameInput.fill(firstName);
     });

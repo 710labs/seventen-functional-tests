@@ -3,6 +3,7 @@ test-results/
 playwright-report/
 tests/examples
 .env
-allure-results/
+allure-results/  
 allure-report/
+utils/zipcode-final.json
 
