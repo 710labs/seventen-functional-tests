@@ -162,8 +162,9 @@ export class CheckoutPage {
           this.cartItems,
           this.usageType
         );
-        await expect(this.cartTotal.total).toBe(
-          expectedCartTotal.expectedTotal
+        await expect(parseFloat(this.cartTotal.total)).toBeCloseTo(
+          parseFloat(expectedCartTotal.expectedTotal),
+          1
         );
       });
       await test.step('GET Actual Order Totals', async () => {
@@ -242,8 +243,9 @@ export class CheckoutPage {
           this.cartItems,
           this.usageType
         );
-        await expect(this.cartTotal.total).toBe(
-          expectedCartTotal.expectedTotal
+        await expect(parseFloat(this.cartTotal.total)).toBeCloseTo(
+          parseFloat(expectedCartTotal.expectedTotal),
+          1
         );
       });
     });

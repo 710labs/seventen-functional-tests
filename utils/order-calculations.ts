@@ -1,9 +1,7 @@
+import bankersRounding from 'bankers-rounding';
+
 export async function formatNumbers(value: string): Promise<string> {
   return value.replace(/(<([^>]+)>)/gi, '').replace(/\$|,/g, '');
-}
-
-export async function bankersRound(num) {
-  return (Math.round(num * 100) / 100).toFixed(2);
 }
 
 export async function calculateCartTotals(
@@ -52,26 +50,27 @@ export async function calculateCartTotals(
 
   for (let i = 0; i < productItems.length; i++) {
     cartSubTotal += Number(productItems[i].subTotal);
-    var grossTax = await bankersRound(
-      Number(productItems[i].subTotal) * grossRate
+    var grossTax = await bankersRounding(
+      Number(productItems[i].subTotal) * grossRate,
+      2
     );
-    grossTaxAmount += Number(grossTax);
-    total = Number(grossTax) + Number(productItems[i].subTotal);
+    grossTaxAmount += grossTax;
+    total = grossTax + Number(productItems[i].subTotal);
 
-    var exciseTax = await bankersRound(total * exciseRate);
-    total = Number(exciseTax) + total;
+    var exciseTax = await bankersRounding(total * exciseRate, 2);
+    total = exciseTax + total;
     exciseTaxAmount += Number(exciseTax);
 
-    var salesTax = await bankersRound(total * salesRate);
-    salesTaxAmount += Number(salesTax);
+    var salesTax = await bankersRounding(total * salesRate, 2);
+    salesTaxAmount += salesTax;
     total = grossTaxAmount + exciseTaxAmount + salesTaxAmount + cartSubTotal;
   }
 
-  var expectedCartSubTotal = await bankersRound(cartSubTotal);
-  var expectedGrossTaxAmount = await bankersRound(grossTaxAmount);
-  var expectedExciseTaxAmount = await bankersRound(exciseTaxAmount);
-  var expectedSalesTaxAmount = await bankersRound(salesTaxAmount);
-  var expectedTotal = await bankersRound(total);
+  var expectedCartSubTotal = cartSubTotal.toString();
+  var expectedGrossTaxAmount = grossTaxAmount.toString();
+  var expectedExciseTaxAmount = exciseTaxAmount.toString();
+  var expectedSalesTaxAmount = salesTaxAmount.toString();
+  var expectedTotal = bankersRounding(total, 2).toString();
 
   expectedCartTotal = {
     expectedCartSubTotal,
