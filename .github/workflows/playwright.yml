@@ -33,3 +33,13 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
+      - name: Publish 710 Labs Test Report  
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+      - name: Report Url 
+        run: echo "https://710labs.github.io/seventen-functional-tests/"
+        shell: bash
