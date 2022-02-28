@@ -37,7 +37,7 @@ jobs:
         if: always()
         run: |
           mkdir public
-          cp -r playwright-report
+          cp -r playwright-report public
       - name: Publish 710 Labs Test Report
         if: always()
         uses: peaceiris/actions-gh-pages@v3
