@@ -40,6 +40,7 @@ export class CartPage {
         'x-api-key': `${process.env.API_KEY}`,
       },
     });
+
     await test.step('Verify Cart Totals', async () => {
       //Get Tax Rates
       var taxRates: any;
@@ -153,7 +154,6 @@ export class CartPage {
         parseFloat(expectedCartTotal.expectedTotal),
         1
       );
-      // await expect(this.cartTotal.total).toBe(expectedCartTotal.expectedTotal);
     });
     await test.step('Confirm Cart + Proceed to Checkout', async () => {
       this.checkoutButton.click();

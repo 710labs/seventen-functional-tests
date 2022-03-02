@@ -46,6 +46,8 @@ export class CreateAccountPage {
     logout: boolean = false,
     bypassCardUpload: boolean = false
   ) {
+    await test.step('Verify Layout', async () => {});
+
     await test.step('Click Register Link', async () => {
       await this.page.click('text=create an account');
       await expect(this.page).toHaveURL('/register/');

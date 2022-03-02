@@ -23,6 +23,17 @@ export class OrderReceivedPage {
 
   async confirmOrderDetail(orderInfo: any = null): Promise<any> {
     var orderNumber;
+    this.page.waitForNavigation();
+    await test.step('Verify Layout', async () => {
+      await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
+        'href',
+        '/terms-of-use'
+      );
+      await expect(this.page.locator('.site-info > a')).toHaveAttribute(
+        'href',
+        '/privacy-policy'
+      );
+    });
     await test.step('Verify Order Recieved Totals', async () => {
       orderNumber = await this.orderNumber.innerText();
       await expect(this.page.url()).toContain('order-received');

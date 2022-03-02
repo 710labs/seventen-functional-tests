@@ -12,6 +12,19 @@ export class AgeGatePage {
   async passAgeGate() {
     await test.step('Pass Age Gate', async () => {
       await this.page.goto('/');
+      await test.step('Verify Layout', async () => {
+        await expect(this.page.locator('h1 > img')).toBeVisible();
+        await expect(this.page.locator('.age-gate-challenge')).toHaveText(
+          'You must be at least 21 years of age or possess a valid medical recommendation to view this site.'
+        );
+        await expect(
+          this.page.locator('.site-info > span > a')
+        ).toHaveAttribute('href', '/terms-of-use');
+        await expect(this.page.locator('.site-info > a')).toHaveAttribute(
+          'href',
+          '/privacy-policy'
+        );
+      });
       await this.page.click("text=I'm over 21 or a qualified patient");
       const passwordField = await this.page.locator(
         'input[name="post_password"]'
