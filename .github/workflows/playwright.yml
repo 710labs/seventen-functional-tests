@@ -52,7 +52,7 @@ jobs:
         env:
           SLACK_COLOR: ${{ job.status }}
           SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: ${{ job.status }} 'Report Url:' ${{ RESULTS_URL }}
+          SLACK_MESSAGE: ${{ job.status }} ${{ RESULTS_URL }}
           SLACK_TITLE: Test Run Status
           SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
