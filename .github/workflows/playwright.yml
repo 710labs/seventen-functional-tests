@@ -15,7 +15,7 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL }}
-      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
+      RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -52,7 +52,7 @@ jobs:
         env:
           SLACK_COLOR: ${{ job.status }}
           SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: ${{ job.status }} ${REPORT_URL}
+          SLACK_MESSAGE: ${{ job.status }} 'Report Url:' ${{ RESULTS_URL }}
           SLACK_TITLE: Test Run Status
-          SLACK_USERNAME: '710 Functional Tests'
+          SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

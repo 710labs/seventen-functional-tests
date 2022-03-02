@@ -258,6 +258,10 @@ export class CheckoutPage {
   ): Promise<any> {
     const firstName = faker.name.firstName();
     const lastName = faker.name.lastName();
+    await test.step('Verify Layout', async () => {
+      await expect(this.page.locator('.site-info > span > a')).toHaveAttribute('href', '/terms-of-use');
+      await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy');
+    });
     await test.step('Fill in First Name', async () => {
       await this.page.waitForTimeout(3000);
       await this.firstNameInput.click();
