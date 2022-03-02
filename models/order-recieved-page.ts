@@ -29,16 +29,12 @@ export class OrderReceivedPage {
       await this.page.waitForSelector(
         '.woocommerce-order-overview__total >> strong'
       );
-      var actualTotal = await this.total.innerText();
-      actualTotal = actualTotal.replace(/,/g, '');
-      actualTotal = actualTotal.replace(/$/g, '');
+      const actualTotal = await this.total.innerText();
+      var actualTotalformatted = await actualTotal.replace(/$/g, '');
+      console.log(actualTotalformatted);
+      console.log(orderInfo.total);
 
-      console.log(actualTotal);
-
-      // await expect(parseFloat(actualTotal)).toBeCloseTo(
-      //   parseFloat(orderInfo.total),
-      //   1
-      // );
+      await expect(actualTotal).toContain(orderInfo.total);
     });
     return orderNumber;
   }
