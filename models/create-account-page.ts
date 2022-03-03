@@ -1,4 +1,4 @@
-import test, { expect, Locator, Page } from '@playwright/test';
+import test, { expect, Locator, Page, request } from '@playwright/test';
 
 export class CreateAccountPage {
   readonly page: Page;
@@ -36,6 +36,24 @@ export class CreateAccountPage {
       '#wccf_user_field_drivers_license'
     );
     this.medicalCardUpload = page.locator('#wccf_user_field_medical_card');
+  }
+  async createApi(usage: string, userType: string): Promise<any> {
+    await test.step('Create Client via API', async () => {
+      const apiContext = await request.newContext({
+        baseURL: 'https://dev.710labs.com',
+        extraHTTPHeaders: {
+          'x-api-key': `${process.env.API_KEY}`,
+        },
+      });
+      const createUserResponse = await apiContext.get(
+        `/wp-content/plugins/seventen-testing-api/api/users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`
+      );
+      const createUserResponseBody: any = await createUserResponse.json();
+      console.log(createUserResponseBody.user);
+      const user = createUserResponseBody.user
+
+      return user;
+    });
   }
 
   async create(
