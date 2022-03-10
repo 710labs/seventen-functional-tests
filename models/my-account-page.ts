@@ -33,7 +33,7 @@ export class MyAccountPage {
     await test.step('Logout User', async () => {
       await this.page.goto('/my-account/');
       await this.logoutLink.click();
-      await expect(this.page.locator('h2:has-text("Login")')).toBeVisible();
+      await expect(this.page.locator('h2:has-text("Sign In")')).toBeVisible();
     });
   }
 }

@@ -41,9 +41,6 @@ export class OrderReceivedPage {
         '.woocommerce-order-overview__total >> strong'
       );
       const actualTotal = await this.total.innerText();
-      var actualTotalformatted = await actualTotal.replace(/$/g, '');
-      console.log(actualTotalformatted);
-      console.log(orderInfo.total);
 
       await expect(actualTotal).toContain(orderInfo.total);
     });

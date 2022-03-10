@@ -46,7 +46,7 @@ export class CartPage {
       var taxRates: any;
 
       const taxRateResponse = await apiContext.get(
-        `/wp-content/plugins/seventen-info-interface/rates/?postCode=${zipcode}`
+        `/wp-content/plugins/seventen-testing-api/api/rates/?postCode=${zipcode}`
       );
       const taxRateResponseBody: any = await taxRateResponse.json();
 
@@ -74,7 +74,7 @@ export class CartPage {
         ).innerHTML();
         name = name.replace('#', '%23');
         const productInfoResponse = await apiContext.get(
-          `/wp-content/plugins/seventen-info-interface/products/?productName=${name}`
+          `/wp-content/plugins/seventen-testing-api/api/products/?productName=${name}`
         );
         const productInfoResponseBody: any = await productInfoResponse.json();
 

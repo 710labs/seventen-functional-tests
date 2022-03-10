@@ -50,7 +50,7 @@ export class CreateAccountPage {
       );
       const createUserResponseBody: any = await createUserResponse.json();
       console.log(createUserResponseBody.user);
-      const user = createUserResponseBody.user
+      const user = createUserResponseBody.user;
 
       return user;
     });
@@ -61,8 +61,7 @@ export class CreateAccountPage {
     password: string,
     zipcode: string,
     type: number,
-    logout: boolean = false,
-    bypassCardUpload: boolean = false
+    logout: boolean = false
   ) {
     await test.step('Verify Layout', async () => {});
 
@@ -81,16 +80,11 @@ export class CreateAccountPage {
       await this.passwordField.fill(password);
     });
 
-    await test.step('Select Usage Type', async () => {
-      await this.page
-        .locator(`input[name="svntn_last_usage_type"] >> nth=${type}`)
-        .check();
-    });
-
-    await test.step('Enter Zip Code', async () => {
-      await this.zipCode.click();
-      await this.zipCode.fill(zipcode);
-    });
+    // await test.step('Select Usage Type', async () => {
+    //   await this.page
+    //     .locator(`input[name="svntn_last_usage_type"] >> nth=${type}`)
+    //     .check();
+    // });
 
     await test.step('Enter Birthdate', async () => {
       await this.birthMonth.selectOption('12');
@@ -98,9 +92,14 @@ export class CreateAccountPage {
       await this.birthYear.selectOption('1988');
     });
 
+    await test.step('Enter Zip Code', async () => {
+      await this.zipCode.click();
+      await this.zipCode.fill(zipcode);
+    });
+
     await test.step('Submit New Customer Form', async () => {
       await this.page.waitForTimeout(2000);
-      await this.page.click('button:has-text("Register")');
+      await this.page.click('button:has-text("Next")');
       await this.page.waitForTimeout(1000);
     });
 
@@ -117,6 +116,11 @@ export class CreateAccountPage {
     });
 
     if (type == 1) {
+      await test.step('Select Medical Usage Type', async () => {
+        await this.page
+          .locator('text=Medical >> input[name="svntn_last_usage_type"]')
+          .click();
+      });
       await test.step('Upload Medical Card', async () => {
         const medicalCardButton = await this.page.waitForSelector(
           'input[name="svntn_core_medical_doc"]'
@@ -131,7 +135,7 @@ export class CreateAccountPage {
     }
 
     await test.step('Complete Usage Type Form', async () => {
-      await (await this.page.$('text=Proceed')).click();
+      await (await this.page.$('text=Register')).click();
       await expect(this.page).toHaveURL('/');
     });
 
