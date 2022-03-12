@@ -78,12 +78,6 @@ export class CreateAccountPage {
 			await this.passwordField.fill(password)
 		})
 
-		// await test.step('Select Usage Type', async () => {
-		//   await this.page
-		//     .locator(`input[name="svntn_last_usage_type"] >> nth=${type}`)
-		//     .check();
-		// });
-
 		await test.step('Enter Birthdate', async () => {
 			await this.birthMonth.selectOption('12')
 			await this.birthDay.selectOption('16')

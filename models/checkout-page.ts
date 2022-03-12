@@ -280,7 +280,7 @@ export class CheckoutPage {
 
 		await test.step('Fill in Order Notes', async () => {
 			await this.comments.click()
-			await this.comments.fill(faker.random.randomWords(30))
+			await this.comments.fill(faker.random.words(30))
 		})
 
 		for (let i = 0; i < this.zipcodes.length; i++) {
