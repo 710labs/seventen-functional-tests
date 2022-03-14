@@ -53,10 +53,14 @@ export class CartPage {
 				)
 				var name = await (await productRows[i].$('.product-name >> a')).innerHTML()
 				name = name.replace('#', '%23')
+				name = name.replace('+', '%2B')
+				console.log(name)
+
 				const productInfoResponse = await apiContext.get(
 					`/wp-content/plugins/seventen-testing-api/api/products/?productName=${name}`,
 				)
 				const productInfoResponseBody: any = await productInfoResponse.json()
+				console.log(productInfoResponseBody)
 
 				var id = productInfoResponseBody.product.id
 				var sku = productInfoResponseBody.product.sku

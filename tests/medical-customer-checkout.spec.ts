@@ -39,7 +39,7 @@ test.describe('Medical Customer Checkout', () => {
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', '90210', 1)
-		await shopPage.addProductsToCart(8)
+		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(`90210`)
 		await checkOutPage.confirmCheckout(`90210`, cartTotals, 1)
 	})
