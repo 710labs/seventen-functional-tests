@@ -20,13 +20,12 @@ test.describe('Recreational Customer Checkout', () => {
 		const checkOutPage = new CheckoutPage(page)
 
 		await ageGatePage.passAgeGate()
+		var user = await createAccountPage.createApi('recreational', 'current')
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(email, 'test1234!', '90210', 0, true)
-		await loginPage.login(email, 'test1234!')
-		await listPassword.submitPassword('qatester')
+		await loginPage.login(user.email, user.password)
 		await shopPage.addProductsToCart(6)
-		var cartTotals = await cartPage.verifyCart(`90210`)
-		await checkOutPage.confirmCheckout('90210', cartTotals, 0)
+		var cartTotals = await cartPage.verifyCart(`94020`)
+		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 	})
 	test(`Checkout New Customer`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)

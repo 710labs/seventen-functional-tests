@@ -18,6 +18,7 @@ export class CreateAccountPage {
 	readonly rememberMeCheckBox: Locator
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
+	apiUser: any
 
 	constructor(page: Page) {
 		this.page = page
@@ -34,6 +35,7 @@ export class CreateAccountPage {
 
 		this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license')
 		this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
+		this.apiUser = null
 	}
 	async createApi(usage: string, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
@@ -46,12 +48,11 @@ export class CreateAccountPage {
 			const createUserResponse = await apiContext.get(
 				`/wp-content/plugins/seventen-testing-api/api/users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
 			)
-			const createUserResponseBody: any = await createUserResponse.json()
-			console.log(createUserResponseBody.user)
-			const user = createUserResponseBody.user
-
-			return user
+			this.apiUser = await createUserResponse.json()
+			console.log(this.apiUser)
 		})
+
+		return this.apiUser.user
 	}
 
 	async create(

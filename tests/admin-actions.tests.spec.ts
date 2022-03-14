@@ -13,19 +13,21 @@ import { OrderReceivedPage } from '../models/order-recieved-page'
 import { EditOrderPage } from '../models/edit-order-page'
 
 test.describe('Admin Split Order', () => {
-	const zipCode = '95376'
-	const orderQuanity = 8
+	const zipCode = '94020'
+	const orderQuanity = 6
 	test.beforeEach(async ({ page, browserName }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
+		const loginPage = new LoginPage(page)
 
 		await ageGatePage.passAgeGate()
+		var user = await createAccountPage.createApi('medical', 'current')
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', zipCode, 0)
-		await shopPage.addProductsToCart(orderQuanity)
+		await loginPage.login(user.email, user.password)
+		await shopPage.addProductsToCart(6)
 	})
 	test(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
 		const cartPage = new CartPage(page, browserName, workerInfo, 0)
