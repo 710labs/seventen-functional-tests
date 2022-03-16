@@ -30,7 +30,7 @@ test.describe('Admin Split Order', () => {
 		await shopPage.addProductsToCart(6)
 	})
 	test(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
-		const cartPage = new CartPage(page, browserName, workerInfo, 0)
+		const cartPage = new CartPage(page, browserName, workerInfo, 1)
 		const orderReceived = new OrderReceivedPage(page)
 		const checkOutPage = new CheckoutPage(page)
 		const myAccountPage = new MyAccountPage(page)
@@ -41,7 +41,7 @@ test.describe('Admin Split Order', () => {
 
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await test.step('Verify Checkout Page Totals + Taxes', async () => {
-			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
+			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 		})
 
 		await test.step('Comfirm Order Details on /order-received', async () => {

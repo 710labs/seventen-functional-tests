@@ -9,8 +9,7 @@ import { CheckoutPage } from '../models/checkout-page'
 import { CartPage } from '../models/cart-page'
 
 test.describe('Medical Customer Checkout', () => {
-	test(`Checkout Existing Customer`, async ({ page, browserName }, workerInfo) => {
-		const email = `test+${uuidv4()}@710labs.com`
+	test(`Checkout Existing Customer #medical`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
@@ -27,7 +26,9 @@ test.describe('Medical Customer Checkout', () => {
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 	})
-	test(`Checkout New Customer`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout New Customer #medical`, async ({ page, browserName }, workerInfo) => {
+		const zipCode = '94020'
+		const email = `test+${uuidv4()}@710labs.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
@@ -37,9 +38,9 @@ test.describe('Medical Customer Checkout', () => {
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.createApi('medical', 'current')
+		await createAccountPage.create(email, 'test1234', zipCode, 1)
 		await shopPage.addProductsToCart(6)
-		var cartTotals = await cartPage.verifyCart(`90210`)
-		await checkOutPage.confirmCheckout(`90210`, cartTotals, 1)
+		var cartTotals = await cartPage.verifyCart(zipCode)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
 })

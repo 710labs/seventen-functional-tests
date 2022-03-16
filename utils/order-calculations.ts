@@ -7,7 +7,7 @@ export async function formatNumbers(value: string): Promise<string> {
 export async function calculateCartTotals(
   taxRates: any,
   productItems: any[],
-  usageType
+  usageType: number
 ): Promise<any> {
   var taxRate = await new Array();
   if (usageType === 0) {
@@ -52,16 +52,16 @@ export async function calculateCartTotals(
     cartSubTotal += Number(productItems[i].subTotal);
     var grossTax = await bankersRounding(
       Number(productItems[i].subTotal) * grossRate,
-      2
+      3
     );
     grossTaxAmount += grossTax;
     total = grossTax + Number(productItems[i].subTotal);
 
-    var exciseTax = await bankersRounding(total * exciseRate, 2);
+    var exciseTax = await bankersRounding(total * exciseRate, 3);
     total = exciseTax + total;
     exciseTaxAmount += Number(exciseTax);
 
-    var salesTax = await bankersRounding(total * salesRate, 2);
+    var salesTax = await bankersRounding(total * salesRate, 3);
     salesTaxAmount += salesTax;
     total = grossTaxAmount + exciseTaxAmount + salesTaxAmount + cartSubTotal;
   }

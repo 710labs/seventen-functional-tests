@@ -9,8 +9,7 @@ import { CheckoutPage } from '../models/checkout-page'
 import { CartPage } from '../models/cart-page'
 
 test.describe('Recreational Customer Checkout', () => {
-	test(`Checkout Existing Customer`, async ({ page, browserName }, workerInfo) => {
-		const email = `test+${uuidv4()}@710labs.com`
+	test(`Checkout Existing Customer #recreational`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
@@ -25,9 +24,9 @@ test.describe('Recreational Customer Checkout', () => {
 		await loginPage.login(user.email, user.password)
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(`94020`)
-		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
+		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 	})
-	test(`Checkout New Customer`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout New Customer #recreational`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
