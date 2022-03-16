@@ -10,7 +10,7 @@ export class CartPage {
 	cartTotal: any
 	usageType: any
 
-	constructor(page: Page, browserName: any, workerInfo: TestInfo, usageType = 0) {
+	constructor(page: Page, browserName: any, workerInfo: TestInfo, usageType) {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
@@ -54,7 +54,6 @@ export class CartPage {
 				var name = await (await productRows[i].$('.product-name >> a')).innerHTML()
 				name = name.replace('#', '%23')
 				name = name.replace('+', '%2B')
-				console.log(name)
 
 				const productInfoResponse = await apiContext.get(
 					`/wp-content/plugins/seventen-testing-api/api/products/?productName=${name}`,

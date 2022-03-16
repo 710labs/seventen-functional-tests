@@ -25,8 +25,8 @@ export class ShopPage {
 				.elementHandles()
 
 			for (let i = 0; i < itemCount; i++) {
-				await addToCartButtons[i].click()
-				await this.page.waitForTimeout(750)
+				await addToCartButtons[i].click({ force: true })
+				await this.page.waitForTimeout(1500)
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
