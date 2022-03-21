@@ -14,7 +14,7 @@ export class MyAccountPage {
 		this.addressesLink = page.locator('text=Addresses')
 		this.accountDetailsLink = page.locator('a:has-text("Account details")')
 		this.cardsLink = page.locator('.woocommerce-MyAccount-navigation-link--id-med-card')
-		this.logoutLink = page.locator('text=Logout')
+		this.logoutLink = page.locator('text=Sign Out')
 	}
 
 	async logout() {
