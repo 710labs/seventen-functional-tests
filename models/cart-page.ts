@@ -38,28 +38,30 @@ export class CartPage {
 
 			taxRates = taxRateResponseBody
 
-			//Get ProductItem info Info
+			//Get ProductItem Info
 			await this.page.waitForSelector('.cart_item')
 
 			const productRows = await this.page.locator('.cart_item').elementHandles()
 
 			for (let i = 0; i < productRows.length; i++) {
 				var unitPrice = await (await productRows[i].$('.product-price >> bdi')).innerHTML()
-
 				unitPrice = await formatNumbers(unitPrice)
 				var quanity = await (await productRows[i].$('.qty')).inputValue()
 				var amount = await formatNumbers(
 					await (await productRows[i].$('.product-subtotal >> bdi')).innerHTML(),
 				)
 				var name = await (await productRows[i].$('.product-name >> a')).innerHTML()
-				name = name.replace('#', '%23')
-				name = name.replace('+', '%2B')
+				name = name.replace(/\#/g, '%23')
+				name = name.replace(/\+/g, '%2B')
+				
+				var idElement = await productRows[i].$('.product-remove >> a')
+
+				var productId = await idElement.getAttribute('data-product_id')
 
 				const productInfoResponse = await apiContext.get(
-					`/wp-content/plugins/seventen-testing-api/api/products/?productName=${name}`,
+					`/wp-content/plugins/seventen-testing-api/api/products/?productId=${productId}`,
 				)
 				const productInfoResponseBody: any = await productInfoResponse.json()
-				console.log(productInfoResponseBody)
 
 				var id = productInfoResponseBody.product.id
 				var sku = productInfoResponseBody.product.sku
@@ -133,6 +135,6 @@ export class CartPage {
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
 			this.checkoutButton.click()
 		})
-		return this.cartTotal
+		return this.cartItems
 	}
 }
