@@ -45,7 +45,7 @@ export class CheckoutPage {
 		this.cartItems = new Array()
 	}
 
-	async verifyCheckoutTotals(zipcode: string, usageType: number): Promise<any> {
+	async verifyCheckoutTotals(zipcode: string, usageType: number, productList: any[]): Promise<any> {
 		this.cartItems = []
 		const apiContext = await request.newContext({
 			baseURL: 'https://dev.710labs.com',
@@ -64,96 +64,6 @@ export class CheckoutPage {
 				const taxRateResponseBody: any = await taxRateResponse.json()
 
 				this.taxRates = taxRateResponseBody
-			})
-			await test.step('GET Product Info', async () => {
-				//Get ProductItem Info
-				await this.page.waitForSelector('.cart_item')
-
-				const productRows = await this.page.locator('.cart_item').elementHandles()
-
-				for (let i = 0; i < productRows.length; i++) {
-					var subTotal = await formatNumbers(
-						await (await productRows[i].$('.product-total >> bdi')).innerHTML(),
-					)
-					var name = await (await productRows[i].$('.product-name')).innerHTML()
-					name = name.replace('#', '%23')
-					await test.step('Call Product API Endpoint', async () => {
-						const productInfoResponse = await apiContext.get(
-							`/wp-content/plugins/seventen-testing-api/api/products/?productName=${name}`,
-						)
-						const productInfoResponseBody: any = await productInfoResponse.json()
-
-						var id = productInfoResponseBody.product.id
-						var sku = productInfoResponseBody.product.sku
-						var taxClass = productInfoResponseBody.product.taxClass
-						this.cartItems.push({
-							id,
-							name,
-							sku,
-							taxClass,
-							subTotal,
-						})
-					})
-				}
-				//Get CartTotal object (actual cart)
-				await this.page.waitForSelector('.shop_table')
-				var cartSubTotal = await (
-					await this.page.$('.shop_table >> .cart-subtotal >> bdi')
-				).innerHTML()
-				cartSubTotal = await formatNumbers(cartSubTotal)
-				if (usageType === 0) {
-					var grossTaxAmount = await (
-						await this.page.$('.tax-rate-us-ca-county-gross-tax-1 >> .amount')
-					).innerHTML()
-					grossTaxAmount = await formatNumbers(grossTaxAmount)
-
-					var exciseTaxAmount = await (
-						await this.page.$('.tax-rate-us-ca-california-excise-tax-2 >> .amount')
-					).innerHTML()
-					exciseTaxAmount = await formatNumbers(exciseTaxAmount)
-
-					var salesTaxAmount = await (
-						await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
-					).innerHTML()
-					salesTaxAmount = await formatNumbers(salesTaxAmount)
-				} else {
-					var grossTaxAmount = await (
-						await this.page.$('.tax-rate-us-ca-gross-1 >> .amount')
-					).innerHTML()
-					grossTaxAmount = await formatNumbers(grossTaxAmount)
-
-					var exciseTaxAmount = await (
-						await this.page.$('.tax-rate-us-ca-excise-2 >> .amount')
-					).innerHTML()
-					exciseTaxAmount = await formatNumbers(exciseTaxAmount)
-
-					var salesTaxAmount = await (
-						await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
-					).innerHTML()
-					salesTaxAmount = await formatNumbers(salesTaxAmount)
-				}
-
-				var total = await (await this.page.$('.shop_table >> .order-total >> .amount')).innerHTML()
-				total = await formatNumbers(total)
-
-				this.cartTotal = {
-					cartSubTotal,
-					grossTaxAmount,
-					exciseTaxAmount,
-					salesTaxAmount,
-					total,
-				}
-				console.log(this.cartTotal)
-
-				var expectedCartTotal = await calculateCartTotals(
-					this.taxRates,
-					this.cartItems,
-					this.usageType,
-				)
-				await expect(parseFloat(this.cartTotal.total)).toBeCloseTo(
-					parseFloat(expectedCartTotal.expectedTotal),
-					1,
-				)
 			})
 			await test.step('GET Actual Order Totals', async () => {
 				//Get CartTotal object (actual cart)
@@ -226,7 +136,7 @@ export class CheckoutPage {
 
 				var expectedCartTotal = await calculateCartTotals(
 					this.taxRates,
-					this.cartItems,
+					productList,
 					this.usageType,
 				)
 				await expect(parseFloat(this.cartTotal.total)).toBeCloseTo(
@@ -237,9 +147,11 @@ export class CheckoutPage {
 		})
 		return this.cartTotal
 	}
-	async confirmCheckout(zipcode: string, cartTotals: any, usageType: number): Promise<any> {
+	async confirmCheckout(zipcode: string, productList: any, usageType: number): Promise<any> {
 		const firstName = faker.name.firstName()
 		const lastName = faker.name.lastName()
+
+		let cartTotals
 		await test.step('Verify Layout', async () => {
 			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 				'href',
@@ -289,7 +201,7 @@ export class CheckoutPage {
 				await this.zipCodeInput.fill(this.zipcodes[i])
 				await this.zipCodeInput.press('Enter')
 				await this.page.waitForTimeout(1000)
-				cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType)
+				cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
 			})
 		}
 
