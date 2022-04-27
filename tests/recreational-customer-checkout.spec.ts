@@ -7,6 +7,7 @@ import { CreateAccountPage } from '../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../models/checkout-page'
 import { CartPage } from '../models/cart-page'
+import { SchedulingPage } from '../models/scheduling-page'
 
 test.describe('Recreational Customer Checkout', () => {
 	test(`Checkout Existing Customer #recreational`, async ({ page, browserName }, workerInfo) => {
@@ -17,6 +18,7 @@ test.describe('Recreational Customer Checkout', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, browserName, workerInfo, 0)
 		const checkOutPage = new CheckoutPage(page)
+		const schedulingPage = new SchedulingPage(page)
 
 		await ageGatePage.passAgeGate()
 		var user = await createAccountPage.createApi('recreational', 'current')
@@ -25,6 +27,7 @@ test.describe('Recreational Customer Checkout', () => {
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
+		await schedulingPage.scheduleDelivery()
 	})
 	test(`Checkout New Customer #recreational`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
@@ -33,6 +36,7 @@ test.describe('Recreational Customer Checkout', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, browserName, workerInfo, 0)
 		const checkOutPage = new CheckoutPage(page)
+		const schedulingPage = new SchedulingPage(page)
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
@@ -40,5 +44,6 @@ test.describe('Recreational Customer Checkout', () => {
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(`90210`)
 		await checkOutPage.confirmCheckout(`90210`, cartTotals, 0)
+		await schedulingPage.scheduleDelivery()
 	})
 })

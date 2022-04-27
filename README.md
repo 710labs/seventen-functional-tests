@@ -203,7 +203,7 @@ Returns product info based on the following query params. These params are used 
 This endpoint will automate the process of creating new and legacy users that can be used in tests. Users created via this endpoint will be cleaned up every 48 hours automatically. 
 
 ### Test Tool Security 
-Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://dev.710labs.com/wp-admin/options-general.php?page=svntn-tladellesting-api).
+Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://thelist-dev.710labs.com/wp-admin/options-general.php?page=svntn-tladellesting-api).
 
 
 ## CI/CD

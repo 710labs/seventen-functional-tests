@@ -7,6 +7,7 @@ import { CreateAccountPage } from '../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../models/checkout-page'
 import { CartPage } from '../models/cart-page'
+import { SchedulingPage } from '../models/scheduling-page'
 
 test.describe('Medical Customer Checkout', () => {
 	test(`Checkout Existing Customer #medical`, async ({ page, browserName }, workerInfo) => {
@@ -17,6 +18,7 @@ test.describe('Medical Customer Checkout', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page)
+		const schedulingPage = new SchedulingPage(page)
 
 		await ageGatePage.passAgeGate()
 		var user = await createAccountPage.createApi('medical', 'current')
@@ -25,6 +27,7 @@ test.describe('Medical Customer Checkout', () => {
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
+		await schedulingPage.scheduleDelivery()
 	})
 	test(`Checkout New Customer #medical`, async ({ page, browserName }, workerInfo) => {
 		const zipCode = '94020'
@@ -35,6 +38,7 @@ test.describe('Medical Customer Checkout', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page)
+		const schedulingPage = new SchedulingPage(page)
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
@@ -42,5 +46,6 @@ test.describe('Medical Customer Checkout', () => {
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
+		await schedulingPage.scheduleDelivery()
 	})
 })

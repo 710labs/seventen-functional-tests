@@ -21,7 +21,7 @@ export class CartPage {
 
 	async verifyCart(zipcode: string): Promise<any> {
 		const apiContext = await request.newContext({
-			baseURL: 'https://dev.710labs.com',
+			baseURL: `${process.env.BASE_URL}`,
 			extraHTTPHeaders: {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
