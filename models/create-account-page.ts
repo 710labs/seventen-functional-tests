@@ -6,6 +6,8 @@ export class CreateAccountPage {
 	readonly passwordField: Locator
 	readonly usageType: Locator
 	readonly zipCode: Locator
+	readonly firstName: Locator
+	readonly lastName: Locator
 	readonly birthMonth: Locator
 	readonly birthDay: Locator
 	readonly birthYear: Locator
@@ -26,6 +28,8 @@ export class CreateAccountPage {
 		this.passwordField = page.locator('input[name="password"]')
 		this.usageType = page.locator('input[name="svntn_last_usage_type"]')
 		this.zipCode = page.locator('input[name="svntn_core_registration_zip"]')
+		this.firstName = page.locator('input[name="svntn_core_registration_firstname"]')
+		this.lastName = page.locator('input[name="svntn_core_registration_lastname"]')
 		this.birthMonth = page.locator('select[name="svntn_core_dob_month_sbmt"]')
 		this.birthDay = page.locator('select[name="svntn_core_dob_day_sbmt"]')
 		this.birthYear = page.locator('select[name="svntn_core_dob_year_sbmt"]')
@@ -40,7 +44,7 @@ export class CreateAccountPage {
 	async createApi(usage: string, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
 			const apiContext = await request.newContext({
-				baseURL: 'https://dev.710labs.com',
+				baseURL: `${process.env.BASE_URL}`,
 				extraHTTPHeaders: {
 					'x-api-key': `${process.env.API_KEY}`,
 				},
@@ -77,6 +81,16 @@ export class CreateAccountPage {
 		await test.step('Enter Passowrd', async () => {
 			await this.passwordField.click()
 			await this.passwordField.fill(password)
+		})
+
+		await test.step('Enter First Name', async () => {
+			await this.firstName.click()
+			await this.firstName.fill(username)
+		})
+
+		await test.step('Enter Last Name', async () => {
+			await this.lastName.click()
+			await this.lastName.fill(username)
 		})
 
 		await test.step('Enter Birthdate', async () => {

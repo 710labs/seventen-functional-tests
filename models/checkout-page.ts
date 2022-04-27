@@ -48,7 +48,7 @@ export class CheckoutPage {
 	async verifyCheckoutTotals(zipcode: string, usageType: number, productList: any[]): Promise<any> {
 		this.cartItems = []
 		const apiContext = await request.newContext({
-			baseURL: 'https://dev.710labs.com',
+			baseURL: `${process.env.BASE_URL}`,
 			extraHTTPHeaders: {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
