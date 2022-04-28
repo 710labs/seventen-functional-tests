@@ -6,7 +6,7 @@ const config: PlaywrightTestConfig = {
   testDir: './../tests',
   timeout: 300 * 1000,
   expect: {
-    timeout: 5000,
+    timeout: 20000,
   },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
