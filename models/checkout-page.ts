@@ -200,7 +200,7 @@ export class CheckoutPage {
 			await this.comments.fill(faker.random.words(30))
 		})
 
-		if ((singleZip = false)) {
+		if (singleZip === false) {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.zipCodeInput.click()
@@ -210,10 +210,8 @@ export class CheckoutPage {
 					cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
 				})
 			}
-		}
-		else{
+		} else {
 			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
-
 		}
 
 		await test.step('Submit New Customer Order', async () => {
