@@ -12,9 +12,10 @@ import { AdminLogin } from '../models/admin-login-page'
 import { OrderReceivedPage } from '../models/order-recieved-page'
 import { EditOrderPage } from '../models/edit-order-page'
 import { SchedulingPage } from '../models/scheduling-page'
+import { v4 as uuidv4 } from 'uuid'
 
 test.describe('Admin Split Order', () => {
-	const zipCode = '94020'
+	const zipCode = '90210'
 	const orderQuanity = 6
 	var orderTotals
 	var orderNumber
@@ -25,7 +26,6 @@ test.describe('Admin Split Order', () => {
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const loginPage = new LoginPage(page)
 		const cartPage = new CartPage(page, browserName, workerInfo, 1)
 		const schedulingPage = new SchedulingPage(page)
 		const orderReceived = new OrderReceivedPage(page)
@@ -33,13 +33,12 @@ test.describe('Admin Split Order', () => {
 		const myAccountPage = new MyAccountPage(page)
 
 		await ageGatePage.passAgeGate()
-		var user = await createAccountPage.createApi('medical', 'current')
 		await listPassword.submitPassword('qatester')
-		await loginPage.login(user.email, user.password)
+		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', zipCode, 1)
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await test.step('Verify Checkout Page Totals + Taxes', async () => {
-			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
+			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
 		})
 		await test.step('Schedule Delivery', async () => {
 			await schedulingPage.scheduleDelivery()
