@@ -147,7 +147,12 @@ export class CheckoutPage {
 		})
 		return this.cartTotal
 	}
-	async confirmCheckout(zipcode: string, productList: any, usageType: number): Promise<any> {
+	async confirmCheckout(
+		zipcode: string,
+		productList: any,
+		usageType: number,
+		singleZip: boolean = false,
+	): Promise<any> {
 		const firstName = faker.name.firstName()
 		const lastName = faker.name.lastName()
 
@@ -195,23 +200,24 @@ export class CheckoutPage {
 			await this.comments.fill(faker.random.words(30))
 		})
 
-		for (let i = 0; i < this.zipcodes.length; i++) {
-			await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
-				await this.zipCodeInput.click()
-				await this.zipCodeInput.fill(this.zipcodes[i])
-				await this.zipCodeInput.press('Enter')
-				await this.page.waitForTimeout(1000)
-				cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
-			})
+		if ((singleZip = false)) {
+			for (let i = 0; i < this.zipcodes.length; i++) {
+				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
+					await this.zipCodeInput.click()
+					await this.zipCodeInput.fill(this.zipcodes[i])
+					await this.zipCodeInput.press('Enter')
+					await this.page.waitForTimeout(1000)
+					cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
+				})
+			}
+		}
+		else{
+			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
+
 		}
 
 		await test.step('Submit New Customer Order', async () => {
 			await this.placeOrderButton.click()
-		})
-
-		console.log({
-			firstName,
-			lastName,
 		})
 
 		return cartTotals
