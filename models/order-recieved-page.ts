@@ -32,8 +32,9 @@ export class OrderReceivedPage {
 			await expect(this.page.url()).toContain('order-received')
 			await this.page.waitForSelector('.woocommerce-order-overview__total >> strong')
 			const actualTotal = await this.total.innerText()
-
-			await expect(actualTotal).toContain(orderInfo.total)
+			if (process.env.BYPASS_TAX_CALC != 'true') {
+				await expect(actualTotal).toContain(orderInfo.total)
+			}
 		})
 		return orderNumber
 	}

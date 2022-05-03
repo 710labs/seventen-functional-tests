@@ -46,6 +46,10 @@ export class CheckoutPage {
 	}
 
 	async verifyCheckoutTotals(zipcode: string, usageType: number, productList: any[]): Promise<any> {
+		if (process.env.BYPASS_TAX_CALC === 'true') {
+			return this.cartTotal
+		}
+
 		this.cartItems = []
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}`,
