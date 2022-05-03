@@ -20,6 +20,13 @@ export class CartPage {
 	}
 
 	async verifyCart(zipcode: string): Promise<any> {
+		if (process.env.BYPASS_TAX_CALC === 'true') {
+			await test.step('Proceed to Checkout', async () => {
+				this.checkoutButton.click()
+			})
+			return this.cartItems
+		}
+
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}`,
 			extraHTTPHeaders: {
@@ -42,6 +49,7 @@ export class CartPage {
 			await this.page.waitForSelector('.cart_item')
 
 			const productRows = await this.page.locator('.cart_item').elementHandles()
+			await expect(productRows, 'Could not find any products in cart').toBeGreaterThan(0)
 
 			for (let i = 0; i < productRows.length; i++) {
 				var unitPrice = await (await productRows[i].$('.product-price >> bdi')).innerHTML()
@@ -53,7 +61,7 @@ export class CartPage {
 				var name = await (await productRows[i].$('.product-name >> a')).innerHTML()
 				name = name.replace(/\#/g, '%23')
 				name = name.replace(/\+/g, '%2B')
-				
+
 				var idElement = await productRows[i].$('.product-remove >> a')
 
 				var productId = await idElement.getAttribute('data-product_id')
@@ -81,6 +89,8 @@ export class CartPage {
 			var cartSubTotal = await (
 				await this.page.$('.shop_table >> .cart-subtotal >> bdi')
 			).innerHTML()
+
+			await expect(cartSubTotal, 'Unable to find Cart Sub Total').toBeGreaterThan(0)
 			cartSubTotal = await formatNumbers(cartSubTotal)
 			if (this.usageType === 0) {
 				var grossTaxAmount = await (
@@ -135,6 +145,8 @@ export class CartPage {
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
 			this.checkoutButton.click()
 		})
+		await expect(this.cartItems).not.toHaveLength(0)
+
 		return this.cartItems
 	}
 }

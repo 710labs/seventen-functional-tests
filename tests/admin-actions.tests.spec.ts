@@ -46,6 +46,7 @@ test.describe('Admin Split Order', () => {
 
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)
+			await expect(orderNumber, 'Failed to create order').not.toBeNull()
 		})
 
 		await test.step('Logout Consumer', async () => {

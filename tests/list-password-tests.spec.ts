@@ -18,5 +18,5 @@ test('Enter List Password - Invalid', async ({ page }) => {
 
 	await ageGatePage.passAgeGate()
 	await listPasswordPage.submitPassword('INCORRECT')
-	await expect(await page.title()).toContain('Password – 710 Labs')
+	await expect(await page.title(), "List password was not enforced").toContain('Password – 710 Labs')
 })
