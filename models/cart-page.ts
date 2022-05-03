@@ -49,7 +49,7 @@ export class CartPage {
 			await this.page.waitForSelector('.cart_item')
 
 			const productRows = await this.page.locator('.cart_item').elementHandles()
-			await expect(productRows, 'Could not find any products in cart').toBeGreaterThan(0)
+			await expect(productRows, 'Could not find any products in cart').not.toBeNull()
 
 			for (let i = 0; i < productRows.length; i++) {
 				var unitPrice = await (await productRows[i].$('.product-price >> bdi')).innerHTML()
@@ -90,7 +90,7 @@ export class CartPage {
 				await this.page.$('.shop_table >> .cart-subtotal >> bdi')
 			).innerHTML()
 
-			await expect(cartSubTotal, 'Unable to find Cart Sub Total').toBeGreaterThan(0)
+			await expect(cartSubTotal, 'Unable to find Cart Sub Total').not.toBeNull()
 			cartSubTotal = await formatNumbers(cartSubTotal)
 			if (this.usageType === 0) {
 				var grossTaxAmount = await (
@@ -145,7 +145,7 @@ export class CartPage {
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
 			this.checkoutButton.click()
 		})
-		await expect(this.cartItems).not.toHaveLength(0)
+		await expect(this.cartItems).not.toBeNull
 
 		return this.cartItems
 	}
