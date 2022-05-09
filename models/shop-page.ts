@@ -18,8 +18,9 @@ export class ShopPage {
 
 	async addProductsToCart(itemCount: number) {
 		await test.step('Add Products to Cart', async () => {
+			await this.page.goto('/')
 			await this.page.waitForSelector('[aria-label*="to your cart"]')
-
+			await this.page.waitForTimeout(5000)
 			const addToCartButtons = await this.page
 				.locator('[aria-label*="to your cart"]')
 				.elementHandles()

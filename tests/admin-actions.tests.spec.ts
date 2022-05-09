@@ -35,6 +35,9 @@ test.describe('Admin Split Order', () => {
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', zipCode, 1)
+		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
+			await myAccountPage.addAddress()
+		}
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await test.step('Verify Checkout Page Totals + Taxes', async () => {
