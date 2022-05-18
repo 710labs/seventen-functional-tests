@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: "0 14 * * *"
 jobs:
-  test-dev:
+  test-dev-ca:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -16,7 +16,14 @@ jobs:
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL }}
       RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
     steps:
+      - name: Setup Env
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'https://thelist-dev.710labs.com/wp-content/plugins/seventen-qa/api/domains/update/?state=ca'
+          method: 'GET'
+          customHeaders: '{\"x-api-key\":\"${{secrets.API_KEY}}\"}'
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
@@ -26,7 +33,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Set Env Vars
-        run: echo ${BASE_URL}
+        run: echo ${BASE_URL_DEV}
       - name: Run Playwright tests
         run: npm run ci:test:dev
       - uses: actions/upload-artifact@v2
@@ -53,7 +60,58 @@ jobs:
         env:
           SLACK_COLOR: ${{ job.status }}
           SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: env-dev(https://thelist-dev.710labs.com) status-${{ job.status }} Report Url-${{ env.RESULTS_URL }}
+          SLACK_MESSAGE: env-dev-ca(https://thelist-dev.710labs.com) status-${{ job.status }} Report Url-${{ env.RESULTS_URL }}
+          SLACK_TITLE: Test Run Status
+          SLACK_USERNAME: "710 Functional Tests"
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  test-stage-ca:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL_STAGE: ${{ secrets.BASE_URL_STAGE }}
+      RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT_OLD }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "14.x"
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Set Env Vars
+        run: echo ${BASE_URL_STAGE}
+      - name: Run Playwright In Stage Env
+        run: npm run ci:test:staging
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+      - name: Copy Test Results
+        if: always()
+        run: |
+          mkdir public
+          cp -r playwright-report public
+      - name: Publish 710 Labs Test Report
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+      - name: Slack Notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
+          SLACK_MESSAGE: env-stg-ca(https://thelist-stage.710labs.com) status-${{ job.status }} Report Url-${{ env.RESULTS_URL }}
           SLACK_TITLE: Test Run Status
           SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

@@ -41,7 +41,7 @@ export class CheckoutPage {
 		this.city = this.page.locator('input[name="billing_city"]')
 		this.zipCodeInput = this.page.locator('input[name="billing_postcode"]')
 		this.comments = this.page.locator('textarea[name="order_comments"]')
-		this.placeOrderButton = this.page.locator('text=Place order')
+		this.placeOrderButton = this.page.locator('id=place_order')
 		this.cartItems = new Array()
 	}
 
@@ -63,7 +63,7 @@ export class CheckoutPage {
 				console.log(zipcode)
 
 				const taxRateResponse = await apiContext.get(
-					`/wp-content/plugins/seventen-testing-api/api/rates/?postCode=${zipcode}`,
+					`${process.env.QA_ENDPOINT}rates/?postCode=${zipcode}`,
 				)
 				const taxRateResponseBody: any = await taxRateResponse.json()
 

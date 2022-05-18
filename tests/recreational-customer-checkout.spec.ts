@@ -11,7 +11,7 @@ import { SchedulingPage } from '../models/scheduling-page'
 import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Recreational Customer Checkout', () => {
-	test(`Checkout Existing Customer #recreational`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout Existing Customer #recreational @CA`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
@@ -34,7 +34,7 @@ test.describe('Recreational Customer Checkout', () => {
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 		await schedulingPage.scheduleDelivery()
 	})
-	test(`Checkout New Customer #recreational`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout New Customer #recreational @CA`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
