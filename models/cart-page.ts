@@ -14,7 +14,7 @@ export class CartPage {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
-		this.checkoutButton = this.page.locator('text=Proceed to checkout')
+		this.checkoutButton = this.page.locator('text=Proceed')
 		this.cartItems = new Array()
 		this.usageType = usageType
 	}
@@ -39,7 +39,7 @@ export class CartPage {
 			var taxRates: any
 
 			const taxRateResponse = await apiContext.get(
-				`/wp-content/plugins/seventen-testing-api/api/rates/?postCode=${zipcode}`,
+				`${process.env.QA_ENDPOINT}rates/?postCode=${zipcode}`,
 			)
 			const taxRateResponseBody: any = await taxRateResponse.json()
 
@@ -67,7 +67,7 @@ export class CartPage {
 				var productId = await idElement.getAttribute('data-product_id')
 
 				const productInfoResponse = await apiContext.get(
-					`/wp-content/plugins/seventen-testing-api/api/products/?productId=${productId}`,
+					`${process.env.QA_ENDPOINT}products/?productId=${productId}`,
 				)
 				const productInfoResponseBody: any = await productInfoResponse.json()
 

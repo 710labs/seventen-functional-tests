@@ -48,6 +48,7 @@ export class MyAccountPage {
 		address: string = '420 Dank Street',
 		city: string = 'Beverly Hills',
 		phone: string = '4204204200',
+		state: string = 'CA',
 	) {
 		await test.step('Update Customer Address', async () => {
 			await this.page.goto('/my-account/')
@@ -56,7 +57,7 @@ export class MyAccountPage {
 
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
-			await this.state.selectOption('CA')
+			await this.state.selectOption(state)
 			await this.phone.fill(phone)
 			await this.page.click('button:has-text("Save address")')
 		})

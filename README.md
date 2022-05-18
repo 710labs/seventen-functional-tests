@@ -187,7 +187,7 @@ npm run ci:test:prod
 ```
 
 ## Test Tools
-### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)
+### [Test Tools Documentation](https://document er.getpostman.com/view/11482169/UVeDuTqj)
 
 Postman collection with examples of endpoints used for grabbing data used in test assertions.
 ### GET Tax Rates By Zip
@@ -203,7 +203,7 @@ Returns product info based on the following query params. These params are used 
 This endpoint will automate the process of creating new and legacy users that can be used in tests. Users created via this endpoint will be cleaned up every 48 hours automatically. 
 
 ### Test Tool Security 
-Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://thelist-dev.710labs.com/wp-admin/options-general.php?page=svntn-tladellesting-api).
+Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://thelist-dev.710labs.com/wp-admin/tools.php?page=svntn-qa).
 
 
 ## CI/CD

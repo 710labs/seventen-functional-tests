@@ -11,6 +11,10 @@ export class CreateAccountPage {
 	readonly birthMonth: Locator
 	readonly birthDay: Locator
 	readonly birthYear: Locator
+	readonly medCardExpMonth: Locator
+	readonly medCardExpDay: Locator
+	readonly medCardExpYear: Locator
+	readonly patientId: Locator
 	readonly updateBirthMonth: Locator
 	readonly updateBirthDay: Locator
 	readonly updateBirthYear: Locator
@@ -36,6 +40,10 @@ export class CreateAccountPage {
 		this.updateBirthMonth = page.locator('select[name="svntn_core_dob_month"]')
 		this.updateBirthDay = page.locator('select[name="svntn_core_dob_day"]')
 		this.updateBirthYear = page.locator('select[name="svntn_core_dob_year"]')
+		this.medCardExpMonth = page.locator('select[name="svntn_core_mxp_month"]')
+		this.medCardExpDay = page.locator('select[name="svntn_core_mxp_day"]')
+		this.medCardExpYear = page.locator('select[name="svntn_core_mxp_year"]')
+		this.patientId = page.locator('input[name="svntn_fl_patient_id"]')
 
 		this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license')
 		this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
@@ -50,7 +58,7 @@ export class CreateAccountPage {
 				},
 			})
 			const createUserResponse = await apiContext.get(
-				`/wp-content/plugins/seventen-testing-api/api/users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
+				`${process.env.QA_ENDPOINT}users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
 			)
 			this.apiUser = await createUserResponse.json()
 			console.log(this.apiUser)
@@ -65,6 +73,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: number,
 		logout: boolean = false,
+		state: string = 'CA',
 	) {
 		await test.step('Verify Layout', async () => {})
 
@@ -122,7 +131,7 @@ export class CreateAccountPage {
 			await driversLicenseChooser.page()
 		})
 
-		if (type == 1) {
+		if (type == 1 && state === 'CA') {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -138,7 +147,29 @@ export class CreateAccountPage {
 				await medicalCardChooser.page()
 			})
 		}
+		if (state === 'FL') {
+			await test.step('Upload Medical Card', async () => {
+				const medicalCardButton = await this.page.waitForSelector(
+					'input[name="svntn_core_medical_doc"]',
+				)
+				const [medicalCardChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medicalCardButton.click(),
+				])
+				await medicalCardChooser.setFiles('Medical-Card.png')
+				await medicalCardChooser.page()
+			})
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption('2023')
+			})
 
+			await test.step('Enter PatientId', async () => {
+				await this.patientId.click()
+				await this.patientId.fill('1234abcd')
+			})
+		}
 		await test.step('Complete Usage Type Form', async () => {
 			await (await this.page.$('text=Register')).click()
 			await expect(this.page).toHaveURL('/')

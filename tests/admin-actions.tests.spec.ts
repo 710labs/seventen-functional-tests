@@ -56,7 +56,7 @@ test.describe('Admin Split Order', () => {
 			await myAccountPage.logout()
 		})
 	})
-	test(`User Can Split Order`, async ({ page, browserName }, workerInfo) => {
+	test(`User Can Split Order @CA`, async ({ page, browserName }, workerInfo) => {
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
 		await test.step('Login Admin', async () => {

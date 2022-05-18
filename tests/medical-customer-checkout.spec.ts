@@ -11,7 +11,7 @@ import { SchedulingPage } from '../models/scheduling-page'
 import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Medical Customer Checkout', () => {
-	test(`Checkout Existing Customer #medical`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout Existing Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page)
@@ -34,7 +34,7 @@ test.describe('Medical Customer Checkout', () => {
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 		await schedulingPage.scheduleDelivery()
 	})
-	test(`Checkout New Customer #medical`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout New Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 		const zipCode = '94020'
 		const email = `test+${uuidv4()}@710labs.com`
 		const ageGatePage = new AgeGatePage(page)
