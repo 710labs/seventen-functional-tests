@@ -1,4 +1,5 @@
 import test, { expect, Locator, Page } from '@playwright/test'
+import { formatNumbers } from '../utils/order-calculations'
 
 export class OrderReceivedPage {
 	readonly page: Page
@@ -33,7 +34,7 @@ export class OrderReceivedPage {
 			await this.page.waitForSelector('.woocommerce-order-overview__total >> strong')
 			const actualTotal = await this.total.innerText()
 			if (process.env.BYPASS_TAX_CALC != 'true') {
-				await expect(actualTotal).toContain(orderInfo.total)
+				await expect(await formatNumbers(actualTotal)).toContain(orderInfo.total)
 			}
 		})
 		return orderNumber

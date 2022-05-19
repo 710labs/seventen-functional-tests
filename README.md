@@ -210,4 +210,33 @@ Endpoints will require a `x-api-key` header. You can set this apiKey [here](http
 - Currently will run in GitHub Actions nightly and on push to the main branch of the repo
 - [In-Progress] Working on tests executing + gating merges to dev + staging
 
+### Enabling thelist-fl tests in gh-actions
+
+```
+      - name: Setup Env
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'https://thelist-dev.710labs.com/wp-content/plugins/seventen-qa/api/domains/update/?state=ca'
+          method: 'GET'
+          customHeaders: '{\"x-api-key\":\"${{secrets.API_KEY}}\"}'
+```
+
+### Pushing PWTest Report to gh-pages 
+
+```
+   - name: Copy Test Results
+        if: always()
+        run: |
+          mkdir public
+          cp -r playwright-report public
+      - name: Publish 710 Labs Test Report
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+```
+
 
