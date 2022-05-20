@@ -4,7 +4,7 @@ on:
     - cron: "0 15 * * *"
   workflow_dispatch:
 jobs:
-  test-dev-ca:
+  test-dev-fl:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -30,7 +30,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev
+        run: npm run ci:test:dev:fl
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -78,7 +78,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright In Stage Env
-        run: npm run ci:test:staging
+        run: npm run ci:test:staging:fl
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
