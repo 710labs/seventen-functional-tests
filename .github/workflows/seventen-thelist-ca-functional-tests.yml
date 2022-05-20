@@ -1,13 +1,9 @@
-name: seventen-functional-tests
+name: thelist-ca-tests
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   schedule:
     - cron: "0 14 * * *"
 jobs:
-  test-dev-ca:
+  test-dev-fl:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -17,6 +13,7 @@ jobs:
       BASE_URL: ${{ secrets.BASE_URL }}
       RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -24,6 +21,11 @@ jobs:
           node-version: "14.x"
       - name: Install dependencies
         run: npm ci
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
@@ -60,6 +62,11 @@ jobs:
           node-version: "14.x"
       - name: Install dependencies
         run: npm ci
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright In Stage Env
