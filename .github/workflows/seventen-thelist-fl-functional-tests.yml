@@ -13,7 +13,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
-      BYPASS_TAX_CALC: false
+      BYPASS_TAX_CALC: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
     steps:
       - uses: actions/checkout@v2
@@ -61,7 +61,7 @@ jobs:
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
-      BYPASS_TAX_CALC: false
+      BYPASS_TAX_CALC: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
     steps:
       - uses: actions/checkout@v2
