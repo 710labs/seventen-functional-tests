@@ -27,6 +27,7 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL }}${{ secrets.QA_ENDPOINT }}domains/update/?state=fl
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
+          debug: true
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
@@ -41,6 +42,7 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
+          debug: true
       - name: Slack Notification
         if: always()
         uses: rtCamp/action-slack-notify@v2
@@ -75,6 +77,7 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=fl
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
+          debug: true
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright In Stage Env
@@ -89,6 +92,7 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
+          debug: true
       - name: Slack Notification
         if: always()
         uses: rtCamp/action-slack-notify@v2
