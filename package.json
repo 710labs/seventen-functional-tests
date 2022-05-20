@@ -9,9 +9,12 @@
 		"test:dev": "npx playwright test --config=configs/dev.config.ts --headed --project=chromium --workers=1",
 		"test:staging": "npx playwright test --config=configs/staging.config.ts --headed --project=chromium --workers=1",
 		"test:prod": "npx playwright test --config=configs/prod.config.ts --headed --project=chromium --workers=1",
-		"ci:test:dev": "npx playwright test --config=configs/dev.config.ts --workers=8 --grep-invert=@FL",
-		"ci:test:staging": "npx playwright test --config=configs/staging.config.ts --workers=8 --grep-invert @FL",
-		"ci:test:prod": "npx playwright test --config=configs/prod.config.ts --workers=8"
+		"ci:test:dev:ca": "npx playwright test --config=configs/dev.config.ts --workers=8 --grep-invert=@FL",
+		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=8 --grep-invert @FL",
+		"ci:test:prod:ca": "npx playwright test --config=configs/prod.config.ts --workers=8",
+		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=8 --grep-invert=@CA",
+		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=8 --grep-invert @CA",
+		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=8"
 	},
 	"repository": {
 		"type": "git",

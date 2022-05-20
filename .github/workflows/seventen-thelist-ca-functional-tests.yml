@@ -30,7 +30,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev
+        run: npm run ci:test:dev:ca
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -71,7 +71,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright In Stage Env
-        run: npm run ci:test:staging
+        run: npm run ci:test:staging:ca
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
