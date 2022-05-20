@@ -2,6 +2,7 @@ name: thelist-fl-tests
 on:
   schedule:
     - cron: "0 15 * * *"
+  workflow_dispatch:
 jobs:
   test-dev-ca:
     timeout-minutes: 60

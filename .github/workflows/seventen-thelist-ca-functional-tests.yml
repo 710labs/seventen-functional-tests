@@ -2,6 +2,7 @@ name: thelist-ca-tests
 on:
   schedule:
     - cron: "0 14 * * *"
+  workflow_dispatch:
 jobs:
   test-dev-fl:
     timeout-minutes: 60
