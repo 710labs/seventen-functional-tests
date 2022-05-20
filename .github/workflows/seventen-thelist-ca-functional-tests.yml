@@ -26,7 +26,7 @@ jobs:
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
           endpoint: ${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
@@ -67,7 +67,7 @@ jobs:
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
           endpoint: ${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_TOKEN }}"} }'
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright In Stage Env
