@@ -54,6 +54,9 @@ export class CartPage {
 			for (let i = 0; i < productRows.length; i++) {
 				var unitPrice = await (await productRows[i].$('.product-price >> bdi')).innerHTML()
 				unitPrice = await formatNumbers(unitPrice)
+				if (unitPrice == '0.00') {
+					continue
+				}
 				var quanity = await (await productRows[i].$('.qty')).inputValue()
 				var amount = await formatNumbers(
 					await (await productRows[i].$('.product-subtotal >> bdi')).innerHTML(),

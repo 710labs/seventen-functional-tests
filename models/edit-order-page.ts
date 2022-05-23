@@ -13,7 +13,8 @@ export class EditOrderPage {
 		this.loginButton = page.locator('text=Log In')
 	}
 
-	async splitOrder(orderNumber: any, orderQuanity: any) {
+	async splitOrder(orderNumber: any, orderQuanity: any): Promise<string> {
+		var splitOrderNumber
 		await test.step('Pull Edit Order Page', async () => {
 			await this.page.goto(`/wp-admin/post.php?post=${orderNumber}&action=edit`)
 			console.log('Order Link:' + (await this.page.url()))
@@ -28,7 +29,7 @@ export class EditOrderPage {
 		})
 		await test.step('Confirm Split', async () => {
 			await this.page.waitForSelector('text=Order split into')
-			const splitOrderNumber = await (
+			splitOrderNumber = await (
 				await (await this.page.$('text=Order split into >> a')).innerText()
 			).replace('#', '')
 			await this.page.goto(`/wp-admin/post.php?post=${splitOrderNumber}&action=edit`)
@@ -37,6 +38,20 @@ export class EditOrderPage {
 				await this.page.locator(`text=Order split from #${orderNumber}`),
 				'split should link to original order',
 			).toBeVisible()
+		})
+		console.log(splitOrderNumber)
+		return splitOrderNumber
+	}
+
+	async cancelOrder(orderNumber: any) {
+		await test.step('Pull Edit Order Page', async () => {
+			await this.page.goto(`/wp-admin/post.php?post=${orderNumber}&action=edit`)
+			console.log('Order Link:' + (await this.page.url()))
+		})
+		await test.step('Cancel Order', async () => {
+			await this.page.locator('#select2-order_status-container').click()
+			await this.page.locator('text=Cancelled').click()
+			await this.page.locator('.save_order').click()
 		})
 	}
 }

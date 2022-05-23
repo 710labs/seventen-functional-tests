@@ -14,12 +14,13 @@ export class SchedulingPage {
 	}
 
 	async scheduleDelivery(): Promise<any> {
-		this.page.waitForNavigation()
 		await test.step('Validate Scheduling Page', async () => {
 			await expect(
 				this.page.locator('#svntnAcuityPane'),
 				'Accuity Scheduling should appear',
-			).toBeVisible()
+			).toBeVisible({
+				timeout: 30000
+			})
 			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 				'href',
 				'/terms-of-use',
