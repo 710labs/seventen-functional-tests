@@ -50,8 +50,8 @@ export class EditOrderPage {
 		})
 		await test.step('Cancel Order', async () => {
 			await this.page.locator('#select2-order_status-container').click()
-			await this.page.locator('text=Cancelled').click()
-			await this.page.locator('.save_order').click()
+			await this.page.locator('li[role="option"]:has-text("Cancelled")').click()
+			await this.page.locator('button[name="save"]').click()
 		})
 	}
 }
