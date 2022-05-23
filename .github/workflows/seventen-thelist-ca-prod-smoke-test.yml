@@ -1,7 +1,7 @@
-name: seventen-basic-acceptance-test-prod-ca
+name: thelist-ca-smoke-tests-prod
 on: workflow_dispatch
 jobs:
-  basic-acceptance-test-prod-ca:
+  smoke-test-prod-ca:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
