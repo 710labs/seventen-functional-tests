@@ -11,7 +11,7 @@ jobs:
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
@@ -25,7 +25,7 @@ jobs:
       - name: Set Domain to FL
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
-          endpoint: ${{ secrets.BASE_URL }}${{ secrets.QA_ENDPOINT }}domains/update/?state=fl
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=fl
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
           debug: true
       - name: Install Playwright
@@ -40,7 +40,7 @@ jobs:
       - name: Set Domain to CA
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
-          endpoint: ${{ secrets.BASE_URL }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
           debug: true
       - name: Slack Notification
