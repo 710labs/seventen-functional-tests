@@ -8,8 +8,9 @@ jobs:
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL }}
+      BASE_URL: ${{ secrets.BASE_URL_PROD }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -20,7 +21,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run bat:dev:ca
+        run: npm run smoke:test:prod:ca
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -33,6 +34,6 @@ jobs:
           SLACK_COLOR: ${{ job.status }}
           SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
           SLACK_MESSAGE: env-prod-ca(https://thelist.710labs.com) status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: Test Run Status
+          SLACK_TITLE: Test Run Status thelist-ca-smoke
           SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

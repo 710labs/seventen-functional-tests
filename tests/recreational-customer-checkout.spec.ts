@@ -46,7 +46,7 @@ test.describe('Recreational Customer Checkout', () => {
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', '90210', 0)
+		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', '90210', 0)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}

@@ -34,7 +34,7 @@ test.describe('Admin Split Order', () => {
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', zipCode, 1)
+		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 1)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}

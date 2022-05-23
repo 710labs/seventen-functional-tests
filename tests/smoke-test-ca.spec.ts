@@ -17,6 +17,7 @@ test.describe('Basic Acceptance Tests @CA', () => {
 	const orderQuanity = 6
 	var orderTotals
 	var orderNumber
+	var splitOrderNumber
 
 	test.beforeEach(async ({ page, browserName }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
@@ -32,7 +33,7 @@ test.describe('Basic Acceptance Tests @CA', () => {
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs.com`, 'test1234!', zipCode, 1)
+		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 1)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
@@ -41,10 +42,6 @@ test.describe('Basic Acceptance Tests @CA', () => {
 		await test.step('Verify Checkout Page Totals + Taxes', async () => {
 			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
 		})
-		await test.step('Schedule Delivery', async () => {
-			await schedulingPage.scheduleDelivery()
-		})
-
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
@@ -57,11 +54,16 @@ test.describe('Basic Acceptance Tests @CA', () => {
 	test(`Basic Acceptance Test @CA @BAT`, async ({ page, browserName }, workerInfo) => {
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
+
 		await test.step('Login Admin', async () => {
 			await adminLoginPage.login()
 		})
 		await test.step('Admin Split Order', async () => {
-			await editOrderPage.splitOrder(orderNumber, orderQuanity)
+			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
+		})
+		await test.step('Cancel Order', async () => {
+			await editOrderPage.cancelOrder(orderNumber)
+			await editOrderPage.cancelOrder(splitOrderNumber)
 		})
 	})
 })
