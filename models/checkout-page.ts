@@ -1,4 +1,4 @@
-import test, { expect, Locator, Page, request } from '@playwright/test'
+import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
 import { faker } from '@faker-js/faker'
 import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
 
@@ -31,8 +31,9 @@ export class CheckoutPage {
 	checkoutButton: any
 	taxRates: any
 	zipcodes = zipcodes
+	apiContext: APIRequestContext
 
-	constructor(page: Page) {
+	constructor(page: Page, apiContext: APIRequestContext) {
 		this.page = page
 		this.firstNameInput = this.page.locator('input[name="billing_first_name"]')
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
@@ -43,6 +44,7 @@ export class CheckoutPage {
 		this.comments = this.page.locator('textarea[name="order_comments"]')
 		this.placeOrderButton = this.page.locator('id=place_order')
 		this.cartItems = new Array()
+		this.apiContext = apiContext
 	}
 
 	async verifyCheckoutTotals(zipcode: string, usageType: number, productList: any[]): Promise<any> {
@@ -51,19 +53,13 @@ export class CheckoutPage {
 		}
 
 		this.cartItems = []
-		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
 		await test.step('GET Tax Rates + Product Info', async () => {
 			await test.step('GET Tax Rate', async () => {
 				//Get Tax Rates
 				console.log(zipcode)
 
-				const taxRateResponse = await apiContext.get(
-					`${process.env.QA_ENDPOINT}rates/?postCode=${zipcode}`,
+				const taxRateResponse = await this.apiContext.get(
+					`rates/?postCode=${zipcode}`,
 				)
 				const taxRateResponseBody: any = await taxRateResponse.json()
 

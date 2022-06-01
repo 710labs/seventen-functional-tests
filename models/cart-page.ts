@@ -1,4 +1,4 @@
-import test, { Page, TestInfo, Locator, expect, request } from '@playwright/test'
+import test, { Page, TestInfo, Locator, expect, request, APIRequestContext } from '@playwright/test'
 import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
 
 export class CartPage {
@@ -9,14 +9,22 @@ export class CartPage {
 	cartItems: any[]
 	cartTotal: any
 	usageType: any
+	apiContext: APIRequestContext
 
-	constructor(page: Page, browserName: any, workerInfo: TestInfo, usageType) {
+	constructor(
+		page: Page,
+		apiContext: APIRequestContext,
+		browserName: any,
+		workerInfo: TestInfo,
+		usageType,
+	) {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
 		this.checkoutButton = this.page.locator('text=Proceed')
 		this.cartItems = new Array()
 		this.usageType = usageType
+		this.apiContext = apiContext
 	}
 
 	async verifyCart(zipcode: string): Promise<any> {
@@ -27,19 +35,12 @@ export class CartPage {
 			return this.cartItems
 		}
 
-		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
-
 		await test.step('Verify Cart Totals', async () => {
 			//Get Tax Rates
 			var taxRates: any
 
-			const taxRateResponse = await apiContext.get(
-				`${process.env.QA_ENDPOINT}rates/?postCode=${zipcode}`,
+			const taxRateResponse = await this.apiContext.get(
+				`rates/?postCode=${zipcode}`,
 			)
 			const taxRateResponseBody: any = await taxRateResponse.json()
 
@@ -69,8 +70,8 @@ export class CartPage {
 
 				var productId = await idElement.getAttribute('data-product_id')
 
-				const productInfoResponse = await apiContext.get(
-					`${process.env.QA_ENDPOINT}products/?productId=${productId}`,
+				const productInfoResponse = await this.apiContext.get(
+					`products/?productId=${productId}`,
 				)
 				const productInfoResponseBody: any = await productInfoResponse.json()
 
