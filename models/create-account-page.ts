@@ -1,4 +1,4 @@
-import test, { expect, Locator, Page, request } from '@playwright/test'
+import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
 
 export class CreateAccountPage {
 	readonly page: Page
@@ -25,10 +25,12 @@ export class CreateAccountPage {
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
 	apiUser: any
+	apiContext: APIRequestContext
 
-	constructor(page: Page) {
-		this.page = page
-		this.userNameField = page.locator('input[name="email"]')
+	constructor(page: Page, apiContext: APIRequestContext) {
+		;(this.page = page),
+			(this.apiContext = apiContext),
+			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
 		this.usageType = page.locator('input[name="svntn_last_usage_type"]')
 		this.zipCode = page.locator('input[name="svntn_core_registration_zip"]')
@@ -44,21 +46,14 @@ export class CreateAccountPage {
 		this.medCardExpDay = page.locator('select[name="svntn_core_mxp_day"]')
 		this.medCardExpYear = page.locator('select[name="svntn_core_mxp_year"]')
 		this.patientId = page.locator('input[name="svntn_fl_patient_id"]')
-
 		this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license')
 		this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
 		this.apiUser = null
 	}
 	async createApi(usage: string, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
-			const apiContext = await request.newContext({
-				baseURL: `${process.env.BASE_URL}`,
-				extraHTTPHeaders: {
-					'x-api-key': `${process.env.API_KEY}`,
-				},
-			})
-			const createUserResponse = await apiContext.get(
-				`${process.env.QA_ENDPOINT}users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
+			const createUserResponse = await this.apiContext.get(
+				`users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
 			)
 			this.apiUser = await createUserResponse.json()
 			console.log(this.apiUser)

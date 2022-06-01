@@ -1,4 +1,4 @@
-import { test, expect, devices } from '@playwright/test'
+import { test, expect, devices, request, APIRequestContext } from '@playwright/test'
 import { ListPasswordPage } from '../models/list-password-protect-page'
 import { AgeGatePage } from '../models/age-gate-page'
 import { LoginPage } from '../models/login-page'
@@ -11,15 +11,24 @@ import { SchedulingPage } from '../models/scheduling-page'
 import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Medical Customer Checkout', () => {
+	var apiContext: APIRequestContext
+	test.beforeAll(async () => {
+		apiContext = await request.newContext({
+			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
+			extraHTTPHeaders: {
+				'x-api-key': `${process.env.API_KEY}`,
+			},
+		})
+	})
 	test(`Checkout Existing Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page)
+		const createAccountPage = new CreateAccountPage(page, apiContext)
 		const myAccountPage = new MyAccountPage(page)
 		const loginPage = new LoginPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page)
+		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+		const checkOutPage = new CheckoutPage(page, apiContext)
 		const schedulingPage = new SchedulingPage(page)
 
 		await ageGatePage.passAgeGate()
@@ -39,11 +48,11 @@ test.describe('Medical Customer Checkout', () => {
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page)
+		const createAccountPage = new CreateAccountPage(page, apiContext)
 		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page)
+		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+		const checkOutPage = new CheckoutPage(page, apiContext)
 		const schedulingPage = new SchedulingPage(page)
 
 		await ageGatePage.passAgeGate()
