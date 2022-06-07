@@ -2,7 +2,7 @@ import test, { APIRequestContext, expect, Locator, Page, request } from '@playwr
 import { faker } from '@faker-js/faker'
 import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
 
-import zipcodes from '../utils/zipcodes.json'
+import zipcodes from '../utils/zipcodes-ca.json'
 
 export class CheckoutPage {
 	readonly page: Page

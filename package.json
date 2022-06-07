@@ -6,17 +6,14 @@
 	"scripts": {
 		"test:local": "npx playwright test --config=configs/local.config.ts --headed --project=chromium --workers=1",
 		"ci:test:local": "npx playwright test --config=configs/local.config.ts --workers=8",
-		"test:dev": "npx playwright test --config=configs/dev.config.ts --headed --project=chromium --workers=1",
-		"test:staging": "npx playwright test --config=configs/staging.config.ts --headed --project=chromium --workers=1",
-		"test:prod": "npx playwright test --config=configs/prod.config.ts --headed --project=chromium --workers=1",
-		"ci:test:dev:ca": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep-invert=@FL",
-		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep-invert @FL",
-		"ci:test:prod:ca": "npx playwright test --config=configs/prod.config.ts --workers=10",
+		"ci:test:dev:ca": "playwright test --config=configs/dev.config.ts --workers=10 --grep @CA  ",
+		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @CA",
+		"ci:test:prod:ca": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @CA ",
 		"smoke:test:prod:ca": "npx playwright test smoke-test-ca --config=configs/prod.config.ts --workers=1",
 		"smoke:test:prod:fl": "npx playwright test basic-acceptance-test-fl --config=configs/prod.config.ts --workers=1",
-		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep-invert=@CA",
-		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep-invert @CA",
-		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10"
+		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep @FL",
+		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
+		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @FL"
 	},
 	"repository": {
 		"type": "git",
