@@ -39,19 +39,19 @@ export class EditOrderPage {
 				'split should link to original order',
 			).toBeVisible()
 		})
-		console.log(splitOrderNumber)
+		console.log('Split Order Link:' + (await this.page.url()))
 		return splitOrderNumber
 	}
 
 	async cancelOrder(orderNumber: any) {
 		await test.step('Pull Edit Order Page', async () => {
 			await this.page.goto(`/wp-admin/post.php?post=${orderNumber}&action=edit`)
-			console.log('Order Link:' + (await this.page.url()))
 		})
 		await test.step('Cancel Order', async () => {
 			await this.page.locator('#select2-order_status-container').click()
 			await this.page.locator('li[role="option"]:has-text("Cancelled")').click()
 			await this.page.locator('button[name="save"]').click()
+			console.log('Cancelled Order:' + (await this.page.url()))
 		})
 	}
 }

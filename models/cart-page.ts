@@ -39,9 +39,7 @@ export class CartPage {
 			//Get Tax Rates
 			var taxRates: any
 
-			const taxRateResponse = await this.apiContext.get(
-				`rates/?postCode=${zipcode}`,
-			)
+			const taxRateResponse = await this.apiContext.get(`rates/?postCode=${zipcode}`)
 			const taxRateResponseBody: any = await taxRateResponse.json()
 
 			taxRates = taxRateResponseBody
@@ -70,9 +68,7 @@ export class CartPage {
 
 				var productId = await idElement.getAttribute('data-product_id')
 
-				const productInfoResponse = await this.apiContext.get(
-					`products/?productId=${productId}`,
-				)
+				const productInfoResponse = await this.apiContext.get(`products/?productId=${productId}`)
 				const productInfoResponseBody: any = await productInfoResponse.json()
 
 				var id = productInfoResponseBody.product.id
@@ -88,63 +84,6 @@ export class CartPage {
 					subTotal: amount,
 				})
 			}
-			//Get CartTotal object (actual cart)
-			await this.page.waitForSelector('.shop_table')
-			var cartSubTotal = await (
-				await this.page.$('.shop_table >> .cart-subtotal >> bdi')
-			).innerHTML()
-
-			await expect(cartSubTotal, 'Unable to find Cart Sub Total').not.toBeNull()
-			cartSubTotal = await formatNumbers(cartSubTotal)
-			if (this.usageType === 0) {
-				var grossTaxAmount = await (
-					await this.page.$('.tax-rate-us-ca-county-gross-tax-1 >> .amount')
-				).innerHTML()
-				grossTaxAmount = await formatNumbers(grossTaxAmount)
-
-				var exciseTaxAmount = await (
-					await this.page.$('.tax-rate-us-ca-california-excise-tax-2 >> .amount')
-				).innerHTML()
-				exciseTaxAmount = await formatNumbers(exciseTaxAmount)
-
-				var salesTaxAmount = await (
-					await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
-				).innerHTML()
-				salesTaxAmount = await formatNumbers(salesTaxAmount)
-			} else {
-				var grossTaxAmount = await (
-					await this.page.$('.tax-rate-us-ca-gross-1 >> .amount')
-				).innerHTML()
-				grossTaxAmount = await formatNumbers(grossTaxAmount)
-
-				var exciseTaxAmount = await (
-					await this.page.$('.tax-rate-us-ca-excise-2 >> .amount')
-				).innerHTML()
-				exciseTaxAmount = await formatNumbers(exciseTaxAmount)
-
-				var salesTaxAmount = await (
-					await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
-				).innerHTML()
-				salesTaxAmount = await formatNumbers(salesTaxAmount)
-			}
-
-			var total = await (await this.page.$('.shop_table >> .order-total >> .amount')).innerHTML()
-			total = await formatNumbers(total)
-
-			this.cartTotal = {
-				cartSubTotal,
-				grossTaxAmount,
-				exciseTaxAmount,
-				salesTaxAmount,
-				total,
-			}
-			console.log(this.cartTotal)
-
-			var expectedCartTotal = await calculateCartTotals(taxRates, this.cartItems, this.usageType)
-			await expect(parseFloat(this.cartTotal.total)).toBeCloseTo(
-				parseFloat(expectedCartTotal.expectedTotal),
-				1,
-			)
 		})
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
 			this.checkoutButton.click()
