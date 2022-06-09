@@ -13,7 +13,8 @@
 		"smoke:test:prod:fl": "npx playwright test basic-acceptance-test-fl --config=configs/prod.config.ts --workers=1",
 		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep @FL",
 		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
-		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @FL"
+		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @FL",
+		"helper:acuityslots:dev":"npx playwright test -g \"Acuity Helpers\" --config=configs/dev.config.ts --project=chromium --workers=10"
 	},
 	"repository": {
 		"type": "git",
