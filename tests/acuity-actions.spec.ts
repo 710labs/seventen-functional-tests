@@ -148,7 +148,6 @@ test.describe('Acuity Helpers', () => {
 	for (let index = 0; index < flDeliveryZones.length; index++) {
 		test(`Add FL Acuity Slots: ${flDeliveryZones[index]} @helper`, async ({
 			page,
-			browserName,
 		}, workerInfo) => {
 			test.skip(workerInfo.project.name === 'mobile-chrome')
 			var acuityUrl
@@ -166,11 +165,11 @@ test.describe('Acuity Helpers', () => {
 					page.locator('text=Delivery Dashboard').click(),
 				])
 			})
-			await test.step(`Navigate to Acuity Scheduling ${caDeliveryZones[index]}`, async () => {
+			await test.step(`Navigate to Acuity Scheduling ${flDeliveryZones[index]}`, async () => {
 				;(acuityUrl = await page
-					.locator(`text=${caDeliveryZones[index]}`)
+					.locator(`text=${flDeliveryZones[index]}`)
 					.evaluate(e => e.getAttribute('href'))),
-					await page.locator(`text=${caDeliveryZones[index]}`).click()
+					await page.locator(`text=${flDeliveryZones[index]}`).click()
 			})
 			await test.step('Login to Acuity Scheduling', async () => {
 				await page
