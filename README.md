@@ -1,4 +1,4 @@
-# SevenTen Functional Tests
+# seventen functional tests
 
 [![seventen-functional-tests](https://github.com/710labs/seventen-functional-tests/actions/workflows/playwright.yml/badge.svg)](https://github.com/710labs/seventen-functional-tests/actions/workflows/playwright.yml)
 
@@ -13,7 +13,7 @@ npm install
 ```
 
 ## Example Test
-Here is a very simple test that goes throug hthe age gate user journey. For more complex testing scenarios the Page Object Model is used to centralize page interactions. 
+Here is a very simple test that goes through the age gate user journey. For more complex testing scenarios the Page Object Model is used to centralize page interactions. 
 ```javascript
     await this.page.goto('/');
     await this.page.click("text=I'm not 21 yet or don't qualify");
@@ -155,12 +155,17 @@ Set the following in a .env file before running the tests against a local instan
 
 BASE_URL (https://local.710labs.com)
 API_KEY (slack me for the value) 
-ADMIN_USER
-ADMIN_PW
+ADMIN_USER: Use your login for wp-instance
+ADMIN_PW:Use your login for wp-instance
+BYPASS_TAX_CALC:This will run tests without verifying tax totals for orders.
+ADD_ADDRESS_BEFORE_CHECKOUT= Changes workflow so user adds address information before checking out. 
+QA_ENDPOINT=/wp-content/plugins/seventen-qa/api/ (this will not change from env to env)
+ACUITY_USER:Used to automate creating acuity schedule slots. 
+ACUITY_PASSWORD:Used to automate creating acuity schedule slots. 
 ```
 via Command Line 
 ```powershell
-cross-env BASE_URL=https://cnn.com ADMIN_USER=admin@710labs.com ADMIN_PW=supersecure!API_KEY=topsecretkey npm run test:local
+cross-env BASE_URL=http://localhost:2000 ADMIN_USER=admin@710labs.com ADMIN_PW=supersecure! API_KEY=topsecretkey npm run test:local
 ```
 
 ```powershell
@@ -176,67 +181,56 @@ npm run test:dev -- --debug
 ```
 CI:
 
-These will run in headless mode and will execute in a variety of browsers and viewport sizes
+These will run in headless mode and will execute in a variety of browsers and viewport sizes in specified environment/domain.
 
-```powershell
-npm run ci:test:local
-npm run ci:test:dev
-npm run ci:test:staging
-npm run ci:test:prod
 
-```
+- npm run [ci:test:dev:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-dev-functional-tests.yml)
+- npm run [ci:test:staging:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-stage-functional-tests.yml)
+- ci:test:prod:ca
+- npm run [smoke:test:prod:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml)
+- npm run [ci:test:dev:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-fl-dev-functional-tests.yml)
+- npm run [ci:test:staging:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-fl-stage-functional-tests.yml)
+- npm run ci:test:prod:fl
+- npm run [smoke:test:prod:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml)
+- npm run [helper:acuityslots:dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-dev-acuity-slot-helper.yml)
+
 
 ## Test Tools
-### [Test Tools Documentation](https://document er.getpostman.com/view/11482169/UVeDuTqj)
-
+### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)
 Postman collection with examples of endpoints used for grabbing data used in test assertions.
-### GET Tax Rates By Zip
+
+### [GET Tax Rates By Zip](https://documenter.getpostman.com/view/11482169/UVeDuTqj#1db7646b-22e5-43f8-ad03-8f268a708b39)
 This API endpoint will return all tax rates (standard/medical, gross, excise, and sales) by zipcode query param. Could also use this [Playwright Script](https://gist.github.com/onlyunusedname/c75e8fa21e4516c687202c26c3cfdd76) to grab info from WordPress directly (more accurate)
-### GET Product Info
+
+### [GET Product Info](https://documenter.getpostman.com/view/11482169/UVeDuTqj#69c89906-d358-4f42-87a9-9476bcbf2905)
 Returns product info based on the following query params. These params are used in the following hierarchy if all are supplied. Only one query param is used per search.
 
 - productId
 - productSku
 - productName
 
-### POST User
+### [POST Customer](https://documenter.getpostman.com/view/11482169/UVeDuTqj#e201c50d-f5bd-4d9b-800a-27ddf8b869a5)
 This endpoint will automate the process of creating new and legacy users that can be used in tests. Users created via this endpoint will be cleaned up every 48 hours automatically. 
+
+### [POST Domain](https://documenter.getpostman.com/view/11482169/UVeDuTqj#d066d956-ab34-4134-9ad4-35338c018539)
+This endpoint will automate the process of switching from CA to FL settings in dev + stg. 
+
+### [POST Acuity Webhooks](https://documenter.getpostman.com/view/11482169/UVeDuTqj#d066d956-ab34-4134-9ad4-35338c018539)
+This endpoint will automate the process of enabling/disabling acuity webhooks in all environments + stg. 
 
 ### Test Tool Security 
 Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://thelist-dev.710labs.com/wp-admin/tools.php?page=svntn-qa).
 
 
-## CI/CD
-- Currently will run in GitHub Actions nightly and on push to the main branch of the repo
-- [In-Progress] Working on tests executing + gating merges to dev + staging
-
-### Enabling thelist-fl tests in gh-actions
-
-```
-      - name: Setup Env
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: 'https://thelist-dev.710labs.com/wp-content/plugins/seventen-qa/api/domains/update/?state=ca'
-          method: 'GET'
-          customHeaders: '{\"x-api-key\":\"${{secrets.API_KEY}}\"}'
-```
-
-### Pushing PWTest Report to gh-pages 
-
-```
-   - name: Copy Test Results
-        if: always()
-        run: |
-          mkdir public
-          cp -r playwright-report public
-      - name: Publish 710 Labs Test Report
-        if: always()
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./playwright-report
-          user_name: "github-actions[bot]"
-          user_email: "github-actions[bot]@users.noreply.github.com"
-```
+## Test Run Schedule
+- [ci:test:dev:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-dev-functional-tests.yml):Daily 7AM PST
+- [ci:test:staging:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-stage-functional-tests.yml): Daily 7AM PST
+- ci:test:prod:ca: On demand via local test run
+- [smoke:test:prod:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml):On demand via gh-actions
+- [ci:test:dev:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-fl-dev-functional-tests.yml):Daily 8AM PST
+- [ci:test:staging:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-fl-stage-functional-tests.yml):Daily 8AM PST
+- ci:test:prod:fl: On demand via local test run
+- [smoke:test:prod:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml): On Demand via gh-actions
+- [helper:acuityslots:dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-dev-acuity-slot-helper.yml): Monday, Wednesday, Friday @6AM
 
 
