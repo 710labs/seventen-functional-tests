@@ -9,21 +9,34 @@ export class AgeGatePage {
 		this.page = page
 	}
 
-	async passAgeGate() {
+	async passAgeGate(state: string = 'CA') {
 		await test.step('Pass Age Gate', async () => {
 			await this.page.goto('/')
 			await test.step('Verify Layout', async () => {
 				await expect(this.page.locator('h1 > img')).toBeVisible()
-				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
-					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
-				)
+
+				if (state === 'CA') {
+					await expect(this.page.locator('.age-gate-challenge')).toHaveText(
+						'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
+					)
+				} else {
+					await expect(this.page.locator('.age-gate-challenge')).toHaveText(
+						'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
+					)
+				}
+
 				await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 					'href',
 					'/terms-of-use',
 				)
 				await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
 			})
-			await this.page.click("text=I'm over 21 or a qualified patient")
+
+			if (state === 'CA') {
+				await this.page.click("text=I'm over 21 or a qualified patient")
+			} else {
+				await this.page.click('text=I Qualify')
+			}
 			const passwordField = await this.page.locator('input[name="post_password"]')
 			await passwordField.click()
 		})
