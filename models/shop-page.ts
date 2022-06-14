@@ -22,8 +22,9 @@ export class ShopPage {
 
 	async addProductsToCart(itemCount: number) {
 		await test.step('Add Products to Cart', async () => {
-			itemCount = itemCount + await this.randomizeCartItems();
+			itemCount = itemCount + (await this.randomizeCartItems())
 			await this.page.goto('/')
+			await this.page.waitForTimeout(3000)
 			await this.page.waitForSelector('[aria-label*="to your cart"]')
 			await this.page.waitForTimeout(5000)
 			const addToCartButtons = await this.page
