@@ -15,13 +15,13 @@ export class AgeGatePage {
 			await test.step('Verify Layout', async () => {
 				await expect(this.page.locator('h1 > img')).toBeVisible()
 
-				if (state === 'CA') {
+				if (state === 'FL' && process.env.BASE_URL === "https://thelist-fl.710labs.com") {
 					await expect(this.page.locator('.age-gate-challenge')).toHaveText(
-						'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
+						'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
 					)
 				} else {
 					await expect(this.page.locator('.age-gate-challenge')).toHaveText(
-						'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
+						'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
 					)
 				}
 
@@ -32,10 +32,10 @@ export class AgeGatePage {
 				await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
 			})
 
-			if (state === 'CA') {
-				await this.page.click("text=I'm over 21 or a qualified patient")
-			} else {
+			if (state === 'FL' && process.env.BASE_URL === "https://thelist-fl.710labs.com") {
 				await this.page.click('text=I Qualify')
+			} else {
+				await this.page.click("text=I'm over 21 or a qualified patient")
 			}
 			const passwordField = await this.page.locator('input[name="post_password"]')
 			await passwordField.click()
