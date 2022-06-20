@@ -22,7 +22,7 @@ test.describe('Acuity Helpers', () => {
 	var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 	test.beforeAll(async () => {
-		for (let index = 0; index < 7; index++) {
+		for (let index = 0; index < 10; index++) {
 			var currentDate = new Date()
 			currentDate.setDate(currentDate.getDate() + index)
 			dates.push(currentDate)
@@ -113,7 +113,7 @@ test.describe('Acuity Helpers', () => {
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
-							`text=9:00am ${days[dates[index].getDay()]}, ${
+							`text=9:00am PDT ${days[dates[index].getDay()]}, ${
 								months[dates[index].getMonth()]
 							} ${dates[index].getDate()}, ${dates[index].getFullYear()}`,
 						)
@@ -146,9 +146,7 @@ test.describe('Acuity Helpers', () => {
 	}
 
 	for (let index = 0; index < flDeliveryZones.length; index++) {
-		test(`Add FL Acuity Slots: ${flDeliveryZones[index]} @helper`, async ({
-			page,
-		}, workerInfo) => {
+		test(`Add FL Acuity Slots: ${flDeliveryZones[index]} @helper`, async ({ page }, workerInfo) => {
 			test.skip(workerInfo.project.name === 'mobile-chrome')
 			var acuityUrl
 			const adminLoginPage = new AdminLogin(page)
@@ -228,7 +226,7 @@ test.describe('Acuity Helpers', () => {
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
-							`text=9:00am ${days[dates[index].getDay()]}, ${
+							`text=9:00am PDT ${days[dates[index].getDay()]}, ${
 								months[dates[index].getMonth()]
 							} ${dates[index].getDate()}, ${dates[index].getFullYear()}`,
 						)
