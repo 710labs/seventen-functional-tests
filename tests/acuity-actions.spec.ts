@@ -2,6 +2,8 @@ import { test } from '@playwright/test'
 import { AdminLogin } from '../models/admin-login-page'
 import caDeliveryZones from '../utils/delivery-zones-ca.json'
 import flDeliveryZones from '../utils/delivery-zones-fl.json'
+const csvFilePath = 'utils/delivery-slots.csv'
+let csvToJson = require('convert-csv-to-json')
 
 test.describe('Acuity Helpers', () => {
 	var dates = []
@@ -255,6 +257,121 @@ test.describe('Acuity Helpers', () => {
 					])
 				})
 			}
+		})
+	}
+})
+
+test.describe('Acuity Automation', () => {
+	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
+	for (let i = 0; i < 5; i++) {
+		console.log(slots[i])
+	}
+
+	test.describe.configure({ mode: 'parallel' });
+
+	var dates = []
+	const months = [
+		+'January',
+		'February',
+		'March',
+		'April',
+		'May',
+		'June',
+		'July',
+		'August',
+		'September',
+		'October',
+		'November',
+		'December',
+	]
+	var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+	for (let index = 0; index < slots.length; index++) {
+		test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} @helper`, async ({
+			page,
+			browserName,
+		}, workerInfo) => {
+			test.skip(workerInfo.project.name === 'mobile-chrome')
+			var acuityUrl
+			await test.step('Login to Acuity Scheduling', async () => {
+				await page.goto('https://login.squarespace.com/')
+				await page
+					.locator('[placeholder="name\\@example\\.com"]')
+					.fill(`${process.env.ACUITY_USER}`)
+				await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
+				await Promise.all([
+					page.waitForNavigation(),
+					page.locator('[data-test="login-button"]').click(),
+				])
+			})
+			await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
+				await page.waitForTimeout(7500)
+				//Navigate to 90210 Zone
+				await page.goto(slots[index].URL)
+				await page.goto(slots[index].URL)
+				// Start Create Slot
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('#offer-class-btn')
+					.first()
+					.click()
+				// Select "Another Test Calendar"
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('select[name="calendar"]')
+					.selectOption({label: slots[index].CalendarName})
+				// Date Selector
+				// Select Day of Month
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('#date-input')
+					.fill(
+						`${slots[index].DateOffered}`,
+					)
+
+				// Select Time
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('[placeholder="Ex\\. 9\\:00am"]')
+					.click()
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('[placeholder="Ex\\. 9\\:00am"]')
+					.fill(`${slots[index].TimeOffered}`)
+				// Save Class
+				await Promise.all([
+					page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
+					page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Save Class').click(),
+				])
+
+				//Edit Capacity
+				//Select Slot
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator(
+						`text=${slots[index].LinkText}`,
+					)
+					.click()
+
+				// Click Edit
+				await page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Edit').click()
+
+				// Edit Capacity Value
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('text=Max number of people for this class >> input[name="group_max"]')
+					.click()
+				await page
+					.frameLocator('[data-test="scheduling-iframe"]')
+					.locator('text=Max number of people for this class >> input[name="group_max"]')
+					.fill(slots[index].Availability)
+
+				// Save Slot
+				await Promise.all([
+					page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
+					page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Save Changes').click(),
+				])
+			})
 		})
 	}
 })
