@@ -19,7 +19,7 @@ test.describe('Basic Acceptance Tests @CA', () => {
 	var orderNumber
 	var splitOrderNumber
 
-	test.beforeEach(async ({ page, browserName }, workerInfo) => {
+	test.beforeEach(async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
@@ -27,6 +27,14 @@ test.describe('Basic Acceptance Tests @CA', () => {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
 		})
+		await context.addCookies([
+			{
+				name: 'vipChecker',
+				value: '3',
+				domain: process.env.BASE_URL?.replace('https://', ''),
+				path: '/',
+			},
+		])
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)

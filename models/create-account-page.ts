@@ -11,6 +11,7 @@ export class CreateAccountPage {
 	readonly birthMonth: Locator
 	readonly birthDay: Locator
 	readonly birthYear: Locator
+	readonly address: Locator
 	readonly medCardExpMonth: Locator
 	readonly medCardExpDay: Locator
 	readonly medCardExpYear: Locator
@@ -24,6 +25,7 @@ export class CreateAccountPage {
 	readonly rememberMeCheckBox: Locator
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
+	readonly defaultAddress: string
 	apiUser: any
 	apiContext: APIRequestContext
 
@@ -42,6 +44,7 @@ export class CreateAccountPage {
 		this.updateBirthMonth = page.locator('select[name="svntn_core_dob_month"]')
 		this.updateBirthDay = page.locator('select[name="svntn_core_dob_day"]')
 		this.updateBirthYear = page.locator('select[name="svntn_core_dob_year"]')
+		this.address = page.locator('input[name="billing_address_1"]')
 		this.medCardExpMonth = page.locator('select[name="svntn_core_mxp_month"]')
 		this.medCardExpDay = page.locator('select[name="svntn_core_mxp_day"]')
 		this.medCardExpYear = page.locator('select[name="svntn_core_mxp_year"]')
@@ -49,6 +52,7 @@ export class CreateAccountPage {
 		this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license')
 		this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
 		this.apiUser = null
+		this.defaultAddress = '123 Main Street'
 	}
 	async createApi(usage: string, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
@@ -68,6 +72,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: number,
 		logout: boolean = false,
+		address: string = "",
 		state: string = 'CA',
 	) {
 		await test.step('Verify Layout', async () => {})
@@ -103,10 +108,20 @@ export class CreateAccountPage {
 			await this.birthYear.selectOption('1988')
 		})
 
-		await test.step('Enter Zip Code', async () => {
-			await this.zipCode.click()
-			await this.zipCode.fill(zipcode)
-		})
+		if (!address || address.length === 0) {
+			await test.step('Enter Zip Code', async () => {
+				await this.zipCode.click()
+				await this.zipCode.fill(zipcode)
+			})
+		} else {
+			await test.step('Enter Billing Address', async () => {
+				await this.address.click()
+				await this.address.fill(address)
+				await this.page.waitForTimeout(1000)
+				await this.page.keyboard.press('ArrowDown')
+				await this.page.keyboard.press('Enter')
+			})
+		}
 
 		await test.step('Submit New Customer Form', async () => {
 			await this.page.waitForTimeout(2000)

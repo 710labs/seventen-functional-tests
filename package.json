@@ -15,7 +15,7 @@
 		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
 		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @FL",
 		"helper:acuityslots:dev": "npx playwright test -g \"Acuity Helpers\" --config=configs/dev.config.ts --project=chromium --workers=10",
-		"helper:acuityslots": "npx playwright test -g \"Acuity Automation\" --config=configs/dev.config.ts --project=chromium --workers=8"
+		"helper:acuityslots": "npx playwright test -g \"Acuity Automation\" --config=configs/dev.config.ts --project=chromium --workers=10"
 	},
 	"repository": {
 		"type": "git",

@@ -1,8 +1,8 @@
-name: thelist-acuity-slot-helper-dev
+name: thelist-acuity-slot-automation
 on:
   workflow_dispatch:
 jobs:
-  acuity-slot-helper:
+  acuity-slot-automation:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
