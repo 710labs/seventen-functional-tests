@@ -13,6 +13,7 @@ import { OrderReceivedPage } from '../models/order-recieved-page'
 import { EditOrderPage } from '../models/edit-order-page'
 import { SchedulingPage } from '../models/scheduling-page'
 import { v4 as uuidv4 } from 'uuid'
+import { faker } from '@faker-js/faker'
 
 test.describe('Admin Split Order', () => {
 	const zipCode = '90210'
@@ -40,7 +41,14 @@ test.describe('Admin Split Order', () => {
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 1)
+		await createAccountPage.create(
+			`test+${uuidv4()}@710labs-test.com`,
+			'test1234!',
+			zipCode,
+			1,
+			false,
+			faker.address.streetAddress,
+		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}

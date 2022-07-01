@@ -54,10 +54,9 @@ export class MyAccountPage {
 			await this.page.goto('/my-account/')
 			await this.addressesLink.click()
 			await this.editBillingAddressLink.click()
-
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
-			await this.state.selectOption(state)
+			await this.state.selectOption(state, { force: true })
 			await this.phone.fill(phone)
 			await this.page.click('button:has-text("Save address")')
 		})

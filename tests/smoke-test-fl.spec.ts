@@ -20,13 +20,21 @@ test.describe('Medical Customer Checkout Florida', () => {
 	var splitOrderNumber
 	const orderQuanity = 6
 
-	test(`Basic Acceptance Test @FL @BAT`, async ({ page, browserName }, workerInfo) => {
+	test(`Basic Acceptance Test @FL @BAT`, async ({ page, browserName, context }, workerInfo) => {
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
 		})
+		await context.addCookies([
+			{
+				name: 'vipChecker',
+				value: '3',
+				domain: process.env.BASE_URL?.replace('https://', ''),
+				path: '/',
+			},
+		])
 		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
 		const zipCode = zipcodes[index]
 		const email = `test+${uuidv4()}@710labs-test.com`
@@ -42,7 +50,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
 
-		await ageGatePage.passAgeGate("FL")
+		await ageGatePage.passAgeGate('FL')
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(email, 'test1234', zipCode, 1, false, 'FL')
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
