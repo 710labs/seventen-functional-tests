@@ -74,7 +74,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: number,
 		logout: boolean = false,
-		address: string = '',
+		address: string = '123 Front Street',
 		state: string = 'CA',
 	) {
 		await test.step('Verify Layout', async () => {})
