@@ -125,7 +125,7 @@ export class CreateAccountPage {
 			})
 		}
 
-		if (state === 'FL') {
+		if (state === 'FL' && process.env.BASE_URL != 'https://thelist-fl.710labs.com') {
 			await test.step('Enter PatientId', async () => {
 				await this.patientId.click()
 				await this.patientId.fill('1234abcd')
@@ -182,6 +182,12 @@ export class CreateAccountPage {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption('2023')
+			})
+		}
+		if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com') {
+			await test.step('Enter PatientId', async () => {
+				await this.page.locator('input[name="svntn_fl_patient_id"]').click()
+				await this.page.locator('input[name="svntn_fl_patient_id"]').fill('1234abcd')
 			})
 		}
 		await test.step('Complete Usage Type Form', async () => {
