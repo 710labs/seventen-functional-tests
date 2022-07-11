@@ -48,7 +48,9 @@ export class CreateAccountPage {
 		this.medCardExpMonth = page.locator('select[name="svntn_core_mxp_month"]')
 		this.medCardExpDay = page.locator('select[name="svntn_core_mxp_day"]')
 		this.medCardExpYear = page.locator('select[name="svntn_core_mxp_year"]')
-		this.patientId = page.locator('input[name="svntn_fl_patient_id"]')
+		this.patientId = page.locator(
+			'input[name="medical_marijuana_registry_patient_identification_number_florida"]',
+		)
 		this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license')
 		this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
 		this.apiUser = null
@@ -72,7 +74,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: number,
 		logout: boolean = false,
-		address: string = "",
+		address: string = '',
 		state: string = 'CA',
 	) {
 		await test.step('Verify Layout', async () => {})
@@ -120,6 +122,13 @@ export class CreateAccountPage {
 				await this.page.waitForTimeout(1000)
 				await this.page.keyboard.press('ArrowDown')
 				await this.page.keyboard.press('Enter')
+			})
+		}
+
+		if (state === 'FL') {
+			await test.step('Enter PatientId', async () => {
+				await this.patientId.click()
+				await this.patientId.fill('1234abcd')
 			})
 		}
 
@@ -173,11 +182,6 @@ export class CreateAccountPage {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption('2023')
-			})
-
-			await test.step('Enter PatientId', async () => {
-				await this.patientId.click()
-				await this.patientId.fill('1234abcd')
 			})
 		}
 		await test.step('Complete Usage Type Form', async () => {
