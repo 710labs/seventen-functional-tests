@@ -21,6 +21,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 	const orderQuanity = 6
 
 	test(`Basic Acceptance Test @FL @BAT`, async ({ page, browserName, context }, workerInfo) => {
+		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
@@ -52,7 +53,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 
 		await ageGatePage.passAgeGate('FL')
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(email, 'test1234', zipCode, 1, false, "123 Front Street", 'FL')
+		await createAccountPage.create(email, 'test1234', zipCode, 1, false, '', 'FL')
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress('123 Front Street', 'Miami', '1234567890', 'FL')
 		}
