@@ -52,7 +52,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 
 		await ageGatePage.passAgeGate('FL')
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(email, 'test1234', zipCode, 1, false, 'FL')
+		await createAccountPage.create(email, 'test1234', zipCode, 1, false, "123 Front Street", 'FL')
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress('123 Front Street', 'Miami', '1234567890', 'FL')
 		}
