@@ -1,7 +1,5 @@
 name: thelist-ca-tests-stage
 on:
-  schedule:
-    - cron: "0 14 * * *"
   workflow_dispatch:
 jobs:
   run-tests:
