@@ -29,6 +29,7 @@ test.describe('Admin Split Order', () => {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
 		})
+		const address = '9779 Oak Pass Rd'
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -47,7 +48,7 @@ test.describe('Admin Split Order', () => {
 			zipCode,
 			1,
 			false,
-			faker.address.streetAddress,
+			address,
 		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
