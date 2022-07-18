@@ -38,6 +38,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		])
 		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
 		const zipCode = zipcodes[index]
+		const address = "3275 NW 24th Street Rd"
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -53,13 +54,13 @@ test.describe('Medical Customer Checkout Florida', () => {
 
 		await ageGatePage.passAgeGate('FL')
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(email, 'test1234', zipCode, 1, false, '', 'FL')
+		await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress('123 Front Street', 'Miami', '1234567890', 'FL')
+			await myAccountPage.addAddress(address, 'Miami', '1234567890', 'FL')
 		}
 		await shopPage.addProductsToCart(orderQuanity)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		await schedulingPage.scheduleDelivery()
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)

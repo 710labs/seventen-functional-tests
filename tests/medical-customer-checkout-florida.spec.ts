@@ -19,6 +19,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
 		})
+		const address = "3275 NW 24th Street Rd"
 		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
 		const zipCode = zipcodes[index]
 		const email = `test+${uuidv4()}@710labs-test.com`
@@ -35,11 +36,11 @@ test.describe('Medical Customer Checkout Florida', () => {
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(email, 'test1234', zipCode, 1, false, '123 Main Street','FL')
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress('123 Front Street', 'Miami', '1234567890', 'FL')
+			await myAccountPage.addAddress(address, 'Miami', '1234567890', 'FL')
 		}
 		await shopPage.addProductsToCart(6)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		await schedulingPage.scheduleDelivery()
 	})
 })
