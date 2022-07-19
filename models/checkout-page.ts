@@ -150,7 +150,7 @@ export class CheckoutPage {
 		productList: any,
 		usageType: number,
 		singleZip: boolean = false,
-		address: string = "9779 Oak Pass Rd"
+		address: string = '9779 Oak Pass Rd',
 	): Promise<any> {
 		const firstName = faker.name.firstName()
 		const lastName = faker.name.lastName()
@@ -174,13 +174,30 @@ export class CheckoutPage {
 			await this.lastNameInput.fill(lastName)
 		})
 
-		await test.step('Enter Billing Address', async () => {
-			await this.addressLine1.click()
-			await this.addressLine1.fill(address)
-			await this.page.waitForTimeout(1000)
-			await this.page.keyboard.press('ArrowDown')
-			await this.page.keyboard.press('Enter')
-		})
+		if (!process.env.NEXT_VERSION) {
+			await test.step('Fill in Street Address', async () => {
+				await this.addressLine1.click()
+				await this.addressLine1.fill(faker.address.streetAddress())
+			})
+
+			await test.step('Fill in State', async () => {
+				await this.city.click()
+				await this.city.fill(faker.address.cityName())
+			})
+
+			await test.step('Fill in ZipCode', async () => {
+				await this.zipCodeInput.click()
+				await this.zipCodeInput.fill(zipcode)
+			})
+		} else {
+			await test.step('Enter Billing Address', async () => {
+				await this.addressLine1.click()
+				await this.addressLine1.fill(address)
+				await this.page.waitForTimeout(1000)
+				await this.page.keyboard.press('ArrowDown')
+				await this.page.keyboard.press('Enter')
+			})
+		}
 
 		await test.step('Fill in Phone Number', async () => {
 			await this.phoneInput.click()

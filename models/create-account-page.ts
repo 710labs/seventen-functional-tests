@@ -110,7 +110,7 @@ export class CreateAccountPage {
 			await this.birthYear.selectOption('1988')
 		})
 
-		if (!address || address.length === 0) {
+		if (process.env.NEXT_VERSION === 'false') {
 			await test.step('Enter Zip Code', async () => {
 				await this.zipCode.click()
 				await this.zipCode.fill(zipcode)
