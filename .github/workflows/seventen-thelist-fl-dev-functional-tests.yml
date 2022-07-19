@@ -15,6 +15,7 @@ jobs:
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
+      NEXT_VERSION: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
