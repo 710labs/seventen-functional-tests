@@ -174,7 +174,7 @@ export class CheckoutPage {
 			await this.lastNameInput.fill(lastName)
 		})
 
-		if (!process.env.NEXT_VERSION) {
+		if (process.env.NEXT_VERSION === 'false') {
 			await test.step('Fill in Street Address', async () => {
 				await this.addressLine1.click()
 				await this.addressLine1.fill(faker.address.streetAddress())
