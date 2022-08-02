@@ -35,7 +35,7 @@ export class CreateAccountPage {
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
 		this.usageType = page.locator('input[name="svntn_last_usage_type"]')
-		this.zipCode = page.locator('input[name="svntn_core_registration_zip"]')
+		this.zipCode = page.locator('input[name="billing_postcode"]')
 		this.firstName = page.locator('input[name="svntn_core_registration_firstname"]')
 		this.lastName = page.locator('input[name="svntn_core_registration_lastname"]')
 		this.birthMonth = page.locator('select[name="svntn_core_dob_month_sbmt"]')
