@@ -38,7 +38,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress(address, 'Miami', '1234567890', 'FL')
 		}
-		await shopPage.addProductsToCart(6)
+		await shopPage.addProductsToCart(6, true)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		await schedulingPage.scheduleDelivery()

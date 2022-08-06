@@ -38,7 +38,7 @@ test.describe('Medical Customer Checkout', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6)
+		await shopPage.addProductsToCart(6, true)
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 		await schedulingPage.scheduleDelivery()
@@ -61,7 +61,7 @@ test.describe('Medical Customer Checkout', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6)
+		await shopPage.addProductsToCart(6, true)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 		await schedulingPage.scheduleDelivery()

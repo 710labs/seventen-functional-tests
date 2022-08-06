@@ -41,7 +41,7 @@ test.describe('Recreational Customer Checkout', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6)
+		await shopPage.addProductsToCart(6, true)
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 		await schedulingPage.scheduleDelivery()
@@ -62,7 +62,7 @@ test.describe('Recreational Customer Checkout', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6)
+		await shopPage.addProductsToCart(6, true)
 		var cartTotals = await cartPage.verifyCart(`90210`)
 		await checkOutPage.confirmCheckout(`90210`, cartTotals, 0)
 		await schedulingPage.scheduleDelivery()
