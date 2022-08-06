@@ -1,6 +1,8 @@
 import test, { Browser, expect, Locator, Page, TestInfo } from '@playwright/test'
+require('dotenv').config({ path: require('find-config')('.env') })
 
 export class ShopPage {
+	readonly baseUrl: string
 	readonly page: Page
 	readonly browserName: any
 	readonly workerInfo: TestInfo
@@ -14,13 +16,14 @@ export class ShopPage {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
+		this.baseUrl = process.env.BASE_URL
 	}
 
 	async randomizeCartItems() {
 		return Math.random() * (2 - -2 + -2)
 	}
 
-	async addProductsToCart(itemCount: number) {
+	async addProductsToCart(itemCount: number, mobile = false) {
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
 			await this.page.goto('/')
@@ -37,9 +40,21 @@ export class ShopPage {
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
-			await this.page
-				.locator(`[title="View your shopping cart"] >> visible=true`)
-				.click({ force: true })
+			if (mobile) {
+				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
+			} else {
+				if (process.env.BASE_URL === 'https://thelist-fl.710labs.com') {
+					await this.page
+						.locator(`[href="${process.env.BASE_URL}/reservations/"]`)
+						.first()
+						.click({ force: true })
+				} else {
+					await this.page
+						.locator(`[href="${process.env.BASE_URL}/cart/"]`)
+						.first()
+						.click({ force: true })
+				}
+			}
 		})
 	}
 	async addSameProductToCart(itemCount: number) {
@@ -56,7 +71,7 @@ export class ShopPage {
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
-			await this.page.locator(`[title="View your shopping cart"] >> visible=true`).click()
+			await this.page.locator(``).first().click({ force: true })
 		})
 	}
 }

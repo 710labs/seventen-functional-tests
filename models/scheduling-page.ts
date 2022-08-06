@@ -19,7 +19,7 @@ export class SchedulingPage {
 				this.page.locator('#svntnAcuityPane'),
 				'Accuity Scheduling should appear',
 			).toBeVisible({
-				timeout: 30000
+				timeout: 30000,
 			})
 			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 				'href',
@@ -31,6 +31,7 @@ export class SchedulingPage {
 			await this.deliveryDay.evaluate((node: HTMLElement) => {
 				node.click()
 			})
+			await this.page.waitForTimeout(10000) 
 			await this.deliveryTime.evaluate((node: HTMLElement) => {
 				node.click()
 			})
