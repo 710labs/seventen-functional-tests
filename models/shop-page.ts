@@ -43,9 +43,9 @@ export class ShopPage {
 			if (mobile) {
 				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
 			} else {
-				if (process.env.BASE_URL === 'https://thelist-fl.710labs.com') {
+				if (process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
 					await this.page
-						.locator(`[href="${process.env.BASE_URL}/reservations/"]`)
+						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
 						.first()
 						.click({ force: true })
 				} else {
