@@ -31,7 +31,7 @@ export class AgeGatePage {
 				)
 			}
 
-			if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com') {
+			if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
 				await this.page.click('text=I Qualify')
 			} else {
 				await this.page.click("text=I'm over 21 or a qualified patient")
