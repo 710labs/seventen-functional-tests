@@ -21,7 +21,7 @@ export class AgeGatePage {
 				)
 				await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
 			})
-			if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com') {
+			if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
 				)
