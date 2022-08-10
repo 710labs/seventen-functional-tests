@@ -30,6 +30,7 @@ test.describe('Medical Customer Checkout', () => {
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		const schedulingPage = new SchedulingPage(page)
+		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
 		var user = await createAccountPage.createApi('medical', 'current')
@@ -38,7 +39,7 @@ test.describe('Medical Customer Checkout', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, true)
+		await shopPage.addProductsToCart(6, mobile)
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 		await schedulingPage.scheduleDelivery()
@@ -54,6 +55,7 @@ test.describe('Medical Customer Checkout', () => {
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		const schedulingPage = new SchedulingPage(page)
+		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
@@ -61,7 +63,7 @@ test.describe('Medical Customer Checkout', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, true)
+		await shopPage.addProductsToCart(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 		await schedulingPage.scheduleDelivery()

@@ -31,6 +31,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		const schedulingPage = new SchedulingPage(page)
+		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
@@ -38,7 +39,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress(address, 'Miami', '1234567890', 'FL')
 		}
-		await shopPage.addProductsToCart(6, true)
+		await shopPage.addProductsToCart(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		await schedulingPage.scheduleDelivery()
