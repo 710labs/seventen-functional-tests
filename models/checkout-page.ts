@@ -12,6 +12,8 @@ export class CheckoutPage {
 	readonly addressLine1: Locator
 	readonly city: Locator
 	readonly zipCodeInput: Locator
+	readonly addressModifierButton: Locator
+	readonly addressModifierSubmitButton: Locator
 	readonly comments: Locator
 	readonly subTotal: Locator
 	readonly grossTaxAmount: Locator
@@ -39,6 +41,8 @@ export class CheckoutPage {
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
 		this.phoneInput = this.page.locator('input[name="billing_phone"]')
 		this.addressLine1 = this.page.locator('input[name="billing_address_1"]')
+		this.addressModifierButton = this.page.locator('[data-modder="address"]')
+		this.addressModifierSubmitButton = this.page.locator('a > [data-mod="address"]')
 		this.city = this.page.locator('input[name="billing_city"]')
 		this.zipCodeInput = this.page.locator('input[name="billing_postcode"]')
 		this.comments = this.page.locator('textarea[name="order_comments"]')
@@ -163,58 +167,14 @@ export class CheckoutPage {
 			)
 			await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
 		})
-		await test.step('Fill in First Name', async () => {
-			await this.page.waitForTimeout(3000)
-			await this.firstNameInput.click()
-			await this.firstNameInput.fill(firstName)
-		})
-
-		await test.step('Fill in Last Name', async () => {
-			await this.lastNameInput.click()
-			await this.lastNameInput.fill(lastName)
-		})
-
-		if (process.env.NEXT_VERSION === 'false') {
-			await test.step('Fill in Street Address', async () => {
-				await this.addressLine1.click()
-				await this.addressLine1.fill(faker.address.streetAddress())
-			})
-
-			await test.step('Fill in State', async () => {
-				await this.city.click()
-				await this.city.fill(faker.address.cityName())
-			})
-
-			await test.step('Fill in ZipCode', async () => {
-				await this.zipCodeInput.click()
-				await this.zipCodeInput.fill(zipcode)
-			})
-		} else {
-			await test.step('Enter Billing Address', async () => {
-				await this.addressLine1.click()
-				await this.addressLine1.fill(address)
-				await this.page.waitForTimeout(1000)
-				await this.page.keyboard.press('ArrowDown')
-				await this.page.keyboard.press('Enter')
-			})
-		}
-
-		await test.step('Fill in Phone Number', async () => {
-			await this.phoneInput.click()
-			await this.phoneInput.fill('123-456-7890')
-		})
-
-		await test.step('Fill in Order Notes', async () => {
-			await this.comments.click()
-			await this.comments.fill(faker.random.words(30))
-		})
 
 		if (singleZip === false) {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
+					await this.addressModifierButton.click()
 					await this.zipCodeInput.click()
 					await this.zipCodeInput.fill(this.zipcodes[i])
-					await this.zipCodeInput.press('Enter')
+					await this.page.locator('text=Submit >> nth=0').click()
 					await this.page.waitForTimeout(1000)
 					cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
 				})
@@ -222,6 +182,10 @@ export class CheckoutPage {
 		} else {
 			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
 		}
+
+		await test.step('Select Acuity Slot', async () => {
+			await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first().click()
+		})
 
 		await test.step('Submit New Customer Order', async () => {
 			await this.placeOrderButton.click()

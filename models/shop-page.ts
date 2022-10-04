@@ -24,10 +24,17 @@ export class ShopPage {
 	}
 
 	async addProductsToCart(itemCount: number, mobile = false) {
-		await test.step('Add Products to Cart', async () => {
-			itemCount = itemCount + (await this.randomizeCartItems())
+		await test.step('Navigate to Shop page', async () => {
 			await this.page.goto('/')
 			await this.page.waitForTimeout(3000)
+		})
+		await test.step('Select Fulfillment Method', async () => {
+			await this.page.waitForSelector('label:has-text("Delivery")')
+			await this.page.locator('label:has-text("Delivery") >> nth=0').click()
+			await this.page.locator('#fulfillerSubmit').click()
+		})
+		await test.step('Add Products to Cart', async () => {
+			itemCount = itemCount + (await this.randomizeCartItems())
 			await this.page.waitForSelector('[aria-label*="to your cart"]')
 			await this.page.waitForTimeout(5000)
 			const addToCartButtons = await this.page
@@ -50,7 +57,7 @@ export class ShopPage {
 						.click({ force: true })
 				} else {
 					await this.page
-						.locator(`[href="${process.env.BASE_URL}/cart/"]`)
+						.locator(`[href="${process.env.BASE_URL}cart/"]`)
 						.first()
 						.click({ force: true })
 				}

@@ -14,11 +14,13 @@ export class AdminLogin {
 	}
 
 	async login() {
-		await test.step('Logout User', async () => {
-			await this.page.goto('/wp-admin/')
-			await this.userNameField.fill(`${process.env.ADMIN_USER}`)
-			await this.passwordField.fill(`${process.env.ADMIN_PW}`)
-			await this.loginButton.click()
+		await test.step('Login User', async () => {
+			await Promise.all([
+				await this.page.goto('/wp-admin/'),
+				await this.userNameField.fill(`${process.env.ADMIN_USER}`),
+				await this.passwordField.fill(`${process.env.ADMIN_PW}`),
+				await this.loginButton.click(),
+			])
 		})
 	}
 }

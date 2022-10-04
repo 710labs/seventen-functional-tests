@@ -26,6 +26,7 @@ export class CreateAccountPage {
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
 	readonly defaultAddress: string
+	readonly phoneNumber: Locator
 	apiUser: any
 	apiContext: APIRequestContext
 
@@ -42,9 +43,9 @@ export class CreateAccountPage {
 		}
 		this.firstName = page.locator('input[name="svntn_core_registration_firstname"]')
 		this.lastName = page.locator('input[name="svntn_core_registration_lastname"]')
-		this.birthMonth = page.locator('select[name="svntn_core_dob_month_sbmt"]')
-		this.birthDay = page.locator('select[name="svntn_core_dob_day_sbmt"]')
-		this.birthYear = page.locator('select[name="svntn_core_dob_year_sbmt"]')
+		this.birthMonth = page.locator('select[name="svntn_core_dob_month"]')
+		this.birthDay = page.locator('select[name="svntn_core_dob_day"]')
+		this.birthYear = page.locator('select[name="svntn_core_dob_year"]')
 		this.updateBirthMonth = page.locator('select[name="svntn_core_dob_month"]')
 		this.updateBirthDay = page.locator('select[name="svntn_core_dob_day"]')
 		this.updateBirthYear = page.locator('select[name="svntn_core_dob_year"]')
@@ -52,13 +53,12 @@ export class CreateAccountPage {
 		this.medCardExpMonth = page.locator('select[name="svntn_core_mxp_month"]')
 		this.medCardExpDay = page.locator('select[name="svntn_core_mxp_day"]')
 		this.medCardExpYear = page.locator('select[name="svntn_core_mxp_year"]')
-		this.patientId = page.locator(
-			'input[name="medical_marijuana_registry_patient_identification_number_florida"]',
-		)
+		this.patientId = page.locator('input[name="_svntn_fl_patient_id"]')
 		this.driversLicenseUpload = page.locator('#wccf_user_field_drivers_license')
 		this.medicalCardUpload = page.locator('#wccf_user_field_medical_card')
 		this.apiUser = null
 		this.defaultAddress = '123 Main Street'
+		this.phoneNumber = page.locator('input[name="billing_phone"]')
 	}
 	async createApi(usage: string, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
@@ -129,12 +129,21 @@ export class CreateAccountPage {
 			})
 		}
 
-		if (process.env.NEXT_VERSION === 'true' && state === 'FL' && process.env.BASE_URL != 'https://thelist-fl.710labs.com') {
+		if (
+			process.env.NEXT_VERSION === 'true' &&
+			state === 'FL' &&
+			process.env.BASE_URL != 'https://thelist-fl.710labs.com'
+		) {
 			await test.step('Enter PatientId', async () => {
 				await this.patientId.click()
 				await this.patientId.fill('1234abcd')
 			})
 		}
+
+		await test.step('Enter Phone Number', async () => {
+			await this.phoneNumber.click()
+			await this.phoneNumber.fill('4204201111')
+		})
 
 		await test.step('Submit New Customer Form', async () => {
 			await this.page.waitForTimeout(2000)

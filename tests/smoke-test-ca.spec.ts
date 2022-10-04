@@ -12,7 +12,7 @@ import { EditOrderPage } from '../models/edit-order-page'
 import { SchedulingPage } from '../models/scheduling-page'
 import { v4 as uuidv4 } from 'uuid'
 
-test.describe('Basic Acceptance Tests @CA', () => {
+test.describe('Basic Acceptance Tests @ca_smoke', () => {
 	const zipCode = '90210'
 	const orderQuanity = 6
 	var orderTotals
@@ -65,7 +65,7 @@ test.describe('Basic Acceptance Tests @CA', () => {
 			await myAccountPage.logout()
 		})
 	})
-	test(`Basic Acceptance Test @CA @BAT`, async ({ page, browserName }, workerInfo) => {
+	test(`Basic Acceptance Test @ca_smoke @BAT`, async ({ page, browserName }, workerInfo) => {
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
 

@@ -7,7 +7,6 @@ import { CreateAccountPage } from '../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../models/checkout-page'
 import { CartPage } from '../models/cart-page'
-import { SchedulingPage } from '../models/scheduling-page'
 import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Medical Customer Checkout', () => {
@@ -29,7 +28,6 @@ test.describe('Medical Customer Checkout', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
-		const schedulingPage = new SchedulingPage(page)
 		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
@@ -42,7 +40,6 @@ test.describe('Medical Customer Checkout', () => {
 		await shopPage.addProductsToCart(6, mobile)
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
-		await schedulingPage.scheduleDelivery()
 	})
 	test(`Checkout New Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 		const zipCode = '94020'
@@ -54,7 +51,6 @@ test.describe('Medical Customer Checkout', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
-		const schedulingPage = new SchedulingPage(page)
 		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
@@ -66,6 +62,5 @@ test.describe('Medical Customer Checkout', () => {
 		await shopPage.addProductsToCart(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
-		await schedulingPage.scheduleDelivery()
 	})
 })
