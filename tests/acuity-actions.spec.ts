@@ -1,9 +1,10 @@
-import { test } from '@playwright/test'
+import { Page, test } from '@playwright/test'
 import { AdminLogin } from '../models/admin-login-page'
 import caDeliveryZones from '../utils/delivery-zones-ca.json'
 import flDeliveryZones from '../utils/delivery-zones-fl.json'
 const csvFilePath = 'utils/delivery-slots.csv'
 let csvToJson = require('convert-csv-to-json')
+const { Parser } = require('json2csv')
 
 test.describe('Acuity Helpers', () => {
 	var dates = []
@@ -38,19 +39,17 @@ test.describe('Acuity Helpers', () => {
 		}, workerInfo) => {
 			test.skip(workerInfo.project.name === 'mobile-chrome')
 			var acuityUrl
-			const adminLoginPage = new AdminLogin(page)
-			await test.step('Login Admin', async () => {
-				adminLoginPage.login()
+			await test.step('Login to Wordpress Admin', async () => {
+				await page.goto('/wp-admin')
+				await page.locator('input[name="log"]').fill(`${process.env.ADMIN_USER}`)
+				await page.locator('input[name="pwd"]').fill(`${process.env.ADMIN_PW}`)
+				await page.locator('text=Log In').click()
 			})
+
 			await test.step('Navigate to Delivery Dashboard', async () => {
-				await Promise.all([
-					page.waitForNavigation(),
-					page.locator('#toplevel_page_svntn-core div:has-text("710 Labs Core")').click(),
-				])
-				await Promise.all([
-					page.waitForNavigation(),
-					page.locator('text=Delivery Dashboard').click(),
-				])
+				await page.goto(
+					'https://thelist-dev.710labs.com/wp-admin/admin.php?page=svntn-delivery-dashboard',
+				)
 			})
 			await test.step(`Navigate to Acuity Scheduling ${caDeliveryZones[index]}`, async () => {
 				;(acuityUrl = await page
@@ -76,7 +75,7 @@ test.describe('Acuity Helpers', () => {
 					// Start Create Slot
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
-						.locator('#offer-class-btn')
+						.locator('[data-testid="offer-class"]')
 						.first()
 						.click()
 					// Select "Another Test Calendar"
@@ -94,7 +93,6 @@ test.describe('Acuity Helpers', () => {
 								index
 							].getFullYear()}`,
 						)
-
 					// Select Time
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
@@ -104,6 +102,7 @@ test.describe('Acuity Helpers', () => {
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('[placeholder="Ex\\. 9\\:00am"]')
 						.fill('9AM')
+
 					// Save Class
 					await Promise.all([
 						page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
@@ -263,31 +262,26 @@ test.describe('Acuity Helpers', () => {
 
 test.describe('Acuity Automation', () => {
 	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
-	
-	test.describe.configure({ mode: 'parallel' })
+	let page: Page
+	test.beforeAll(async ({ browser }) => {
+		page = await browser.newPage()
+		await test.step('Login to Acuity Scheduling', async () => {
+			await page.goto('https://login.squarespace.com/')
+			await page.locator('[placeholder="name\\@example\\.com"]').fill(`${process.env.ACUITY_USER}`)
+			await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
+			await Promise.all([
+				page.waitForNavigation(),
+				page.locator('[data-test="login-button"]').click(),
+			])
+		})
+	})
 
 	for (let index = 0; index < slots.length; index++) {
-		test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} @helper`, async ({
-			page,
-		}, workerInfo) => {
-			test.skip(workerInfo.project.name === 'mobile-chrome')
-			await test.step('Login to Acuity Scheduling', async () => {
-				await page.goto('https://login.squarespace.com/')
-				await page
-					.locator('[placeholder="name\\@example\\.com"]')
-					.fill(`${process.env.ACUITY_USER}`)
-				await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
-				await Promise.all([
-					page.waitForNavigation(),
-					page.locator('[data-test="login-button"]').click(),
-				])
-			})
-			await test.step(
-				`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`,
-				async () => {
-					await page.waitForTimeout(7500)
-					//Navigate to 90210 Zone
-					await page.goto(slots[index].URL)
+		try {
+			test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} @helper`, async ({}, workerInfo) => {
+				test.skip(workerInfo.project.name === 'mobile-chrome')
+				await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
+					//Navigate to Zone
 					await page.goto(slots[index].URL)
 					// Start Create Slot
 					await page
@@ -350,8 +344,23 @@ test.describe('Acuity Automation', () => {
 							.locator('text=Save Changes')
 							.click(),
 					])
-				},
-			)
-		})
+				})
+			})
+		} catch (error) {
+			//Partner;Partner_region_zone;Appointment ID;URL;Calendar Name;Date Offered;Time Offered;Link Text;Availability
+			const fields = [
+				'Partner',
+				'Partner_region_zone',
+				'Appointment ID',
+				'URL',
+				'Calendar Name',
+				'Date Offered',
+				'Link Text',
+				'Availability',
+			]
+			const opts = { fields }
+			const parser = new Parser(opts)
+			const csv = parser.parse(slots[index])
+		}
 	}
 })

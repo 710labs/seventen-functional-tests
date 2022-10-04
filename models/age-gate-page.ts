@@ -11,7 +11,8 @@ export class AgeGatePage {
 
 	async passAgeGate(state: string = 'CA') {
 		await test.step('Pass Age Gate', async () => {
-			await this.page.goto('/')
+			test.setTimeout(30000);
+			await this.page.goto('/')			
 			await test.step('Verify Layout', async () => {
 				await expect(this.page.locator('h1 > img')).toBeVisible()
 

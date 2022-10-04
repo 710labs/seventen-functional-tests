@@ -20,7 +20,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 	var splitOrderNumber
 	const orderQuanity = 6
 
-	test(`Basic Acceptance Test @FL @BAT`, async ({ page, browserName, context }, workerInfo) => {
+	test(`Basic Acceptance Test @fl_smoke @BAT`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,

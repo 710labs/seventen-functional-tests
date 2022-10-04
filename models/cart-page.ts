@@ -21,7 +21,7 @@ export class CartPage {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
-		this.checkoutButton = this.page.locator('text=Proceed')
+		this.checkoutButton = this.page.locator('.checkout-button')
 		this.cartItems = new Array()
 		this.usageType = usageType
 		this.apiContext = apiContext
