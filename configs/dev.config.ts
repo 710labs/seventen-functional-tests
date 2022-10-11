@@ -4,9 +4,9 @@ require('dotenv').config({ path: require('find-config')('.env') });
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
   testDir: './../tests',
-  timeout: 30 * 1000,
+  timeout: 300 * 1000,
   expect: {
-    timeout: 30000,
+    timeout: 300 * 1000,
   },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -14,7 +14,7 @@ const config: PlaywrightTestConfig = {
   reporter: [['list'], ['html']],
   use: {
     acceptDownloads: true,
-    actionTimeout: 10000,
+    actionTimeout: 300 * 1000,
     baseURL: 'https://thelist-dev.710labs.com',
     launchOptions: {
       slowMo: 200,
