@@ -262,6 +262,7 @@ test.describe('Acuity Helpers', () => {
 
 test.describe('Acuity Automation', () => {
 	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
+	test.describe.configure({ mode: 'parallel' });
 	let page: Page
 	test.beforeAll(async ({ browser }) => {
 		page = await browser.newPage()
@@ -282,6 +283,8 @@ test.describe('Acuity Automation', () => {
 				test.skip(workerInfo.project.name === 'mobile-chrome')
 				await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 					//Navigate to Zone
+					await page.goto(slots[index].URL)
+					await page.waitForTimeout(10000)
 					await page.goto(slots[index].URL)
 					// Start Create Slot
 					await page

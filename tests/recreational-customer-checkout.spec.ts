@@ -1,4 +1,4 @@
-import { test, expect, devices, APIRequestContext, request } from '@playwright/test'
+import test, { APIRequestContext, expect, Page, request } from '@playwright/test'
 import { ListPasswordPage } from '../models/list-password-protect-page'
 import { AgeGatePage } from '../models/age-gate-page'
 import { LoginPage } from '../models/login-page'
@@ -11,6 +11,7 @@ import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Recreational Customer Checkout', () => {
 	var apiContext: APIRequestContext
+	var page: Page
 	test.beforeAll(async () => {
 		apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
@@ -44,7 +45,7 @@ test.describe('Recreational Customer Checkout', () => {
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 	})
-	test(`Checkout New Customer #recreational @CA`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout New Customer #recreational @CA`, async ({ page : page, browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
