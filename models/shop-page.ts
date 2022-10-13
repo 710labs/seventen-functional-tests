@@ -32,6 +32,7 @@ export class ShopPage {
 			await this.page.waitForSelector('label:has-text("Delivery")')
 			await this.page.locator('label:has-text("Delivery") >> nth=0').click()
 			await this.page.locator('#fulfillerSubmit').click()
+			await this.page.waitForTimeout(2000)
 			await this.page.reload()
 		})
 		await test.step('Add Products to Cart', async () => {
