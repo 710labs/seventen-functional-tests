@@ -12,7 +12,7 @@ import { EditOrderPage } from '../models/edit-order-page'
 import { SchedulingPage } from '../models/scheduling-page'
 import { v4 as uuidv4 } from 'uuid'
 
-test.describe('Basic Acceptance Tests @ca_smoke', () => {
+test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
 	const orderQuanity = 6
 	var orderTotals
