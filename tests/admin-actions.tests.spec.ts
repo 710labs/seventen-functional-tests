@@ -58,9 +58,6 @@ test.describe('Admin Split Order', () => {
 		await test.step('Verify Checkout Page Totals + Taxes', async () => {
 			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
 		})
-		await test.step('Schedule Delivery', async () => {
-			await schedulingPage.scheduleDelivery()
-		})
 
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)
