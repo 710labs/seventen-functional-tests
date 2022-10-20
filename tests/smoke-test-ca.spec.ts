@@ -65,7 +65,7 @@ test.describe('Basic Acceptance Tests @ca_smoke', () => {
 			await myAccountPage.logout()
 		})
 	})
-	test(`Basic Acceptance Test @ca_smoke @BAT`, async ({ page, browserName }, workerInfo) => {
+	test(`Basic Acceptance Test @smoke`, async ({ page, browserName }, workerInfo) => {
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
 
