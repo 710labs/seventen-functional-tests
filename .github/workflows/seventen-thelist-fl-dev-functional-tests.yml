@@ -39,6 +39,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
       - name: Set Domain to CA
+        if: always()
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
