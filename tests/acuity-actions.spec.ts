@@ -279,7 +279,7 @@ test.describe('Acuity Automation', () => {
 
 	for (let index = 0; index < slots.length; index++) {
 		try {
-			test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} @helper`, async ({}, workerInfo) => {
+			test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} [${slots[index].Partner},${slots[index].Partner_region_zone},${slots[index].AppointmentID},${slots[index].URL},${slots[index].CalendarName},${slots[index].DateOffered},${slots[index].TimeOffered},${slots[index].LinkText},${slots[index].Availbility}] @helper`, async ({}, workerInfo) => {
 				test.skip(workerInfo.project.name === 'mobile-chrome')
 				await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 					//Navigate to Zone
