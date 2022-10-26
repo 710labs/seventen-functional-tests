@@ -21,7 +21,7 @@ export class AgeGatePage {
 				)
 				await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
 			})
-			if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
+			if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
 				)
@@ -31,7 +31,7 @@ export class AgeGatePage {
 				)
 			}
 
-			if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
+			if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
 				await this.page.click('text=I Qualify')
 			} else {
 				await this.page.click("text=I'm over 21 or a qualified patient")

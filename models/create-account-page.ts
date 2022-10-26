@@ -197,7 +197,7 @@ export class CreateAccountPage {
 				await this.medCardExpYear.selectOption('2023')
 			})
 		}
-		if (state === 'FL' && process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
+		if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
 			await test.step('Enter PatientId', async () => {
 				await this.page.locator('input[name="svntn_fl_patient_id"]').click()
 				await this.page.locator('input[name="svntn_fl_patient_id"]').fill('1234abcd')
