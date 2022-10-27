@@ -109,9 +109,15 @@ export class CreateAccountPage {
 		})
 
 		await test.step('Enter Birthdate', async () => {
-			await this.birthMonth.selectOption('12')
-			await this.birthDay.selectOption('16')
-			await this.birthYear.selectOption('1988')
+			if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+				await this.page.locator('select[name="svntn_core_dob_month_sbmt"]').selectOption('12')
+				await this.page.locator('select[name="svntn_core_dob_day_sbmt"]').selectOption('16')
+				await this.page.locator('select[name="svntn_core_dob_year_sbmt"]').selectOption('1988')
+			} else {
+				await this.birthMonth.selectOption('12')
+				await this.birthDay.selectOption('16')
+				await this.birthYear.selectOption('1988')
+			}
 		})
 
 		if (process.env.NEXT_VERSION === 'false') {
@@ -132,7 +138,7 @@ export class CreateAccountPage {
 		if (
 			process.env.NEXT_VERSION === 'true' &&
 			state === 'FL' &&
-			process.env.BASE_URL != 'https://thelist-fl.710labs.com'
+			process.env.BASE_URL != 'https://thelist.theflowery.co/'
 		) {
 			await test.step('Enter PatientId', async () => {
 				await this.patientId.click()
@@ -141,8 +147,10 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Enter Phone Number', async () => {
-			await this.phoneNumber.click()
-			await this.phoneNumber.fill('4204201111')
+			if (process.env.BASE_URL != 'https://thelist.theflowery.co/') {
+				await this.phoneNumber.click()
+				await this.phoneNumber.fill('4204201111')
+			}
 		})
 
 		await test.step('Submit New Customer Form', async () => {
@@ -191,11 +199,13 @@ export class CreateAccountPage {
 				await medicalCardChooser.setFiles('Medical-Card.png')
 				await medicalCardChooser.page()
 			})
-			await test.step('Enter Med Card Exp', async () => {
-				await this.medCardExpMonth.selectOption('12')
-				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2023')
-			})
+			if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+				await test.step('Enter Med Card Exp', async () => {
+					await this.medCardExpMonth.selectOption('12')
+					await this.medCardExpDay.selectOption('16')
+					await this.medCardExpYear.selectOption('2023')
+				})
+			}
 		}
 		if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
 			await test.step('Enter PatientId', async () => {

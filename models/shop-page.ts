@@ -29,11 +29,13 @@ export class ShopPage {
 			await this.page.waitForTimeout(3000)
 		})
 		await test.step('Select Fulfillment Method', async () => {
-			await this.page.waitForSelector('label:has-text("Delivery")')
-			await this.page.locator('label:has-text("Delivery") >> nth=0').click()
-			await this.page.locator('#fulfillerSubmit').click()
-			await this.page.waitForTimeout(2000)
-			await this.page.reload()
+			if (process.env.NEXT_VERSION === 'true') {
+				await this.page.waitForSelector('label:has-text("Delivery")')
+				await this.page.locator('label:has-text("Delivery") >> nth=0').click()
+				await this.page.locator('#fulfillerSubmit').click()
+				await this.page.waitForTimeout(2000)
+				await this.page.reload()
+			}
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
@@ -52,7 +54,7 @@ export class ShopPage {
 			if (mobile) {
 				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
 			} else {
-				if (process.env.BASE_URL === 'https://thelist-fl.710labs.com/') {
+				if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
 					await this.page
 						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
 						.first()

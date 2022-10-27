@@ -193,4 +193,79 @@ export class CheckoutPage {
 
 		return cartTotals
 	}
+
+	async confirmCheckoutDeprecated(
+		zipcode: string,
+		productList: any,
+		usageType: number,
+		singleZip: boolean = false,
+		address: string = '9779 Oak Pass Rd',
+	): Promise<any> {
+		const firstName = faker.name.firstName()
+		const lastName = faker.name.lastName()
+
+		let cartTotals
+		await test.step('Verify Layout', async () => {
+			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
+				'href',
+				'/terms-of-use',
+			)
+			await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
+		})
+		await test.step('Fill in First Name', async () => {
+			await this.page.waitForTimeout(3000)
+			await this.firstNameInput.click()
+			await this.firstNameInput.fill(firstName)
+		})
+
+		await test.step('Fill in Last Name', async () => {
+			await this.lastNameInput.click()
+			await this.lastNameInput.fill(lastName)
+		})
+
+		await test.step('Fill in Street Address', async () => {
+			await this.addressLine1.click()
+			await this.addressLine1.fill(faker.address.streetAddress())
+		})
+
+		await test.step('Fill in State', async () => {
+			await this.city.click()
+			await this.city.fill(faker.address.cityName())
+		})
+
+		await test.step('Fill in ZipCode', async () => {
+			await this.zipCodeInput.click()
+			await this.zipCodeInput.fill(zipcode)
+		})
+
+		await test.step('Fill in Phone Number', async () => {
+			await this.phoneInput.click()
+			await this.phoneInput.fill('123-456-7890')
+		})
+
+		await test.step('Fill in Order Notes', async () => {
+			await this.comments.click()
+			await this.comments.fill(faker.random.words(30))
+		})
+
+		if (singleZip === false) {
+			for (let i = 0; i < this.zipcodes.length; i++) {
+				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
+					await this.zipCodeInput.click()
+					await this.zipCodeInput.fill(this.zipcodes[i])
+					await this.zipCodeInput.press('Enter')
+					await this.page.waitForTimeout(1000)
+					cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
+				})
+			}
+		} else {
+			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
+		}
+
+		await test.step('Submit New Customer Order', async () => {
+			await this.placeOrderButton.click()
+		})
+
+		return cartTotals
+	}
 }
