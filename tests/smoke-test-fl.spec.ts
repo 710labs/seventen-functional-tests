@@ -60,7 +60,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		}
 		await shopPage.addProductsToCart(orderQuanity)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
+		await checkOutPage.confirmCheckoutDeprecated(zipCode, cartTotals, 1, true, address)
 		await schedulingPage.scheduleDelivery()
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)
