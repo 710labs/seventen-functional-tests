@@ -199,7 +199,7 @@ export class CreateAccountPage {
 				await medicalCardChooser.setFiles('Medical-Card.png')
 				await medicalCardChooser.page()
 			})
-			if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+			if (state === 'FL') {
 				await test.step('Enter Med Card Exp', async () => {
 					await this.medCardExpMonth.selectOption('12')
 					await this.medCardExpDay.selectOption('16')
