@@ -7,6 +7,11 @@ let csvToJson = require('convert-csv-to-json')
 const { Parser } = require('json2csv')
 
 test.describe('Acuity Helpers', () => {
+	var today = new Date()
+	var currentYear = today.getFullYear()
+	var PDTCutoff = new Date().setFullYear(currentYear, 11, 1)
+	var PSTCutoff = new Date().setFullYear(currentYear, 3, 1)
+
 	var dates = []
 	const months = [
 		'January',
@@ -23,6 +28,12 @@ test.describe('Acuity Helpers', () => {
 		'December',
 	]
 	var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+	function timezone() {
+		if (today > PSTCutoff && today < PDTCutoff) {
+			return 'PST'
+		} else return 'PDT'
+	}
 
 	test.beforeAll(async () => {
 		for (let index = 0; index < 10; index++) {
@@ -114,7 +125,7 @@ test.describe('Acuity Helpers', () => {
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
-							`text=9:00am PDT ${days[dates[index].getDay()]}, ${
+							`text=9:00am PST ${days[dates[index].getDay()]}, ${
 								months[dates[index].getMonth()]
 							} ${dates[index].getDate()}, ${dates[index].getFullYear()}`,
 						)
@@ -227,7 +238,7 @@ test.describe('Acuity Helpers', () => {
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
-							`text=9:00am PDT ${days[dates[index].getDay()]}, ${
+							`text=9:00am ${timeZone} ${days[dates[index].getDay()]}, ${
 								months[dates[index].getMonth()]
 							} ${dates[index].getDate()}, ${dates[index].getFullYear()}`,
 						)
@@ -262,7 +273,7 @@ test.describe('Acuity Helpers', () => {
 
 test.describe('Acuity Automation', () => {
 	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
-	test.describe.configure({ mode: 'parallel' });
+	test.describe.configure({ mode: 'parallel' })
 	let page: Page
 	test.beforeAll(async ({ browser }) => {
 		page = await browser.newPage()
@@ -321,6 +332,7 @@ test.describe('Acuity Automation', () => {
 
 					//Edit Capacity
 					//Select Slot
+					//Prevent 12PM and 2PM collison
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(`text=${slots[index].LinkText}`)
