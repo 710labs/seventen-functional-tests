@@ -9,8 +9,8 @@ const { Parser } = require('json2csv')
 test.describe('Acuity Helpers', () => {
 	var today = new Date()
 	var currentYear = today.getFullYear()
-	var PDTCutoff = new Date().setFullYear(currentYear, 11, 1)
-	var PSTCutoff = new Date().setFullYear(currentYear, 3, 1)
+	var PDTCutoff = new Date(currentYear, 10, 1)
+	var PSTCutoff = new Date(currentYear, 2, 1)
 
 	var dates = []
 	const months = [
@@ -31,12 +31,12 @@ test.describe('Acuity Helpers', () => {
 
 	function timezone() {
 		if (today > PSTCutoff && today < PDTCutoff) {
-			return 'PST'
-		} else return 'PDT'
+			return 'PDT'
+		} else return 'PST'
 	}
 
 	test.beforeAll(async () => {
-		for (let index = 0; index < 10; index++) {
+		for (let index = 1; index < 10; index++) {
 			var currentDate = new Date()
 			currentDate.setDate(currentDate.getDate() + index)
 			dates.push(currentDate)
@@ -81,21 +81,21 @@ test.describe('Acuity Helpers', () => {
 			for (let index = 0; index < dates.length; index++) {
 				await test.step(`Create Slot on ${dates[index].toLocaleDateString()}`, async () => {
 					await page.waitForTimeout(7500)
-					//Navigate to 90210 Zone
+					Navigate to 90210 Zone
 					await page.goto(acuityUrl)
-					// Start Create Slot
+					Start Create Slot
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('[data-testid="offer-class"]')
 						.first()
 						.click()
-					// Select "Another Test Calendar"
+					Select "Another Test Calendar"
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('select[name="calendar"]')
 						.selectOption('6156957')
-					// Date Selector
-					// Select Day of Month
+					Date Selector
+					Select Day of Month
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('#date-input')
@@ -104,7 +104,7 @@ test.describe('Acuity Helpers', () => {
 								index
 							].getFullYear()}`,
 						)
-					// Select Time
+					Select Time
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('[placeholder="Ex\\. 9\\:00am"]')
@@ -114,27 +114,27 @@ test.describe('Acuity Helpers', () => {
 						.locator('[placeholder="Ex\\. 9\\:00am"]')
 						.fill('9AM')
 
-					// Save Class
+					Save Class
 					await Promise.all([
 						page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
 						page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Save Class').click(),
 					])
 
-					//Edit Capacity
-					//Select Slot
+					Edit Capacity
+					Select Slot
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
-							`text=9:00am PST ${days[dates[index].getDay()]}, ${
+							`text=9:00am ${timezone} ${days[dates[index].getDay()]}, ${
 								months[dates[index].getMonth()]
 							} ${dates[index].getDate()}, ${dates[index].getFullYear()}`,
 						)
 						.click()
 
-					// Click Edit
+					Click Edit
 					await page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Edit').click()
 
-					// Edit Capacity Value
+					Edit Capacity Value
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('text=Max number of people for this class >> input[name="group_max"]')
@@ -144,7 +144,7 @@ test.describe('Acuity Helpers', () => {
 						.locator('text=Max number of people for this class >> input[name="group_max"]')
 						.fill('100')
 
-					// Save Slot
+					Save Slot
 					await Promise.all([
 						page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
 						page
@@ -158,21 +158,21 @@ test.describe('Acuity Helpers', () => {
 	}
 
 	for (let index = 0; index < flDeliveryZones.length; index++) {
-		test(`Add FL Acuity Slots: ${flDeliveryZones[index]} @helper`, async ({ page }, workerInfo) => {
+		test(`Add FL Acuity Slots: ${flDeliveryZones[index]} @helper`, async ({
+			page,
+			browserName,
+		}, workerInfo) => {
 			test.skip(workerInfo.project.name === 'mobile-chrome')
 			var acuityUrl
 			const adminLoginPage = new AdminLogin(page)
 			await test.step('Login Admin', async () => {
-				adminLoginPage.login()
+				await adminLoginPage.login()
 			})
 			await test.step('Navigate to Delivery Dashboard', async () => {
 				await Promise.all([
-					page.waitForNavigation(),
-					page.locator('#toplevel_page_svntn-core div:has-text("710 Labs Core")').click(),
-				])
-				await Promise.all([
-					page.waitForNavigation(),
-					page.locator('text=Delivery Dashboard').click(),
+					await page.goto(
+						'https://thelist-dev.710labs.com/wp-admin/admin.php?page=svntn-delivery-dashboard',
+					),
 				])
 			})
 			await test.step(`Navigate to Acuity Scheduling ${flDeliveryZones[index]}`, async () => {
@@ -189,12 +189,15 @@ test.describe('Acuity Helpers', () => {
 				await Promise.all([
 					page.waitForNavigation(),
 					page.locator('[data-test="login-button"]').click(),
+					page.waitForNavigation(),
 				])
 			})
 			for (let index = 0; index < dates.length; index++) {
 				await test.step(`Create Slot on ${dates[index].toLocaleDateString()}`, async () => {
-					await page.waitForTimeout(7500)
-					//Navigate to 90210 Zone
+					await page.waitForTimeout(12000)
+					//Navigate to Zone
+					await page.goto(acuityUrl)
+					await page.waitForTimeout(12000)
 					await page.goto(acuityUrl)
 					// Start Create Slot
 					await page
@@ -238,7 +241,7 @@ test.describe('Acuity Helpers', () => {
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
-							`text=9:00am ${timeZone} ${days[dates[index].getDay()]}, ${
+							`text=9:00am PST ${days[dates[index].getDay()]}, ${
 								months[dates[index].getMonth()]
 							} ${dates[index].getDate()}, ${dates[index].getFullYear()}`,
 						)
