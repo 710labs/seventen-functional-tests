@@ -81,21 +81,21 @@ test.describe('Acuity Helpers', () => {
 			for (let index = 0; index < dates.length; index++) {
 				await test.step(`Create Slot on ${dates[index].toLocaleDateString()}`, async () => {
 					await page.waitForTimeout(7500)
-					Navigate to 90210 Zone
+					//Navigate to 90210 Zone
 					await page.goto(acuityUrl)
-					Start Create Slot
+					//Start Create Slot
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('[data-testid="offer-class"]')
 						.first()
 						.click()
-					Select "Another Test Calendar"
+					//Select "Another Test Calendar"
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('select[name="calendar"]')
 						.selectOption('6156957')
-					Date Selector
-					Select Day of Month
+					//Date Selector
+					//Select Day of Month
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('#date-input')
@@ -104,7 +104,7 @@ test.describe('Acuity Helpers', () => {
 								index
 							].getFullYear()}`,
 						)
-					Select Time
+					//Select Time
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('[placeholder="Ex\\. 9\\:00am"]')
@@ -114,14 +114,14 @@ test.describe('Acuity Helpers', () => {
 						.locator('[placeholder="Ex\\. 9\\:00am"]')
 						.fill('9AM')
 
-					Save Class
+					//Save Class
 					await Promise.all([
 						page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
 						page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Save Class').click(),
 					])
 
-					Edit Capacity
-					Select Slot
+					//Edit Capacity
+					//Select Slot
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator(
@@ -131,10 +131,10 @@ test.describe('Acuity Helpers', () => {
 						)
 						.click()
 
-					Click Edit
+					//Click Edit
 					await page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Edit').click()
 
-					Edit Capacity Value
+					//Edit Capacity Value
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
 						.locator('text=Max number of people for this class >> input[name="group_max"]')
@@ -144,7 +144,7 @@ test.describe('Acuity Helpers', () => {
 						.locator('text=Max number of people for this class >> input[name="group_max"]')
 						.fill('100')
 
-					Save Slot
+					//Save Slot
 					await Promise.all([
 						page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
 						page
