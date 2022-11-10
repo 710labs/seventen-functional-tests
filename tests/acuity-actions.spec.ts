@@ -338,7 +338,7 @@ test.describe('Acuity Automation', () => {
 					//Prevent 12PM and 2PM collison
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
-						.locator(`text=${slots[index].LinkText}`)
+						.getByText(`${slots[index].LinkText}`, { exact: true })
 						.click()
 
 					// Click Edit
