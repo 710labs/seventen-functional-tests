@@ -1,2 +1,5 @@
 Partner;Partner_region_zone;Appointment ID;URL;Calendar Name;Date Offered;Time Offered;Link Text;Availability
+Amuse LAX;amuse_lax1_zone_a;27879905;https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879905;Another Test Calendar (Pacific Time);1/23/2023;9:00 AM;9:00am PST Monday, January 23, 2023;8
+Amuse LAX;amuse_lax1_zone_a;27879905;https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879905;Another Test Calendar (Pacific Time);1/24/2023;9:00 AM;9:00am PST Tuesday, January 24, 2023;8
 Amuse LAX;amuse_lax1_zone_a;27879905;https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879905;Another Test Calendar (Pacific Time);1/25/2023;9:00 AM;9:00am PST Wednesday, January 25, 2023;8
+
