@@ -47,7 +47,6 @@ export class MyAccountPage {
 	async addAddress(
 		address: string = '420 Dank Street',
 		city: string = 'Beverly Hills',
-		phone: string = '4204204200',
 		state: string = 'CA',
 	) {
 		await test.step('Update Customer Address', async () => {
@@ -56,7 +55,6 @@ export class MyAccountPage {
 			await this.editBillingAddressLink.click()
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
-			await this.phone.fill(phone)
 			await this.page.click('button:has-text("Save address")')
 		})
 	}
