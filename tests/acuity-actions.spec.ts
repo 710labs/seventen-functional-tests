@@ -63,10 +63,10 @@ test.describe('Acuity Helpers', () => {
 				)
 			})
 			await test.step(`Navigate to Acuity Scheduling ${caDeliveryZones[index]}`, async () => {
-				;(acuityUrl = await page
+				acuityUrl = await page
 					.locator(`text=${caDeliveryZones[index]}`)
-					.evaluate(e => e.getAttribute('href'))),
-					await page.locator(`text=${caDeliveryZones[index]}`).click()
+					.evaluate(e => e.getAttribute('href'))
+				await page.locator(`text=${caDeliveryZones[index]}`).click()
 			})
 			await test.step('Login to Acuity Scheduling', async () => {
 				await page
@@ -80,8 +80,10 @@ test.describe('Acuity Helpers', () => {
 			})
 			for (let index = 0; index < dates.length; index++) {
 				await test.step(`Create Slot on ${dates[index].toLocaleDateString()}`, async () => {
-					await page.waitForTimeout(7500)
-					//Navigate to 90210 Zone
+					await page.waitForNavigation()
+					//Navigate to Zone
+					await page.goto(acuityUrl)
+					await page.waitForTimeout(20000)
 					await page.goto(acuityUrl)
 					//Start Create Slot
 					await page
