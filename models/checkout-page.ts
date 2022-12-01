@@ -183,11 +183,7 @@ export class CheckoutPage {
 			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
 		}
 
-		await test.step('Select Acuity Slot', async () => {
-			await expect(
-				this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice'),
-				`Checking For Acuity Slots w/ ${zipcode}`,
-			)
+		await test.step(`Select Acuity Slot for ${zipcode} `, async () => {
 			await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first().click()
 		})
 
