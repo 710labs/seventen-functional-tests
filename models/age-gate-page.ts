@@ -31,7 +31,7 @@ export class AgeGatePage {
 				)
 			}
 
-			if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+			if (this.page.url().includes('thelist.theflowery.co')) {
 				await this.page.click('text=I Qualify')
 			} else {
 				await this.page.click("text=I'm over 21 or a qualified patient")
