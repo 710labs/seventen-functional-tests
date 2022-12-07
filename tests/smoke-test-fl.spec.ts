@@ -6,23 +6,21 @@ import { CreateAccountPage } from '../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../models/checkout-page'
 import { CartPage } from '../models/cart-page'
-import { SchedulingPage } from '../models/scheduling-page'
 import { MyAccountPage } from '../models/my-account-page'
 import zipcodes from '../utils/zipcodes-fl.json'
 import { AdminLogin } from '../models/admin-login-page'
 import { EditOrderPage } from '../models/edit-order-page'
-import { OrderReceivedPage } from '../models/order-recieved-page'
 
 test.describe('Medical Customer Checkout Florida', () => {
-	var cartTotals
-	var orderNumber
-	var splitOrderNumber
+	var cartTotals: any
+	var orderNumber: any
+	var splitOrderNumber: string
 	const orderQuanity = 6
 
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
+			baseURL: `${process.env.BASE_URL_PROD_FL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
@@ -31,7 +29,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 			{
 				name: 'vipChecker',
 				value: '3',
-				domain: process.env.BASE_URL?.replace('https://', ''),
+				domain: process.env.BASE_URL_PROD_FL?.replace('https://', ''),
 				path: '/',
 			},
 		])
