@@ -1,7 +1,6 @@
 import { test, expect, devices, request } from '@playwright/test'
 import { ListPasswordPage } from '../models/list-password-protect-page'
 import { AgeGatePage } from '../models/age-gate-page'
-import { LoginPage } from '../models/login-page'
 import { ShopPage } from '../models/shop-page'
 import { CreateAccountPage } from '../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
@@ -15,7 +14,7 @@ import { EditOrderPage } from '../models/edit-order-page'
 import { OrderReceivedPage } from '../models/order-recieved-page'
 
 test.describe('Medical Customer Checkout Florida', () => {
-	var orderTotals
+	var cartTotals
 	var orderNumber
 	var splitOrderNumber
 	const orderQuanity = 6
@@ -38,7 +37,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		])
 		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
 		const zipCode = zipcodes[index]
-		const address = "3275 NW 24th Street Rd"
+		const address = '3275 NW 24th Street Rd'
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -47,24 +46,29 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
-		const schedulingPage = new SchedulingPage(page)
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
-		const orderReceived = new OrderReceivedPage(page)
+		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
-		await ageGatePage.passAgeGate('FL')
-		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
-		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress(address, 'Miami', '1234567890', 'FL')
-		}
-		await shopPage.addProductsToCart(orderQuanity)
-		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckoutDeprecated(zipCode, cartTotals, 1, true, address)
-		await schedulingPage.scheduleDelivery()
-		await test.step('Comfirm Order Details on /order-received', async () => {
-			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)
-			await expect(orderNumber, 'Failed to create order').not.toBeNull()
+		await test.step('Pass Age Gate', async () => {
+			await ageGatePage.passAgeGate('FL')
+		})
+
+		await test.step('Enter List Password', async () => {
+			await listPassword.submitPassword('qatester')
+		})
+
+		await test.step('Create Account', async () => {
+			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
+		})
+
+		await test.step('Add Products to Cart', async () => {
+			await shopPage.addProductsToCart(orderQuanity, mobile)
+			cartTotals = await cartPage.verifyCart(zipCode)
+		})
+
+		await test.step('Choose Fulfillment Slot + Verify Checkout', async () => {
+			await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		})
 
 		await test.step('Logout Consumer', async () => {
