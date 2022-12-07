@@ -20,7 +20,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL_PROD_FL}${process.env.QA_ENDPOINT}`,
+			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
@@ -29,7 +29,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 			{
 				name: 'vipChecker',
 				value: '3',
-				domain: process.env.BASE_URL_PROD_FL?.replace('https://', ''),
+				domain: process.env.BASE_URL?.replace('https://', ''),
 				path: '/',
 			},
 		])
