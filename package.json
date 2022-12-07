@@ -9,7 +9,7 @@
 		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @CA",
 		"ci:test:prod:ca": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @CA ",
 		"smoke:test:prod:ca": "npx playwright test smoke-test-ca --config=configs/prod.config.ts --workers=1",
-		"smoke:test:prod:fl": "npx playwright test smoke-test-fl --config=configs/prod.config.ts --workers=1 --headed --debug",
+		"smoke:test:prod:fl": "npx playwright test smoke-test-fl --config=configs/prod.config.ts --workers=1",
 		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep @FL",
 		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
 		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @FL",
