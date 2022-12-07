@@ -137,8 +137,7 @@ export class CreateAccountPage {
 
 		if (
 			process.env.NEXT_VERSION === 'true' &&
-			state === 'FL' &&
-			process.env.BASE_URL != 'https://thelist.theflowery.co/'
+			state === 'FL' 
 		) {
 			await test.step('Enter PatientId', async () => {
 				await this.patientId.click()
@@ -147,10 +146,8 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Enter Phone Number', async () => {
-			if (process.env.BASE_URL != 'https://thelist.theflowery.co/') {
-				await this.phoneNumber.click()
-				await this.phoneNumber.fill('4204201111')
-			}
+			await this.phoneNumber.click()
+			await this.phoneNumber.fill('4204201111')
 		})
 
 		await test.step('Submit New Customer Form', async () => {
