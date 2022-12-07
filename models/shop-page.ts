@@ -25,6 +25,7 @@ export class ShopPage {
 
 	async addProductsToCart(itemCount: number, mobile = false) {
 		await test.step('Navigate to Shop page', async () => {
+			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
 			await this.page.waitForTimeout(3000)
 		})
