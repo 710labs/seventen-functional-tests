@@ -109,15 +109,9 @@ export class CreateAccountPage {
 		})
 
 		await test.step('Enter Birthdate', async () => {
-			if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
-				await this.page.locator('select[name="svntn_core_dob_month_sbmt"]').selectOption('12')
-				await this.page.locator('select[name="svntn_core_dob_day_sbmt"]').selectOption('16')
-				await this.page.locator('select[name="svntn_core_dob_year_sbmt"]').selectOption('1988')
-			} else {
-				await this.birthMonth.selectOption('12')
-				await this.birthDay.selectOption('16')
-				await this.birthYear.selectOption('1988')
-			}
+			await this.birthMonth.selectOption('12')
+			await this.birthDay.selectOption('16')
+			await this.birthYear.selectOption('1988')
 		})
 
 		if (process.env.NEXT_VERSION === 'false') {
@@ -135,10 +129,7 @@ export class CreateAccountPage {
 			})
 		}
 
-		if (
-			process.env.NEXT_VERSION === 'true' &&
-			state === 'FL' 
-		) {
+		if (process.env.NEXT_VERSION === 'true' && state === 'FL') {
 			await test.step('Enter PatientId', async () => {
 				await this.patientId.click()
 				await this.patientId.fill('1234abcd')
@@ -196,18 +187,10 @@ export class CreateAccountPage {
 				await medicalCardChooser.setFiles('Medical-Card.png')
 				await medicalCardChooser.page()
 			})
-			if (state === 'FL') {
-				await test.step('Enter Med Card Exp', async () => {
-					await this.medCardExpMonth.selectOption('12')
-					await this.medCardExpDay.selectOption('16')
-					await this.medCardExpYear.selectOption('2023')
-				})
-			}
-		}
-		if (state === 'FL' && process.env.BASE_URL === 'https://thelist.theflowery.co/') {
-			await test.step('Enter PatientId', async () => {
-				await this.page.locator('input[name="svntn_fl_patient_id"]').click()
-				await this.page.locator('input[name="svntn_fl_patient_id"]').fill('1234abcd')
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption('2023')
 			})
 		}
 		await test.step('Complete Usage Type Form', async () => {

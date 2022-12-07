@@ -39,4 +39,11 @@ export class OrderReceivedPage {
 		})
 		return orderNumber
 	}
+
+	async getOrderNumber(): Promise<any> {
+		var orderNumber
+		this.page.waitForNavigation()
+		orderNumber = await this.orderNumber.innerText()
+		return orderNumber
+	}
 }

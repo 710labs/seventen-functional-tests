@@ -10,6 +10,7 @@ import { MyAccountPage } from '../models/my-account-page'
 import zipcodes from '../utils/zipcodes-fl.json'
 import { AdminLogin } from '../models/admin-login-page'
 import { EditOrderPage } from '../models/edit-order-page'
+import { OrderReceivedPage } from '../models/order-recieved-page'
 
 test.describe('Medical Customer Checkout Florida', () => {
 	var cartTotals: any
@@ -46,6 +47,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
+		const orderReceived = new OrderReceivedPage(page)
 		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
@@ -69,6 +71,10 @@ test.describe('Medical Customer Checkout Florida', () => {
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		})
 
+		await test.step('Comfirm Order Details on /order-received', async () => {
+			orderNumber = await orderReceived.getOrderNumber()
+			await expect(orderNumber, 'Failed to create order').not.toBeNull()
+		})
 		await test.step('Logout Consumer', async () => {
 			await myAccountPage.logout()
 		})
