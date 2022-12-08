@@ -155,7 +155,9 @@ export class CreateAccountPage {
 				this.page.waitForEvent('filechooser'),
 				dlUploadButton.click(),
 			])
-			await driversLicenseChooser.setFiles('CA-DL.jpg')
+			await this.page.waitForTimeout(5000)
+			await driversLicenseChooser.setFiles('Medical-Card.png')
+			await this.page.waitForTimeout(5000)
 			await driversLicenseChooser.page()
 		})
 
@@ -171,8 +173,15 @@ export class CreateAccountPage {
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),
 				])
-				await medicalCardChooser.setFiles('Medical-Card.png')
+				await medicalCardChooser.setFiles('CA-DL.jpg')
 				await medicalCardChooser.page()
+				await this.page.waitForTimeout(5000)
+			})
+
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption('2023')
 			})
 		}
 		if (state === 'FL') {

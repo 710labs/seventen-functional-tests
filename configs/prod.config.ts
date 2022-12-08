@@ -25,7 +25,7 @@ const config: PlaywrightTestConfig = {
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 300 * 1000,
-		baseURL: 'https://thelist.theflowery.co/',
+		baseURL: 'https://thelist.710labs.com/',
 		launchOptions: {
 			slowMo: 200,
 		},

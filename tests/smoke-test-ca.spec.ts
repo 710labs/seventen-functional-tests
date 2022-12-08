@@ -9,17 +9,17 @@ import { MyAccountPage } from '../models/my-account-page'
 import { AdminLogin } from '../models/admin-login-page'
 import { OrderReceivedPage } from '../models/order-recieved-page'
 import { EditOrderPage } from '../models/edit-order-page'
-import { SchedulingPage } from '../models/scheduling-page'
 import { v4 as uuidv4 } from 'uuid'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
 	const orderQuanity = 6
-	var orderTotals
-	var orderNumber
-	var splitOrderNumber
+	var orderNumber: any
+	var splitOrderNumber: string
+	var cartTotals: any
 
-	test.beforeEach(async ({ page, browserName, context }, workerInfo) => {
+
+	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'mobile-chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
@@ -35,39 +35,48 @@ test.describe('Basic Acceptance Tests CA', () => {
 				path: '/',
 			},
 		])
+		const address = '123 Rodeo Dr Beverly Hills'
+		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
+		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-		const schedulingPage = new SchedulingPage(page)
-		const orderReceived = new OrderReceivedPage(page)
 		const checkOutPage = new CheckoutPage(page, apiContext)
-		const myAccountPage = new MyAccountPage(page)
+		const adminLoginPage = new AdminLogin(page)
+		const editOrderPage = new EditOrderPage(page)
+		const orderReceived = new OrderReceivedPage(page)
+		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
 
-		await ageGatePage.passAgeGate()
-		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 1)
-		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress()
-		}
-		await shopPage.addProductsToCart(6)
-		var cartTotals = await cartPage.verifyCart(zipCode)
-		await test.step('Verify Checkout Page Totals + Taxes', async () => {
-			orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
+		await test.step('Pass Age Gate', async () => {
+			await ageGatePage.passAgeGate('FL')
 		})
+
+		await test.step('Enter List Password', async () => {
+			await listPassword.submitPassword('qatester')
+		})
+
+		await test.step('Create Account', async () => {
+			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'CA')
+		})
+
+		await test.step('Add Products to Cart', async () => {
+			await shopPage.addProductsToCart(orderQuanity, mobile)
+			cartTotals = await cartPage.verifyCart(zipCode)
+		})
+
+		await test.step('Choose Fulfillment Slot + Verify Checkout', async () => {
+			await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
+		})
+
 		await test.step('Comfirm Order Details on /order-received', async () => {
-			orderNumber = await orderReceived.confirmOrderDetail(orderTotals)
+			orderNumber = await orderReceived.getOrderNumber()
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
 		})
-
 		await test.step('Logout Consumer', async () => {
 			await myAccountPage.logout()
 		})
-	})
-	test(`Basic Acceptance Test @smoke`, async ({ page, browserName }, workerInfo) => {
-		const adminLoginPage = new AdminLogin(page)
-		const editOrderPage = new EditOrderPage(page)
 
 		await test.step('Login Admin', async () => {
 			await adminLoginPage.login()
