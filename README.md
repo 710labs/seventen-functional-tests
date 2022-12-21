@@ -224,13 +224,13 @@ Endpoints will require a `x-api-key` header. You can set this apiKey [here](http
 
 ## Test Run Schedule
 - [ci:test:dev:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-dev-functional-tests.yml):Daily 7AM PST
-- [ci:test:staging:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-stage-functional-tests.yml): Daily 7AM PST
-- ci:test:prod:ca: On demand via local test run
-- [smoke:test:prod:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml):On demand via gh-actions
 - [ci:test:dev:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-fl-dev-functional-tests.yml):Daily 8AM PST
-- [ci:test:staging:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-fl-stage-functional-tests.yml):Daily 8AM PST
-- ci:test:prod:fl: On demand via local test run
+- [smoke:test:prod:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml):On demand via gh-actions
 - [smoke:test:prod:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml): On Demand via gh-actions
-- [helper:acuityslots:dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-dev-acuity-slot-helper.yml): Monday, Wednesday, Friday @6AM
 
+### Triggering Smoke Tests 
+Use the following GH Actions API requests to view workflows and create dispatch events that will kick off the smoke tests. This will mainly verify the state of production after various infra events such as deploys, builds, scaling, etc. Use the postman collection below to review the github actions api requests.
+
+
+[710Labs Github Actions API Triggers](https://documenter.getpostman.com/view/11482169/UVeDuTqj#c3365b2e-43d5-4c4f-adc6-5fd463c523e6)
 
