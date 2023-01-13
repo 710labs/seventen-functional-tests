@@ -184,6 +184,7 @@ export class CheckoutPage {
 		}
 
 		await test.step(`Select Acuity Slot for ${zipcode} `, async () => {
+			await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first().click()
 			await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first().click()
 		})
 
