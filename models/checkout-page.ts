@@ -62,7 +62,7 @@ export class CheckoutPage {
 				//Get Tax Rates
 				console.log(zipcode)
 
-				const taxRateResponse = await this.apiContext.get(`rates/?postCode=${zipcode}`)
+				const taxRateResponse = await this.apiContext.get(`rates?postCode=${zipcode}`)
 				const taxRateResponseBody: any = await taxRateResponse.json()
 
 				this.taxRates = taxRateResponseBody
