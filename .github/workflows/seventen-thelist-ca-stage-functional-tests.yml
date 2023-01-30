@@ -12,6 +12,8 @@ jobs:
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
