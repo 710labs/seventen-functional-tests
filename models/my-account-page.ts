@@ -10,6 +10,7 @@ export class MyAccountPage {
 	readonly addressLineOne: Locator
 	readonly city: Locator
 	readonly state: Locator
+	readonly zipCode: Locator
 	readonly phone: Locator
 	readonly editBillingAddressLink: Locator
 	readonly editShippingAddressLink: Locator
@@ -24,6 +25,7 @@ export class MyAccountPage {
 		this.addressLineOne = page.locator('#billing_address_1')
 		this.city = page.locator('#billing_city')
 		this.state = page.locator('#billing_state')
+		this.zipCode = page.locator('#billing_postcode')
 		this.phone = page.locator('#billing_phone')
 		this.editBillingAddressLink = page.locator('text=Billing address Edit >> a')
 		this.editShippingAddressLink = page.locator('text=Delivery address Edit >> a')
@@ -48,6 +50,7 @@ export class MyAccountPage {
 		address: string = '420 Dank Street',
 		city: string = 'Beverly Hills',
 		state: string = 'CA',
+		zipCode: string = '90212',
 	) {
 		await test.step('Update Customer Address', async () => {
 			await this.page.goto('/my-account/')
@@ -55,6 +58,7 @@ export class MyAccountPage {
 			await this.editBillingAddressLink.click()
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
+			await this.zipCode.fill(zipCode)
 			await this.page.click('button:has-text("Save address")')
 		})
 	}
