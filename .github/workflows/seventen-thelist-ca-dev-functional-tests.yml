@@ -16,6 +16,7 @@ jobs:
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -47,4 +48,3 @@ jobs:
           SLACK_TITLE: Test Run Status (thelist-ca-dev)
           SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-  
