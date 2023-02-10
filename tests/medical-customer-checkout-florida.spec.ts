@@ -34,7 +34,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress(address, 'Miami', 'FL')
+			await myAccountPage.addAddress(address, 'Miami', 'FL', zipCode)
 		}
 		await shopPage.addProductsToCart(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
