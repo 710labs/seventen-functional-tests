@@ -2,7 +2,7 @@
 
 [![seventen-functional-tests](https://github.com/710labs/seventen-functional-tests/actions/workflows/playwright.yml/badge.svg)](https://github.com/710labs/seventen-functional-tests/actions/workflows/playwright.yml)
 
-This repo will house all e2e test scripts for 710 Labs direct-to-consumer web applications. 
+This repo will house all e2e test scripts for 710 Labs direct-to-consumer web applications . 
 
 ## Installation
 
