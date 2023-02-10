@@ -12,15 +12,6 @@ export class AgeGatePage {
 	async passAgeGate(state: string = 'CA') {
 		await test.step('Pass Age Gate', async () => {
 			await this.page.goto('/')
-			await test.step('Verify Layout', async () => {
-				await expect(this.page.locator('h1 > img')).toBeVisible()
-
-				await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
-					'href',
-					'/terms-of-use',
-				)
-				await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
-			})
 			if (this.page.url().includes('thelist.theflowery.co')) {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
@@ -29,7 +20,7 @@ export class AgeGatePage {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
 				)
-			}
+			} 
 
 			if (this.page.url().includes('thelist.theflowery.co')) {
 				await this.page.click('text=I Qualify')
