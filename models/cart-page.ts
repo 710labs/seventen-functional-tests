@@ -39,7 +39,7 @@ export class CartPage {
 			//Get Tax Rates
 			var taxRates: any
 
-			const taxRateResponse = await this.apiContext.get(`rates/?postCode=${zipcode}`)
+			const taxRateResponse = await this.apiContext.get(`rates?postCode=${zipcode}`)
 			const taxRateResponseBody: any = await taxRateResponse.json()
 
 			taxRates = taxRateResponseBody

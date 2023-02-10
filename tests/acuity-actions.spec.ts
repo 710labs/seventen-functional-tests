@@ -302,6 +302,14 @@ test.describe('Acuity Automation', () => {
 					await page.goto(slots[index].URL)
 					await page.waitForTimeout(10000)
 					await page.goto(slots[index].URL)
+
+					const popUp = await page
+						.frameLocator('[data-test="scheduling-iframe"]')
+						.getByRole('button', { name: 'Close' })
+
+					if (popUp != null) {
+						popUp.click()
+					}
 					// Start Create Slot
 					await page
 						.frameLocator('[data-test="scheduling-iframe"]')
