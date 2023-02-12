@@ -17,6 +17,7 @@ jobs:
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -32,7 +33,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev:ca
+        run: SLACK_BOT_USER_OAUTH_TOKEN=$SLACK_BOT_USER_OAUTH_TOKEN npm run ci:test:dev:ca
       - uses: actions/upload-artifact@v2
         if: failure()
         with:

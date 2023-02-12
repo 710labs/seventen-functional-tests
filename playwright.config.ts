@@ -1,4 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
+import generateCustomLayout from "./slack/slack-alert-layout"
 require('dotenv').config({ path: require('find-config')('.env') })
 
 /* https://playwright.dev/docs/test-configuration */
@@ -19,6 +20,15 @@ const config: PlaywrightTestConfig = {
 			{
 				'tesults-target':
 					'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo',
+			},
+		],
+		[
+			"./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+			{
+				channels: ["tech-savagery-tests"], // provide one or more Slack channels
+				sendResults: "always", // "always" , "on-failure", "off"
+				layout: generateCustomLayout,
+				maxNumberOfFailuresToShow: 20,
 			},
 		],
 	],
