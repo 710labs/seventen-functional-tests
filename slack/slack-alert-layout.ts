@@ -79,6 +79,12 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                     }
                 }
             }
+            if (assets.length > 0) {
+                fails.push({
+                    type: "context",
+                    elements: [{ type: "mrkdwn", text: assets.join("\n") }],
+                });
+            }
             if (i > maxNumberOfFailures) {
                 fails.push({
                     type: 'section',
