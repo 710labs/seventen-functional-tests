@@ -33,7 +33,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Install Playwright
-        run: npx install playwright-slack-report
+        run: npm install playwright-slack-report
       - name: Run Playwright tests
         run: SLACK_BOT_USER_OAUTH_TOKEN=$SLACK_BOT_USER_OAUTH_TOKEN npm run ci:test:dev:ca
       - uses: actions/upload-artifact@v2
