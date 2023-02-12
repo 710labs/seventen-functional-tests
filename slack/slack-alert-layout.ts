@@ -40,56 +40,57 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
     const meta: any[] = [];
 
     for (let i = 0; i < summaryResults.failures.length; i += 1) {
-        function status(status) {
-            return status === "failed";
-        }
-        var testFailuresDetails = summaryResults.tests.filter(status)
-        const { reason, name, attachments, suiteName } = testFailuresDetails[i]
-        const formattedFailure = reason
-            .substring(0, maxNumberOfFailureLength)
-            .split('\n')
-            .map((l) => `>${l}`)
-            .join('\n');
-        fails.push({
-            type: 'section',
-            text: {
-                type: 'mrkdwn',
-                text: `*${test}*
-        \n\n${formattedFailure}`,
-            },
-        });
-        const assets: Array<string> = [];
-        if (attachments) {
-            for (const a of attachments) {
-                // Upload failed tests screenshots and videos to the service of your choice
-                // In my case I upload the to S3 bucket
-                const permalink = await uploadFile(
-                    a.path,
-                    `${suiteName}--${name}`.replace(/\W/gi, "-").toLowerCase()
-                );
+        const { reason, name, attachments, suiteName, status } = summaryResults.tests[i]
+        if (status === "failed") {
+            const formattedFailure = reason
+                .substring(0, maxNumberOfFailureLength)
+                .split('\n')
+                .map((l) => `>${l}`)
+                .join('\n');
 
-                if (permalink) {
-                    let icon = "";
-                    if (a.name === "screenshot") {
-                        icon = "📸";
-                    } else if (a.name === "video") {
-                        icon = "🎥";
-                    }
-
-                    assets.push(`${icon}  See the <${permalink}|${a.name}>`);
-                }
-            }
-        }
-        if (i > maxNumberOfFailures) {
             fails.push({
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: '*There are too many failures to display, view the full results in BuildKite*',
+                    text: `*${name}*
+        \n\n${formattedFailure}`,
                 },
             });
-            break;
+
+            const assets: Array<string> = [];
+            if (attachments) {
+                for (const a of attachments) {
+                    // Upload failed tests screenshots and videos to the service of your choice
+                    // In my case I upload the to S3 bucket
+                    const permalink = await uploadFile(
+                        a.path,
+                        `${suiteName}--${name}`.replace(/\W/gi, "-").toLowerCase()
+                    );
+
+                    if (permalink) {
+                        let icon = "";
+                        if (a.name === "screenshot") {
+                            icon = "📸";
+                        } else if (a.name === "video") {
+                            icon = "🎥";
+                        }
+
+                        assets.push(`${icon}  See the <${permalink}|${a.name}>`);
+                    }
+                }
+            }
+            if (i > maxNumberOfFailures) {
+                fails.push({
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: '*There are too many failures to display, view the full results in BuildKite*',
+                    },
+                });
+                break;
+            }
         }
+
     }
 
     if (summaryResults.meta) {
