@@ -42,12 +42,15 @@
 	},
 	"homepage": "https://github.com/710labs/seventen-functional-tests#readme",
 	"devDependencies": {
+		"@aws-sdk/client-s3": "^3.267.0",
 		"@faker-js/faker": "^6.0.0-alpha.5",
 		"@playwright/test": "^1.30.0",
 		"cross-env": "^7.0.3",
 		"dotenv": "^16.0.0",
 		"find-config": "^1.0.0",
+		"fs": "^0.0.1-security",
 		"node-fetch": "^3.2.0",
+		"path": "^0.12.7",
 		"playwright": "^1.30.0",
 		"playwright-slack-report": "^1.1.0",
 		"uuid": "^8.3.2"
