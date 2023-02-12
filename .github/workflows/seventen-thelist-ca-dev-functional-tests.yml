@@ -32,10 +32,8 @@ jobs:
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
-      - name: Install Playwright
-        run: npm install playwright-slack-report
       - name: Run Playwright tests
-        run: SLACK_BOT_USER_OAUTH_TOKEN=$SLACK_BOT_USER_OAUTH_TOKEN npm run ci:test:dev:ca
+        run: npm run ci:test:dev:ca
       - uses: actions/upload-artifact@v2
         if: failure()
         with:

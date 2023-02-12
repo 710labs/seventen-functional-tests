@@ -23,7 +23,7 @@ const config: PlaywrightTestConfig = {
 			},
 		],
 		[
-			"./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+			"./../node_modules/playwright-slack-report/dist/src/SlackReporter.js",
 			{
 			  channels: ["tech-savagery-tests"], // provide one or more Slack channels
 			  sendResults: "always", // "always" , "on-failure", "off"
