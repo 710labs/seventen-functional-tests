@@ -20,7 +20,7 @@ export class AgeGatePage {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
 				)
-			} 
+			}
 
 			if (this.page.url().includes('thelist.theflowery.co')) {
 				await this.page.click('text=I Qualify')
@@ -28,6 +28,7 @@ export class AgeGatePage {
 				await this.page.click("text=I'm over 21 or a qualified patient")
 			}
 			const passwordField = await this.page.locator('input[name="post_password"]')
+			await expect(passwordField, 'Could not find the The List password field.').toBeVisible();
 			await passwordField.click()
 		})
 	}

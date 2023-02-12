@@ -56,21 +56,7 @@ const generateCustomLayout = (summaryResults: SummaryResults):Array<KnownBlock |
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: '**Thisi is cusomter block**',
-      },
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `**The first test is:**\n${summaryResults.tests[0].name}`,
-      },
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `**Test with attachment:**\n${testWithStringAttachment?.attachments
+        text: `Example Attachments:\n${testWithStringAttachment?.attachments
           ?.filter((a) => a.contentType === 'text/plain')
           .map((a) => a.body?.toString())}`,
       },
