@@ -44,7 +44,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 },
             });
 
-            if (attachments) {
+            if (attachments.length > 0) {
                 for (const a of attachments) {
                     // Upload failed tests screenshots and videos to the service of your choice
                     // In my case I upload the to S3 bucket
@@ -82,6 +82,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
             }
             if (assets.length > 0) {
                 fails.concat(assets);
+                console.log(fails)
             }
             if (i > maxNumberOfFailures) {
                 fails.push({
