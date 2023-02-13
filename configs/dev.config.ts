@@ -1,5 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from "./../slack/slack-alert-layout"
+import generateCustomLayoutAsync from "../slack/slack-alert-layout-s3"
 require('dotenv').config({ path: require('find-config')('.env') })
 
 /* https://playwright.dev/docs/test-configuration */
@@ -33,11 +33,7 @@ const config: PlaywrightTestConfig = {
 					{
 						key: 'Environment',
 						value: process.env.ENV,
-					},
-					{
-						key: 'Base Url',
-						value: process.env.GITHUB_REF,
-					},
+					}
 				],
 			},
 		],
@@ -51,6 +47,7 @@ const config: PlaywrightTestConfig = {
 		},
 		trace: 'retain-on-failure',
 		video: "retain-on-failure",
+		screenshot: 'only-on-failure',
 	},
 	projects: [
 		{

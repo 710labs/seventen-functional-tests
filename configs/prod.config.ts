@@ -1,6 +1,6 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
-import generateCustomLayout from "./../slack/slack-alert-layout"
+import generateCustomLayout from "../slack/slack-alert-layout-s3"
 
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
