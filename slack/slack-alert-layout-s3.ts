@@ -77,7 +77,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                             icon = "📋"
                         }
 
-                        assets.push(`${icon}  See the <${permalink}|${a.name}>`);
+                        assets.push(`${icon}  See the <https://trace.playwright.dev/?trace=${permalink}|${a.name}>`);
                     }
                 }
             }
