@@ -28,7 +28,7 @@ export class AgeGatePage {
 				await this.page.click("text=I'm over 21 or a qualified patient")
 			}
 			const passwordField = await this.page.locator('input[name="post_password"]')
-			await expect(passwordField, 'Could not find the The List password field.').toBeVisible();
+			await expect(passwordField, 'Could not find the The List password field. The list password page may be in the incorrect order workflow').toBeVisible();
 			await passwordField.click()
 		})
 	}
