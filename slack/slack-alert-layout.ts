@@ -1,7 +1,6 @@
 import { Block, KnownBlock } from '@slack/types';
 import { SummaryResults } from "playwright-slack-report/dist/src";
 import fs from "fs";
-import path from "path";
 const web_api_1 = require('@slack/web-api');
 const slackClient = new web_api_1.WebClient(process.env.SLACK_BOT_USER_OAUTH_TOKEN);
 
@@ -21,10 +20,11 @@ async function uploadFile(filePath) {
 }
 
 export async function generateCustomLayoutAsync(summaryResults: SummaryResults): Promise<Array<KnownBlock | Block>> {
-    const maxNumberOfFailures = 10;
-    const maxNumberOfFailureLength = 650;
+    const maxNumberOfFailures = 25;
+    const maxNumberOfFailureLength = 1000;
     const fails: any[] = [];
     const meta: any[] = [];
+    const assets: any[] = [];
 
     for (let i = 0; i < summaryResults.failures.length; i += 1) {
         const { reason, name, attachments, suiteName, status } = summaryResults.tests[i]
@@ -44,7 +44,6 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 },
             });
 
-            const assets: Array<object> = [];
             if (attachments) {
                 for (const a of attachments) {
                     // Upload failed tests screenshots and videos to the service of your choice
