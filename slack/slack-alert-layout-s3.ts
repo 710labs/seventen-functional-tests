@@ -61,7 +61,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 for (const a of attachments) {
                     // Upload failed tests screenshots and videos to the service of your choice
                     // In my case I upload the to S3 bucket
-                    const permalink = await uploadFile(
+                    var permalink = await uploadFile(
                         a.path,
                         `${suiteName}--${name}`.replace(/\W/gi, "-").toLowerCase()
                     );
@@ -75,9 +75,10 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                         }
                         else if (a.name === "trace") {
                             icon = "📋"
+                            permalink = `https://trace.playwright.dev/?trace=${permalink}`
                         }
 
-                        assets.push(`${icon}  See the <https://trace.playwright.dev/?trace=${permalink}|${a.name}>`);
+                        assets.push(`${icon}  See the <${permalink}|${a.name}>`);
                     }
                 }
             }
