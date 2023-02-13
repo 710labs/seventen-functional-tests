@@ -3,8 +3,6 @@ import { SummaryResults } from "playwright-slack-report/dist/src";
 import fs from "fs";
 import path from "path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-const web_api_1 = require('@slack/web-api');
-const slackClient = new web_api_1.WebClient(process.env.SLACK_BOT_USER_OAUTH_TOKEN);
 
 
 const s3Client = new S3Client({
@@ -36,7 +34,7 @@ async function uploadFile(filePath, fileName) {
 
 export async function generateCustomLayoutAsync(summaryResults: SummaryResults): Promise<Array<KnownBlock | Block>> {
     const maxNumberOfFailures = 10;
-    const maxNumberOfFailureLength = 650;
+    const maxNumberOfFailureLength = 700;
     const fails: any[] = [];
     const meta: any[] = [];
 
@@ -74,6 +72,9 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                             icon = "📸";
                         } else if (a.name === "video") {
                             icon = "🎥";
+                        }
+                        else if (a.name === "trace") {
+                            icon = "📋"
                         }
 
                         assets.push(`${icon}  See the <${permalink}|${a.name}>`);
