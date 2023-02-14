@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: DEV-CA thelist-710labs.com
+      EXECUTION_TYPE: Scheduled Daily Run
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
@@ -40,18 +41,3 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-      - name: Slack Notification
-        if: always()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: env-dev-ca(https://thelist-dev.710labs.com) status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: Test Run Status (thelist-ca-dev)
-          SLACK_USERNAME: "710 Functional Tests"
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
