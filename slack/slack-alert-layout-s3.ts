@@ -66,6 +66,9 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
     const failSummary: any[] = [];
     const passSummary: any[] = [];
     const skipSummary: any[] = [];
+    var failSummaryText: string = '';
+    var passSummaryText: string = '';
+    var skipSummaryText: string = '';
     const Summary: any[] = [];
     const meta: any[] = [];
 
@@ -144,6 +147,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 },
             }
             )
+            passSummaryText = passSummary.join('')
         }
         if (status === "failed") {
             failSummary.push({
@@ -154,6 +158,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 },
             }
             )
+            failSummaryText = failSummary.join('')
         }
         if (status === "skipped") {
             skipSummary.push({
@@ -164,6 +169,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 },
             }
             )
+            skipSummaryText = skipSummary.join('');
         }
     }
 
@@ -186,26 +192,23 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n\n`,
+                text: `\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n\n ${passSummaryText}`,
             },
         },
-        ...passSummary,
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `\n\n:red_circle: *${summaryResults.failed}* Tests failed \n\n`,
+                text: `\n\n:red_circle: *${summaryResults.failed}* Tests failed \n\n ${failSummaryText} `,
             },
         },
-        ...failSummary,
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `\n\n:fast_forward: *${summaryResults.skipped}* skipped\n\n`
+                text: `\n\n:fast_forward: *${summaryResults.skipped}* skipped\n\n ${skipSummaryText}`
             },
         },
-        ...skipSummary,
 
         {
             type: 'divider',
