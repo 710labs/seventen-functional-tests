@@ -3,7 +3,6 @@ import { SummaryResults } from "playwright-slack-report/dist/src";
 import fs from "fs";
 import path from "path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { fileTypeFromFile } from 'file-type';
 
 
 const s3Client = new S3Client({
@@ -14,21 +13,45 @@ const s3Client = new S3Client({
     region: process.env.S3_REGION,
 });
 
-async function uploadFile(filePath, fileName) {
+async function uploadFile(type, filePath, fileName) {
     try {
         const ext = path.extname(filePath);
         const name = `${fileName}${ext}`;
-        var mime = await fileTypeFromFile(name);
 
-        await s3Client.send(
-            new PutObjectCommand({
-                Bucket: process.env.S3_BUCKET,
-                Key: name,
-                Body: fs.createReadStream(filePath),
-                ContentType: mime?.mime,
-                ContentDisposition: 'inline'
-            })
-        );
+        if (type === 'screenshot') {
+            await s3Client.send(
+                new PutObjectCommand({
+                    Bucket: process.env.S3_BUCKET,
+                    Key: name,
+                    Body: fs.createReadStream(filePath),
+                    ContentType: 'image/png',
+                    ContentDisposition: 'inline'
+                })
+            );
+        }
+        if (type === 'video') {
+            await s3Client.send(
+                new PutObjectCommand({
+                    Bucket: process.env.S3_BUCKET,
+                    Key: name,
+                    Body: fs.createReadStream(filePath),
+                    ContentType: 'video/webm',
+                    ContentDisposition: 'inline'
+                })
+            );
+        }
+        if (type === 'trace') {
+            await s3Client.send(
+                new PutObjectCommand({
+                    Bucket: process.env.S3_BUCKET,
+                    Key: name,
+                    Body: fs.createReadStream(filePath),
+                    ContentType: 'application/zip',
+                    ContentDisposition: 'inline'
+                })
+            );
+        }
+
 
         return `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${name}`;
     } catch (err) {
@@ -65,7 +88,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 for (const a of attachments) {
                     // Upload failed tests screenshots and videos to the service of your choice
                     // In my case I upload the to S3 bucket
-                    var permalink = await uploadFile(
+                    var permalink = await uploadFile(a.name,
                         a.path,
                         `${suiteName}--${name}`.replace(/\W/gi, "-").toLowerCase()
                     );
