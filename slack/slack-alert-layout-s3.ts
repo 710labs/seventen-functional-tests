@@ -139,24 +139,11 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
     for (let i = 0; i < summaryResults.tests.length; i += 1) {
         const { name, startedAt, status } = summaryResults.tests[i];
         if (status === "passed") {
-            passSummary.push({
-                type: 'section',
-                text: {
-                    type: 'mrkdwn',
-                    text: `\n${name} [${startedAt}]`,
-                },
-            }
-            )
+            passSummary.push(`\n${name} [${startedAt}]`)
             passSummaryText = passSummary.join('')
         }
         if (status === "failed") {
-            failSummary.push({
-                type: 'section',
-                text: {
-                    type: 'mrkdwn',
-                    text: `\n${name} [${startedAt}]`,
-                },
-            }
+            failSummary.push(`\n${name} [${startedAt}]`
             )
             failSummaryText = failSummary.join('')
         }
