@@ -3,6 +3,7 @@ import { SummaryResults } from "playwright-slack-report/dist/src";
 import fs from "fs";
 import path from "path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { fileTypeFromFile } from 'file-type';
 
 
 const s3Client = new S3Client({
@@ -17,12 +18,15 @@ async function uploadFile(filePath, fileName) {
     try {
         const ext = path.extname(filePath);
         const name = `${fileName}${ext}`;
+        var mime = await fileTypeFromFile(name);
 
         await s3Client.send(
             new PutObjectCommand({
                 Bucket: process.env.S3_BUCKET,
                 Key: name,
                 Body: fs.createReadStream(filePath),
+                ContentType: mime?.mime,
+                ContentDisposition: 'inline'
             })
         );
 
@@ -93,7 +97,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                     type: 'section',
                     text: {
                         type: 'mrkdwn',
-                        text: '*There are too many failures to display, view the full results in BuildKite*',
+                        text: `Holy 💩! There were more than ${maxNumberOfFailures} failures. Checkout the videos, screenshots, and traces above and find out why. `,
                     },
                 });
                 break;
