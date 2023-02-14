@@ -33,6 +33,10 @@ const config: PlaywrightTestConfig = {
 					{
 						key: 'Environment',
 						value: process.env.ENV,
+					},
+					{
+						key: 'Execution_Type',
+						value:  process.env.EXECUCTION_TYPE
 					}
 				],
 			},
