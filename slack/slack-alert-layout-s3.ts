@@ -60,9 +60,13 @@ async function uploadFile(type, filePath, fileName) {
 }
 
 export async function generateCustomLayoutAsync(summaryResults: SummaryResults): Promise<Array<KnownBlock | Block>> {
-    const maxNumberOfFailures = 10;
+    const maxNumberOfFailures = 5;
     const maxNumberOfFailureLength = 700;
     const fails: any[] = [];
+    const failSummary: any[] = [];
+    const passSummary: any[] = [];
+    const skipSummary: any[] = [];
+    const Summary: any[] = [];
     const meta: any[] = [];
 
     for (let i = 0; i < summaryResults.failures.length; i += 1) {
@@ -129,6 +133,41 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
 
     }
 
+    for (let i = 0; i < summaryResults.tests.length; i += 1) {
+        const { name, startedAt, status } = summaryResults.tests[i];
+        if (status === "passed") {
+            passSummary.push({
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: `\n${name} [${startedAt}]`,
+                },
+            }
+            )
+        }
+        if (status === "failed") {
+            failSummary.push({
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: `\n${name} [${startedAt}]`,
+                },
+            }
+            )
+        }
+        if (status === "skipped") {
+            skipSummary.push({
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: `\n${name} [${startedAt}]`,
+                },
+            }
+            )
+        }
+    }
+
+
     if (summaryResults.meta) {
         for (let i = 0; i < summaryResults.meta.length; i += 1) {
             const { key, value } = summaryResults.meta[i];
@@ -142,27 +181,32 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
         }
     }
     return [
-        {
-            type: "header",
-            text: {
-                type: "plain_text",
-                text: "🎭 *710 Labs Test Results*",
-                emoji: true,
-            },
-        },
         ...meta,
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `:white_check_mark: *${summaryResults.passed
-                    }* Tests ran successfully \n\n :red_circle: *${summaryResults.failed
-                    }* Tests failed \n\n ${summaryResults.skipped > 0
-                        ? `:fast_forward: *${summaryResults.skipped}* skipped`
-                        : ''
-                    } \n\n `,
+                text: `\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n\n`,
             },
         },
+        ...passSummary,
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: `\n\n:red_circle: *${summaryResults.failed}* Tests failed \n\n`,
+            },
+        },
+        ...failSummary,
+        {
+            type: 'section',
+            text: {
+                type: 'mrkdwn',
+                text: `\n\n:fast_forward: *${summaryResults.skipped}* skipped\n\n`
+            },
+        },
+        ...skipSummary,
+
         {
             type: 'divider',
         },
