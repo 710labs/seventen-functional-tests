@@ -10,7 +10,7 @@ const config: PlaywrightTestConfig = {
 		timeout: 5 * 1000,
 	},
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 0,
+	retries: process.env.CI ? 0 : 0,
 	workers: process.env.CI ? 12 : undefined,
 	reporter: [
 		['list'],
@@ -55,13 +55,13 @@ const config: PlaywrightTestConfig = {
 	},
 	projects: [
 		{
-			name: 'chromium',
+			name: 'Desktop Chrome',
 			use: {
 				...devices['Desktop Chrome'],
 			},
 		},
 		{
-			name: 'mobile-chrome',
+			name: 'Mobile Chrome',
 			use: {
 				...devices['Pixel 5'],
 			},

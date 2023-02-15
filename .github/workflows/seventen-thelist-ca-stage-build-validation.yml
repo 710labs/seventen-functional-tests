@@ -1,4 +1,4 @@
-name: thelist-ca-tests-dev-build-validation
+name: thelist-ca-tests-stage
 on:
   workflow_dispatch:
 jobs:
@@ -6,12 +6,12 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: dev-ca thelist-dev.710labs.com
+      ENV: stage-ca thelist-stage.710labs.com
       EXECUTION_TYPE: Build Validation
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
@@ -32,9 +32,14 @@ jobs:
       - name: Set Domain to CA
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
-          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev:ca
+        run: npm run ci:test:staging:ca
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
