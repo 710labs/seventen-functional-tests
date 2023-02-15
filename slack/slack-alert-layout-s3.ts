@@ -3,6 +3,7 @@ import { SummaryResults } from "playwright-slack-report/dist/src";
 import fs from "fs";
 import path from "path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from 'uuid';
 
 
 const s3Client = new S3Client({
@@ -22,7 +23,7 @@ async function uploadFile(type, filePath, fileName) {
             await s3Client.send(
                 new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET,
-                    Key: name,
+                    Key: name + uuidv4(),
                     Body: fs.createReadStream(filePath),
                     ContentType: 'image/png',
                     ContentDisposition: 'inline'
@@ -33,7 +34,7 @@ async function uploadFile(type, filePath, fileName) {
             await s3Client.send(
                 new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET,
-                    Key: name,
+                    Key: name + uuidv4(),
                     Body: fs.createReadStream(filePath),
                     ContentType: 'video/webm',
                     ContentDisposition: 'inline'
@@ -44,7 +45,7 @@ async function uploadFile(type, filePath, fileName) {
             await s3Client.send(
                 new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET,
-                    Key: name,
+                    Key: name +uuidv4(),
                     Body: fs.createReadStream(filePath),
                     ContentType: 'application/zip',
                     ContentDisposition: 'inline'
@@ -94,8 +95,6 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
             const assets: Array<string> = [];
             if (attachments) {
                 for (const a of attachments) {
-                    // Upload failed tests screenshots and videos to the service of your choice
-                    // In my case I upload the to S3 bucket
                     var permalink = await uploadFile(a.name,
                         a.path,
                         `${suiteName}--${name}`.replace(/\W/gi, "-").toLowerCase()

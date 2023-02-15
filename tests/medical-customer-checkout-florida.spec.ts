@@ -28,7 +28,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
-		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
+		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')

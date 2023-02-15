@@ -19,7 +19,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 	const orderQuanity = 6
 
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
-		test.skip(workerInfo.project.name === 'mobile-chrome')
+		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
@@ -48,7 +48,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
-		var mobile = workerInfo.project.name === 'mobile-chrome' ? true : false
+		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
 			await ageGatePage.passAgeGate('FL')

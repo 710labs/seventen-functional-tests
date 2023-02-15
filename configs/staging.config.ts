@@ -42,13 +42,13 @@ const config: PlaywrightTestConfig = {
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'Desktop Chrome',
       use: {
         ...devices['Desktop Chrome'],
       },
     },
     {
-      name: 'mobile-chrome',
+      name: 'Mobile Chrome',
       use: {
         ...devices['Pixel 5'],
       },
