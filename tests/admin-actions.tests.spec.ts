@@ -22,7 +22,7 @@ test.describe('Admin Split Order', () => {
 	var orderNumber
 
 	test.beforeEach(async ({ page, browserName }, workerInfo) => {
-		test.skip(workerInfo.project.name === 'mobile-chrome')
+		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {

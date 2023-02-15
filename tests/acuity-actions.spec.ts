@@ -48,7 +48,7 @@ test.describe('Acuity Helpers', () => {
 			page,
 			browserName,
 		}, workerInfo) => {
-			test.skip(workerInfo.project.name === 'mobile-chrome')
+			test.skip(workerInfo.project.name === 'Mobile Chrome')
 			var acuityUrl
 			await test.step('Login to Wordpress Admin', async () => {
 				await page.goto('/wp-admin')
@@ -164,7 +164,7 @@ test.describe('Acuity Helpers', () => {
 			page,
 			browserName,
 		}, workerInfo) => {
-			test.skip(workerInfo.project.name === 'mobile-chrome')
+			test.skip(workerInfo.project.name === 'Mobile Chrome')
 			var acuityUrl
 			const adminLoginPage = new AdminLogin(page)
 			await test.step('Login Admin', async () => {
@@ -296,7 +296,7 @@ test.describe('Acuity Automation', () => {
 	for (let index = 0; index < slots.length; index++) {
 		try {
 			test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} [${slots[index].Partner},${slots[index].Partner_region_zone},${slots[index].AppointmentID},${slots[index].URL},${slots[index].CalendarName},${slots[index].DateOffered},${slots[index].TimeOffered},${slots[index].LinkText},${slots[index].Availability}] @helper`, async ({}, workerInfo) => {
-				test.skip(workerInfo.project.name === 'mobile-chrome')
+				test.skip(workerInfo.project.name === 'Mobile Chrome')
 				await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 					//Navigate to Zone
 					await page.goto(slots[index].URL)
