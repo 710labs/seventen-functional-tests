@@ -28,13 +28,3 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
-      - name: Slack Notification
-        if: always()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: env-prod-fl-smoke-test(https://thelist.710labs.com) status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: Test Run Status thelist-ca-smoke
-          SLACK_USERNAME: "710 Functional Tests"
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

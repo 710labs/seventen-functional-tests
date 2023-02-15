@@ -69,18 +69,19 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
     var failSummaryText: string = '';
     var passSummaryText: string = '';
     var skipSummaryText: string = '';
-    const Summary: any[] = [];
     const meta: any[] = [];
 
     for (let i = 0; i < summaryResults.failures.length; i += 1) {
         const { reason, name, attachments, suiteName, status } = summaryResults.tests[i]
         if (status === "failed") {
-            const formattedFailure = reason
+            var formattedFailure = reason
                 .substring(0, maxNumberOfFailureLength)
                 .split('\n')
                 .map((l) => `>${l}`)
                 .join('\n');
-
+            var errorStart = formattedFailure.indexOf("Error:")
+            var errorEnd = formattedFailure.indexOf("Error", errorStart + 1)
+            formattedFailure = formattedFailure.substring(errorStart, errorEnd)
             fails.push({
                 type: 'section',
                 text: {
@@ -137,25 +138,18 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
     }
 
     for (let i = 0; i < summaryResults.tests.length; i += 1) {
-        const { name, startedAt, status } = summaryResults.tests[i];
+        const { name, projectName, status } = summaryResults.tests[i];
         if (status === "passed") {
-            passSummary.push(`\n${name} [${startedAt}]`)
+            passSummary.push(`\n${name} [${projectName}]\n`)
             passSummaryText = passSummary.join('')
         }
         if (status === "failed") {
-            failSummary.push(`\n${name} [${startedAt}]`
+            failSummary.push(`${name} [${projectName}]\n`
             )
             failSummaryText = failSummary.join('')
         }
         if (status === "skipped") {
-            skipSummary.push({
-                type: 'section',
-                text: {
-                    type: 'mrkdwn',
-                    text: `\n${name} [${startedAt}]`,
-                },
-            }
-            )
+            skipSummary.push(`${name} [${projectName}]\n`)
             skipSummaryText = skipSummary.join('');
         }
     }
@@ -168,7 +162,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `\n*${key}* :\t${value}`,
+                    text: `*${key}* :\t${value}\n`,
                 },
             });
         }

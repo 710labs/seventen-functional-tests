@@ -1,22 +1,19 @@
-name: thelist-ca-tests-dev-build-validation
-on:
-  workflow_dispatch:
+name: thelist-ca-smoke-tests-prod
+on: workflow_dispatch
 jobs:
-  run-tests:
+  smoke-test-prod-ca:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: dev-ca thelist-dev.710labs.com
+      ENV: prod-ca thelist.710labs.com
       EXECUTION_TYPE: Build Validation
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_DEV }}
-      RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
+      BASE_URL: ${{ secrets.BASE_URL_PROD_CA }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
-      ADD_ADDRESS_BEFORE_CHECKOUT: true
       SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
       S3_BUCKET: ${{ secrets.S3_BUCKET}}
       S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
@@ -29,12 +26,12 @@ jobs:
           node-version: "16.x"
       - name: Install dependencies
         run: npm ci
-      - name: Set Domain to CA
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev:ca
+        run: npm run smoke:test:prod:ca
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/

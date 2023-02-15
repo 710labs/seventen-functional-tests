@@ -1,6 +1,6 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test';
 require('dotenv').config({ path: require('find-config')('.env') });
-import generateCustomLayout from "../slack/slack-alert-layout-s3";
+import generateCustomLayoutAsync from "../slack/slack-alert-layout-s3";
 
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
@@ -13,12 +13,22 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 12 : undefined,
   reporter: [['list'], ['html'], [
-    "./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+    "./../node_modules/playwright-slack-report/dist/src/SlackReporter.js",
     {
-      channels: ["tech-savagery-tests"], // provide one or more Slack channels
+      channels: ["tech-savagery-tests", "710labs-qatest-results"],
       sendResults: "always", // "always" , "on-failure", "off"
-      layout: generateCustomLayout,
+      layoutAsync: generateCustomLayoutAsync,
       maxNumberOfFailuresToShow: 20,
+      meta: [
+        {
+          key: 'Environment',
+          value: process.env.ENV,
+        },
+        {
+          key: 'Execution Type',
+          value: process.env.EXECUTION_TYPE
+        }
+      ],
     },
   ],],
   use: {
