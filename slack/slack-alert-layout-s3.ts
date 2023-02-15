@@ -45,7 +45,7 @@ async function uploadFile(type, filePath, fileName) {
             await s3Client.send(
                 new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET,
-                    Key: name +uuidv4(),
+                    Key: name + uuidv4(),
                     Body: fs.createReadStream(filePath),
                     ContentType: 'application/zip',
                     ContentDisposition: 'inline'
@@ -143,8 +143,7 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
             passSummaryText = passSummary.join('')
         }
         if (status === "failed") {
-            failSummary.push(`${name} [${projectName}]\n`
-            )
+            failSummary.push(`${name} [${projectName}]\n`)
             failSummaryText = failSummary.join('')
         }
         if (status === "skipped") {
@@ -169,6 +168,9 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
     return [
         ...meta,
         {
+            type: 'divider',
+        },
+        {
             type: 'section',
             text: {
                 type: 'mrkdwn',
@@ -176,11 +178,17 @@ export async function generateCustomLayoutAsync(summaryResults: SummaryResults):
             },
         },
         {
+            type: 'divider',
+        },
+        {
             type: 'section',
             text: {
                 type: 'mrkdwn',
                 text: `\n\n:red_circle: *${summaryResults.failed}* Tests failed \n\n ${failSummaryText} `,
             },
+        },
+        {
+            type: 'divider',
         },
         {
             type: 'section',
