@@ -5,6 +5,8 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
+      ENV: prod-fl thelist.theflowery.co
+      EXECUTION_TYPE: Build Validation
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
