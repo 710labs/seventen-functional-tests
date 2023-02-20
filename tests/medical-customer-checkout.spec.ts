@@ -20,7 +20,7 @@ test.describe('Medical Customer Checkout', () => {
 	var checkOutPage: CheckoutPage
 	var myAccountPage: MyAccountPage
 
-	test.beforeAll(async ({ page, browserName }, workerInfo) => {
+	test.beforeEach(async ({ page, browserName }, workerInfo) => {
 		ageGatePage = new AgeGatePage(page)
 		listPassword = new ListPasswordPage(page)
 		createAccountPage = new CreateAccountPage(page, apiContext)
