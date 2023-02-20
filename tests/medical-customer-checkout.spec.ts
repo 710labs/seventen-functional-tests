@@ -1,4 +1,4 @@
-import { test, expect, devices, request, APIRequestContext } from '@playwright/test'
+import { test, request, APIRequestContext } from '@playwright/test'
 import { ListPasswordPage } from '../models/list-password-protect-page'
 import { AgeGatePage } from '../models/age-gate-page'
 import { LoginPage } from '../models/login-page'

@@ -92,4 +92,26 @@ export class CartPage {
 
 		return this.cartItems
 	}
+
+	async verifyCredit(existingAccountCredit: number): Promise<any> {
+		var accountCredit: string = ''
+		await test.step('Verify Cart Summary', async () => {
+			//Get Cart Summary Info
+			const taxSummaries = await this.page.locator('.tax-rate').elementHandles()
+			const accountCreditElement = await this.page.locator('.cart-discount').elementHandle()
+			accountCredit = await formatNumbers(
+				await (await accountCreditElement.$('.amount')).innerHTML(),
+			)
+
+			await expect(accountCredit, 'Account Credit was not applied to order.').not.toBeNull()
+			await expect(
+				taxSummaries,
+				'Taxes not applied to order with Account Credit applied.',
+			).not.toBeNull()
+			await expect(
+				Math.floor(accountCredit),
+				'Credit amount applied to cart is higher than client credit on account.',
+			).toBeLessThanOrEqual(existingAccountCredit)
+		})
+	}
 }

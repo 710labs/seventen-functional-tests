@@ -1,7 +1,7 @@
 import bankersRounding from 'bankers-rounding';
 
 export async function formatNumbers(value: string): Promise<string> {
-  return value.replace(/(<([^>]+)>)/gi, '').replace(/\$|,/g, '');
+  return value.replace(/(<([^>]+)>)/gi, '').replace(/\$|,/g, '').replace(/\-|,/g, '');
 }
 
 export async function calculateCartTotals(
