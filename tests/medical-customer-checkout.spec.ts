@@ -11,10 +11,24 @@ import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Medical Customer Checkout', () => {
 	var apiContext: APIRequestContext
-	var page: Page
-	test.beforeAll(async () => {
-		const browser = await chromium.launch()
-		page = await browser.newPage()
+	var ageGatePage: AgeGatePage
+	var listPassword: ListPasswordPage
+	var loginPage: LoginPage
+	var createAccountPage: CreateAccountPage
+	var shopPage: ShopPage
+	var cartPage: CartPage
+	var checkOutPage: CheckoutPage
+	var myAccountPage: MyAccountPage
+
+	test.beforeAll(async ({ page, browserName }, workerInfo) => {
+		ageGatePage = new AgeGatePage(page)
+		listPassword = new ListPasswordPage(page)
+		createAccountPage = new CreateAccountPage(page, apiContext)
+		loginPage = new LoginPage(page)
+		myAccountPage = new MyAccountPage(page)
+		shopPage = new ShopPage(page, browserName, workerInfo)
+		cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+		checkOutPage = new CheckoutPage(page, apiContext)
 		apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
@@ -22,15 +36,7 @@ test.describe('Medical Customer Checkout', () => {
 			},
 		})
 	})
-	test(`Checkout Existing Customer #medical @CA`, async ({ browserName }, workerInfo) => {
-		const ageGatePage = new AgeGatePage(page)
-		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page, apiContext)
-		const myAccountPage = new MyAccountPage(page)
-		const loginPage = new LoginPage(page)
-		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page, apiContext)
+	test(`Checkout Existing Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
@@ -47,13 +53,6 @@ test.describe('Medical Customer Checkout', () => {
 	test(`Checkout New Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 		const zipCode = '94020'
 		const email = `test+${uuidv4()}@710labs-test.com`
-		const ageGatePage = new AgeGatePage(page)
-		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page, apiContext)
-		const myAccountPage = new MyAccountPage(page)
-		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page, apiContext)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
