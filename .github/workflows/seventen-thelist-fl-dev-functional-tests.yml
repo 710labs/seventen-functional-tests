@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: dev-fl thelist-710labs.com
-      EXECUTION_TYPE: Build Validation
+      EXECUTION_TYPE: Scheduled Daily Run
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}

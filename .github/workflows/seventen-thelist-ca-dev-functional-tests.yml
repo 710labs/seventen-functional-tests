@@ -8,7 +8,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: DEV-CA thelist-710labs.com
+      ENV: dev-ca thelist-710labs.com
       EXECUTION_TYPE: Scheduled Daily Run
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
