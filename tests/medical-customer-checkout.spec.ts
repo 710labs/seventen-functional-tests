@@ -1,4 +1,4 @@
-import { test, expect, devices, request, APIRequestContext } from '@playwright/test'
+import { test, expect, devices, request, APIRequestContext, chromium, Page } from '@playwright/test'
 import { ListPasswordPage } from '../models/list-password-protect-page'
 import { AgeGatePage } from '../models/age-gate-page'
 import { LoginPage } from '../models/login-page'
@@ -11,7 +11,10 @@ import { MyAccountPage } from '../models/my-account-page'
 
 test.describe('Medical Customer Checkout', () => {
 	var apiContext: APIRequestContext
+	var page: Page
 	test.beforeAll(async () => {
+		const browser = await chromium.launch()
+		page = await browser.newPage()
 		apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 			extraHTTPHeaders: {
@@ -19,7 +22,7 @@ test.describe('Medical Customer Checkout', () => {
 			},
 		})
 	})
-	test(`Checkout Existing Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
+	test(`Checkout Existing Customer #medical @CA`, async ({ browserName }, workerInfo) => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
