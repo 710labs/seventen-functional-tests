@@ -181,7 +181,6 @@ export async function generateCustomLayoutAsync(
 		},
 		{
 			type: 'section',
-            color: `${summaryResults.failed == 0 ? `#00FF00` : `#FF0000`}`,
 			text: {
 				type: 'mrkdwn',
 				text:
