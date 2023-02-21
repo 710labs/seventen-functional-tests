@@ -10,7 +10,7 @@ jobs:
     env:
       ENV: dev-ca thelist-710labs.com
       EXECUTION_TYPE: Scheduled Daily Run
-      RUN_ID: ${{ env.GITHUB_RUN_NUMBER }}
+      RUN_ID: ${{github.run_number}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
@@ -57,4 +57,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
           AWS_REGION: ${{ secrets.S3_REGION}}
           SOURCE_DIR: 'results-history'
-          DEST_DIR: ${{ env.GITHUB_RUN_NUMBER }}
+          DEST_DIR: ${{github.run_number}}
