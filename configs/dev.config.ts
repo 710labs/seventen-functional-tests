@@ -1,5 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from "../slack/slack-alert-layout-s3"
+import generateCustomLayoutAsync from '../slack/slack-alert-layout-s3'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 /* https://playwright.dev/docs/test-configuration */
@@ -23,10 +23,10 @@ const config: PlaywrightTestConfig = {
 			},
 		],
 		[
-			"./../node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				channels: ["tech-savagery-tests", "710labs-qatest-results"], // provide one or more Slack channels
-				sendResults: "always", // "always" , "on-failure", "off"
+				channels: ['tech-savagery-tests', '710labs-qatest-results'], // provide one or more Slack channels
+				sendResults: 'always', // "always" , "on-failure", "off"
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
 				meta: [
@@ -36,8 +36,12 @@ const config: PlaywrightTestConfig = {
 					},
 					{
 						key: 'Execution Type',
-						value:  process.env.EXECUTION_TYPE
-					}
+						value: process.env.EXECUTION_TYPE,
+					},
+					{
+						key: 'Test Run ID',
+						value: process.env.RUN_ID,
+					},
 				],
 			},
 		],
@@ -50,7 +54,7 @@ const config: PlaywrightTestConfig = {
 			slowMo: 200,
 		},
 		trace: 'retain-on-failure',
-		video: "retain-on-failure",
+		video: 'retain-on-failure',
 		screenshot: 'only-on-failure',
 	},
 	projects: [
