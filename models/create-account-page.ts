@@ -66,7 +66,6 @@ export class CreateAccountPage {
 				`users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
 			)
 			this.apiUser = await createUserResponse.json()
-			console.log(this.apiUser)
 		})
 
 		return this.apiUser.user
@@ -205,13 +204,6 @@ export class CreateAccountPage {
 		await test.step('Complete Usage Type Form', async () => {
 			await (await this.page.$('text=Register')).click()
 			await expect(this.page).toHaveURL('/')
-		})
-
-		console.log({
-			username,
-			password,
-			type,
-			zipcode,
 		})
 
 		if (logout) {

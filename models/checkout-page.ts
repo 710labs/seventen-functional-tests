@@ -60,8 +60,6 @@ export class CheckoutPage {
 		await test.step('GET Tax Rates + Product Info', async () => {
 			await test.step('GET Tax Rate', async () => {
 				//Get Tax Rates
-				console.log(zipcode)
-
 				const taxRateResponse = await this.apiContext.get(`rates?postCode=${zipcode}`)
 				const taxRateResponseBody: any = await taxRateResponse.json()
 
@@ -102,22 +100,21 @@ export class CheckoutPage {
 							salesTaxAmount,
 							total,
 						}
-						console.log(this.cartTotal)
 					})
 				} else {
 					await test.step('GET Medical Tax Totals', async () => {
 						var grossTaxAmount = await (
-							await this.page.$('.tax-rate-us-ca-gross-1 >> .amount')
+							await this.page.$('.tax-rate >> nth=0 >> .amount')
 						).innerHTML()
 						grossTaxAmount = await formatNumbers(grossTaxAmount)
 
 						var exciseTaxAmount = await (
-							await this.page.$('.tax-rate-us-ca-excise-2 >> .amount')
+							await this.page.$('.tax-rate >> nth=1 >> .amount')
 						).innerHTML()
 						exciseTaxAmount = await formatNumbers(exciseTaxAmount)
 
 						var salesTaxAmount = await (
-							await this.page.$('.tax-rate-us-ca-sales-3 >> .amount')
+							await this.page.$('.tax-rate >> nth=2 >> .amount')
 						).innerHTML()
 						salesTaxAmount = await formatNumbers(salesTaxAmount)
 						var total = await (
@@ -132,7 +129,6 @@ export class CheckoutPage {
 							salesTaxAmount,
 							total,
 						}
-						console.log(this.cartTotal)
 					})
 				}
 
@@ -184,8 +180,19 @@ export class CheckoutPage {
 		}
 
 		await test.step(`Select Acuity Slot for ${zipcode} `, async () => {
-			await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first().click()
-			await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first().click()
+			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+			expect(
+				daySlot,
+				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await daySlot.click()
+
+			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+			expect(
+				timeSlot,
+				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await timeSlot.click()
 		})
 
 		await test.step('Submit New Customer Order', async () => {

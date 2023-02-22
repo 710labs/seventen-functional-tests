@@ -3,8 +3,7 @@
 	"version": "1.0.0",
 	"description": "",
 	"scripts": {
-		"test:local": "npx playwright test --config=configs/local.config.ts --headed --project=Desktop Chrome --workers=1",
-		"ci:test:local:ca": "npx playwright test --config=configs/local.config.ts --workers=10 --grep @CA",
+		"test:local:ca": "playwright test --config=configs/local.config.ts --workers=20 --grep @CA",
 		"ci:test:dev:ca": "playwright test --config=configs/dev.config.ts --workers=10 --grep @CA",
 		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @CA",
 		"ci:test:prod:ca": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @CA ",

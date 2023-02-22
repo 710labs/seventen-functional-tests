@@ -61,7 +61,7 @@ async function uploadFile(type, filePath, fileName) {
 export async function generateCustomLayoutAsync(
 	summaryResults: SummaryResults,
 ): Promise<Array<KnownBlock | Block>> {
-	const maxNumberOfFailures = 5
+	const maxNumberOfFailures = 15
 	const maxNumberOfFailureLength = 700
 	const fails: any[] = []
 	const failSummary: any[] = []
@@ -87,8 +87,7 @@ export async function generateCustomLayoutAsync(
 				type: 'section',
 				text: {
 					type: 'mrkdwn',
-					text: `*${name}*
-        \n\n${formattedFailure}`,
+					text: `*${name}*\n\n${formattedFailure}`,
 				},
 			})
 
@@ -185,9 +184,11 @@ export async function generateCustomLayoutAsync(
 				type: 'mrkdwn',
 				text:
 					`\n\nStatus: ${
-						summaryResults.failed == 0 ? ':large_green_circle: Passed' : ':large_red_circle: Failed'
+						summaryResults.failed == 0 ? ':large_green_circle: Passed' : ':red_circle: Failed'
 					}\n` +
-					`\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n` +
+					`\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n ${
+						passSummaryText.length > 0 ? passSummaryText : ''
+					}` +
 					`\n\n:red_circle: *${summaryResults.failed}* Tests failed \n ${
 						failSummaryText.length > 0 ? failSummaryText : ''
 					}` +
