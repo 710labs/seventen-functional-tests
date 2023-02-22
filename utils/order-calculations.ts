@@ -39,7 +39,6 @@ export async function calculateCartTotals(
         return tax.label === 'Sales';
       }).rate / 100;
   }
-  console.log(taxRate);
 
   var expectedCartTotal;
   var total = 0;
@@ -79,7 +78,5 @@ export async function calculateCartTotals(
     expectedSalesTaxAmount,
     expectedTotal,
   };
-  console.log(expectedCartTotal);
-
   return expectedCartTotal;
 }

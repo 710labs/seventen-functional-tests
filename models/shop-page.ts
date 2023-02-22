@@ -42,12 +42,14 @@ export class ShopPage {
 			itemCount = itemCount + (await this.randomizeCartItems())
 			await this.page.waitForSelector('[aria-label*="to your cart"]')
 			await this.page.waitForTimeout(5000)
-			const addToCartButtons = await this.page
-				.locator('[aria-label*="to your cart"]')
-				.elementHandles()
+			const addToCartButtons = await this.page.locator('[aria-label*="to your cart"]')
 
 			for (let i = 0; i < itemCount; i++) {
-				await addToCartButtons[i].click({ force: true })
+				await expect(
+					addToCartButtons.nth(i),
+					'Product Inventory is Low for this item. Please add more. ',
+				).toBeVisible()
+				await addToCartButtons.nth(i).click({ force: true })
 				await this.page.waitForTimeout(1500)
 			}
 			await this.page.keyboard.press('PageUp')
