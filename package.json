@@ -4,6 +4,7 @@
 	"description": "",
 	"scripts": {
 		"test:local:ca": "playwright test --config=configs/local.config.ts --workers=20 --grep @CA",
+		"test:local:fl": "playwright test --config=configs/local.config.ts --workers=20 --grep @FL",
 		"ci:test:dev:ca": "playwright test --config=configs/dev.config.ts --workers=10 --grep @CA",
 		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @CA",
 		"ci:test:prod:ca": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @CA ",
@@ -12,8 +13,8 @@
 		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep @FL",
 		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
 		"ci:test:prod:fl": "npx playwright test --config=configs/prod.config.ts --workers=10 --grep @FL",
-		"helper:acuityslots:dev": "npx playwright test -g \"Acuity Helpers\" --config=configs/dev.config.ts --project=Desktop Chrome --workers=10",
-		"helper:acuityslots": "npx playwright test -g \"Acuity Automation\" --config=configs/dev.config.ts --project=Desktop Chrome --workers=10"
+		"helper:acuityslots:dev": "npx playwright test -g \"Acuity Helpers\" --config=configs/automation.config.ts --project=Desktop Chrome --workers=10",
+		"helper:acuityslots": "npx playwright test -g \"Acuity Automation\" --config=configs/automation.config.ts --project=Desktop Chrome --workers=10"
 	},
 	"repository": {
 		"type": "git",

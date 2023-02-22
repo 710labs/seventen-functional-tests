@@ -20,14 +20,10 @@ const config: PlaywrightTestConfig = {
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
 				channels: ['tech-savagery-tests'],
-				sendResults: 'always',
+				sendResults: 'never',
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
 				meta: [
-					{
-						key: 'Environment',
-						value: process.env.ENV,
-					},
 					{
 						key: 'Execution Type',
 						value: 'Acuity Slot Scripts',
