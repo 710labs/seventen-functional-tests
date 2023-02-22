@@ -186,7 +186,7 @@ export async function generateCustomLayoutAsync(
 				text:
 					`\n\nStatus: ${
 						summaryResults.failed == 0 ? ':large_green_circle: Passed' : ':large_red_circle: Failed'
-					} \n ${skipSummaryText}` +
+					}\n` +
 					`\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n` +
 					`\n\n:red_circle: *${summaryResults.failed}* Tests failed \n ${
 						failSummaryText.length > 0 ? failSummaryText : ''
