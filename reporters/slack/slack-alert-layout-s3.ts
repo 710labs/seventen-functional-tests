@@ -74,7 +74,7 @@ export async function generateCustomLayoutAsync(
 	console.log(summaryResults)
 	for (let i = 0; i < summaryResults.failures.length; i += 1) {
 		const { reason, name, attachments, suiteName, status } = summaryResults.tests[i]
-		if (status === 'failed') {
+		if (status === 'failed' || status === 'timedOut') {
 			var formattedFailure = reason
 				.substring(0, maxNumberOfFailureLength)
 				.split('\n')

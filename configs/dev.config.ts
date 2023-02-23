@@ -44,6 +44,7 @@ const config: PlaywrightTestConfig = {
 				],
 			},
 		],
+		['../reporters/s3/pw-report-s3-upload.ts'],
 	],
 	use: {
 		acceptDownloads: true,
@@ -68,7 +69,7 @@ const config: PlaywrightTestConfig = {
 			use: {
 				...devices['Pixel 5'],
 			},
-		}
+		},
 	],
 	outputDir: '../test-results/',
 }
