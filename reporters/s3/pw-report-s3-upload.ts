@@ -8,21 +8,14 @@ import {
 } from '@playwright/test/reporter'
 
 class ReportToS3 implements Reporter {
-	onBegin(config: FullConfig, suite: Suite) {
-		console.log(`Starting the run with ${suite.allTests().length} tests`)
-	}
+	onBegin(config: FullConfig, suite: Suite) {}
 
-	onTestBegin(test: TestCase, result: TestResult) {
-		console.log(`Starting test ${test.title}`)
-	}
+	onTestBegin(test: TestCase, result: TestResult) {}
 
-	onTestEnd(test: TestCase, result: TestResult) {
-		console.log(`Finished test ${test.title}: ${result.status} [${result.duration / 1000} sec]`)
-	}
+	onTestEnd(test: TestCase, result: TestResult) {}
 
 	onEnd(result: FullResult) {
-		console.log(`Finished the run: ${result.status}`)
-		//upload html report to s3
+		console.log(result)
 	}
 }
 

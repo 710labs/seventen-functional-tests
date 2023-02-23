@@ -23,24 +23,25 @@ const config: PlaywrightTestConfig = {
 			},
 		],
 		[
-			"./../node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-			  channels: ["tech-savagery-tests", "710labs-qatest-results"],
-			  sendResults: "always", // "always" , "on-failure", "off"
-			  layoutAsync: generateCustomLayoutAsync,
-			  maxNumberOfFailuresToShow: 20,
-			  meta: [
-				{
-				  key: 'Environment',
-				  value: process.env.ENV,
-				},
-				{
-				  key: 'Execution Type',
-				  value: process.env.EXECUTION_TYPE
-				}
-			  ],
+				channels: ['tech-savagery-tests', '710labs-qatest-results'],
+				sendResults: 'always', // "always" , "on-failure", "off"
+				layoutAsync: generateCustomLayoutAsync,
+				maxNumberOfFailuresToShow: 20,
+				meta: [
+					{
+						key: 'Environment',
+						value: process.env.ENV,
+					},
+					{
+						key: 'Execution Type',
+						value: process.env.EXECUTION_TYPE,
+					},
+				],
 			},
-		  ],
+		],
+		['../reporters/s3/pw-report-s3-upload.ts'],
 	],
 	use: {
 		acceptDownloads: true,
