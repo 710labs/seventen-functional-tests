@@ -11,7 +11,6 @@ const config: PlaywrightTestConfig = {
 	},
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 0 : 0,
-	workers: process.env.CI ? 12 : undefined,
 	reporter: [
 		['list'],
 		['html'],
@@ -69,13 +68,7 @@ const config: PlaywrightTestConfig = {
 			use: {
 				...devices['Pixel 5'],
 			},
-		},
-		// {
-		//   name: 'mobile-safari',
-		//   use: {
-		//     ...devices['iPhone 12'],
-		//   },
-		// },
+		}
 	],
 	outputDir: '../test-results/',
 }

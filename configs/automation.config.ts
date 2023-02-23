@@ -50,18 +50,6 @@ const config: PlaywrightTestConfig = {
 				...devices['Desktop Chrome'],
 			},
 		},
-		{
-			name: 'Mobile Chrome',
-			use: {
-				...devices['Pixel 5'],
-			},
-		},
-		// {
-		//   name: 'mobile-safari',
-		//   use: {
-		//     ...devices['iPhone 12'],
-		//   },
-		// },
 	],
 	outputDir: '../test-results/',
 }
