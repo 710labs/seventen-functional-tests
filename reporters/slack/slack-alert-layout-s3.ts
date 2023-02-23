@@ -170,7 +170,7 @@ export async function generateCustomLayoutAsync(
 			type: 'header',
 			text: {
 				type: 'plain_text',
-				text: '710 Labs',
+				text: 'Direct To Consumer Tests',
 				emoji: true,
 			},
 		},
