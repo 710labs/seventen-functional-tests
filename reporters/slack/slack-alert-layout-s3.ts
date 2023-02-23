@@ -141,7 +141,7 @@ export async function generateCustomLayoutAsync(
 			passSummary.sort()
 			passSummaryText = passSummary.join('')
 		}
-		if (status === 'failed') {
+		if (status === 'failed' || status === 'timedOut') {
 			failSummary.push(`${name} [${projectName}]\n`)
 			failSummary.sort()
 			failSummaryText = failSummary.join('')
