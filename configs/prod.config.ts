@@ -38,6 +38,10 @@ const config: PlaywrightTestConfig = {
 						key: 'Execution Type',
 						value: process.env.EXECUTION_TYPE,
 					},
+					{
+						key: 'Test Run ID',
+						value: process.env.RUN_UNIQUE_ID + '-' + process.env.RUN_ID,
+					},
 				],
 			},
 		],
