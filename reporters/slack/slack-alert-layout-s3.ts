@@ -5,6 +5,7 @@ import path from 'path'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { v4 as uuidv4 } from 'uuid'
 
+
 const s3Client = new S3Client({
 	credentials: {
 		accessKeyId: process.env.S3_ACCESS_KEY || '',

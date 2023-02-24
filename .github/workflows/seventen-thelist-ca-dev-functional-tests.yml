@@ -11,6 +11,7 @@ jobs:
       ENV: dev-ca thelist-710labs.com
       EXECUTION_TYPE: Scheduled Daily Run
       RUN_ID: ${{github.run_number}}
+      RUN_UNIQUE_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
