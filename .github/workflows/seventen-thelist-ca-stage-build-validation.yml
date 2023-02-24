@@ -1,4 +1,4 @@
-name: thelist-ca-tests-stage
+name: thelist-ca-tests-stage-build-validation
 on:
   workflow_dispatch:
 jobs:
