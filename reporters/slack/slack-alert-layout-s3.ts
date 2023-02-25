@@ -205,8 +205,8 @@ export async function generateCustomLayoutAsync(
 					type: 'button',
 					text: {
 						type: 'plain_text',
-						emoji: true,
-						text: `Test Run [${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}] Report`,
+						emoji: false,
+						text: `[${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}] Report`,
 					},
 					style: 'primary',
 					value: 'click_me',
