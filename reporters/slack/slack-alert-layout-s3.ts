@@ -5,7 +5,6 @@ import path from 'path'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { v4 as uuidv4 } from 'uuid'
 
-
 const s3Client = new S3Client({
 	credentials: {
 		accessKeyId: process.env.S3_ACCESS_KEY || '',
@@ -195,6 +194,25 @@ export async function generateCustomLayoutAsync(
 					}` +
 					`\n\n:fast_forward: *${summaryResults.skipped}* skipped\n ${skipSummaryText}`,
 			},
+		},
+		{
+			type: 'divider',
+		},
+		{
+			type: 'actions',
+			elements: [
+				{
+					type: 'button',
+					text: {
+						type: 'plain_text',
+						emoji: true,
+						text: `Test Run [${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}] Report`,
+					},
+					style: 'primary',
+					value: 'click_me',
+					url: `https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}/index.html`,
+				},
+			],
 		},
 		{
 			type: 'divider',
