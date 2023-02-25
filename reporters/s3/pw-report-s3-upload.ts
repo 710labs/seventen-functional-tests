@@ -21,10 +21,10 @@ class ReportToS3 implements Reporter {
 		await s3.uploadDirectory({
 			path: '../seventen-functional-tests/playwright-report',
 			params: {
-				Bucket: `${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`,
+				Bucket: process.env.S3_BUCKET,
 				CacheControl: `max-age=86400`,
 			},
-			rootKey: uuidv4(),
+			rootKey: `${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`,
 		})
 	}
 }
