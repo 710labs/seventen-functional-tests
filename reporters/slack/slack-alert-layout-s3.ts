@@ -210,7 +210,7 @@ export async function generateCustomLayoutAsync(
 					},
 					style: 'primary',
 					value: 'click_me',
-					url: `https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}/index.html`,
+					url: `https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.RUN_UNIQUE_ID}-${process.env.RUN_ID}/index.html`,
 				},
 			],
 		},
