@@ -24,7 +24,7 @@ class ReportToS3 implements Reporter {
 				Bucket: process.env.S3_BUCKET,
 				CacheControl: `max-age=86400`,
 			},
-			rootKey: `${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`,
+			rootKey: `${process.env.RUN_UNIQUE_ID}-${process.env.RUN_ID}`,
 		})
 	}
 }
