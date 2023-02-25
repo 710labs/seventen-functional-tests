@@ -1,6 +1,7 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
 import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
 require('dotenv').config({ path: require('find-config')('.env') })
+import { v4 as uuidv4 } from 'uuid'
 
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
@@ -44,9 +45,9 @@ const config: PlaywrightTestConfig = {
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'retain-on-failure',
-		video: 'retain-on-failure',
-		screenshot: 'only-on-failure',
+		trace: 'on',
+		video: 'on',
+		screenshot: 'on',
 	},
 	projects: [
 		{
