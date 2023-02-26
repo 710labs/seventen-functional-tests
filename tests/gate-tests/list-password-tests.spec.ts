@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { AgeGatePage } from '../models/age-gate-page'
-import { ListPasswordPage } from '../models/list-password-protect-page'
+import { AgeGatePage } from '../../models/age-gate-page'
+import { ListPasswordPage } from '../../models/list-password-protect-page'
 
 test('Enter List Password - Valid @CA @FL', async ({ page }) => {
 	const ageGatePage = new AgeGatePage(page)

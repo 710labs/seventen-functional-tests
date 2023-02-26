@@ -206,11 +206,23 @@ export async function generateCustomLayoutAsync(
 					text: {
 						type: 'plain_text',
 						emoji: false,
-						text: `[${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}] Report`,
+						text: `
+						Test Report`,
 					},
 					style: 'primary',
 					value: 'click_me',
 					url: `https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.RUN_UNIQUE_ID}-${process.env.RUN_ID}/index.html`,
+				},
+				{
+					type: 'button',
+					text: {
+						type: 'plain_text',
+						emoji: false,
+						text: `GitHub Action`,
+					},
+					style: 'primary',
+					value: 'click_me',
+					url: `https://github.com/710labs/seventen-functional-tests/actions/runs/${process.env.RUN_UNIQUE_ID}`,
 				},
 			],
 		},
