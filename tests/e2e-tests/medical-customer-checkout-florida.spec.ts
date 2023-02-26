@@ -1,13 +1,13 @@
 import { test, expect, devices, request } from '@playwright/test'
-import { ListPasswordPage } from '../models/list-password-protect-page'
-import { AgeGatePage } from '../models/age-gate-page'
-import { ShopPage } from '../models/shop-page'
-import { CreateAccountPage } from '../models/create-account-page'
+import { ListPasswordPage } from '../../models/list-password-protect-page'
+import { AgeGatePage } from '../../models/age-gate-page'
+import { ShopPage } from '../../models/shop-page'
+import { CreateAccountPage } from '../../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
-import { CheckoutPage } from '../models/checkout-page'
-import { CartPage } from '../models/cart-page'
-import { MyAccountPage } from '../models/my-account-page'
-import zipcodes from '../utils/zipcodes-fl.json'
+import { CheckoutPage } from '../../models/checkout-page'
+import { CartPage } from '../../models/cart-page'
+import { MyAccountPage } from '../../models/my-account-page'
+import zipcodes from '../../utils/zipcodes-fl.json'
 
 test(`Checkout New Customer Florida #medical @FL`, async ({ page, browserName }, workerInfo) => {
 	const apiContext = await request.newContext({

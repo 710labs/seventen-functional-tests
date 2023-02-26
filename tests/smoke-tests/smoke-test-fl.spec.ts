@@ -1,23 +1,22 @@
-import { test, expect, request } from '@playwright/test'
-import { ListPasswordPage } from '../models/list-password-protect-page'
-import { AgeGatePage } from '../models/age-gate-page'
-import { ShopPage } from '../models/shop-page'
-import { CreateAccountPage } from '../models/create-account-page'
-import { CheckoutPage } from '../models/checkout-page'
-import { CartPage } from '../models/cart-page'
-import { MyAccountPage } from '../models/my-account-page'
-import { AdminLogin } from '../models/admin-login-page'
-import { OrderReceivedPage } from '../models/order-recieved-page'
-import { EditOrderPage } from '../models/edit-order-page'
+import { test, expect, devices, request } from '@playwright/test'
+import { ListPasswordPage } from '../../models/list-password-protect-page'
+import { AgeGatePage } from '../../models/age-gate-page'
+import { ShopPage } from '../../models/shop-page'
+import { CreateAccountPage } from '../../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
+import { CheckoutPage } from '../../models/checkout-page'
+import { CartPage } from '../../models/cart-page'
+import { MyAccountPage } from '../../models/my-account-page'
+import zipcodes from '../../utils/zipcodes-fl.json'
+import { AdminLogin } from '../../models/admin-login-page'
+import { EditOrderPage } from '../../models/edit-order-page'
+import { OrderReceivedPage } from '../../models/order-recieved-page'
 
-test.describe('Basic Acceptance Tests CA', () => {
-	const zipCode = '90210'
-	const orderQuanity = 6
+test.describe('Medical Customer Checkout Florida', () => {
+	var cartTotals: any
 	var orderNumber: any
 	var splitOrderNumber: string
-	var cartTotals: any
-
+	const orderQuanity = 6
 
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
@@ -35,7 +34,9 @@ test.describe('Basic Acceptance Tests CA', () => {
 				path: '/',
 			},
 		])
-		const address = '123 Rodeo Dr Beverly Hills'
+		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
+		const zipCode = zipcodes[index]
+		const address = '3275 NW 24th Street Rd'
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -58,7 +59,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 
 		await test.step('Create Account', async () => {
-			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'CA')
+			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
 		})
 
 		await test.step('Add Products to Cart', async () => {

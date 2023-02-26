@@ -1,9 +1,9 @@
 import { APIRequestContext, request, test } from '@playwright/test'
-import { ListPasswordPage } from '../models/list-password-protect-page'
-import { AgeGatePage } from '../models/age-gate-page'
-import { LoginPage } from '../models/login-page'
-import { ShopPage } from '../models/shop-page'
-import { CartPage } from '../models/cart-page'
+import { ListPasswordPage } from '../../models/list-password-protect-page'
+import { AgeGatePage } from '../../models/age-gate-page'
+import { LoginPage } from '../../models/login-page'
+import { ShopPage } from '../../models/shop-page'
+import { CartPage } from '../../models/cart-page'
 
 var apiContext: APIRequestContext
 test.skip('Customer Has Credit - Discount Applied', async ({ page, browserName }, workerInfo) => {
