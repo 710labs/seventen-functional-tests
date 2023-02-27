@@ -11,8 +11,13 @@ export class ListPasswordPage {
 
 	async submitPassword(password: string) {
 		await test.step('Enter List Password', async () => {
-			await this.page.click('input[name="post_password"]')
-			await this.page.fill('input[name="post_password"]', password)
+			const passwordField = await this.page.locator('input[name="post_password"]')
+			await expect(
+				passwordField,
+				'Could not find the The List password field. The list password page may be in the incorrect order workflow',
+			).toBeVisible()
+			await passwordField.click()
+			await passwordField.fill(password)
 		})
 		await test.step('Submit List Password', async () => {
 			await this.page.press('input[name="post_password"]', 'Enter')
