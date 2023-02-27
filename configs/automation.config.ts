@@ -2,16 +2,15 @@ import { PlaywrightTestConfig, devices } from '@playwright/test'
 import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
 require('dotenv').config({ path: require('find-config')('.env') })
 
-/* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
 	testDir: './../utils',
-	timeout: 300 * 1000,
+	timeout: 120 * 1000,
 	expect: {
 		timeout: 5 * 1000,
 	},
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 0 : 0,
+	retries: process.env.CI ? 0 : 1,
 	workers: process.env.CI ? 12 : 5,
 	reporter: [
 		['list'],
@@ -34,7 +33,7 @@ const config: PlaywrightTestConfig = {
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 300 * 1000,
+		actionTimeout: 20 * 1000,
 		baseURL: 'https://thelist-dev.710labs.com',
 		launchOptions: {
 			slowMo: 200,
