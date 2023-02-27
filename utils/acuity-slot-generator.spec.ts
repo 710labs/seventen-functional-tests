@@ -25,7 +25,6 @@ test.describe('Acuity Automation', () => {
 		if (testInfo.status !== testInfo.expectedStatus) {
 			//Parse test title and add entry to failures.csv
 			console.log(testInfo.title)
-			console.log(testInfo.annotations.)
 		}
 	})
 
