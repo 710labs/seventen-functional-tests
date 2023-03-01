@@ -31,6 +31,8 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
+        with:
+          node-version: '16.x'
       - uses: actions/setup-node@v2
         with:
           node-version: '16.x'
@@ -41,6 +43,7 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+          node-version: '16.x'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests

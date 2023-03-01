@@ -40,7 +40,7 @@ const config: PlaywrightTestConfig = {
 					},
 					{
 						key: 'Test Run ID',
-						value: process.env.RUN_UNIQUE_ID + '-' + process.env.RUN_ID,
+						value: process.env.UNIQUE_RUN_ID + '-' + process.env.RUN_ID,
 					},
 				],
 			},
