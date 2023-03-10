@@ -1,11 +1,11 @@
-name: thelist-ca-tests-prod-build-validation
+name: thelist-mi-tests-prod-build-validation
 on: workflow_dispatch
 jobs:
   smoke-test-prod-ca:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: prod-ca thelist.710labs.com
+      ENV: prod-mi thelist-mi.710labs.com
       EXECUTION_TYPE: Build Validation
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
@@ -31,7 +31,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run smoke:test:prod:ca
+        run: npm run smoke:test:prod:mi
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
