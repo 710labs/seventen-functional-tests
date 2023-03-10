@@ -8,7 +8,7 @@ import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
 import { AdminLogin } from '../../models/admin/admin-login-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
-import { EditOrderPage } from '../../models/edit-order-page'
+import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 
 test.describe('Basic Acceptance Tests CA', () => {
