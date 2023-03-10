@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
 	testDir: './../tests',
-	timeout: 300 * 1000,
+	timeout: 180 * 1000,
 	expect: {
 		timeout: 5 * 1000,
 	},

@@ -8,8 +8,8 @@ import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
 import zipcodes from '../../utils/zipcodes-fl.json'
-import { AdminLogin } from '../../models/admin-login-page'
-import { EditOrderPage } from '../../models/edit-order-page'
+import { AdminLogin } from '../../models/admin/admin-login-page'
+import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 
 test.describe('Medical Customer Checkout Florida', () => {

@@ -2,15 +2,9 @@ import test, { expect, Locator, Page } from '@playwright/test'
 
 export class EditOrderPage {
 	readonly page: Page
-	readonly userNameField: Locator
-	readonly passwordField: Locator
-	readonly loginButton: Locator
 
 	constructor(page: Page) {
 		this.page = page
-		this.userNameField = page.locator('input[name="log"]')
-		this.passwordField = page.locator('input[name="pwd"]')
-		this.loginButton = page.locator('text=Log In')
 	}
 
 	async splitOrder(orderNumber: any, orderQuanity: any): Promise<string> {

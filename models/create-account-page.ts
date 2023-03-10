@@ -196,6 +196,17 @@ export class CreateAccountPage {
 				await medicalCardChooser.page()
 			})
 			await test.step('Enter Med Card Exp', async () => {
+				expect(this.medCardExpMonth).toBeVisible()
+				expect(this.medCardExpMonth).toBeEnabled()
+
+				expect(this.medCardExpDay).toBeVisible()
+				expect(this.medCardExpDay).toBeEnabled()
+
+				expect(this.medCardExpYear).toBeVisible()
+				expect(this.medCardExpYear).toBeEnabled()
+
+				await this.page.waitForTimeout(5000)
+
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption('2023')
@@ -203,6 +214,7 @@ export class CreateAccountPage {
 		}
 		await test.step('Complete Usage Type Form', async () => {
 			await (await this.page.$('text=Register')).click()
+			await this.page.waitForTimeout(5000)
 			await expect(this.page).toHaveURL('/')
 		})
 

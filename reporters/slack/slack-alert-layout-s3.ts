@@ -72,7 +72,7 @@ export async function generateCustomLayoutAsync(
 	var skipSummaryText: string = ''
 	const meta: any[] = []
 	console.log(summaryResults)
-	for (let i = 0; i < summaryResults.failures.length; i += 1) {
+	for (let i = 0; i < summaryResults.tests.length; i += 1) {
 		const { reason, name, attachments, suiteName, status } = summaryResults.tests[i]
 		if (status === 'failed' || status === 'timedOut') {
 			var formattedFailure = reason

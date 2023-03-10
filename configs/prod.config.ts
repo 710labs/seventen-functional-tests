@@ -5,7 +5,7 @@ import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
 	testDir: './../tests',
-	timeout: 300 * 1000,
+	timeout: 180 * 1000,
 	expect: {
 		timeout: 10 * 1000,
 	},
