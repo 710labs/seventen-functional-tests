@@ -4,10 +4,17 @@ import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
 import { ShopPage } from '../../models/shop-page'
 import { CartPage } from '../../models/cart-page'
+import { CreateAccountPage } from '../../models/create-account-page'
+import { AdminLogin } from '../../models/admin/admin-login-page'
 
-var apiContext: APIRequestContext
-test.skip('Customer Has Credit - Discount Applied', async ({ page, browserName }, workerInfo) => {
-	apiContext = await request.newContext({
+test.skip('Customer Has Credit - Discount Applied @CA', async ({
+	page,
+	browserName,
+}, workerInfo) => {
+	//Arrange
+
+	//Setup Pages
+	const apiContext = await request.newContext({
 		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 		extraHTTPHeaders: {
 			'x-api-key': `${process.env.API_KEY}`,
@@ -15,15 +22,24 @@ test.skip('Customer Has Credit - Discount Applied', async ({ page, browserName }
 	})
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
+	const createAccountPage = new CreateAccountPage(page, apiContext)
 	const loginPage = new LoginPage(page)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
 	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+	const adminLoginPage = new AdminLogin(page)
 	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
-	//Arrange
+	//Create Account
+	var user = await createAccountPage.createApi('recreational', 'current')
+
+	//Add Credit
+	await adminLoginPage.login()
+	await 
+
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword('qatester')
-	await loginPage.login('account-credit-500@mail7.io', 'test1234!')
+	var user = await createAccountPage.createApi('recreational', 'current')
+	await loginPage.login(user.email, user.password)
 
 	//Act
 	await shopPage.addProductsToCart(6, mobile)
@@ -36,7 +52,7 @@ test.skip('Customer Has Credit - Order Total Equals Rec Limit - Discount Applied
 	page,
 	browserName,
 }, workerInfo) => {
-	apiContext = await request.newContext({
+	const apiContext = await request.newContext({
 		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 		extraHTTPHeaders: {
 			'x-api-key': `${process.env.API_KEY}`,

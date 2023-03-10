@@ -14,7 +14,7 @@ export class AdminLogin {
 	}
 
 	async login() {
-		await test.step('Login User', async () => {
+		await test.step('Login Admin User', async () => {
 			await Promise.all([
 				await this.page.goto('/wp-admin/'),
 				await this.userNameField.fill(`${process.env.ADMIN_USER}`),
