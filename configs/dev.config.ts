@@ -48,7 +48,7 @@ const config: PlaywrightTestConfig = {
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 300 * 1000,
+		actionTimeout: 15 * 1000,
 		baseURL: 'https://thelist-dev.710labs.com',
 		launchOptions: {
 			slowMo: 200,
