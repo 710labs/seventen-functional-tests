@@ -1,5 +1,5 @@
 import { Page, test } from '@playwright/test'
-import { AdminLogin } from '../models/admin-login-page'
+import { AdminLogin } from '../models/admin/admin-login-page'
 import caDeliveryZones from './delivery-zones-ca.json'
 import flDeliveryZones from './delivery-zones-fl.json'
 const csvFilePath = 'utils/delivery-slots.csv'
