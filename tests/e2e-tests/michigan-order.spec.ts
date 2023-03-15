@@ -7,18 +7,20 @@ import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
-import zipcodes from '../../utils/zipcodes-fl.json'
+import flZipcodes from '../../utils/zipcodes-fl.json'
+import miZipcodes from '../../utils/zipcodes-mi.json'
+import caZipcodes from '../../utils/zipcodes-ca.json'
 
-test(`Checkout New Customer Florida #medical @FL`, async ({ page, browserName }, workerInfo) => {
+test(`Basic Order - New Customer #medical @MI`, async ({ page, browserName }, workerInfo) => {
 	const apiContext = await request.newContext({
 		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 		extraHTTPHeaders: {
 			'x-api-key': `${process.env.API_KEY}`,
 		},
 	})
-	const address = '3275 NW 24th Street Rd'
-	var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
-	const zipCode = zipcodes[index]
+	const address = '123 Eight Mile Rd'
+	var index = await Math.floor(Math.random() * (miZipcodes.length - 0) + 0)
+	const zipCode = miZipcodes[index]
 	const email = `test+${uuidv4()}@710labs-test.com`
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
