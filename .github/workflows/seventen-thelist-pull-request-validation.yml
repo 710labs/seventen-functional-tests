@@ -1,15 +1,16 @@
-name: thelist-ca-tests-dev
+name: thelist-tests-pr-validation
 on:
-  schedule:
-    - cron: '0 14 * * *'
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
 jobs:
-  run-tests:
+  ca-tests-dev:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       ENV: dev-ca thelist-710labs.com
-      EXECUTION_TYPE: Scheduled Daily Run
+      EXECUTION_TYPE: Pull REquest Validation
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
