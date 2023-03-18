@@ -9,6 +9,7 @@ export class CheckoutPage {
 	readonly firstNameInput: Locator
 	readonly lastNameInput: Locator
 	readonly phoneInput: Locator
+	readonly userInfoArea: Locator
 	readonly addressLine1: Locator
 	readonly city: Locator
 	readonly zipCodeInput: Locator
@@ -40,6 +41,7 @@ export class CheckoutPage {
 		this.firstNameInput = this.page.locator('input[name="billing_first_name"]')
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
 		this.phoneInput = this.page.locator('input[name="billing_phone"]')
+		this.userInfoArea = this.page.locator('id = "wcseEmulator"] / section[3] / div / div')
 		this.addressLine1 = this.page.locator('input[name="billing_address_1"]')
 		this.addressModifierButton = this.page.locator('[data-modder="address"]')
 		this.addressModifierSubmitButton = this.page.locator('a > [data-mod="address"]')
@@ -157,6 +159,9 @@ export class CheckoutPage {
 
 		let cartTotals
 		await test.step('Verify Layout', async () => {
+			// visual diff of checkout page
+			await expect(this.page).toHaveScreenshot('checkout-page.png', { maxDiffPixels: 100, mask: [this.userInfoArea] });
+
 			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 				'href',
 				'/terms-of-use',

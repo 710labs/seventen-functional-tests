@@ -31,7 +31,7 @@ export class CreateAccountPage {
 	apiContext: APIRequestContext
 
 	constructor(page: Page, apiContext: APIRequestContext) {
-		;(this.page = page),
+		; (this.page = page),
 			(this.apiContext = apiContext),
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
@@ -80,7 +80,10 @@ export class CreateAccountPage {
 		address: string = '123 Front Street',
 		state: string = 'CA',
 	) {
-		await test.step('Verify Layout', async () => {})
+		await test.step('Verify Layout', async () => {
+			// visual diff for create account screen
+			await expect(this.page).toHaveScreenshot('create-account-layout.png', { maxDiffPixels: 100 });
+		})
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
@@ -150,6 +153,8 @@ export class CreateAccountPage {
 			const dlUploadButton = await this.page.waitForSelector(
 				'input[name="svntn_core_personal_doc"]',
 			)
+			// visual diff for license upload screen
+			await expect(this.page).toHaveScreenshot('drivers-license-upload.png', { maxDiffPixels: 100 });
 			const [driversLicenseChooser] = await Promise.all([
 				this.page.waitForEvent('filechooser'),
 				dlUploadButton.click(),
@@ -168,6 +173,8 @@ export class CreateAccountPage {
 				const medicalCardButton = await this.page.waitForSelector(
 					'input[name="svntn_core_medical_doc"]',
 				)
+				// visual diff for med card upload screen
+				await expect(this.page).toHaveScreenshot('CA-medical-card-upload.png', { maxDiffPixels: 100 });
 				const [medicalCardChooser] = await Promise.all([
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),
@@ -188,6 +195,8 @@ export class CreateAccountPage {
 				const medicalCardButton = await this.page.waitForSelector(
 					'input[name="svntn_core_medical_doc"]',
 				)
+				// visual diff for FL med upload screen
+				await expect(this.page).toHaveScreenshot('FL-medical-card-upload.png', { maxDiffPixels: 100 });
 				const [medicalCardChooser] = await Promise.all([
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),

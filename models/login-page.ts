@@ -20,6 +20,9 @@ export class LoginPage {
 
 	async login(username: string, password: string) {
 		await test.step('Enter Username', async () => {
+			// visual diff of login screen
+			await expect(this.page).toHaveScreenshot('login-screen.png', { maxDiffPixels: 100 });
+			
 			await this.userNameField.click()
 			await this.userNameField.fill(username)
 		})

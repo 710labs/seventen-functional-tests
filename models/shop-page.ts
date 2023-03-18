@@ -28,6 +28,8 @@ export class ShopPage {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
 			await this.page.waitForTimeout(3000)
+			// visual diff for fulfillment method modal on home screen
+			await expect(this.page).toHaveScreenshot('fullfillment-method-modal.png', { maxDiffPixels: 100 });
 		})
 		await test.step('Select Fulfillment Method', async () => {
 			if (process.env.NEXT_VERSION === 'true') {
@@ -39,6 +41,8 @@ export class ShopPage {
 			}
 		})
 		await test.step('Add Products to Cart', async () => {
+			// visual diff for store landing page
+			await expect(this.page).toHaveScreenshot('store-landing-page.png', { maxDiffPixels: 100 });
 			itemCount = itemCount + (await this.randomizeCartItems())
 			await this.page.waitForSelector('[aria-label*="to your cart"]')
 			await this.page.waitForTimeout(5000)

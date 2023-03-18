@@ -11,7 +11,8 @@ const config: PlaywrightTestConfig = {
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 0 : 1,
-	workers: process.env.CI ? 12 : 5,
+	// workers: process.env.CI ? 12 : 5,
+	workers: process.env.CI ? 1 : undefined,
 	reporter: [
 		['list'],
 		['html'],

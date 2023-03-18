@@ -21,6 +21,10 @@ export class AgeGatePage {
 					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
 				)
 			}
+			// visual diff of age gate screen
+			await expect(this.page).toHaveScreenshot('age-gate-screen.png', { maxDiffPixels: 100 });
+			//await expect(this.page).toHaveScreenshot('fullfillment-method-modal.png', { maxDiffPixels: 100 });
+			// await expect(this.page).toHaveScreenshot('login-screen.png', { maxDiffPixels: 100 });
 
 			if (this.page.url().includes('thelist.theflowery.co')) {
 				await this.page.click('text=I Qualify')
@@ -40,6 +44,8 @@ export class AgeGatePage {
 			await expect(this.page.locator('.age-gate-error-message')).toHaveText(
 				'You are not old enough to view this content',
 			)
+			// visual diff fail age screen
+			await expect(this.page).toHaveScreenshot('fail-age-gate-message.png', { maxDiffPixels: 100 });
 		})
 	}
 }
