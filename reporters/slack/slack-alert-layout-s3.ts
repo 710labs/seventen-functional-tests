@@ -186,8 +186,8 @@ export async function generateCustomLayoutAsync(
 					`\n\n ${
 						summaryResults.failed == 0 ? ':large_green_circle: Passed' : ':red_circle: Failed'
 					}\n` +
-					`\n\n${summaryResults.passed} / ${summaryResults.passed + summaryResults.failed}
-					}` +
+					`\n\n${summaryResults.passed}(Pass) ${summaryResults.passed} (Fail) / ${summaryResults.passed + summaryResults.failed} Tests
+					` +
 					`\n\n ${
 						failSummaryText.length > 0 ? 'Failures:' : ''
 					} \n ${
