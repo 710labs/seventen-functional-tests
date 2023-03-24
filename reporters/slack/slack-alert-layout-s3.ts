@@ -183,16 +183,16 @@ export async function generateCustomLayoutAsync(
 			text: {
 				type: 'mrkdwn',
 				text:
-					`\n\nStatus: ${
+					`\n\n ${
 						summaryResults.failed == 0 ? ':large_green_circle: Passed' : ':red_circle: Failed'
 					}\n` +
-					`\n\n:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n ${
-						passSummaryText.length > 0 ? passSummaryText : ''
+					`\n\n${summaryResults.passed} / ${summaryResults.passed + summaryResults.failed}
 					}` +
-					`\n\n:red_circle: *${summaryResults.failed}* Tests failed \n ${
+					`\n\n ${
+						failSummaryText.length > 0 ? 'Failures:' : ''
+					} \n ${
 						failSummaryText.length > 0 ? failSummaryText : ''
-					}` +
-					`\n\n:fast_forward: *${summaryResults.skipped}* skipped\n ${skipSummaryText}`,
+					}`
 			},
 		},
 		{
@@ -229,7 +229,7 @@ export async function generateCustomLayoutAsync(
 		{
 			type: 'divider',
 		},
-		...fails,
+		//...fails,
 	]
 }
 
