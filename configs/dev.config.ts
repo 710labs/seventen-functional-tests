@@ -1,5 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
+import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 /* https://playwright.dev/docs/test-configuration */
@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
 		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				channels: ['tech-savagery-tests', '710labs-qatest-results'], // provide one or more Slack channels
+				//channels: ['tech-savagery-tests', '710labs-qatest-results'], // provide one or more Slack channels
 				sendResults: 'always', // "always" , "on-failure", "off"
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
