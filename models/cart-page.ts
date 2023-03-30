@@ -27,6 +27,12 @@ export class CartPage {
 		this.apiContext = apiContext
 	}
 
+	async goToCheckout() {
+		await test.step('Proceed to Checkout', async () => {
+			this.checkoutButton.click()
+		})
+	}
+
 	async verifyCart(zipcode: string): Promise<any> {
 		if (process.env.BYPASS_TAX_CALC === 'true') {
 			await test.step('Proceed to Checkout', async () => {

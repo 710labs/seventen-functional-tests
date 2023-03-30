@@ -9,7 +9,7 @@ import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
 import zipcodes from '../../utils/zipcodes-fl.json'
 
-test(`Checkout New Customer Florida #medical @FL`, async ({ page, browserName }, workerInfo) => {
+test(`Basic Order - New Customer #medical @FL`, async ({ page, browserName }, workerInfo) => {
 	const apiContext = await request.newContext({
 		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 		extraHTTPHeaders: {
