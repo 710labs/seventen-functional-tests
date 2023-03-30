@@ -202,6 +202,25 @@ export class CheckoutPage {
 		return cartTotals
 	}
 
+	async selectSlot() {
+		await test.step(`Select Acuity Slot`, async () => {
+			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+			expect(
+				daySlot,
+				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await daySlot.click()
+
+			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+			expect(
+				timeSlot,
+				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await timeSlot.click()
+		})
+	}
+
+
 	async confirmCheckoutDeprecated(
 		zipcode: string,
 		productList: any,
