@@ -1,5 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
+import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 import { v4 as uuidv4 } from 'uuid'
 

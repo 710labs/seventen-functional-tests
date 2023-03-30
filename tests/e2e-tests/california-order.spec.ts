@@ -18,7 +18,7 @@ test.beforeAll(async () => {
 		},
 	})
 })
-test(`Checkout Existing Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
+test(`Basic Order - Existing Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
 	const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -40,7 +40,7 @@ test(`Checkout Existing Customer #medical @CA`, async ({ page, browserName }, wo
 	var cartTotals = await cartPage.verifyCart(`94020`)
 	await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 })
-test(`Checkout New Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
+test(`Basic Order - New Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
 	const zipCode = '94020'
 	const email = `test+${uuidv4()}@710labs-test.com`
 	const ageGatePage = new AgeGatePage(page)
@@ -61,4 +61,46 @@ test(`Checkout New Customer #medical @CA`, async ({ page, browserName }, workerI
 	await shopPage.addProductsToCart(6, mobile)
 	var cartTotals = await cartPage.verifyCart(zipCode)
 	await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
+})
+test(`Basic Order - Existing Customer #recreational @CA`, async ({ page, browserName }, workerInfo) => {
+	const ageGatePage = new AgeGatePage(page)
+	const listPassword = new ListPasswordPage(page)
+	const createAccountPage = new CreateAccountPage(page, apiContext)
+	const myAccountPage = new MyAccountPage(page)
+	const loginPage = new LoginPage(page)
+	const shopPage = new ShopPage(page, browserName, workerInfo)
+	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 0)
+	const checkOutPage = new CheckoutPage(page, apiContext)
+	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
+
+	await ageGatePage.passAgeGate()
+	var user = await createAccountPage.createApi('recreational', 'current')
+	await listPassword.submitPassword('qatester')
+	await loginPage.login(user.email, user.password)
+	if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
+		await myAccountPage.addAddress()
+	}
+	await shopPage.addProductsToCart(6, mobile)
+	var cartTotals = await cartPage.verifyCart(`94020`)
+	await checkOutPage.confirmCheckout('94020', cartTotals, 0)
+})
+test(`Basic Order - New Customer #recreational @CA`, async ({ page: page, browserName }, workerInfo) => {
+	const ageGatePage = new AgeGatePage(page)
+	const listPassword = new ListPasswordPage(page)
+	const createAccountPage = new CreateAccountPage(page, apiContext)
+	const myAccountPage = new MyAccountPage(page)
+	const shopPage = new ShopPage(page, browserName, workerInfo)
+	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 0)
+	const checkOutPage = new CheckoutPage(page, apiContext)
+	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
+
+	await ageGatePage.passAgeGate()
+	await listPassword.submitPassword('qatester')
+	await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', '90210', 0)
+	if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
+		await myAccountPage.addAddress()
+	}
+	await shopPage.addProductsToCart(6, mobile)
+	var cartTotals = await cartPage.verifyCart(`90210`)
+	await checkOutPage.confirmCheckout(`90210`, cartTotals, 0)
 })
