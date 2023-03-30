@@ -3,8 +3,8 @@ import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const config: PlaywrightTestConfig = {
-	testDir: './../utils',
-	timeout: 120 * 1000,
+	testDir: './../utils/generators/',
+	timeout: 180 * 1000,
 	expect: {
 		timeout: 5 * 1000,
 	},
@@ -25,11 +25,12 @@ const config: PlaywrightTestConfig = {
 				meta: [
 					{
 						key: 'Execution Type',
-						value: 'Acuity Slot Scripts',
+						value: 'Scripts',
 					},
 				],
 			},
 		],
+		['../reporters/s3/pw-report-s3-upload-generators.ts'],
 	],
 	use: {
 		acceptDownloads: true,
