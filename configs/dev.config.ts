@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
 		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				//channels: ['tech-savagery-tests', '710labs-qatest-results'], // provide one or more Slack channels
+				channels: ['tech-savagery-tests', '710labs-qatest-results'],
 				sendResults: 'always', // "always" , "on-failure", "off"
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
