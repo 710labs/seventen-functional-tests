@@ -65,7 +65,7 @@ test.describe('House Of Dank Order Generator', () => {
 
 			switch (orders[index].address) {
 				case 'in_state':
-					address = '123 8 Mile Road'
+					address = '123 8 Mile Road MI'
 					break
 				case 'out_of_state':
 					address = '123 Broadway New York'

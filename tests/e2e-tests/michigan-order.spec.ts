@@ -39,7 +39,7 @@ test(`Basic Order - New Customer - In State - #recreational @MI`, async ({
 	page,
 	browserName,
 }, workerInfo) => {
-	const address = '123 Eight Mile Rd'
+	const address = '123 Eight Mile Rd MI'
 	const apiContext = await request.newContext({
 		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 		extraHTTPHeaders: {
