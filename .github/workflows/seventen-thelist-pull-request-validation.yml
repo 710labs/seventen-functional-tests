@@ -51,6 +51,7 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
   fl-tests-dev:
+    needs: ca-tests-dev
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -96,6 +97,7 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:fl
   mi-tests-dev:
+    needs: fl-tests-dev
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
