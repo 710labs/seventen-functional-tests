@@ -25,7 +25,7 @@ export default defineConfig<TestOptions>({
 		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				channels: ['tech-savagery-tests'],
+				channels: ['tech-savagery-tests', '710labs-qatest-results'],
 				sendResults: 'always', // "always" , "on-failure", "off"
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
