@@ -50,7 +50,7 @@ const config: PlaywrightTestConfig = {
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 300 * 1000,
-		baseURL: 'https://thelist.710labs.com/',
+		baseURL: process.env.BASE_URL,
 		launchOptions: {
 			slowMo: 200,
 		},
