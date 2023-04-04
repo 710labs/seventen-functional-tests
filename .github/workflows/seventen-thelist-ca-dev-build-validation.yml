@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: dev-ca thelist-dev.710labs.com
+      ENV_ID: dev-ca
       EXECUTION_TYPE: Build Validation
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}

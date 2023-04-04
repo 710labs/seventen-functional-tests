@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: dev-mi thelist-dev.710labs.com
+      ENV_ID: dev-mi
       EXECUTION_TYPE: Scheduled Daily Run
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}

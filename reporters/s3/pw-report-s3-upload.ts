@@ -11,9 +11,9 @@ class ReportToS3 implements Reporter {
 					Bucket: process.env.S3_BUCKET,
 					CacheControl: `max-age=86400`,
 				},
-				rootKey: `${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`,
+				rootKey: `${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`,
 			})
-			console.log(`Artifacts Uploaded to https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`)
+			console.log(`Artifacts Uploaded to https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`)
 		} catch (error) {
 			console.log(error)
 		}

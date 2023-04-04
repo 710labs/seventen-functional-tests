@@ -6,14 +6,28 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: prod-fl thelist.theflowery.co
-      EXECUTION_TYPE: Build Validation
+      ENV_ID: prod-fl
+      EXECUTION_TYPE: Smoke Tests 
+      RUN_ID: ${{github.run_number}}
+      UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_PROD_FL }}
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
