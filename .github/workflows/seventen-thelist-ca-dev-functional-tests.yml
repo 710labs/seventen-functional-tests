@@ -10,6 +10,7 @@ jobs:
     env:
       ENV: dev-ca thelist-710labs.com
       EXECUTION_TYPE: Scheduled Daily Run
+      ENV_ID: dev-ca
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}

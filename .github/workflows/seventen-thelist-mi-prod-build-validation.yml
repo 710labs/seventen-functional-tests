@@ -6,6 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: prod-mi thelist-mi.710labs.com
+      ENV_ID: prod-mi
       EXECUTION_TYPE: Build Validation
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}

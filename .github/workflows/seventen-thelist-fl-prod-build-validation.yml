@@ -7,6 +7,7 @@ jobs:
     env:
       ENV: prod-fl thelist.theflowery.co
       EXECUTION_TYPE: Build Validation
+      ENV_ID: prod-fl
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
