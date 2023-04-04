@@ -1,9 +1,10 @@
-import { PlaywrightTestConfig, devices } from '@playwright/test'
+import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
+import { TestOptions } from '../options'
 
 /* https://playwright.dev/docs/test-configuration */
-const config: PlaywrightTestConfig = {
+export default defineConfig<TestOptions>({
 	testDir: './../tests',
 	timeout: 180 * 1000,
 	expect: {
@@ -54,7 +55,36 @@ const config: PlaywrightTestConfig = {
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'retain-on-failure',
+		trace: 'on',
+		video: 'on',
+		screenshot: 'on',
+		orders: [
+			[
+				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
+				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
+				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+			],
+			[
+				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
+				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
+				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+			],
+			[
+				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
+				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
+				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+			],
+			[
+				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
+				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
+				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+			],
+			[
+				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
+				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
+				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+			],
+		],
 	},
 	projects: [
 		{
@@ -77,5 +107,4 @@ const config: PlaywrightTestConfig = {
 		// },
 	],
 	outputDir: '../test-results/',
-}
-export default config
+})
