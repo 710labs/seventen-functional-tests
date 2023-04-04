@@ -11,7 +11,7 @@ import { faker } from '@faker-js/faker'
 test(`Basic Order - New Customer - In State - #recreational @MI`, async ({
 	page,
 	browserName,
-	orders
+	orders,
 }, workerInfo) => {
 	const address = '123 Eight Mile Rd MI'
 	const apiContext = await request.newContext({
@@ -84,6 +84,7 @@ test(`Basic Order - New Customer - In State - #recreational @MI`, async ({
 test(`Basic Order - New Customer - Out Of State - #recreational @MI`, async ({
 	page,
 	browserName,
+	orders,
 }, workerInfo) => {
 	const address = '123 Broadway New York'
 	const apiContext = await request.newContext({
