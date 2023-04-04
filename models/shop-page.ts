@@ -93,17 +93,13 @@ export class ShopPage {
 			await test.step(`Add ${orderList[index]} to Cart`, async () => {
 				await this.page
 					.locator(`[data-product_sku*='${orderList[index]}']`)
+					.first()
 					.scrollIntoViewIfNeeded()
-				await this.page.locator(`[data-product_sku*='${orderList[index]}']`).click()
+				await this.page.locator(`[data-product_sku*='${orderList[index]}']`).first().click()
 				await this.page.waitForTimeout(2000)
 			})
 		}
-		await this.page
-			.locator(`[data-product_sku*='Battery - Accessories']`)
-			.first()
-			.scrollIntoViewIfNeeded()
-		await this.page.locator(`[data-product_sku*='Battery - Accessories']`).first().click()
-		await this.page.waitForTimeout(7000)
+		await this.page.waitForTimeout(5000)
 	}
 	async goToCart() {
 		if (this.workerInfo.project.name === 'Mobile Chrome') {
