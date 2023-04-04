@@ -91,16 +91,18 @@ export class ShopPage {
 	async addProductListToCart(orderList: string[]) {
 		for (let index = 0; index < orderList.length; index++) {
 			await test.step(`Add ${orderList[index]} to Cart`, async () => {
-				await this.page.locator(`[data-product_sku='${orderList[index]}']`).scrollIntoViewIfNeeded()
-				await this.page.locator(`[data-product_sku='${orderList[index]}']`).click()
+				await this.page
+					.locator(`[data-product_sku*='${orderList[index]}']`)
+					.scrollIntoViewIfNeeded()
+				await this.page.locator(`[data-product_sku*='${orderList[index]}']`).click()
 				await this.page.waitForTimeout(2000)
 			})
 		}
 		await this.page
-			.locator(`[data-product_sku='PERSYBATTERY - Accessories']`)
+			.locator(`[data-product_sku*='Battery - Accessories']`)
 			.first()
 			.scrollIntoViewIfNeeded()
-		await this.page.locator(`[data-product_sku='PERSYBATTERY - Accessories']`).first().click()
+		await this.page.locator(`[data-product_sku*='Battery - Accessories']`).first().click()
 		await this.page.waitForTimeout(7000)
 	}
 	async goToCart() {

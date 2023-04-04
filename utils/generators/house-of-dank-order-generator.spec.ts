@@ -13,33 +13,33 @@ test.describe('House Of Dank Order Generator', () => {
 	test.describe.configure({ mode: 'parallel' })
 
 	var order1 = [
-		'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'1352101', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'1352065', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
+		'1263018', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
+		'1271376', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
+		'1261669', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
 	]
 
 	var order2 = [
-		'1271381 | Half Ounce', //Gummiez #12 (https://thelist-dev.710labs.com/product/gummiez-12/)
-		'1221676', //Cake Crasher (https://thelist-dev.710labs.com/product/cake-crasher/)
-		'1149561', //Gak Smoovie #5 (https://thelist-dev.710labs.com/product/gak-smoovie-5/)
+		'1263018', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
+		'1271376', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
+		'1261669', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
 	]
 
 	var order3 = [
-		'1233744', //Blueberry Haze (https://thelist-dev.710labs.com/product/blueberry-haze-2/)
-		'1352101', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'1352065', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
+		'1263018', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
+		'1271376', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
+		'1261669', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
 	]
 
 	var order4 = [
-		'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'1352101', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'1099685', //Zkittlez (https://thelist-dev.710labs.com/product/zkittlez/)
+		'1263018', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
+		'1271376', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
+		'1261669', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
 	]
 
 	var order5 = [
-		'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'1032839', //Sundae Driver (https://thelist-dev.710labs.com/product/sundae-driver/)
-		'1352065', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
+		'1263018', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
+		'1271376', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
+		'1261669', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
 	]
 
 	for (let index = 0; index < orders.length; index++) {
