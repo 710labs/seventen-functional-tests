@@ -1,4 +1,5 @@
-import { test, request } from '@playwright/test'
+import { request } from '@playwright/test'
+import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
@@ -7,37 +8,10 @@ import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { faker } from '@faker-js/faker'
 
-var orders = [
-	[
-		'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'1352101', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'1352065', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
-	],
-	[
-		'1271381 | Half Ounce', //Gummiez #12 (https://thelist-dev.710labs.com/product/gummiez-12/)
-		'1221676', //Cake Crasher (https://thelist-dev.710labs.com/product/cake-crasher/)
-		'1149561', //Gak Smoovie #5 (https://thelist-dev.710labs.com/product/gak-smoovie-5/)
-	],
-	[
-		'1233744', //Blueberry Haze (https://thelist-dev.710labs.com/product/blueberry-haze-2/)
-		'1352101', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'1352065', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
-	],
-	[
-		'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'1352101', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'1099685', //Zkittlez (https://thelist-dev.710labs.com/product/zkittlez/)
-	],
-	[
-		'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'1032839', //Sundae Driver (https://thelist-dev.710labs.com/product/sundae-driver/)
-		'1352065', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
-	],
-]
-
 test(`Basic Order - New Customer - In State - #recreational @MI`, async ({
 	page,
 	browserName,
+	orders
 }, workerInfo) => {
 	const address = '123 Eight Mile Rd MI'
 	const apiContext = await request.newContext({
