@@ -50,7 +50,7 @@ export default defineConfig<TestOptions>({
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 300 * 1000,
+		actionTimeout: 30 * 1000,
 		baseURL: process.env.BASE_URL,
 		launchOptions: {
 			slowMo: 200,
@@ -60,29 +60,34 @@ export default defineConfig<TestOptions>({
 		screenshot: 'on',
 		orders: [
 			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'1280525', //The Sweeties #7 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234042&action=edit)
+				'1410716', //Lemon Heads #4 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234034&action=edit)
+				'1275126', //Starburst 36 #1 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234030&action=edit)
+				'BATTERY-1', //TEST Pod Battery (https://thelist-mi.710labs.com/wp-admin/post.php?post=234043&action=edit)
 			],
 			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'1280525', //The Sweeties #7 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234042&action=edit)
+				'1410716', //Lemon Heads #4 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234034&action=edit)
+				'1275126', //Starburst 36 #1 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234030&action=edit)
+				'BATTERY-1', //TEST Pod Battery (https://thelist-mi.710labs.com/wp-admin/post.php?post=234043&action=edit)
 			],
 			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'1280525', //The Sweeties #7 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234042&action=edit)
+				'1410716', //Lemon Heads #4 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234034&action=edit)
+				'1275126', //Starburst 36 #1 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234030&action=edit)
+				'BATTERY-1', //TEST Pod Battery (https://thelist-mi.710labs.com/wp-admin/post.php?post=234043&action=edit)
 			],
 			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'1280525', //The Sweeties #7 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234042&action=edit)
+				'1410716', //Lemon Heads #4 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234034&action=edit)
+				'1275126', //Starburst 36 #1 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234030&action=edit)
+				'BATTERY-1', //TEST Pod Battery (https://thelist-mi.710labs.com/wp-admin/post.php?post=234043&action=edit)
 			],
 			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'1280525', //The Sweeties #7 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234042&action=edit)
+				'1410716', //Lemon Heads #4 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234034&action=edit)
+				'1275126', //Starburst 36 #1 (https://thelist-mi.710labs.com/wp-admin/post.php?post=234030&action=edit)
+				'BATTERY-1', //TEST Pod Battery (https://thelist-mi.710labs.com/wp-admin/post.php?post=234043&action=edit)
 			],
 		],
 	},

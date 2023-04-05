@@ -6,6 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: prod-ca thelist.710labs.com
+      ENV_ID: prod-ca
       EXECUTION_TYPE: Build Validation
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
@@ -35,4 +36,3 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
-

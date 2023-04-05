@@ -50,7 +50,7 @@ export default defineConfig<TestOptions>({
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 300 * 1000,
+		actionTimeout: 30 * 1000,
 		baseURL: process.env.BASE_URL,
 		launchOptions: {
 			slowMo: 200,
