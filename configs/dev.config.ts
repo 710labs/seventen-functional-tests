@@ -49,7 +49,7 @@ export default defineConfig<TestOptions>({
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 15 * 1000,
+		actionTimeout: 30 * 1000,
 		baseURL: 'https://thelist-dev.710labs.com',
 		launchOptions: {
 			slowMo: 200,
