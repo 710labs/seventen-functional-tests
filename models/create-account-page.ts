@@ -208,14 +208,14 @@ export class CreateAccountPage {
 				await medicalCardChooser.page()
 			})
 			await test.step('Enter Med Card Exp', async () => {
-				expect(this.medCardExpMonth).toBeVisible()
-				expect(this.medCardExpMonth).toBeEnabled()
+				await expect(this.medCardExpMonth).toBeVisible()
+				await expect(this.medCardExpMonth).toBeEnabled()
 
-				expect(this.medCardExpDay).toBeVisible()
-				expect(this.medCardExpDay).toBeEnabled()
+				await expect(this.medCardExpDay).toBeVisible()
+				await expect(this.medCardExpDay).toBeEnabled()
 
-				expect(this.medCardExpYear).toBeVisible()
-				expect(this.medCardExpYear).toBeEnabled()
+				await expect(this.medCardExpYear).toBeVisible()
+				await expect(this.medCardExpYear).toBeEnabled()
 
 				await this.page.waitForTimeout(5000)
 
