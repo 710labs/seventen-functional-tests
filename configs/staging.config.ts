@@ -43,7 +43,7 @@ export default defineConfig<TestOptions>({
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 0,
+		actionTimeout: 30 * 1000,
 		baseURL: 'https://thelist-stage.710labs.com',
 		launchOptions: {
 			slowMo: 200,
@@ -56,26 +56,31 @@ export default defineConfig<TestOptions>({
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
+				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 		],
 	},

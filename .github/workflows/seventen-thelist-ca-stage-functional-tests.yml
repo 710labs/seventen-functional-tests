@@ -6,6 +6,11 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
+      ENV: stage-ca thelist-stage.710labs.com
+      ENV_ID: stage-ca
+      EXECUTION_TYPE: Build Validation
+      RUN_ID: ${{github.run_number}}
+      UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
@@ -15,6 +20,13 @@ jobs:
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2

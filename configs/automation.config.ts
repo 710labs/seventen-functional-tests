@@ -4,7 +4,7 @@ require('dotenv').config({ path: require('find-config')('.env') })
 
 const config: PlaywrightTestConfig = {
 	testDir: './../utils/generators/',
-	timeout: 300 * 1000,
+	timeout: 10 * 60000,
 	expect: {
 		timeout: 10 * 1000,
 	},

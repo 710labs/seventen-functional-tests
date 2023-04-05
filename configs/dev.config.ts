@@ -6,7 +6,7 @@ import type { TestOptions } from '../options'
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
 	testDir: './../tests',
-	timeout: 300 * 1000,
+	timeout: 10 * 60000,
 	expect: {
 		timeout: 5 * 1000,
 	},
@@ -25,7 +25,7 @@ export default defineConfig<TestOptions>({
 		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				channels: ['tech-savagery-tests'],
+				channels: ['tech-savagery-tests', '710labs-qatest-results'],
 				sendResults: 'always', // "always" , "on-failure", "off"
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
@@ -49,7 +49,7 @@ export default defineConfig<TestOptions>({
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 15 * 1000,
+		actionTimeout: 30 * 1000,
 		baseURL: 'https://thelist-dev.710labs.com',
 		launchOptions: {
 			slowMo: 200,
