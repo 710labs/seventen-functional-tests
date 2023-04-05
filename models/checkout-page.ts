@@ -181,14 +181,14 @@ export class CheckoutPage {
 
 		await test.step(`Select Acuity Slot for ${zipcode} `, async () => {
 			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-			expect(
+			await expect(
 				daySlot,
 				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
 			).toBeVisible()
 			await daySlot.click()
 
 			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-			expect(
+			await expect(
 				timeSlot,
 				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
 			).toBeVisible()
@@ -205,14 +205,14 @@ export class CheckoutPage {
 	async selectSlot() {
 		await test.step(`Select Acuity Slot`, async () => {
 			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-			expect(
+			await expect(
 				daySlot,
 				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
 			).toBeVisible()
 			await daySlot.click()
 
 			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-			expect(
+			await expect(
 				timeSlot,
 				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
 			).toBeVisible()
