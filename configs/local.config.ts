@@ -1,5 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
+import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 import { v4 as uuidv4 } from 'uuid'
 
@@ -42,7 +42,7 @@ const config: PlaywrightTestConfig = {
 	],
 	use: {
 		acceptDownloads: true,
-		actionTimeout: 300 * 1000,
+		actiontimeout: 10 * 60000,
 		baseURL: 'https://thelist-dev.710labs.com',
 		launchOptions: {
 			slowMo: 200,

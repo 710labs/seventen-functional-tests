@@ -58,7 +58,7 @@ export class ShopPage {
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
-			if (mobile) {
+			if (this.workerInfo.project.name === 'Mobile Chrome') {
 				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
 			} else {
 				if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
@@ -91,5 +91,35 @@ export class ShopPage {
 			await this.page.waitForTimeout(2000)
 			await this.page.locator(``).first().click({ force: true })
 		})
+	}
+	async addProductListToCart(orderList: string[]) {
+		for (let index = 0; index < orderList.length; index++) {
+			await test.step(`Add ${orderList[index]} to Cart`, async () => {
+				await this.page
+					.locator(`[data-product_sku*='${orderList[index]}']`)
+					.first()
+					.scrollIntoViewIfNeeded()
+				await this.page.locator(`[data-product_sku*='${orderList[index]}']`).first().click()
+				await this.page.waitForTimeout(2000)
+			})
+		}
+		await this.page.waitForTimeout(5000)
+	}
+	async goToCart() {
+		if (this.workerInfo.project.name === 'Mobile Chrome') {
+			await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
+		} else {
+			if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+				await this.page
+					.locator(`[href="${process.env.BASE_URL}reservations/"]`)
+					.first()
+					.click({ force: true })
+			} else {
+				await this.page
+					.locator(`[href="${process.env.BASE_URL}cart/"]`)
+					.first()
+					.click({ force: true })
+			}
+		}
 	}
 }

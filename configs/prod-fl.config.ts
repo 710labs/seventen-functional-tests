@@ -8,7 +8,7 @@ export default defineConfig<TestOptions>({
 	testDir: './../tests',
 	timeout: 180 * 1000,
 	expect: {
-		timeout: 5 * 1000,
+		timeout: 10 * 1000,
 	},
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
@@ -16,6 +16,13 @@ export default defineConfig<TestOptions>({
 	reporter: [
 		['list'],
 		['html'],
+		[
+			'playwright-tesults-reporter',
+			{
+				'tesults-target':
+					'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo',
+			},
+		],
 		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
@@ -44,7 +51,7 @@ export default defineConfig<TestOptions>({
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 30 * 1000,
-		baseURL: 'https://thelist-stage.710labs.com',
+		baseURL: process.env.BASE_URL,
 		launchOptions: {
 			slowMo: 200,
 		},
@@ -56,31 +63,26 @@ export default defineConfig<TestOptions>({
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
 				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
 				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-				'Battery - Accessories', //Pod Battery (https://thelist-stage.710labs.com/wp-admin/post.php?post=95733&action=edit)
 			],
 		],
 	},

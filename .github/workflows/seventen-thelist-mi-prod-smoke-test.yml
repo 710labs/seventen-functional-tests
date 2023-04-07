@@ -1,19 +1,17 @@
-name: thelist-fl-tests-prod-build-validation
+name: thelist-mi-smoke-tests-prod
 on: workflow_dispatch
 jobs:
-  smoke-test-prod-fl:
+  smoke-test-prod-mi:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: prod-fl thelist.theflowery.co
-      EXECUTION_TYPE: Build Validation
-      ENV_ID: prod-fl
-      RUN_ID: ${{github.run_number}}
-      UNIQUE_RUN_ID: ${{github.run_id}}
+      ENV: prod-mi thelist-mi.710labs.com
+      ENV_ID: prod-mi
+      EXECUTION_TYPE: Smoke Test
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_PROD_FL }}
+      BASE_URL: ${{ secrets.BASE_URL_PROD_MI }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
@@ -22,8 +20,6 @@ jobs:
       S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
       S3_SECRET: ${{ secrets.S3_SECRET}}
       S3_REGION: ${{ secrets.S3_REGION}}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -34,9 +30,10 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run smoke:test:prod:fl
+        run: npm run smoke:test:prod:mi
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: playwright-report
           path: playwright-report/
+

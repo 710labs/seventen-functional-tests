@@ -27,7 +27,7 @@ export class EditProfilePage {
 			await this.page.getByLabel('Description').fill('testing-auto-discounts')
 			await this.page.getByRole('button', { name: 'Add comp' }).click()
 
-			expect(compValue.innerText()).toContain(`${discountAmount}`)
+			await expect(compValue.innerText()).toContain(`${discountAmount}`)
 		})
 	}
 

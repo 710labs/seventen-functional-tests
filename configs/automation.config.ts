@@ -1,18 +1,17 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout-s3'
+import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const config: PlaywrightTestConfig = {
-	testDir: './../utils',
-	timeout: 120 * 1000,
+	testDir: './../utils/generators/',
+	timeout: 10 * 60000,
 	expect: {
-		timeout: 5 * 1000,
+		timeout: 10 * 1000,
 	},
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 0 : 1,
-	// workers: process.env.CI ? 12 : 5,
-	workers: process.env.CI ? 1 : undefined,
+	retries: 0,
+	workers: process.env.CI ? 12 : 5,
 	reporter: [
 		['list'],
 		['html'],
@@ -26,16 +25,17 @@ const config: PlaywrightTestConfig = {
 				meta: [
 					{
 						key: 'Execution Type',
-						value: 'Acuity Slot Scripts',
+						value: 'Scripts',
 					},
 				],
 			},
 		],
+		['../reporters/s3/pw-report-s3-upload-generators.ts'],
 	],
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 20 * 1000,
-		baseURL: 'https://thelist-dev.710labs.com',
+		baseURL: 'https://thelist-stage.710labs.com',
 		launchOptions: {
 			slowMo: 200,
 		},

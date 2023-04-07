@@ -1,0 +1,145 @@
+name: thelist-tests-pr-validation
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+jobs:
+  ca-tests-dev:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ENV: dev-ca thelist-710labs.com
+      ENV_ID: dev-ca
+      EXECUTION_TYPE: Pull Request Validation
+      RUN_ID: ${{github.run_number}}
+      UNIQUE_RUN_ID: ${{github.run_id}}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          node-version: '16.x'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+      - name: Install dependencies
+        run: npm ci
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+          node-version: '16.x'
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npm run ci:test:dev:ca
+  fl-tests-dev:
+    needs: ca-tests-dev
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ENV: dev-fl thelist-710labs.com
+      ENV_ID: dev-fl
+      EXECUTION_TYPE: Pull Request Validation
+      RUN_ID: ${{github.run_number}}
+      UNIQUE_RUN_ID: ${{github.run_id}}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          node-version: '16.x'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+      - name: Install dependencies
+        run: npm ci
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=fl
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+          node-version: '16.x'
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npm run ci:test:dev:fl
+  mi-tests-dev:
+    needs: fl-tests-dev
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ENV: dev-mi thelist-710labs.com
+      ENV_ID: dev-mi
+      EXECUTION_TYPE: Pull Request Validation
+      RUN_ID: ${{github.run_number}}
+      UNIQUE_RUN_ID: ${{github.run_id}}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          node-version: '16.x'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+      - name: Install dependencies
+        run: npm ci
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=mi
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+          node-version: '16.x'
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npm run ci:test:dev:mi
+
