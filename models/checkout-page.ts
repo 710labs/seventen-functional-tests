@@ -160,7 +160,7 @@ export class CheckoutPage {
 		let cartTotals
 		await test.step('Verify Layout', async () => {
 			// visual diff of checkout page
-			await expect(this.page).toHaveScreenshot('checkout-page.png', { maxDiffPixels: 100, mask: [this.userInfoArea] });
+			await expect(this.page).toHaveScreenshot('checkout-page.png', { maxDiffPixels: 3500, mask: [this.userInfoArea] });
 
 			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 				'href',

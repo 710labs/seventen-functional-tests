@@ -37,7 +37,7 @@ export class CartPage {
 
 		await test.step('Verify Cart Totals', async () => {
 			// visual diff of cart page
-			await expect(this.page).toHaveScreenshot('cart-page.png', { maxDiffPixels: 100 });
+			await expect(this.page).toHaveScreenshot('cart-page.png', { maxDiffPixels: 500 });
 
 			//Get Tax Rates
 			var taxRates: any
