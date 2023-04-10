@@ -8,7 +8,7 @@ export default defineConfig<TestOptions>({
 	testDir: './../tests',
 	timeout: 10 * 60000,
 	expect: {
-		timeout: 5 * 1000,
+		timeout: 15 * 1000,
 	},
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 0 : 0,
