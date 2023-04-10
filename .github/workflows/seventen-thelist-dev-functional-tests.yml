@@ -51,6 +51,7 @@ jobs:
         run: npm run ci:test:dev:ca
   fl-tests-dev:
     needs: ca-tests-dev
+    if: ${{ always() }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -98,6 +99,7 @@ jobs:
   mi-tests-dev:
     needs: fl-tests-dev
     timeout-minutes: 60
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       ENV: dev-mi thelist-710labs.com
