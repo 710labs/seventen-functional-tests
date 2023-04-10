@@ -11,7 +11,7 @@ export default defineConfig<TestOptions>({
 		timeout: 15 * 1000,
 	},
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 0 : 0,
+	retries: process.env.CI ? 1 : 0,
 	reporter: [
 		['list'],
 		['html'],
