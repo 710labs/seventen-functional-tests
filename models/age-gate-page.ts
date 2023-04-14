@@ -16,6 +16,10 @@ export class AgeGatePage {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
 				)
+			} else if (this.page.url().includes('thelist-mi')) {
+				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
+					'You must be at least 21 years old or possess a valid medical recommendation to view this site',
+				)
 			} else {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
@@ -28,7 +32,10 @@ export class AgeGatePage {
 				await this.page.click("text=I'm over 21 or a qualified patient")
 			}
 			const passwordField = await this.page.locator('input[name="post_password"]')
-			await expect(passwordField, 'Could not find the The List password field. The list password page may be in the incorrect order workflow').toBeVisible();
+			await expect(
+				passwordField,
+				'Could not find the The List password field. The list password page may be in the incorrect order workflow',
+			).toBeVisible()
 			await passwordField.click()
 		})
 	}
