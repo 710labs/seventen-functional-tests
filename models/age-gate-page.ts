@@ -20,7 +20,7 @@ export class AgeGatePage {
 				await visualDiff(this.page, `age-gate-FL-${process.env.ENV}.png`, 500)
 			} else if (this.page.url().includes('thelist-mi')) {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
-					'You must be at least 21 years old or possess a valid medical recommendation to view this site',
+					'You must be at least 21 years old or possess a valid medical recommendation to view this site.',
 				)
 				await visualDiff(this.page, `age-gate-CA-MI-${process.env.ENV}.png`, 500)
 			}
