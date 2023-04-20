@@ -19,25 +19,25 @@ const config: PlaywrightTestConfig = {
 	reporter: [
 		['list'],
 		['html'],
-		// [
-		// 	'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
-		// 	{
-		// 		channels: ['tech-savagery-tests'],
-		// 		sendResults: 'always',
-		// 		layoutAsync: generateCustomLayoutAsync,
-		// 		maxNumberOfFailuresToShow: 20,
-		// 		meta: [
-		// 			{
-		// 				key: 'Environment',
-		// 				value: process.env.ENV,
-		// 			},
-		// 			{
-		// 				key: 'Execution Type',
-		// 				value: process.env.EXECUTION_TYPE,
-		// 			},
-		// 		],
-		// 	},
-		// ],
+		[
+			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
+			{
+				channels: ['tech-savagery-tests'],
+				sendResults: 'always',
+				layoutAsync: generateCustomLayoutAsync,
+				maxNumberOfFailuresToShow: 20,
+				meta: [
+					{
+						key: 'Environment',
+						value: process.env.ENV,
+					},
+					{
+						key: 'Execution Type',
+						value: process.env.EXECUTION_TYPE,
+					},
+				],
+			},
+		],
 		['../reporters/s3/pw-report-s3-upload.ts'],
 	],
 	use: {
