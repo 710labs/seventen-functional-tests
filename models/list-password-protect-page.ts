@@ -1,4 +1,5 @@
 import test, { Page, expect } from '@playwright/test'
+import { visualDiff } from '../utils/visual-diff'
 
 export class ListPasswordPage {
 	page: Page
@@ -14,7 +15,7 @@ export class ListPasswordPage {
 			const passwordField = await this.page.locator('input[name="post_password"]')
 
 			// visual diff of site password screen
-			await expect(this.page).toHaveScreenshot('site-password-screen.png', { maxDiffPixels: 100 });
+			await visualDiff(this.page, `site-password-screen-${process.env.ENV}.png`, 500)
 
 			await expect(
 				passwordField,

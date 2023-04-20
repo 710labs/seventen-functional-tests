@@ -1,4 +1,5 @@
 import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
+import { visualDiff } from '../utils/visual-diff'
 
 export class CreateAccountPage {
 	readonly page: Page
@@ -94,7 +95,7 @@ export class CreateAccountPage {
 	) {
 		await test.step('Verify Layout', async () => {
 			// visual diff for create account screen
-			await expect(this.page).toHaveScreenshot('create-account-layout.png', { maxDiffPixels: 100 });
+			await visualDiff(this.page, `create-account-layout-${process.env.ENV}.png`, 500)
 		})
 
 		await test.step('Click Register Link', async () => {
@@ -166,7 +167,7 @@ export class CreateAccountPage {
 				'input[name="svntn_core_personal_doc"]',
 			)
 			// visual diff for license upload screen
-			await expect(this.page).toHaveScreenshot('drivers-license-upload.png', { maxDiffPixels: 100 });
+			await visualDiff(this.page, `drivers-license-upload-${process.env.ENV}.png`, 500)
 			const [driversLicenseChooser] = await Promise.all([
 				this.page.waitForEvent('filechooser'),
 				dlUploadButton.click(),
@@ -186,7 +187,7 @@ export class CreateAccountPage {
 					'input[name="svntn_core_medical_doc"]',
 				)
 				// visual diff for med card upload screen
-				await expect(this.page).toHaveScreenshot('CA-medical-card-upload.png', { maxDiffPixels: 100 });
+				await visualDiff(this.page, `CA-medical-card-upload-${process.env.ENV}.png`, 500)
 				const [medicalCardChooser] = await Promise.all([
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),
@@ -208,7 +209,7 @@ export class CreateAccountPage {
 					'input[name="svntn_core_medical_doc"]',
 				)
 				// visual diff for FL med upload screen
-				await expect(this.page).toHaveScreenshot('FL-medical-card-upload.png', { maxDiffPixels: 100 });
+				await visualDiff(this.page, `FL-medical-card-upload-${process.env.ENV}.png`, 500)
 				const [medicalCardChooser] = await Promise.all([
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),

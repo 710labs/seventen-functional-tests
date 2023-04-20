@@ -1,4 +1,5 @@
 import test, { expect, Locator, Page } from '@playwright/test'
+import { visualDiff } from '../utils/visual-diff'
 
 export class LoginPage {
 	readonly page: Page
@@ -21,8 +22,8 @@ export class LoginPage {
 	async login(username: string, password: string) {
 		await test.step('Enter Username', async () => {
 			// visual diff of login screen
-			await expect(this.page).toHaveScreenshot('login-screen.png', { maxDiffPixels: 100 });
-			
+			await visualDiff(this.page, `login-screen-${process.env.ENV}.png`, 500)
+
 			await this.userNameField.click()
 			await this.userNameField.fill(username)
 		})

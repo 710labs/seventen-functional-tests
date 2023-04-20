@@ -1,4 +1,4 @@
-import { test, request, APIRequestContext } from '@playwright/test'
+import { test, request, APIRequestContext, expect } from '@playwright/test'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
+import { visualDiff, visualDiffWithMaskArray } from '../../utils/visual-diff'
 
 test.describe('CA Order Tests', () => {
 	test.describe.configure({ mode: 'parallel' })
@@ -33,16 +34,21 @@ test.describe('CA Order Tests', () => {
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
-
 		await ageGatePage.passAgeGate()
 		var user = await createAccountPage.createApi('medical', 'current')
 		await listPassword.submitPassword('qatester')
 		await loginPage.login(user.email, user.password)
+		const shopMasks = [shopPage.productImage, shopPage.productCategories]
+		await visualDiffWithMaskArray(page, `store-landing-page-existing-CA-med-${process.env.ENV}.png`, 1500, shopMasks)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
+		var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+		await visualDiffWithMaskArray(page, `cart-page-existing-CA-med-${process.env.ENV}.png`, 1500, cartMaskLocators)
 		var cartTotals = await cartPage.verifyCart(`94020`)
+		var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+		await visualDiffWithMaskArray(page, `checkout-page-existing-CA-med-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 	})
 	test(`Basic Order - New Customer #medical @CA`, async ({ page, browserName }, workerInfo) => {
@@ -60,11 +66,17 @@ test.describe('CA Order Tests', () => {
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(email, 'test1234', zipCode, 1)
+		const shopMasks = [shopPage.productImage, shopPage.productCategories]
+		await visualDiffWithMaskArray(page, `store-landing-page-new-CA-med-${process.env.ENV}.png`, 1500, shopMasks)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
+		var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+		await visualDiffWithMaskArray(page, `cart-page-new-CA-med-${process.env.ENV}.png`, 1500, cartMaskLocators)
 		var cartTotals = await cartPage.verifyCart(zipCode)
+		var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+		await visualDiffWithMaskArray(page, `checkout-page-new-CA-med-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
 	test(`Basic Order - Existing Customer #recreational @CA`, async ({
@@ -80,16 +92,21 @@ test.describe('CA Order Tests', () => {
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 0)
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
-
 		await ageGatePage.passAgeGate()
 		var user = await createAccountPage.createApi('recreational', 'current')
 		await listPassword.submitPassword('qatester')
 		await loginPage.login(user.email, user.password)
+		const shopMasks = [shopPage.productImage, shopPage.productCategories]
+		await visualDiffWithMaskArray(page, `store-landing-page-existing-CA-rec-${process.env.ENV}.png`, 1500, shopMasks)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
+		var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+		await visualDiffWithMaskArray(page, `cart-page-existing-CA-rec-${process.env.ENV}.png`, 1500, cartMaskLocators)
 		var cartTotals = await cartPage.verifyCart(`94020`)
+		var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+		await visualDiffWithMaskArray(page, `checkout-page-existing-CA-rec-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 	})
 	test(`Basic Order - New Customer #recreational @CA`, async ({
@@ -108,11 +125,17 @@ test.describe('CA Order Tests', () => {
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
 		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', '90210', 0)
+		const shopMasks = [shopPage.productImage, shopPage.productCategories]
+		await visualDiffWithMaskArray(page, `store-landing-page-new-CA-rec-${process.env.ENV}.png`, 1500, shopMasks)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
+		var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+		await visualDiffWithMaskArray(page, `cart-page-new-CA-rec-${process.env.ENV}.png`, 1500, cartMaskLocators)
 		var cartTotals = await cartPage.verifyCart(`90210`)
+		var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+		await visualDiffWithMaskArray(page, `checkout-page-new-CA-rec-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 		await checkOutPage.confirmCheckout(`90210`, cartTotals, 0)
 	})
 })

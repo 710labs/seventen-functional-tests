@@ -9,7 +9,10 @@ export class CheckoutPage {
 	readonly firstNameInput: Locator
 	readonly lastNameInput: Locator
 	readonly phoneInput: Locator
-	readonly userInfoArea: Locator
+	readonly personalInfoField: Locator
+	readonly AppointmentsSection: Locator
+	readonly FulfillmentMethodSection: Locator
+	readonly AddressSection: Locator
 	readonly addressLine1: Locator
 	readonly city: Locator
 	readonly zipCodeInput: Locator
@@ -22,6 +25,8 @@ export class CheckoutPage {
 	readonly salesTaxAmount: Locator
 	readonly cartTotalAmount: Locator
 	readonly placeOrderButton: Locator
+	readonly reservationTimer: Locator
+
 	cartItems: any
 	usageType: number
 	cartTotal: {
@@ -41,7 +46,10 @@ export class CheckoutPage {
 		this.firstNameInput = this.page.locator('input[name="billing_first_name"]')
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
 		this.phoneInput = this.page.locator('input[name="billing_phone"]')
-		this.userInfoArea = this.page.locator('id = "wcseEmulator"] / section[3] / div / div')
+		this.personalInfoField = this.page.locator('#wcseEmulator > section:nth-child(14)')
+		this.AppointmentsSection = this.page.locator('section.wcseSet.wcse-infipane')
+		this.FulfillmentMethodSection = this.page.locator('div#methodSummary.wcseSet.wcse-paned')
+		this.AddressSection = this.page.locator('#wcseEmulator > section:nth-child(13)')
 		this.addressLine1 = this.page.locator('input[name="billing_address_1"]')
 		this.addressModifierButton = this.page.locator('[data-modder="address"]')
 		this.addressModifierSubmitButton = this.page.locator('a > [data-mod="address"]')
@@ -49,6 +57,7 @@ export class CheckoutPage {
 		this.zipCodeInput = this.page.locator('input[name="billing_postcode"]')
 		this.comments = this.page.locator('textarea[name="order_comments"]')
 		this.placeOrderButton = this.page.locator('id=place_order')
+		this.reservationTimer = this.page.locator('.rsp-countdown-content')
 		this.cartItems = new Array()
 		this.apiContext = apiContext
 	}
@@ -159,9 +168,6 @@ export class CheckoutPage {
 
 		let cartTotals
 		await test.step('Verify Layout', async () => {
-			// visual diff of checkout page
-			await expect(this.page).toHaveScreenshot('checkout-page.png', { maxDiffPixels: 3500, mask: [this.userInfoArea] });
-
 			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
 				'href',
 				'/terms-of-use',

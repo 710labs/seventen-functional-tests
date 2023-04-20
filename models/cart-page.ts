@@ -6,6 +6,10 @@ export class CartPage {
 	browserName: any
 	workerInfo: TestInfo
 	checkoutButton: Locator
+	reservationTimer: Locator
+	productName: Locator
+	productImage: Locator
+	productImage2: Locator
 	cartItems: any[]
 	cartTotal: any
 	usageType: any
@@ -22,6 +26,10 @@ export class CartPage {
 		this.browserName = browserName
 		this.workerInfo = workerInfo
 		this.checkoutButton = this.page.locator('.checkout-button')
+		this.reservationTimer = this.page.locator('.rsp-countdown-content')
+		this.productName = this.page.locator('td.product-name')
+		this.productImage = this.page.locator('img.woocommerce-placeholder.wp-post-image')
+		this.productImage2 = this.page.locator('img.attachment-woocommerce_thumbnail.size-woocommerce_thumbnail')
 		this.cartItems = new Array()
 		this.usageType = usageType
 		this.apiContext = apiContext
@@ -42,9 +50,6 @@ export class CartPage {
 		}
 
 		await test.step('Verify Cart Totals', async () => {
-			// visual diff of cart page
-			await expect(this.page).toHaveScreenshot('cart-page.png', { maxDiffPixels: 500 });
-
 			//Get Tax Rates
 			var taxRates: any
 

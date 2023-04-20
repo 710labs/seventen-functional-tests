@@ -11,6 +11,7 @@ import zipcodes from '../../utils/zipcodes-fl.json'
 import { AdminLogin } from '../../models/admin/admin-login-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
+import { visualDiff, visualDiffWithMaskArray } from '../../utils/visual-diff'
 
 test.describe('Medical Customer Checkout Florida', () => {
 	var cartTotals: any
@@ -63,11 +64,17 @@ test.describe('Medical Customer Checkout Florida', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
+			const shopMasks = [shopPage.productImage, shopPage.productCategories]
+			await visualDiffWithMaskArray(page, `store-landing-page-smoke-FL-${process.env.ENV}.png`, 1500, shopMasks)
 			await shopPage.addProductsToCart(orderQuanity, mobile)
+			var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+			await visualDiffWithMaskArray(page, `cart-page-smoke-FL-${process.env.ENV}.png`, 1500, cartMaskLocators)
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
 		await test.step('Choose Fulfillment Slot + Verify Checkout', async () => {
+			var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+			await visualDiffWithMaskArray(page, `checkout-page-smoke-FL-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		})
 

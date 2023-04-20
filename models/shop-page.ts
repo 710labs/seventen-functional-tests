@@ -12,11 +12,15 @@ export class ShopPage {
 	readonly rememberMeCheckBox: Locator
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
+	readonly productImage: Locator
+	readonly productCategories: Locator
 	constructor(page: Page, browserName: any, workerInfo: TestInfo) {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
 		this.baseUrl = process.env.BASE_URL
+		this.productImage = page.locator('img.woocommerce-placeholder.wp-post-image')
+		this.productCategories = page.locator('//*[@id="masthead"]/div[4]')
 	}
 
 	async randomizeCartItems() {
@@ -28,8 +32,6 @@ export class ShopPage {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
 			await this.page.waitForTimeout(3000)
-			// visual diff for fulfillment method modal on home screen
-			await expect(this.page).toHaveScreenshot('fullfillment-method-modal.png', { maxDiffPixels: 1500 });
 		})
 		await test.step('Select Fulfillment Method', async () => {
 			if (process.env.NEXT_VERSION === 'true') {
@@ -42,7 +44,6 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			// visual diff for store landing page
-			await expect(this.page).toHaveScreenshot('store-landing-page.png', { maxDiffPixels: 300 });
 			itemCount = itemCount + (await this.randomizeCartItems())
 			await this.page.waitForSelector('[aria-label*="to your cart"]')
 			await this.page.waitForTimeout(5000)

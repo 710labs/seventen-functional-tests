@@ -10,6 +10,7 @@ export class MyAccountPage {
 	readonly addressLineOne: Locator
 	readonly city: Locator
 	readonly state: Locator
+	readonly stateDropDown: Locator
 	readonly zipCode: Locator
 	readonly phone: Locator
 	readonly editBillingAddressLink: Locator
@@ -25,6 +26,7 @@ export class MyAccountPage {
 		this.addressLineOne = page.locator('#billing_address_1')
 		this.city = page.locator('#billing_city')
 		this.state = page.locator('#billing_state')
+		this.stateDropDown = page.locator('select#billing_state.state_select')
 		this.zipCode = page.locator('#billing_postcode')
 		this.phone = page.locator('#billing_phone')
 		this.editBillingAddressLink = page.locator('text=Billing address Edit >> a')
