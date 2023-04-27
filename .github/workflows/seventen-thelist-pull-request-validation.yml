@@ -56,7 +56,9 @@ jobs:
             artifact_name="${test_file//\//-}-snapshots"
             echo "Downloading snapshots for $test_file to $folder_name"
             mkdir -p "$folder_name"
-            curl -L -o "${folder_name}.zip" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${artifact_name}/zip"
+          response=$(curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${artifact_name}/zip")
+          echo "GitHub API response: $response"
+          curl -L -o "${folder_name}.zip" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${artifact_name}/zip"
             unzip -o -d "$folder_name" "${folder_name}.zip"
             rm "${folder_name}.zip"
           done
