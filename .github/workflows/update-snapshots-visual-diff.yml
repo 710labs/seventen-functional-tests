@@ -1,11 +1,9 @@
-name: thelist-tests-pr-validation
+name: update-snapshots-visual-diff
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
+
 jobs:
-  ca-tests-dev:
+  ca-update-snapshots-dev:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -61,7 +59,7 @@ jobs:
             rm "${folder_name}.zip"
           done
       - name: Run Playwright tests
-        run: npm run ci:test:dev:ca
+        run: npx playwright test --config=configs/dev.config.ts --workers=10 --grep @CA --update-snapshots
       # Upload snapshots for each test file
       - name: Upload snapshots
         if: always()
@@ -74,7 +72,7 @@ jobs:
             gh artifact upload "$artifact_name" "${folder_name}.zip" --repo "${{ github.repository }}"
             rm "${folder_name}.zip"
           done
-  fl-tests-dev:
+  fl-update-snapshots-dev:
     needs: ca-tests-dev
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -134,7 +132,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Run Playwright tests
-        run: npm run ci:test:dev:fl
+        run: npx playwright test --config=configs/dev.config.ts --workers=10 --grep @FL --update-snapshots
       # Upload snapshots for each test file
       - name: Upload snapshots
         if: always()
@@ -147,7 +145,7 @@ jobs:
             gh artifact upload "$artifact_name" "${folder_name}.zip" --repo "${{ github.repository }}"
             rm "${folder_name}.zip"
           done
-  mi-tests-dev:
+  mi-update-snapshots-dev:
     needs: fl-tests-dev
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -203,11 +201,8 @@ jobs:
             unzip -o -d "$folder_name" "${folder_name}.zip"
             rm "${folder_name}.zip"
           done
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Run Playwright tests
-        run: npm run ci:test:dev:mi
+        run: npx playwright test --config=configs/dev.config.ts --workers=10 --grep @MI --update-snapshots
       # Upload snapshots for each test file
       - name: Upload snapshots
         if: always()
