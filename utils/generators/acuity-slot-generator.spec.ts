@@ -13,12 +13,16 @@ test.describe('Acuity Automation', () => {
 		page = await browser.newPage()
 		await test.step('Login to Acuity Scheduling', async () => {
 			await page.goto('https://login.squarespace.com/')
+			await page.locator('[placeholder="name\\@example\\.com"]').clear()
 			await page.locator('[placeholder="name\\@example\\.com"]').fill(`${process.env.ACUITY_USER}`)
+			await page.locator('[placeholder="Password"]').clear()
 			await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
+			await page.waitForTimeout(5000)
 			await Promise.all([
 				page.waitForTimeout(5000),
 				page.locator('[data-test="login-button"]').click(),
 			])
+			await page.waitForTimeout(5000)
 		})
 	})
 	test.afterEach(async ({ page }, testInfo) => {
