@@ -16,7 +16,7 @@ test.describe('Acuity Automation', () => {
 			await page.locator('[placeholder="name\\@example\\.com"]').fill(`${process.env.ACUITY_USER}`)
 			await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
 			await Promise.all([
-				page.waitForNavigation(),
+				page.waitForTimeout(5000),
 				page.locator('[data-test="login-button"]').click(),
 			])
 		})
