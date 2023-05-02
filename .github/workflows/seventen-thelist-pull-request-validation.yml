@@ -8,19 +8,6 @@ jobs:
   ca-tests-dev:
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test_file:
-          [
-            admin-tests/split-orders-tests.spec.ts,
-            e2e-tests/california-order.spec.ts,
-            e2e-tests/florida-order.spec.ts,
-            e2e-tests/michigan-order.spec.ts,
-            gate-tests/age-gate-tests.spec.ts,
-            gate-tests/list-password-tests.spec.ts,
-            smoke-tests/smoke-test-ca.spec.ts,
-            smoke-tests/smoke-test-fl.spec.ts,
-          ]
     env:
       ENV: dev-ca thelist-710labs.com
       ENV_ID: dev-ca
