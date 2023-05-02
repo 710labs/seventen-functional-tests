@@ -49,13 +49,11 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Download snapshots
-        run: |
-          test_files="admin-tests/split-orders-tests.spec.ts e2e-tests/california-order.spec.ts e2e-tests/florida-order.spec.ts e2e-tests/michigan-order.spec.ts gate-tests/age-gate-tests.spec.ts gate-tests/list-password-tests.spec.ts smoke-tests/smoke-test-ca.spec.ts smoke-tests/smoke-test-fl.spec.ts"
-          for test_file in $test_files; do
-            artifact_name="${test_file//\//-}-snapshots"
-            echo "Downloading snapshots for $test_file"
-            gh run download --artifact "$artifact_name" --repo "${{ github.repository }}" -D "tests/"
-          done
+        if: always()
+        uses: actions/download-artifact@v2
+        with:
+          name: snapshots
+          path: tests/
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
       - name: Upload snapshots
