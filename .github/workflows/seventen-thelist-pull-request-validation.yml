@@ -8,6 +8,19 @@ jobs:
   ca-tests-dev:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test_file:
+          [
+            admin-tests/split-orders-tests.spec.ts,
+            e2e-tests/california-order.spec.ts,
+            e2e-tests/florida-order.spec.ts,
+            e2e-tests/michigan-order.spec.ts,
+            gate-tests/age-gate-tests.spec.ts,
+            gate-tests/list-password-tests.spec.ts,
+            smoke-tests/smoke-test-ca.spec.ts,
+            smoke-tests/smoke-test-fl.spec.ts,
+          ]
     env:
       ENV: dev-ca thelist-710labs.com
       ENV_ID: dev-ca
@@ -48,34 +61,15 @@ jobs:
           node-version: "16.x"
       - name: Install Playwright
         run: npx playwright install --with-deps
-      # Download snapshots for each test file
-      # - name: Download snapshots
-      #   run: |
-      #     for test_file in admin-tests/split-orders-tests.spec.ts e2e-tests/california-order.spec.ts e2e-tests/florida-order.spec.ts e2e-tests/michigan-order.spec.ts gate-tests/age-gate-tests.spec.ts gate-tests/list-password-tests.spec.ts smoke-tests/smoke-test-ca.spec.ts smoke-tests/smoke-test-fl.spec.ts; do
-      #       folder_name="tests/${test_file}-snapshots"
-      #       artifact_name="${test_file//\//-}-snapshots"
-      #       echo "Downloading snapshots for $test_file to $folder_name"
-      #       mkdir -p "$folder_name"
-      #     response=$(curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${artifact_name}/zip")
-      #     echo "GitHub API response: $response"
-      #     curl -L -o "${folder_name}.zip" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${artifact_name}/zip"
-      #       unzip -o -d "$folder_name" "${folder_name}.zip"
-      #       rm "${folder_name}.zip"
-      #     done
+      - name: Download snapshots
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.test_file }}-snapshots
+          path: tests/${{ matrix.test_file }}-snapshots
+      - name: Unzip snapshots
+        run: unzip tests/${{ matrix.test_file }}-snapshots.zip -d tests/${{ matrix.test_file }}-snapshots
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
-      # Upload snapshots for each test file
-      # - name: Upload snapshots
-      #   if: always()
-      #   run: |
-      #     for test_file in admin-tests/split-orders-tests.spec.ts e2e-tests/california-order.spec.ts e2e-tests/florida-order.spec.ts e2e-tests/michigan-order.spec.ts gate-tests/age-gate-tests.spec.ts gate-tests/list-password-tests.spec.ts smoke-tests/smoke-test-ca.spec.ts smoke-tests/smoke-test-fl.spec.ts; do
-      #       folder_name="tests/${test_file}-snapshots"
-      #       artifact_name="${test_file//\//-}-snapshots"
-      #       echo "Uploading snapshots for $test_file from $folder_name"
-      #       zip -r "${folder_name}.zip" "$folder_name"
-      #       gh artifact upload "$artifact_name" "${folder_name}.zip" --repo "${{ github.repository }}"
-      #       rm "${folder_name}.zip"
-      #     done
       - name: Upload snapshots
         if: always()
         uses: actions/upload-artifact@v2
