@@ -48,20 +48,34 @@ jobs:
           node-version: "16.x"
       - name: Install Playwright
         run: npx playwright install --with-deps
-      - name: Download snapshots
-        if: always()
-        uses: actions/download-artifact@v2
+      # - name: Download snapshots
+      #   uses: actions/download-artifact@v2
+      #   with:
+      #     name: snapshots
+      #     path: tests/
+      #     workflow_conclusion: success
+      - name: Download snapshots from S3
+        uses: aws-actions/aws-cli@v1
         with:
-          name: snapshots
-          path: tests/
+          region: ${{ secrets.S3_REGION }} # Change this to your desired AWS region
+          script: |
+            aws s3 sync s3://${{ secrets.S3_BUCKET }}/snapshots/ tests/
+        continue-on-error: true
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
-      - name: Upload snapshots
+      - name: Upload snapshots to S3
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: aws-actions/aws-cli@v1
         with:
-          name: snapshots
-          path: tests/**/*-snapshots/*
+          region: ${{ secrets.S3_REGION }} # Change this to your desired AWS region
+          script: |
+            aws s3 sync tests/ s3://${{ secrets.S3_BUCKET }}/snapshots/ --exclude "*" --include "*-snapshots/*"
+      # - name: Upload snapshots
+      #   if: always()
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: snapshots
+      #     path: tests/**/*-snapshots/*
   fl-tests-dev:
     needs: ca-tests-dev
     timeout-minutes: 60
