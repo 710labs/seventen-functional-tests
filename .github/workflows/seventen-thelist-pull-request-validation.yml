@@ -61,13 +61,18 @@ jobs:
           node-version: "16.x"
       - name: Install Playwright
         run: npx playwright install --with-deps
-      - name: Download snapshots
-        uses: actions/download-artifact@v2
-        with:
-          name: ${{ matrix.test_file }}-snapshots
-          path: tests/${{ matrix.test_file }}-snapshots
-      - name: Unzip snapshots
-        run: unzip tests/${{ matrix.test_file }}-snapshots.zip -d tests/${{ matrix.test_file }}-snapshots
+      - name: Zip and upload snapshots
+        if: always()
+        run: |
+          test_files="admin-tests/split-orders-tests.spec.ts e2e-tests/california-order.spec.ts e2e-tests/florida-order.spec.ts e2e-tests/michigan-order.spec.ts gate-tests/age-gate-tests.spec.ts gate-tests/list-password-tests.spec.ts smoke-tests/smoke-test-ca.spec.ts smoke-tests/smoke-test-fl.spec.ts"
+          for test_file in $test_files; do
+            folder_name="tests/${test_file}-snapshots"
+            artifact_name="${test_file//\//-}-snapshots"
+            echo "Uploading snapshots for $test_file from $folder_name"
+            zip -r "${folder_name}.zip" "$folder_name"
+            gh artifact upload "$artifact_name" "${folder_name}.zip" --repo "${{ github.repository }}"
+            rm "${folder_name}.zip"
+          done
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
       - name: Upload snapshots
