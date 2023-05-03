@@ -67,7 +67,7 @@ jobs:
         run: npm run ci:test:dev:ca
       - name: Upload snapshots to S3
         if: always()
-        run: aws s3 sync tests/ s3://${{ S3_BUCKET }}/snapshots/ --exclude "*" --include "*-snapshots/*"
+        run: aws s3 sync tests/ s3://${{ secrets.S3_BUCKET }}/snapshots/ --exclude "*" --include "*-snapshots/*"
       # - name: Upload snapshots
       #   if: always()
       #   uses: actions/upload-artifact@v2
