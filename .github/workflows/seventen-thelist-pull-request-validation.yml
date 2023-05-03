@@ -60,6 +60,9 @@ jobs:
           region: ${{ secrets.S3_REGION }} # Change this to your desired AWS region
           script: |
             aws s3 sync s3://${{ secrets.S3_BUCKET }}/snapshots/ tests/
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
         continue-on-error: true
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
@@ -70,6 +73,9 @@ jobs:
           region: ${{ secrets.S3_REGION }} # Change this to your desired AWS region
           script: |
             aws s3 sync tests/ s3://${{ secrets.S3_BUCKET }}/snapshots/ --exclude "*" --include "*-snapshots/*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       # - name: Upload snapshots
       #   if: always()
       #   uses: actions/upload-artifact@v2
