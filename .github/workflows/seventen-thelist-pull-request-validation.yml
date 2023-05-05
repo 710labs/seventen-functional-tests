@@ -61,13 +61,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.S3_SECRET }}
           aws-region: ${{ secrets.S3_REGION }}
       - name: Download snapshots from S3
-        run: aws s3 sync s3://${{ secrets.S3_BUCKET }}/tests/ tests/ --exclude "*" --include "*/**/*-snapshots/*"
+        run: aws s3 sync s3://${{ secrets.S3_BUCKET }}/snapshots/ tests/
         continue-on-error: true
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
       - name: Upload snapshots to S3
         if: always()
-        run: aws s3 sync tests/ s3://${{ secrets.S3_BUCKET }}/tests/ --exclude "*" --include "*/**/*-snapshots/*"
+        run: aws s3 sync tests/ s3://${{ secrets.S3_BUCKET }}/snapshots/ --exclude "*" --include "*-snapshots/*"
       # - name: Upload snapshots
       #   if: always()
       #   uses: actions/upload-artifact@v2
