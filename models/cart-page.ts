@@ -10,6 +10,7 @@ export class CartPage {
 	cartTotal: any
 	usageType: any
 	apiContext: APIRequestContext
+	cartCounter:Locator
 
 	constructor(
 		page: Page,
@@ -25,6 +26,7 @@ export class CartPage {
 		this.cartItems = new Array()
 		this.usageType = usageType
 		this.apiContext = apiContext
+		this.cartCounter = this.page.locator('.rsp-countdown-content')
 	}
 
 	async goToCheckout() {
