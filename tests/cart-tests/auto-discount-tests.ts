@@ -34,7 +34,6 @@ test.skip('Customer Has Credit - Discount Applied @CA', async ({
 
 	//Add Credit
 	await adminLoginPage.login()
-	await 
 
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword('qatester')
