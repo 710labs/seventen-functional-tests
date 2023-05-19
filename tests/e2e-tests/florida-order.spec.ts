@@ -8,6 +8,7 @@ import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
 import zipcodes from '../../utils/zipcodes-fl.json'
+import { visualDiff, visualDiffWithMaskArray } from '../../utils/visual-diff'
 
 test(`Basic Order - New Customer #medical @FL`, async ({ page, browserName }, workerInfo) => {
 	const apiContext = await request.newContext({
@@ -32,10 +33,16 @@ test(`Basic Order - New Customer #medical @FL`, async ({ page, browserName }, wo
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword('qatester')
 	await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
+	const shopMasks = [shopPage.productImage]
+	await visualDiffWithMaskArray(page, `store-landing-page-new-FL-med-${process.env.ENV}.png`, 1500, shopMasks)
 	if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 		await myAccountPage.addAddress(address, 'Miami', 'FL', zipCode)
 	}
 	await shopPage.addProductsToCart(6, mobile)
+	var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+	await visualDiffWithMaskArray(page, `cart-page-new-FL-med-${process.env.ENV}.png`, 1500, cartMaskLocators)
 	var cartTotals = await cartPage.verifyCart(zipCode)
+	var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+	await visualDiffWithMaskArray(page, `checkout-page-new-FL-med-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 	await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 })

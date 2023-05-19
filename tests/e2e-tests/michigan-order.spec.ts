@@ -7,6 +7,8 @@ import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { faker } from '@faker-js/faker'
+import { visualDiff, visualDiffWithMaskArray } from '../../utils/visual-diff'
+import { v4 as uuidv4 } from 'uuid'
 
 test.describe('MI Order Tests', () => {
 	test.describe.configure({ mode: 'parallel' })
@@ -23,12 +25,15 @@ test.describe('MI Order Tests', () => {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
 		})
+		const zipCode = '48161'
+		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
+		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 		await test.step(`Pass Age Gate`, async () => {
@@ -41,9 +46,9 @@ test.describe('MI Order Tests', () => {
 
 		await test.step(`Create Account`, async () => {
 			await createAccountPage.createMichiganCustomer(
-				faker.name.firstName(),
-				faker.name.lastName(),
-				faker.internet.email(),
+				faker.name.firstName() + uuidv4(),
+				faker.name.lastName() + uuidv4(),
+				faker.internet.email() + uuidv4(),
 				faker.internet.password(),
 				faker.datatype.number({ min: 1, max: 28 }),
 				faker.datatype.number({ min: 10, max: 12 }),
@@ -58,6 +63,8 @@ test.describe('MI Order Tests', () => {
 		await test.step(`Enter Fulfillment Method`, async () => {
 			await page.locator('#fulfillmentElement').getByText('Pickup', { exact: true }).click()
 			await page.getByRole('button', { name: 'Submit' }).click()
+			const shopMasks = [shopPage.productImage]
+			await visualDiffWithMaskArray(page, `store-landing-page-new-MI-instate-REC-${process.env.ENV}.png`, 1500, shopMasks)
 		})
 
 		await test.step(`Add Products`, async () => {
@@ -69,10 +76,14 @@ test.describe('MI Order Tests', () => {
 
 		await test.step(`Navigate to Cart`, async () => {
 			await shopPage.goToCart()
+			var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+			await visualDiffWithMaskArray(page, `cart-page-new-MI-instate-rec-${process.env.ENV}.png`, 1500, cartMaskLocators)
 		})
 
 		await test.step(`Navigate to Checkout`, async () => {
 			await cartPage.goToCheckout()
+			var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+			await visualDiffWithMaskArray(page, `checkout-page-new-MI-instate-rec-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 		})
 
 		await test.step(`Choose Acuity Slot`, async () => {
@@ -96,12 +107,15 @@ test.describe('MI Order Tests', () => {
 				'x-api-key': `${process.env.API_KEY}`,
 			},
 		})
+		const zipCode = '48161'
+		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 		const checkOutPage = new CheckoutPage(page, apiContext)
+		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 		await test.step(`Pass Age Gate`, async () => {
@@ -114,9 +128,9 @@ test.describe('MI Order Tests', () => {
 
 		await test.step(`Create Account`, async () => {
 			await createAccountPage.createMichiganCustomer(
-				faker.name.firstName(),
-				faker.name.lastName(),
-				faker.internet.email(),
+				faker.name.firstName() + uuidv4(),
+				faker.name.lastName() + uuidv4(),
+				faker.internet.email() + uuidv4(),
 				faker.internet.password(),
 				faker.datatype.number({ min: 1, max: 28 }),
 				faker.datatype.number({ min: 10, max: 12 }),
@@ -127,6 +141,7 @@ test.describe('MI Order Tests', () => {
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
 			)
+			//await createAccountPage.create(email, 'test1234', zipCode, 1)
 		})
 		await test.step(`Enter Fulfillment Method`, async () => {
 			await page.locator('#fulfillmentElement').getByText('Pickup', { exact: true }).click()
@@ -134,18 +149,24 @@ test.describe('MI Order Tests', () => {
 		})
 
 		await test.step(`Add Products`, async () => {
+			await visualDiff(page, `store-landing-page-new-MI-outstate-rec-${process.env.ENV}.png`, 1500)
 			var order = await faker.datatype.number({ min: 0, max: orders.length - 1 })
 			await test.step(`Load Cart - Order #${order}`, async () => {
 				await shopPage.addProductListToCart(orders[order])
+				//await shopPage.addProductsToCart(6, mobile);
 			})
 		})
 
 		await test.step(`Navigate to Cart`, async () => {
 			await shopPage.goToCart()
+			var cartMaskLocators = [cartPage.productName, cartPage.productImage, cartPage.productImage2, cartPage.reservationTimer]
+			await visualDiffWithMaskArray(page, `cart-page-new-MI-outstate-rec-${process.env.ENV}.png`, 1500, cartMaskLocators)
 		})
 
 		await test.step(`Navigate to Checkout`, async () => {
 			await cartPage.goToCheckout()
+			var checkoutMaskLocators = [checkOutPage.personalInfoField, checkOutPage.reservationTimer, checkOutPage.AppointmentsSection, checkOutPage.FulfillmentMethodSection, checkOutPage.AddressSection]
+			await visualDiffWithMaskArray(page, `checkout-page-new-MI-outstate-rec-${process.env.ENV}.png`, 1500, checkoutMaskLocators)
 		})
 
 		await test.step(`Choose Acuity Slot`, async () => {

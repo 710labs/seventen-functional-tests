@@ -1,4 +1,5 @@
 import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
+import { visualDiff } from '../utils/visual-diff'
 
 export class CreateAccountPage {
 	readonly page: Page
@@ -38,7 +39,7 @@ export class CreateAccountPage {
 	//svntn_core_pxp_month
 
 	constructor(page: Page, apiContext: APIRequestContext) {
-		;(this.page = page),
+		; (this.page = page),
 			(this.apiContext = apiContext),
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
@@ -92,7 +93,10 @@ export class CreateAccountPage {
 		address: string = '123 Front Street',
 		state: string = 'CA',
 	) {
-		await test.step('Verify Layout', async () => {})
+		await test.step('Verify Layout', async () => {
+			// visual diff for create account screen
+			await visualDiff(this.page, `create-account-layout-${process.env.ENV}.png`, 500)
+		})
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
@@ -162,6 +166,8 @@ export class CreateAccountPage {
 			const dlUploadButton = await this.page.waitForSelector(
 				'input[name="svntn_core_personal_doc"]',
 			)
+			// visual diff for license upload screen
+			await visualDiff(this.page, `drivers-license-upload-${process.env.ENV}.png`, 500)
 			const [driversLicenseChooser] = await Promise.all([
 				this.page.waitForEvent('filechooser'),
 				dlUploadButton.click(),
@@ -180,6 +186,8 @@ export class CreateAccountPage {
 				const medicalCardButton = await this.page.waitForSelector(
 					'input[name="svntn_core_medical_doc"]',
 				)
+				// visual diff for med card upload screen
+				await visualDiff(this.page, `CA-medical-card-upload-${process.env.ENV}.png`, 500)
 				const [medicalCardChooser] = await Promise.all([
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),
@@ -200,6 +208,8 @@ export class CreateAccountPage {
 				const medicalCardButton = await this.page.waitForSelector(
 					'input[name="svntn_core_medical_doc"]',
 				)
+				// visual diff for FL med upload screen
+				await visualDiff(this.page, `FL-medical-card-upload-${process.env.ENV}.png`, 500)
 				const [medicalCardChooser] = await Promise.all([
 					this.page.waitForEvent('filechooser'),
 					medicalCardButton.click(),
