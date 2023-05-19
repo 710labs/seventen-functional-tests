@@ -47,7 +47,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npx playwright test --config=configs/dev.config.ts --workers=10 --grep @CA --update-snapshots
+        run: npx playwright test --config=configs/dev.config.ts --workers=10 --grep @CA
       # Upload snapshots for each test file
       - name: Upload snapshots to S3
         if: always()
