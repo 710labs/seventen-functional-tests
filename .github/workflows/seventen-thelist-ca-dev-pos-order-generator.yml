@@ -2,10 +2,22 @@ name: thelist-ca-dev-pos-order-generator
 on:
   workflow_dispatch:
     inputs:
-        order_count:
-          description: 'Orders'     
-          required: true
-          default: '1'
+      order_count:
+        description: "Order Count"
+        required: true
+        default: "1"
+      prefix:
+        description: "Facility"
+        required: false
+        default: "March_And_Ash"
+      address:
+        description: "Address"
+        required: false
+        default: "3324 S La Cienega Blvd, Los Angeles"
+      fulfillment_type:
+        description: "Fulfillment Type: (1) Pickup (2) Delivery"
+        required: false
+        default: "1"
 jobs:
   pos-order-gerenator:
     timeout-minutes: 60
