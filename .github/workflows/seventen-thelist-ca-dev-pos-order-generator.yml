@@ -7,17 +7,27 @@ on:
         required: true
         default: "1"
       prefix:
-        description: "Facility"
+        description: "Unique Prefix"
         required: false
-        default: "March_And_Ash"
+        default: ""
       address:
         description: "Address"
         required: false
         default: "3324 S La Cienega Blvd, Los Angeles"
-      fulfillment_type:
-        description: "Fulfillment Type: (1) Pickup (2) Delivery"
-        required: false
-        default: "1"
+      cfulfillment_type:
+        type: choice
+        description: Fulfillment Type
+        options:
+        - Pickup
+        - Delivery
+        - Random
+      customer_type:
+        type: choice
+        description: Customer Type
+        options:
+        - Medical
+        - Recreational
+        - Random
 jobs:
   pos-order-gerenator:
     timeout-minutes: 60
