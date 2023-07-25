@@ -1,5 +1,3 @@
-const csvFilePath = 'utils/hod-orders.csv'
-let csvToJson = require('convert-csv-to-json')
 import { test, expect, devices, request, Page } from '@playwright/test'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { ShopPage } from '../../models/shop-page'
@@ -10,7 +8,10 @@ import { CartPage } from '../../models/cart-page'
 import { faker } from '@faker-js/faker'
 
 test.describe('POS Order Generator', () => {
-	let orders = csvToJson.fieldDelimiter(',').getJsonFromCsv(csvFilePath)
+
+	createOrder(){
+
+	}
 	test.describe.configure({ mode: 'parallel' })
 
 	var order1 = [
@@ -32,6 +33,14 @@ test.describe('POS Order Generator', () => {
 	]
 
 	var orderCount = process.env.ORDER_COUNT
+	var orders;
+
+	for (let index = 0; index < parseInt(orderCount); index++) {
+
+		createOrder
+	}
+
+
 
 	for (let index = 0; index < parseInt(orderCount); index++) {
 		var first_name = faker.name.firstName()
