@@ -1,9 +1,9 @@
-name: thelist-pos-order-generator
+name: thelist-ca-dev-pos-order-generator
 on:
   workflow_dispatch:
     inputs:
         order_count:
-          description: 'Number of Orders to Create'     
+          description: 'Orders'     
           required: true
           default: '1'
 jobs:
@@ -17,6 +17,8 @@ jobs:
       BASE_URL: ${{ secrets.BASE_URL_DEV }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
+      ORDER_COUNT: ${{ github.event.inputs.order_count }}
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -43,4 +45,3 @@ jobs:
           SLACK_TITLE: Task Run Status thelist-ca-acuity-slot-helper
           SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          ORDER_COUNT: ${{ github.event.inputs.order_count }}
