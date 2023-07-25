@@ -43,3 +43,4 @@ jobs:
           SLACK_TITLE: Task Run Status thelist-ca-acuity-slot-helper
           SLACK_USERNAME: "710 Functional Tests"
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          ORDER_COUNT: ${{ github.event.inputs.order_count }}
