@@ -374,4 +374,119 @@ export class CreateAccountPage {
 			await expect(this.page).toHaveURL('/')
 		})
 	}
+
+	async createCaliforniaCustomer(
+		firstName: string,
+		lastName: string,
+		username: string,
+		password: string,
+		birthDay: number,
+		birthMonth: number,
+		birthYear: number,
+		phone: string,
+		type: string,
+		address: string,
+		medCardNumber: string,
+		driversLicenseNumber: string,
+	) {
+		await test.step('Click Register Link', async () => {
+			await this.page.click('text=create an account')
+			await expect(this.page).toHaveURL('/register/')
+		})
+
+		await test.step('Enter First Name', async () => {
+			await this.firstName.click()
+			await this.firstName.fill(firstName)
+		})
+
+		await test.step('Enter Last Name', async () => {
+			await this.lastName.click()
+			await this.lastName.fill(lastName)
+		})
+
+		await test.step('Enter Email', async () => {
+			await this.userNameField.click()
+			await this.userNameField.fill(username)
+		})
+
+		await test.step('Enter Passowrd', async () => {
+			await this.passwordField.click()
+			await this.passwordField.fill(password)
+		})
+
+		await test.step('Enter Birthdate', async () => {
+			await this.birthMonth.selectOption(`${birthMonth}`)
+			await this.birthDay.selectOption(`${birthDay}`)
+			await this.birthYear.selectOption(`${birthYear}`)
+		})
+
+		await test.step('Enter Billing Address', async () => {
+			await this.address.click()
+			await this.address.fill(address)
+			await this.page.waitForTimeout(1000)
+			await this.page.keyboard.press('ArrowDown')
+			await this.page.keyboard.press('Enter')
+		})
+
+		await test.step('Enter Phone Number', async () => {
+			await this.phoneNumber.click()
+			await this.phoneNumber.fill(`${phone}`)
+		})
+
+		await test.step('Click Next Link', async () => {
+			await this.page.getByRole('button', { name: 'Next' }).click()
+			await this.page.waitForSelector('#eligibilityContext')
+		})
+
+		if (type === 'medical') {
+			await test.step('Select Medical Usage Type', async () => {
+				await this.page.waitForTimeout(5000)
+				await this.page.getByLabel('Medical', { exact: true }).check()
+				await this.page.waitForTimeout(5000)
+			})
+
+			await test.step('Upload Drivers License', async () => {
+				await this.page.getByLabel("ID Upload (driver's license or passport) *").click()
+				await this.page
+					.getByLabel("ID Upload (driver's license or passport) *")
+					.setInputFiles('CA-DL.jpg')
+			})
+
+			await test.step('Upload Medical Card', async () => {
+				await this.page.getByLabel('Medical Card Upload *').click()
+				await this.page.getByLabel('Medical Card Upload *').setInputFiles('Medical-Card.png')
+			})
+
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption('2023')
+			})
+		}
+
+		if (type === 'recreational') {
+			await test.step('Select Recreational Usage Type', async () => {
+				await this.page.locator('text=Recreational >> input[name="svntn_last_usage_type"]').click()
+			})
+			await test.step('Upload Drivers License', async () => {
+				const dlUploadButton = await this.page.waitForSelector(
+					'input[name="svntn_core_personal_doc"]',
+				)
+				const [driversLicenseChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					dlUploadButton.click(),
+				])
+				await this.page.waitForTimeout(5000)
+				await driversLicenseChooser.setFiles('CA-DL.jpg')
+				await this.page.waitForTimeout(5000)
+				await driversLicenseChooser.page()
+			})
+		}
+
+		await test.step('Complete Usage Type Form', async () => {
+			await await this.page.getByRole('button', { name: 'Register' }).click()
+			await this.page.waitForTimeout(5000)
+			await expect(this.page).toHaveURL('/')
+		})
+	}
 }
