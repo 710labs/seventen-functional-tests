@@ -204,12 +204,17 @@ export class CheckoutPage {
 
 	async selectSlot() {
 		await test.step(`Select Acuity Slot`, async () => {
+
+			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice')
+
 			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
 			await expect(
 				daySlot,
 				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
 			).toBeVisible()
 			await daySlot.click()
+
+			await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
 
 			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
 			await expect(
