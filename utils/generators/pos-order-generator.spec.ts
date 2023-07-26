@@ -6,61 +6,142 @@ import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { faker } from '@faker-js/faker'
+import { URL } from 'url'
 
 test.describe('POS Order Generator', () => {
+	var orders = [
+		{
+			name: '$2K - 10+ Products - Battery',
+			id: 1,
+			products: [
+				{
+					sku: '7839089 | Persy Badder (Tier 1)',
+					name: 'Rainbow Belts',
+					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-4/',
+				},
+				{
+					sku: '8497601 | Persy Badder (Tier 1)',
+					name: 'Cherry Zest #4',
+					url: 'https://thelist-dev.710labs.com/product/cherry-zest-4/',
+				},
+				{
+					sku: '4104600 | Persy Badder (Tier 2)',
+					name: 'Ginger Tea #8',
+					url: 'https://thelist-dev.710labs.com/product/ginger-tea-8-2/',
+				},
+				{
+					sku: '3409734 | Persy Badder (Tier 2)',
+					name: 'Gak Smoovie #',
+					url: 'https://thelist-dev.710labs.com/product/gak-smoovie-5-2/',
+				},
+				{
+					sku: '4389415 | Half Ounce',
+					name: 'Zkittlez',
+					url: 'https://thelist-dev.710labs.com/product/zkittlez-3/',
+				},
+				{
+					sku: '9659062 | Half Ounce',
+					name: 'Candy Chrome #27',
+					url: 'https://thelist-dev.710labs.com/product/candy-chrome-27-2/',
+				},
+				{
+					sku: '8927221 | Half Ounce',
+					name: 'Starburst 36 #1',
+					url: 'https://thelist-dev.710labs.com/product/starburst-36-1-4/',
+				},
+				{
+					sku: '2757322 | Live Rosin (Tier 2)',
+					name: 'Z Cubed #5',
+					url: 'https://thelist-dev.710labs.com/product/z-cubed-5-3/',
+				},
+				{
+					sku: '8013814 | Water Hash (Tier 1)',
+					name: 'Lemon Heads #4',
+					url: 'https://thelist-dev.710labs.com/product/lemon-heads-4-2/',
+				},
+				{
+					sku: 'DUPLICATEBATTERYSKU',
+					name: 'Persy Pod Battery (Black)',
+					url: 'https://thelist-dev.710labs.com/product/persy-pod-battery-black-2/',
+				},
+				{
+					sku: '8548663 | Persy Pod (Tier 1)',
+					name: 'Rainbow Belts',
+					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-3/',
+				},
+			],
+		},
+		{
+			name: '<5 Products + Battery',
+			id: 2,
+			products: [
+				{
+					sku: '4389415 | Half Ounce)',
+					name: 'Rainbow Belts',
+					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-4/',
+				},
+				{
+					sku: '8927221 | Half Ounce',
+					name: 'Starburst 36 #1',
+					url: 'https://thelist-dev.710labs.com/product/starburst-36-1-4/',
+				},
+				{
+					sku: 'DUPLICATEBATTERYSKU',
+					name: 'Persy Pod Battery (Black)',
+					url: 'https://thelist-dev.710labs.com/product/persy-pod-battery-black-2/',
+				},
+				{
+					sku: '8548663 | Persy Pod (Tier 1)',
+					name: 'Rainbow Belts',
+					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-3/',
+				},
+			],
+		},
+	]
 
-	createOrder(){
+	var orderCount = process.env.POSSYNC_ORDER_COUNT
 
+	async function getOrderNumber(url) {
+		const parsedURL = new URL(url)
+		const pathname = parsedURL.pathname
+
+		// Use regex to extract the desired string from the pathname
+		const regex = /\/(\d+)\/?/
+		const match = pathname.match(regex)
+
+		// Check if the regex matched and get the extracted string
+		const extractedString = match ? match[1] : null
+
+		return extractedString
 	}
-	test.describe.configure({ mode: 'parallel' })
-
-	var order1 = [
-		'142698', //Rainbow Belts (https://thelist-dev.710labs.com/product/rainbow-belts-4/)
-		'142698', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'142698', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
-	]
-
-	var order2 = [
-		'142698', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'142698', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'142698', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
-	]
-
-	var order3 = [
-		'142698', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)
-		'142698', //Pie Scream #7 + Pielatti (https://thelist-dev.710labs.com/product/pie-scream-7-pielatti/)
-		'142698', //Randy Watzon #13 + Blueberry Haze (https://thelist-dev.710labs.com/product/randy-watzon-13-blueberry-haze/)
-	]
-
-	var orderCount = process.env.ORDER_COUNT
-	var orders;
-
-	for (let index = 0; index < parseInt(orderCount); index++) {
-
-		createOrder
-	}
-
-
 
 	for (let index = 0; index < parseInt(orderCount); index++) {
 		var first_name = faker.name.firstName()
 		var last_name = faker.name.lastName()
-		var email = `${first_name}.${last_name}@pos-sync.com`.toLocaleLowerCase()
+		var email =
+			`${process.env.POSSYNC_PREFIX}-${first_name}.${last_name}@pos-sync.com`.toLocaleLowerCase()
 		var password = 'test1234'
-		var dob_day = faker.datatype.number({ min: 1, max: 12 })
-		var dob_month = faker.datatype.number({ min: 1, max: 25 })
+		var dob_day = faker.datatype.number({ min: 10, max: 25 })
+		var dob_month = faker.datatype.number({ min: 10, max: 12 })
 		var dob_year = faker.datatype.number({ min: 1955, max: 2001 })
-		var phone = faker.phone.phoneNumber()
-		var customer_type = 'recreational'
-		var address = '3324 S La Cienega Blvd, Los Angeles'
+		var phone = faker.phone.phoneNumber('###-###-####')
+		var customer_type =
+			process.env.POSSYNC_CUSTOMER_TYPE === 'Random'
+				? faker.helpers.arrayElement(['Recreational', 'Medical'])
+				: process.env.POSSYNC_CUSTOMER_TYPE
+		var address = process.env.POSSYNC_ADDRESS
 		var med_card_number = faker.random.numeric(8)
 		var drivers_license_number = faker.random.numeric(8)
-		var order = faker.datatype.number({ min: 1, max: 3 })
+		var fulfillmentType =
+			process.env.POSSYNC_FULFILLMENT_TYPE === 'Random'
+				? faker.helpers.arrayElement(['Pickup', 'Delivery'])
+				: process.env.POSSYNC_FULFILLMENT_TYPE
+		var cart_type =
+			process.env.POSSYNC_CART_TYPE === 'Random'
+				? faker.helpers.arrayElement(['Flower + Concentrate + Non Cannabis'])
+				: process.env.POSSYNC_FULFILLMENT_TYPE
 
-		test(`Add Order: ${email} - DOB:${dob_month}/${dob_day}/${dob_year} - ${customer_type} - ${address} - Order[${order}]`, async ({
-			page,
-			browserName,
-		}, workerInfo) => {
+		test(`POS Sync Add Order: ${index + 1}`, async ({ page, browserName }, workerInfo) => {
 			const apiContext = await request.newContext({
 				baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 				extraHTTPHeaders: {
@@ -77,6 +158,7 @@ test.describe('POS Order Generator', () => {
 
 			await test.step(`Pass Age Gate`, async () => {
 				await ageGatePage.passAgeGate()
+				console.log(process.env)
 			})
 
 			await test.step(`Enter List Password`, async () => {
@@ -101,35 +183,54 @@ test.describe('POS Order Generator', () => {
 			})
 
 			await test.step(`Enter Fulfillment Method`, async () => {
-				await page.locator('#fulfillmentElement').getByText('Pickup', { exact: true }).click()
+				await page
+					.locator('#fulfillmentElement')
+					.getByText(`${fulfillmentType}`, { exact: true })
+					.click()
 				await page.getByRole('button', { name: 'Submit' }).click()
+
+				test.info().annotations.push({
+					type: 'Fulfillment Type',
+					description: `${fulfillmentType}`,
+				})
 			})
 
 			await test.step(`Add Products`, async () => {
-				switch (order) {
-					case 1:
+				switch (cart_type) {
+					case 'Flower + Concentrate + Non Cannabis':
 						await test.step(`Load Cart - Order #1`, async () => {
-							await shopPage.addProductListToCart(order1)
+							await shopPage.addProductListToCart(
+								orders.find(order => order.id == 1).products.map(product => product.sku),
+							)
+							let iterationNumber = 1
+							orders
+								.find(order => order.id == 1)
+								.products.forEach(product => {
+									test.info().annotations.push({
+										type: `Product ${iterationNumber}`,
+										description: `${product.sku} - ${product.name} - (${product.url})`,
+									})
+									iterationNumber++
+								})
 						})
 						break
-					case 2:
-						await test.step(`Load Cart - Order #2`, async () => {
-							await shopPage.addProductListToCart(order2)
-						})
-						break
-					case 3:
-						await test.step(`Load Cart - Order #3`, async () => {
-							await shopPage.addProductListToCart(order3)
-						})
-						break
-					case 4:
-						await test.step(`Load Cart - Order #4`, async () => {
-							await shopPage.addProductListToCart(order1)
-						})
-						break
-					case 5:
-						await test.step(`Load Cart - Order #5`, async () => {
-							await shopPage.addProductListToCart(order1)
+					case 'Random':
+						await test.step(`Load Cart - Order #1`, async () => {
+							await shopPage.addProductListToCart(
+								orders
+									.find(order => order.id == faker.datatype.number({ min: 1, max: orders.length }))
+									.products.map(product => product.sku),
+							)
+							let iterationNumber = 1
+							orders
+								.find(order => order.id == 1)
+								.products.forEach(product => {
+									test.info().annotations.push({
+										type: `Product ${iterationNumber}`,
+										description: `${product.sku} - ${product.name} - (${product.url})`,
+									})
+									iterationNumber++
+								})
 						})
 						break
 					default:
@@ -150,6 +251,15 @@ test.describe('POS Order Generator', () => {
 
 			await test.step(`Complete Order`, async () => {
 				await checkOutPage.placeOrderButton.click()
+
+				await page.waitForSelector('.woocommerce-order-overview__order > strong')
+
+				var order = await getOrderNumber(page.url())
+
+				test.info().annotations.push({
+					type: 'Order',
+					description: `${process.env.BASE_URL}wp-admin/post.php?post=${order}&action=edit`,
+				})
 			})
 		})
 	}
