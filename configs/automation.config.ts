@@ -34,7 +34,7 @@ const config: PlaywrightTestConfig = {
 				],
 			},
 		],
-		['../reporters/s3/pw-report-s3-upload-generators.ts'],
+		['../reporters/s3/pw-report-s3-upload.ts'],
 	],
 	use: {
 		acceptDownloads: true,
