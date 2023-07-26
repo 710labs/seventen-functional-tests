@@ -39,6 +39,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
+      ENV_ID: pos-sync-ca-dev
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}

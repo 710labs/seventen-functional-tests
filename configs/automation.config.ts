@@ -27,6 +27,10 @@ const config: PlaywrightTestConfig = {
 						key: 'EXECUTION TYPE',
 						value: 'POS ORDER SYNC',
 					},
+					{
+						key: 'Test Run ID',
+						value: process.env.UNIQUE_RUN_ID + '-' + process.env.RUN_ID,
+					},
 				],
 			},
 		],
