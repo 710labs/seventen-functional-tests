@@ -158,7 +158,6 @@ test.describe('POS Order Generator', () => {
 
 			await test.step(`Pass Age Gate`, async () => {
 				await ageGatePage.passAgeGate()
-				console.log(process.env)
 			})
 
 			await test.step(`Enter List Password`, async () => {
