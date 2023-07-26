@@ -19,13 +19,13 @@ const config: PlaywrightTestConfig = {
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
 				channels: ['tech-savagery-tests'],
-				sendResults: 'never',
+				sendResults: 'always',
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
 				meta: [
 					{
-						key: 'Execution Type',
-						value: 'Scripts',
+						key: 'EXECUTION TYPE',
+						value: 'POS ORDER SYNC',
 					},
 				],
 			},

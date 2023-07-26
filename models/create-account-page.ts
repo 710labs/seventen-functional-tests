@@ -438,7 +438,7 @@ export class CreateAccountPage {
 			await this.page.waitForSelector('#eligibilityContext')
 		})
 
-		if (type === 'medical') {
+		if (type === 'Medical') {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.waitForTimeout(5000)
 				await this.page.getByLabel('Medical', { exact: true }).check()
@@ -464,7 +464,7 @@ export class CreateAccountPage {
 			})
 		}
 
-		if (type === 'recreational') {
+		if (type === 'Recreational') {
 			await test.step('Select Recreational Usage Type', async () => {
 				await this.page.locator('text=Recreational >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -486,7 +486,39 @@ export class CreateAccountPage {
 		await test.step('Complete Usage Type Form', async () => {
 			await await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
-			await expect(this.page).toHaveURL('/')
+			await expect(this.page).toHaveURL('/#pickup-deliver')
+		})
+
+		test.info().annotations.push({
+			type: 'Name',
+			description: `${firstName} ${lastName}`,
+		})
+
+		test.info().annotations.push({
+			type: 'Email',
+			description: `${username}`,
+		})
+
+		test.info().annotations.push({
+			type: 'Phone',
+			description: `${phone}`,
+		})
+		test.info().annotations.push({
+			type: 'Address',
+			description: `${address}`,
+		})
+		test.info().annotations.push({
+			type: 'Customer Type',
+			description: `${type}`,
+		})
+
+		test.info().annotations.push({
+			type: 'DOB',
+			description: `${birthMonth}/${birthDay}/${birthYear}`,
+		})
+		test.info().annotations.push({
+			type: 'Password',
+			description: `${password}`,
 		})
 	}
 }

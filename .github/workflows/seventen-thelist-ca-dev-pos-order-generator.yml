@@ -14,20 +14,26 @@ on:
         description: "Address"
         required: false
         default: "3324 S La Cienega Blvd, Los Angeles"
-      cfulfillment_type:
+      fulfillment_type:
         type: choice
         description: Fulfillment Type
         options:
-        - Pickup
-        - Delivery
-        - Random
+          - Random
+          - Pickup
+          - Delivery
       customer_type:
         type: choice
         description: Customer Type
         options:
-        - Medical
-        - Recreational
-        - Random
+          - Random
+          - Medical
+          - Recreational
+      cart_type:
+        type: choice
+        description: Cart Type
+        options:
+          - Random
+          - Flower + Concentrate + Non Cannabis
 jobs:
   pos-order-gerenator:
     timeout-minutes: 60
@@ -39,8 +45,12 @@ jobs:
       BASE_URL: ${{ secrets.BASE_URL_DEV }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
-      ORDER_COUNT: ${{ github.event.inputs.order_count }}
-
+      POSSYNC_ORDER_COUNT: ${{ github.event.inputs.order_count }}
+      POSSYNC_PREFIX: ${{ github.event.inputs.prefix }}
+      POSSYNC_ADDRESS: ${{ github.event.inputs.address }}
+      POSSYNC_FULFILLMENT_TYPE: ${{ github.event.inputs.fulfillment_type }}
+      POSSYNC_CUSTOMER_TYPE: ${{ github.event.inputs.customer_type }}
+      POSSYNC_CART_TYPE: ${{ github.event.inputs.cart_type }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -51,19 +61,4 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run helper:acuityslots
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-      - name: Slack Notification
-        if: always()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: Executed Acuity Slot Helper in Dev. Status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: Task Run Status thelist-ca-acuity-slot-helper
-          SLACK_USERNAME: "710 Functional Tests"
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: npm run helper:possync_orders
