@@ -204,8 +204,9 @@ export class CheckoutPage {
 
 	async selectSlot() {
 		await test.step(`Select Acuity Slot`, async () => {
-
-			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice')
+			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
+				timeout: 45 * 1000,
+			})
 
 			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
 			await expect(
@@ -224,7 +225,6 @@ export class CheckoutPage {
 			await timeSlot.click()
 		})
 	}
-
 
 	async confirmCheckoutDeprecated(
 		zipcode: string,
