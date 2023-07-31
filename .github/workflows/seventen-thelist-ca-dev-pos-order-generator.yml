@@ -18,22 +18,22 @@ on:
         type: choice
         description: Fulfillment Type
         options:
-          - "Random"
-          - "Pickup"
-          - "Delivery"
+          - Random
+          - Pickup
+          - Delivery
       customer_type:
         type: choice
         description: Customer Type
         options:
-          - "Random"
-          - "Medical"
-          - "Recreational"
+          - Random
+          - Medical
+          - Recreational
       cart_type:
         type: choice
         description: Cart Type
         options:
-          - "Random"
-          - "Flower + Concentrate + Non Cannabis"
+          - Random
+          - Flower + Concentrate + Non Cannabis
 jobs:
   pos-order-generator:
     timeout-minutes: 60
@@ -73,7 +73,7 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
-          node-version: "16.x"
+          node-version: '16.x'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
