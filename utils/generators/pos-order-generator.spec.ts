@@ -1,4 +1,4 @@
-import { test, expect, devices, request, Page } from '@playwright/test'
+import { test, request } from '@playwright/test'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { ShopPage } from '../../models/shop-page'
 import { AgeGatePage } from '../../models/age-gate-page'
@@ -72,7 +72,7 @@ test.describe('POS Order Generator', () => {
 			],
 		},
 		{
-			name: '<5 Products + Battery',
+			name: 'Only Cannabis Products',
 			id: 2,
 			products: [
 				{
@@ -86,14 +86,14 @@ test.describe('POS Order Generator', () => {
 					url: 'https://thelist-dev.710labs.com/product/starburst-36-1-4/',
 				},
 				{
-					sku: 'DUPLICATEBATTERYSKU',
-					name: 'Persy Pod Battery (Black)',
-					url: 'https://thelist-dev.710labs.com/product/persy-pod-battery-black-2/',
-				},
-				{
 					sku: '8548663 | Persy Pod (Tier 1)',
 					name: 'Rainbow Belts',
 					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-3/',
+				},
+				{
+					sku: '8013814 | Water Hash (Tier 1)',
+					name: 'Lemon Heads #4',
+					url: 'https://thelist-dev.710labs.com/product/lemon-heads-4-2/',
 				},
 			],
 		},
@@ -136,10 +136,7 @@ test.describe('POS Order Generator', () => {
 			process.env.POSSYNC_FULFILLMENT_TYPE === 'Random'
 				? faker.helpers.arrayElement(['Pickup', 'Delivery'])
 				: process.env.POSSYNC_FULFILLMENT_TYPE
-		var cart_type =
-			process.env.POSSYNC_CART_TYPE === 'Random'
-				? faker.helpers.arrayElement(['Flower + Concentrate + Non Cannabis'])
-				: process.env.POSSYNC_FULFILLMENT_TYPE
+		var cart_type = faker.helpers.arrayElement([1, 2])
 
 		test(`POS Sync Add Order: ${index + 1}`, async ({ page, browserName }, workerInfo) => {
 			const apiContext = await request.newContext({
@@ -196,8 +193,8 @@ test.describe('POS Order Generator', () => {
 
 			await test.step(`Add Products`, async () => {
 				switch (cart_type) {
-					case 'Flower + Concentrate + Non Cannabis':
-						await test.step(`Load Cart - Order #1`, async () => {
+					case 1:
+						await test.step(`Load Cart - All Product Types`, async () => {
 							await shopPage.addProductListToCart(
 								orders.find(order => order.id == 1).products.map(product => product.sku),
 							)
@@ -213,16 +210,14 @@ test.describe('POS Order Generator', () => {
 								})
 						})
 						break
-					case 'Random':
-						await test.step(`Load Cart - Order #1`, async () => {
+					case 2:
+						await test.step(`Load Cart - Only Cannabis`, async () => {
 							await shopPage.addProductListToCart(
-								orders
-									.find(order => order.id == faker.datatype.number({ min: 1, max: orders.length }))
-									.products.map(product => product.sku),
+								orders.find(order => order.id == 2).products.map(product => product.sku),
 							)
 							let iterationNumber = 1
 							orders
-								.find(order => order.id == 1)
+								.find(order => order.id == 2)
 								.products.forEach(product => {
 									test.info().annotations.push({
 										type: `Product ${iterationNumber}`,
