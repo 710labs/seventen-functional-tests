@@ -76,9 +76,34 @@ test.describe('POS Order Generator', () => {
 			id: 2,
 			products: [
 				{
-					sku: '4389415 | Half Ounce)',
+					sku: '7839089 | Persy Badder (Tier 1)',
 					name: 'Rainbow Belts',
 					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-4/',
+				},
+				{
+					sku: '8497601 | Persy Badder (Tier 1)',
+					name: 'Cherry Zest #4',
+					url: 'https://thelist-dev.710labs.com/product/cherry-zest-4/',
+				},
+				{
+					sku: '4104600 | Persy Badder (Tier 2)',
+					name: 'Ginger Tea #8',
+					url: 'https://thelist-dev.710labs.com/product/ginger-tea-8-2/',
+				},
+				{
+					sku: '3409734 | Persy Badder (Tier 2)',
+					name: 'Gak Smoovie #',
+					url: 'https://thelist-dev.710labs.com/product/gak-smoovie-5-2/',
+				},
+				{
+					sku: '4389415 | Half Ounce',
+					name: 'Zkittlez',
+					url: 'https://thelist-dev.710labs.com/product/zkittlez-3/',
+				},
+				{
+					sku: '9659062 | Half Ounce',
+					name: 'Candy Chrome #27',
+					url: 'https://thelist-dev.710labs.com/product/candy-chrome-27-2/',
 				},
 				{
 					sku: '8927221 | Half Ounce',
@@ -86,14 +111,19 @@ test.describe('POS Order Generator', () => {
 					url: 'https://thelist-dev.710labs.com/product/starburst-36-1-4/',
 				},
 				{
-					sku: '8548663 | Persy Pod (Tier 1)',
-					name: 'Rainbow Belts',
-					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-3/',
+					sku: '2757322 | Live Rosin (Tier 2)',
+					name: 'Z Cubed #5',
+					url: 'https://thelist-dev.710labs.com/product/z-cubed-5-3/',
 				},
 				{
 					sku: '8013814 | Water Hash (Tier 1)',
 					name: 'Lemon Heads #4',
 					url: 'https://thelist-dev.710labs.com/product/lemon-heads-4-2/',
+				},
+				{
+					sku: '8548663 | Persy Pod (Tier 1)',
+					name: 'Rainbow Belts',
+					url: 'https://thelist-dev.710labs.com/product/rainbow-belts-3/',
 				},
 			],
 		},
