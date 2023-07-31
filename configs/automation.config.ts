@@ -4,7 +4,7 @@ require('dotenv').config({ path: require('find-config')('.env') })
 
 const config: PlaywrightTestConfig = {
 	testDir: './../utils/generators/',
-	timeout: 20 * 60000,
+	timeout: 40 * 60000,
 	expect: {
 		timeout: 10 * 1000,
 	},
@@ -18,7 +18,7 @@ const config: PlaywrightTestConfig = {
 		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				channels: ['tech-savagery-tests'],
+				channels: ['tech-savagery-tests', '710labs-qatest-results'],
 				sendResults: 'always',
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
