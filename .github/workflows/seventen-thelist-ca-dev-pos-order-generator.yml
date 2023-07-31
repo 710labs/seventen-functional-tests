@@ -33,7 +33,6 @@ on:
         description: Cart Type
         options:
           - Random
-          - Flower + Concentrate + Non Cannabis
 jobs:
   pos-order-generator:
     timeout-minutes: 60
