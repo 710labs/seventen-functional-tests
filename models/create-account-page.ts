@@ -227,7 +227,7 @@ export class CreateAccountPage {
 		await test.step('Complete Usage Type Form', async () => {
 			await (await this.page.$('text=Register')).click()
 			await this.page.waitForTimeout(5000)
-			await expect(this.page).toHaveURL('/')
+			await expect(this.page).toHaveURL('/#pickup-deliver')
 		})
 
 		if (logout) {
