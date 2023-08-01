@@ -223,12 +223,19 @@ export class CreateAccountPage {
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption('2023')
 			})
+
+			await test.step('Complete Usage Type Form', async () => {
+				await (await this.page.$('text=Register')).click()
+				await this.page.waitForTimeout(5000)
+				await expect(this.page).toHaveURL('/#deliver')
+			})
+		} else {
+			await test.step('Complete Usage Type Form', async () => {
+				await (await this.page.$('text=Register')).click()
+				await this.page.waitForTimeout(5000)
+				await expect(this.page).toHaveURL('/#pickup-deliver')
+			})
 		}
-		await test.step('Complete Usage Type Form', async () => {
-			await (await this.page.$('text=Register')).click()
-			await this.page.waitForTimeout(5000)
-			await expect(this.page).toHaveURL('/#pickup-deliver')
-		})
 
 		if (logout) {
 			await this.page.goto('/my-account')
