@@ -34,8 +34,9 @@ test.describe('POS Order Generator', () => {
 	for (let index = 0; index < parseInt(orderCount); index++) {
 		var first_name = faker.name.firstName()
 		var last_name = faker.name.lastName()
-		var email =
-			`${process.env.POSSYNC_PREFIX}-${first_name}.${last_name}@pos-sync.com`.toLocaleLowerCase()
+		var email = `${process.env.POSSYNC_PREFIX}-${first_name}.${last_name}-${Math.floor(
+			new Date().getTime() / 1000,
+		)}@pos-sync.com`.toLocaleLowerCase()
 		var password = 'test1234'
 		var dob_day = faker.datatype.number({ min: 10, max: 25 })
 		var dob_month = faker.datatype.number({ min: 10, max: 12 })
