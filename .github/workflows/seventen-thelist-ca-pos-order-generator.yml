@@ -51,7 +51,6 @@ jobs:
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_DEV }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       POSSYNC_ORDER_COUNT: ${{ github.event.inputs.order_count }}
@@ -74,9 +73,11 @@ jobs:
           if [ ${{ github.event.inputs.environment }} == "stage" ]; then
             echo "Setting stage url"
             echo "POSSYNC_URL=${{ secrets.BASE_URL_STAGE }}" >> $GITHUB_ENV
+            echo "BASE_URL=${{ secrets.BASE_URL_STAGE }}" >> $GITHUB_ENV
           elif [ ${{ github.event.inputs.environment }} == "dev" ]; then
             echo "Setting stage url"
             echo "POSSYNC_URL=${{ secrets.BASE_URL_DEV }}" >> $GITHUB_ENV
+            echo "BASE_URL=${{ secrets.BASE_URL_DEV }}" >> $GITHUB_ENV
           else
             echo "Setting MY_ENV_VARIABLE=development"
             echo "MY_ENV_VARIABLE=development" >> $GITHUB_ENV
