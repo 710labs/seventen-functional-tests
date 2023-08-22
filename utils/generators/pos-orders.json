@@ -120,7 +120,7 @@
 	},
 	{
 		"name": "$2K - 10+ Products - Battery",
-		"environment": "staging",
+		"environment": "stage",
 		"id": 1,
 		"products": [
 			{
