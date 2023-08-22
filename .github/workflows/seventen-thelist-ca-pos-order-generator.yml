@@ -35,7 +35,7 @@ on:
           - Random
       environment:
         type: choice
-        description: Fulfillment Type
+        description: Environment
         options:
           - dev
           - stage
