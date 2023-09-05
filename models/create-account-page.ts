@@ -1,4 +1,5 @@
 import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
+import { faker } from '@faker-js/faker'
 
 export class CreateAccountPage {
 	readonly page: Page
@@ -149,7 +150,7 @@ export class CreateAccountPage {
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
-			await this.phoneNumber.fill('4204201111')
+			await this.phoneNumber.fill(faker.phone.phoneNumber('###-###-####'))
 		})
 
 		await test.step('Submit New Customer Form', async () => {
