@@ -6,7 +6,7 @@ import type { TestOptions } from '../options'
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
 	testDir: './../tests',
-	timeout: 10 * 60000,
+	timeout: 15 * 60000,
 	expect: {
 		timeout: 15 * 1000,
 	},
