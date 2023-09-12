@@ -11,9 +11,16 @@ import posOrders from '../generators/pos-orders.json'
 
 test.describe('POS Order Generator', () => {
 	var orders = posOrders.filter(
-		(order: { environment: string | undefined }) =>
+		(order: { environment: string | undefined, name, id, products }) =>
 			order.environment === process.env.POSSYNC_ENVIRONMENT,
 	)
+
+	if(process.env.POSSYNC_CART_TYPE?.includes("Over Limit")){
+		var orders = posOrders.filter(
+			(order: { environment: string | undefined, name, id, products }) =>
+				order.name === process.env.POSSYNC_CART_TYPE,
+		) 
+	}
 
 	var orderCount = process.env.POSSYNC_ORDER_COUNT
 

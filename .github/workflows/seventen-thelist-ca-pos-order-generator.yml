@@ -33,6 +33,7 @@ on:
         description: Cart Type
         options:
           - Random
+          - Over Limit MMU
       environment:
         type: choice
         description: Environment
