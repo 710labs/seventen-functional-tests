@@ -22,6 +22,13 @@ test.describe('POS Order Generator', () => {
 		) 
 	}
 
+	else{
+		var orders = posOrders.filter(
+			(order: { environment: string | undefined, name, id, products }) =>
+				order.name != process.env.POSSYNC_CART_TYPE,
+		) 
+	}
+
 	var orderCount = process.env.POSSYNC_ORDER_COUNT
 
 	async function getOrderNumber(url) {
