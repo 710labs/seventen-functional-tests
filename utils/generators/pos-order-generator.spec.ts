@@ -11,22 +11,20 @@ import posOrders from '../generators/pos-orders.json'
 
 test.describe('POS Order Generator', () => {
 	var orders = posOrders.filter(
-		(order: { environment: string | undefined, name, id, products }) =>
+		(order: { environment: string | undefined; name; id; products }) =>
 			order.environment === process.env.POSSYNC_ENVIRONMENT,
 	)
 
-	if(process.env.POSSYNC_CART_TYPE?.includes("Over Limit")){
+	if (process.env.POSSYNC_CART_TYPE?.includes('Over Limit')) {
 		orders = orders.filter(
-			(order: { environment: string | undefined, name, id, products }) =>
+			(order: { environment: string | undefined; name; id; products }) =>
 				order.name === process.env.POSSYNC_CART_TYPE,
-		) 
-	}
-
-	else{
+		)
+	} else {
 		orders = orders.filter(
-			(order: { environment: string | undefined, name, id, products }) =>
+			(order: { environment: string | undefined; name; id; products }) =>
 				order.name != process.env.POSSYNC_CART_TYPE,
-		) 
+		)
 	}
 
 	var orderCount = process.env.POSSYNC_ORDER_COUNT
@@ -69,7 +67,9 @@ test.describe('POS Order Generator', () => {
 				: process.env.POSSYNC_FULFILLMENT_TYPE
 		var cart_type = faker.helpers.arrayElement([1, 2])
 
-		test(`POS Sync Add Order: ${index + 1}`, async ({ page, browserName }, workerInfo) => {
+		test(`${process.env.POSSYNC_ENVIRONMENT?.toUpperCase()} POS Sync Add Order: ${
+			index + 1
+		}`, async ({ page, browserName }, workerInfo) => {
 			const apiContext = await request.newContext({
 				baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
 				extraHTTPHeaders: {
