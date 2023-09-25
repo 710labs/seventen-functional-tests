@@ -35,29 +35,9 @@
 				"url": "https://thelist-dev.710labs.com/product/candy-chrome-27-2/"
 			},
 			{
-				"sku": "8927221 | Half Ounce",
-				"name": "Starburst 36 #1",
-				"url": "https://thelist-dev.710labs.com/product/starburst-36-1-4/"
-			},
-			{
-				"sku": "2757322 | Live Rosin (Tier 2)",
-				"name": "Z Cubed #5",
-				"url": "https://thelist-dev.710labs.com/product/z-cubed-5-3/"
-			},
-			{
-				"sku": "8013814 | Water Hash (Tier 1)",
-				"name": "Lemon Heads #4",
-				"url": "https://thelist-dev.710labs.com/product/lemon-heads-4-2/"
-			},
-			{
 				"sku": "DUPLICATEBATTERYSKU",
 				"name": "Persy Pod Battery (Black)",
 				"url": "https://thelist-dev.710labs.com/product/persy-pod-battery-black-2/"
-			},
-			{
-				"sku": "8548663 | Persy Pod (Tier 1)",
-				"name": "Rainbow Belts",
-				"url": "https://thelist-dev.710labs.com/product/rainbow-belts-3/"
 			}
 		]
 	},
@@ -319,26 +299,6 @@
 				"sku": "6198180 | Persy Badder",
 				"name": "Rainbow Belts",
 				"url": "https://thelist-dev.710labs.com/product/rainbow-belts-6/"
-			},
-			{
-				"sku": "2803694 | Water Hash",
-				"name": "Lemon Heads #4",
-				"url": "https://thelist-stage.710labs.com/product/lemon-heads-4-8/"
-			},
-			{
-				"sku": "6913059 | Persy Doink",
-				"name": "Candy Chrome #27",
-				"url": "https://thelist-stage.710labs.com/product/candy-chrome-27-8/"
-			},
-			{
-				"sku": "8682180 | 10 Pack Doinks",
-				"name": "Starburst 36 #1",
-				"url": "https://thelist-stage.710labs.com/product/starburst-36-1-5/"
-			},
-			{
-				"sku": "7412060 | Persy Rosin",
-				"name": "Papaya Colada",
-				"url": "https://thelist-stage.710labs.com/product/papaya-colada/"
 			},
 			{
 				"sku": "Battery - Accessories",
