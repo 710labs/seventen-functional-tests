@@ -16,14 +16,14 @@ test.describe('POS Order Generator', () => {
 	)
 
 	if(process.env.POSSYNC_CART_TYPE?.includes("Over Limit")){
-		var orders = posOrders.filter(
+		orders = orders.filter(
 			(order: { environment: string | undefined, name, id, products }) =>
 				order.name === process.env.POSSYNC_CART_TYPE,
 		) 
 	}
 
 	else{
-		var orders = posOrders.filter(
+		orders = orders.filter(
 			(order: { environment: string | undefined, name, id, products }) =>
 				order.name != process.env.POSSYNC_CART_TYPE,
 		) 
