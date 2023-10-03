@@ -1,20 +1,20 @@
-name: thelist-ca-tests-stage-build-validation
+name: thelist-tests-stage-build-validation
 on:
   workflow_dispatch:
 jobs:
-  ca-tests-stage:
+  ca-tests-staging:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: stage-ca thelist-710labs.com
-      ENV_ID: dev-ca
+      ENV: staging-ca thelist-710labs.com
+      ENV_ID: staging-ca
       EXECUTION_TYPE: Scheduled Run
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
@@ -30,8 +30,6 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
-        with:
-          node-version: '16.x'
       - uses: actions/setup-node@v2
         with:
           node-version: '16.x'
@@ -42,26 +40,25 @@ jobs:
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
-          node-version: '16.x'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev:ca
-  mi-tests-stage:
-    needs: ca-tests-stage
+        run: npm run ci:test:staging:ca
+  mi-tests-staging:
+    needs: ca-tests-staging
     timeout-minutes: 60
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
-      ENV: dev-mi thelist-710labs.com
-      ENV_ID: dev-mi
+      ENV: staging-mi thelist-710labs.com
+      ENV_ID: staging-mi
       EXECUTION_TYPE: Scheduled Run
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
@@ -77,20 +74,20 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
-        with:
-          node-version: '16.x'
       - uses: actions/setup-node@v2
-        with:
-          node-version: '16.x'
       - name: Install dependencies
         run: npm ci
-      - name: Set Domain to CA
+      - name: Set Domain to MI
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=mi
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
-          node-version: '16.x'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:dev:mi
+        run: npm run ci:test:staging:mi
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
