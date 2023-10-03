@@ -1,4 +1,4 @@
-name: thelist-tests-pr-validation
+name: thelist-tests-pr-validation-test
 on:
   workflow_dispatch:
   pull_request:
