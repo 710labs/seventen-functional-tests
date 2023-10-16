@@ -92,7 +92,7 @@ test.describe('POS Order Generator', () => {
 			var cart_type =
 				process.env.POSSYNC_CART_TYPE === 'Random'
 					? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
-					: process.env.POSSYNC_FULFILLMENT_TYPE
+					: process.env.POSSYNC_CART_TYPE
 
 			await test.step(`Pass Age Gate`, async () => {
 				await ageGatePage.passAgeGate()
