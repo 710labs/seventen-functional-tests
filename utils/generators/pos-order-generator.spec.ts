@@ -147,7 +147,7 @@ test.describe('POS Order Generator', () => {
 						)
 						let iterationNumber = 1
 						orders
-							.find(order => order.id == 1)
+							.find(order => order.name === 'Over Limit MMU')
 							.products.forEach(product => {
 								test.info().annotations.push({
 									type: `Product ${iterationNumber}`,
@@ -165,7 +165,7 @@ test.describe('POS Order Generator', () => {
 						)
 						let iterationNumber = 1
 						orders
-							.find(order => order.id == 2)
+							.find(order => order.name === 'Under Limit MMU')
 							.products.forEach(product => {
 								test.info().annotations.push({
 									type: `Product ${iterationNumber}`,
