@@ -20,10 +20,15 @@ test.describe('POS Order Generator', () => {
 			(order: { environment: string | undefined; name; id; products }) =>
 				order.name === process.env.POSSYNC_CART_TYPE,
 		)
-	} else {
+	} else if (process.env.POSSYNC_CART_TYPE?.includes('Under Limit')) {
 		orders = orders.filter(
 			(order: { environment: string | undefined; name; id; products }) =>
-				order.name != process.env.POSSYNC_CART_TYPE,
+				order.name == process.env.POSSYNC_CART_TYPE,
+		)
+	} else if (process.env.POSSYNC_CART_TYPE?.includes('Random')) {
+		orders = orders.filter(
+			(order: { environment: string | undefined; name; id; products }) =>
+				order.name == process.env.POSSYNC_CART_TYPE,
 		)
 	}
 
@@ -65,9 +70,14 @@ test.describe('POS Order Generator', () => {
 			process.env.POSSYNC_FULFILLMENT_TYPE === 'Random'
 				? faker.helpers.arrayElement(['Pickup', 'Delivery'])
 				: process.env.POSSYNC_FULFILLMENT_TYPE
-		var cart_type = faker.helpers.arrayElement([1, 2])
+		var cart_type = process.env.POSSYNC_CART_TYPE
 
-		test(`${process.env.POSSYNC_ENVIRONMENT?.toUpperCase()} POS Sync Add Order: ${
+		var cart_type =
+			process.env.POSSYNC_CART_TYPE === 'Random'
+				? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
+				: process.env.POSSYNC_FULFILLMENT_TYPE
+
+		test(`${process.env.POSSYNC_ENVIRONMENT?.toUpperCase()} - ${cart_type} - POS Sync Add Order: ${
 			index + 1
 		}`, async ({ page, browserName }, workerInfo) => {
 			const apiContext = await request.newContext({
@@ -124,10 +134,12 @@ test.describe('POS Order Generator', () => {
 
 			await test.step(`Add Products`, async () => {
 				switch (cart_type) {
-					case 1:
+					case 'Over Limit MMU':
 						await test.step(`Load Cart - All Product Types`, async () => {
 							await shopPage.addProductListToCart(
-								orders.find(order => order.id == 1).products.map(product => product.sku),
+								orders
+									.find(order => order.name === 'Over Limit MMU')
+									.products.map(product => product.sku),
 							)
 							let iterationNumber = 1
 							orders
@@ -141,10 +153,12 @@ test.describe('POS Order Generator', () => {
 								})
 						})
 						break
-					case 2:
+					case 'Under Limit MMU':
 						await test.step(`Load Cart - Only Cannabis`, async () => {
 							await shopPage.addProductListToCart(
-								orders.find(order => order.id == 2).products.map(product => product.sku),
+								orders
+									.find(order => order.name === 'Under Limit MMU')
+									.products.map(product => product.sku),
 							)
 							let iterationNumber = 1
 							orders
