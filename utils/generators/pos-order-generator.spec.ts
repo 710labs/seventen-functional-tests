@@ -94,6 +94,11 @@ test.describe('POS Order Generator', () => {
 					? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
 					: process.env.POSSYNC_CART_TYPE
 
+			test.info().annotations.push({
+				type: 'Cart Type',
+				description: `${cart_type}`,
+			})
+
 			await test.step(`Pass Age Gate`, async () => {
 				await ageGatePage.passAgeGate()
 			})
