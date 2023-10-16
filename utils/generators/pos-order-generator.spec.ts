@@ -72,10 +72,7 @@ test.describe('POS Order Generator', () => {
 				: process.env.POSSYNC_FULFILLMENT_TYPE
 		var cart_type = process.env.POSSYNC_CART_TYPE
 
-		var cart_type =
-			process.env.POSSYNC_CART_TYPE === 'Random'
-				? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
-				: process.env.POSSYNC_FULFILLMENT_TYPE
+
 
 		test(`${process.env.POSSYNC_ENVIRONMENT?.toUpperCase()} - ${cart_type} - POS Sync Add Order: ${
 			index + 1
@@ -93,6 +90,11 @@ test.describe('POS Order Generator', () => {
 			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
 			const checkOutPage = new CheckoutPage(page, apiContext)
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
+
+			var cart_type =
+			process.env.POSSYNC_CART_TYPE === 'Random'
+				? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
+				: process.env.POSSYNC_FULFILLMENT_TYPE
 
 			await test.step(`Pass Age Gate`, async () => {
 				await ageGatePage.passAgeGate()
@@ -134,7 +136,7 @@ test.describe('POS Order Generator', () => {
 
 			await test.step(`Add Products`, async () => {
 				switch (cart_type) {
-					case 'Over Limit MMU':
+					case cart_type?.includes("Over"):
 						await test.step(`Load Cart - All Product Types`, async () => {
 							await shopPage.addProductListToCart(
 								orders
@@ -153,7 +155,7 @@ test.describe('POS Order Generator', () => {
 								})
 						})
 						break
-					case 'Under Limit MMU':
+					case cart_type?.includes("Under"):
 						await test.step(`Load Cart - Only Cannabis`, async () => {
 							await shopPage.addProductListToCart(
 								orders
