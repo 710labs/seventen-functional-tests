@@ -214,6 +214,28 @@
 		]
 	},
 	{
+		"name": "Under Limit MMU",
+		"environment": "dev",
+		"id": 1,
+		"products": [
+			{
+				"sku": "7839089 | Persy Badder (Tier 1)",
+				"name": "Rainbow Belts",
+				"url": "https://thelist-dev.710labs.com/product/rainbow-belts-4/"
+			},
+			{
+				"sku": "8497601 | Persy Badder (Tier 1)",
+				"name": "Cherry Zest #4",
+				"url": "https://thelist-dev.710labs.com/product/cherry-zest-4/"
+			},
+			{
+				"sku": "4104600 | Persy Badder (Tier 2)",
+				"name": "Ginger Tea #8",
+				"url": "https://thelist-dev.710labs.com/product/ginger-tea-8-2/"
+			}
+		]
+	},
+	{
 		"name": "Only Cannabis Products",
 		"id": 2,
 		"environment": "dev",
@@ -443,6 +465,28 @@
 				"sku": "7412060 | Persy Rosin",
 				"name": "Papaya Colada",
 				"url": "https://thelist-stage.710labs.com/product/papaya-colada/"
+			}
+		]
+	},
+	{
+		"name": "Under Limit MMU",
+		"id": 2,
+		"environment": "stage",
+		"products": [
+			{
+				"sku": "1986305 | Half Ounce",
+				"name": "Zkittlez",
+				"url": "https://thelist-stage.710labs.com/product/zkittlez-6"
+			},
+			{
+				"sku": "2811347 | Gummis (Tier 2)",
+				"name": "Bubba D",
+				"url": "https://thelist-stage.710labs.com/product/bubba-d/"
+			},
+			{
+				"sku": "8895408 | Single Doink",
+				"name": "Zkittlez",
+				"url": "https://thelist-stage.710labs.com/product/zkittlez-5/"
 			}
 		]
 	}
