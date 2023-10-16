@@ -72,8 +72,6 @@ test.describe('POS Order Generator', () => {
 				: process.env.POSSYNC_FULFILLMENT_TYPE
 		var cart_type = process.env.POSSYNC_CART_TYPE
 
-
-
 		test(`${process.env.POSSYNC_ENVIRONMENT?.toUpperCase()} - ${cart_type} - POS Sync Add Order: ${
 			index + 1
 		}`, async ({ page, browserName }, workerInfo) => {
@@ -92,9 +90,9 @@ test.describe('POS Order Generator', () => {
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 			var cart_type =
-			process.env.POSSYNC_CART_TYPE === 'Random'
-				? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
-				: process.env.POSSYNC_FULFILLMENT_TYPE
+				process.env.POSSYNC_CART_TYPE === 'Random'
+					? faker.helpers.arrayElement(['Over Limit MMU', 'Under Limit MMU'])
+					: process.env.POSSYNC_FULFILLMENT_TYPE
 
 			await test.step(`Pass Age Gate`, async () => {
 				await ageGatePage.passAgeGate()
@@ -135,46 +133,42 @@ test.describe('POS Order Generator', () => {
 			})
 
 			await test.step(`Add Products`, async () => {
-				switch (cart_type) {
-					case cart_type?.includes("Over"):
-						await test.step(`Load Cart - All Product Types`, async () => {
-							await shopPage.addProductListToCart(
-								orders
-									.find(order => order.name === 'Over Limit MMU')
-									.products.map(product => product.sku),
-							)
-							let iterationNumber = 1
+				if (cart_type?.includes('Over')) {
+					await test.step(`Load Cart - Over MMU`, async () => {
+						await shopPage.addProductListToCart(
 							orders
-								.find(order => order.id == 1)
-								.products.forEach(product => {
-									test.info().annotations.push({
-										type: `Product ${iterationNumber}`,
-										description: `${product.sku} - ${product.name} - (${product.url})`,
-									})
-									iterationNumber++
+								.find(order => order.name === 'Over Limit MMU')
+								.products.map(product => product.sku),
+						)
+						let iterationNumber = 1
+						orders
+							.find(order => order.id == 1)
+							.products.forEach(product => {
+								test.info().annotations.push({
+									type: `Product ${iterationNumber}`,
+									description: `${product.sku} - ${product.name} - (${product.url})`,
 								})
-						})
-						break
-					case cart_type?.includes("Under"):
-						await test.step(`Load Cart - Only Cannabis`, async () => {
-							await shopPage.addProductListToCart(
-								orders
-									.find(order => order.name === 'Under Limit MMU')
-									.products.map(product => product.sku),
-							)
-							let iterationNumber = 1
+								iterationNumber++
+							})
+					})
+				} else if (cart_type?.includes('Under')) {
+					await test.step(`Load Cart - Under MMU`, async () => {
+						await shopPage.addProductListToCart(
 							orders
-								.find(order => order.id == 2)
-								.products.forEach(product => {
-									test.info().annotations.push({
-										type: `Product ${iterationNumber}`,
-										description: `${product.sku} - ${product.name} - (${product.url})`,
-									})
-									iterationNumber++
+								.find(order => order.name === 'Under Limit MMU')
+								.products.map(product => product.sku),
+						)
+						let iterationNumber = 1
+						orders
+							.find(order => order.id == 2)
+							.products.forEach(product => {
+								test.info().annotations.push({
+									type: `Product ${iterationNumber}`,
+									description: `${product.sku} - ${product.name} - (${product.url})`,
 								})
-						})
-						break
-					default:
+								iterationNumber++
+							})
+					})
 				}
 			})
 
