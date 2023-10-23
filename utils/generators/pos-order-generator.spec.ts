@@ -25,11 +25,6 @@ test.describe('POS Order Generator', () => {
 			(order: { environment: string | undefined; name; id; products }) =>
 				order.name == process.env.POSSYNC_CART_TYPE,
 		)
-	} else if (process.env.POSSYNC_CART_TYPE?.includes('Random')) {
-		orders = orders.filter(
-			(order: { environment: string | undefined; name; id; products }) =>
-				order.name == process.env.POSSYNC_CART_TYPE,
-		)
 	}
 
 	var orderCount = process.env.POSSYNC_ORDER_COUNT
