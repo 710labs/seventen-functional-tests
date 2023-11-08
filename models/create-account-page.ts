@@ -90,7 +90,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: number,
 		logout: boolean = false,
-		address: string = '123 Front Street',
+		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90016',
 		state: string = 'CA',
 	) {
 		await test.step('Verify Layout', async () => {})
