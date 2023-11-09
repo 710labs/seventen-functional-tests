@@ -1,0 +1,38 @@
+name: thelist-co-smoke-tests-prod
+on: workflow_dispatch
+jobs:
+  smoke-test-prod-ca:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ENV: prod-co thelist-co.710labs.com
+      ENV_ID: prod-ca
+      EXECUTION_TYPE: Build Validation
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_PROD_CO }}
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16.x"
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npm run smoke:test:prod:co
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
