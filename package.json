@@ -9,6 +9,7 @@
 		"ci:test:dev:ca": "playwright test --config=configs/dev.config.ts --workers=10 --grep @CA",
 		"ci:test:dev:mi": "playwright test --config=configs/dev.config.ts --workers=10 --grep @MI",
 		"ci:test:dev:fl": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep @FL",
+		"ci:test:dev:co": "npx playwright test --config=configs/dev.config.ts --workers=10 --grep @CO",
 		"ci:test:staging:ca": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @CA",
 		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
 		"ci:test:staging:mi": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @MI",
