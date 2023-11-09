@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 
-test('Enter List Password - Valid @CA @FL', async ({ page }) => {
+test('Enter List Password - Valid @CA @FL @CO', async ({ page }) => {
 	const ageGatePage = new AgeGatePage(page)
 	const listPasswordPage = new ListPasswordPage(page)
 
@@ -12,7 +12,7 @@ test('Enter List Password - Valid @CA @FL', async ({ page }) => {
 	await expect(page).toHaveURL('/my-account/')
 })
 
-test('Enter List Password - Invalid @CA @FL', async ({ page }) => {
+test('Enter List Password - Invalid @CA @FL @CO', async ({ page }) => {
 	const ageGatePage = new AgeGatePage(page)
 	const listPasswordPage = new ListPasswordPage(page)
 

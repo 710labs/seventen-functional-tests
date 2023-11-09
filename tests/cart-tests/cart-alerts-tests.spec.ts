@@ -6,7 +6,7 @@ import { ShopPage } from '../../models/shop-page'
 import { CartPage } from '../../models/cart-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 
-test('Cart Timer Is Visible @MI @CA', async ({ page, browserName }, workerInfo) => {
+test('Cart Timer Is Visible @MI @CA @CO', async ({ page, browserName }, workerInfo) => {
 	//Arrange
 
 	//Setup Pages
