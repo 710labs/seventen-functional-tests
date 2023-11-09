@@ -125,7 +125,7 @@ test.describe('POS Order Generator', () => {
 					.getByText(`${fulfillmentType}`, { exact: true })
 					.click()
 				await page.getByRole('button', { name: 'Submit' }).click()
-
+ 
 				test.info().annotations.push({
 					type: 'Fulfillment Type',
 					description: `${fulfillmentType}`,
@@ -133,42 +133,82 @@ test.describe('POS Order Generator', () => {
 			})
 
 			await test.step(`Add Products`, async () => {
-				if (cart_type?.includes('Over')) {
-					await test.step(`Load Cart - Over MMU`, async () => {
-						await shopPage.addProductListToCart(
+				if (customer_type === 'Medical') {
+					if (cart_type?.includes('Over')) {
+						await test.step(`Load Cart - Over MMU`, async () => {
+							await shopPage.addProductListToCart(
+								orders
+									.find(order => order.name === 'Over Limit MMU')
+									.products.map(product => product.sku),
+							)
+							let iterationNumber = 1
 							orders
 								.find(order => order.name === 'Over Limit MMU')
-								.products.map(product => product.sku),
-						)
-						let iterationNumber = 1
-						orders
-							.find(order => order.name === 'Over Limit MMU')
-							.products.forEach(product => {
-								test.info().annotations.push({
-									type: `Product ${iterationNumber}`,
-									description: `${product.sku} - ${product.name} - (${product.url})`,
+								.products.forEach(product => {
+									test.info().annotations.push({
+										type: `Product ${iterationNumber}`,
+										description: `${product.sku} - ${product.name} - (${product.url})`,
+									})
+									iterationNumber++
 								})
-								iterationNumber++
-							})
-					})
-				} else if (cart_type?.includes('Under')) {
-					await test.step(`Load Cart - Under MMU`, async () => {
-						await shopPage.addProductListToCart(
+						})
+					} else if (cart_type?.includes('Under')) {
+						await test.step(`Load Cart - Under MMU`, async () => {
+							await shopPage.addProductListToCart(
+								orders
+									.find(order => order.name === 'Under Limit MMU' && order.medical == true)
+									.products.map(product => product.sku),
+							)
+							let iterationNumber = 1
 							orders
 								.find(order => order.name === 'Under Limit MMU')
-								.products.map(product => product.sku),
-						)
-						let iterationNumber = 1
-						orders
-							.find(order => order.name === 'Under Limit MMU')
-							.products.forEach(product => {
-								test.info().annotations.push({
-									type: `Product ${iterationNumber}`,
-									description: `${product.sku} - ${product.name} - (${product.url})`,
+								.products.forEach(product => {
+									test.info().annotations.push({
+										type: `Product ${iterationNumber}`,
+										description: `${product.sku} - ${product.name} - (${product.url})`,
+									})
+									iterationNumber++
 								})
-								iterationNumber++
-							})
-					})
+						})
+					}
+				} else if (customer_type === 'Recreational') {
+					if (cart_type?.includes('Over')) {
+						await test.step(`Load Cart - Over MMU`, async () => {
+							await shopPage.addProductListToCart(
+								orders
+									.find(order => order.name === 'Over Limit MMU')
+									.products.map(product => product.sku),
+							)
+							let iterationNumber = 1
+							orders
+								.find(order => order.name === 'Over Limit MMU')
+								.products.forEach(product => {
+									test.info().annotations.push({
+										type: `Product ${iterationNumber}`,
+										description: `${product.sku} - ${product.name} - (${product.url})`,
+									})
+									iterationNumber++
+								})
+						})
+					} else if (cart_type?.includes('Under')) {
+						await test.step(`Load Cart - Under MMU`, async () => {
+							await shopPage.addProductListToCart(
+								orders
+									.find(order => order.name === 'Under Limit MMU')
+									.products.map(product => product.sku),
+							)
+							let iterationNumber = 1
+							orders
+								.find(order => order.name === 'Under Limit MMU')
+								.products.forEach(product => {
+									test.info().annotations.push({
+										type: `Product ${iterationNumber}`,
+										description: `${product.sku} - ${product.name} - (${product.url})`,
+									})
+									iterationNumber++
+								})
+						})
+					}
 				}
 			})
 
