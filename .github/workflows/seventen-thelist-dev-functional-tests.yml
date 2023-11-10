@@ -183,7 +183,7 @@ jobs:
       - name: Set Domain to CO
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
-          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=co
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
           node-version: '16.x'
       - name: Install Playwright
