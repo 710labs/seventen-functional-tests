@@ -16,7 +16,7 @@ export class AgeGatePage {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
 				)
-			} else if (this.page.url().includes('thelist-mi')) {
+			} else if (this.page.url().includes('thelist-mi') || this.page.url().includes('thelist-co')) {
 				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
 					'You must be at least 21 years old or possess a valid medical recommendation to view this site',
 				)
