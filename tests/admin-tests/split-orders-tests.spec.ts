@@ -16,7 +16,7 @@ const orderQuanity = 6
 var orderTotals: any
 var orderNumber: any
 
-test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName }, workerInfo) => {
+test(`Admin Can Split Order - Legacy Split @CA`, async ({ page, browserName }, workerInfo) => {
 	test.skip(workerInfo.project.name === 'Mobile Chrome')
 	const apiContext = await request.newContext({
 		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
