@@ -93,6 +93,10 @@ export class CreateAccountPage {
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90016',
 		state: string = 'CA',
 	) {
+		if (state = 'CO') {
+			address = '933 Alpine Ave, Boulder, CO, 80304',
+			state = 'CO'
+		}
 		await test.step('Verify Layout', async () => {})
 
 		await test.step('Click Register Link', async () => {
@@ -173,7 +177,7 @@ export class CreateAccountPage {
 			await driversLicenseChooser.page()
 		})
 
-		if (type == 1 && state === 'CA') {
+		if ((type == 1 && state === 'CA') || ((type == 1 && state === 'CO'))) {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
 			})
