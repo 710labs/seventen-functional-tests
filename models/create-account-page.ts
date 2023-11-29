@@ -93,7 +93,7 @@ export class CreateAccountPage {
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90016',
 		state: string = 'CA',
 	) {
-		if (state = 'CO') {
+		if (state === 'CO') {
 			address = '933 Alpine Ave, Boulder, CO, 80304',
 			state = 'CO'
 		}
