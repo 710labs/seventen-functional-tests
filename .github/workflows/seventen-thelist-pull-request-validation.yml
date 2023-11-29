@@ -86,7 +86,7 @@ jobs:
           node-version: '16.x'
       - name: Install dependencies
         run: npm ci
-      - name: Set Domain to CA
+      - name: Set Domain to FL
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=fl
@@ -132,7 +132,7 @@ jobs:
           node-version: '16.x'
       - name: Install dependencies
         run: npm ci
-      - name: Set Domain to CA
+      - name: Set Domain to MI
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=mi
