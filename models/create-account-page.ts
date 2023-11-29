@@ -39,7 +39,7 @@ export class CreateAccountPage {
 	//svntn_core_pxp_month
 
 	constructor(page: Page, apiContext: APIRequestContext) {
-		;(this.page = page),
+		; (this.page = page),
 			(this.apiContext = apiContext),
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
@@ -93,11 +93,7 @@ export class CreateAccountPage {
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90016',
 		state: string = 'CA',
 	) {
-		if (state === 'CO') {
-			address = '933 Alpine Ave, Boulder, CO, 80304',
-			state = 'CO'
-		}
-		await test.step('Verify Layout', async () => {})
+		await test.step('Verify Layout', async () => { })
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
@@ -177,7 +173,7 @@ export class CreateAccountPage {
 			await driversLicenseChooser.page()
 		})
 
-		if ((type == 1 && state === 'CA') || ((type == 1 && state === 'CO'))) {
+		if ((type == 1 && state === 'CA')) {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -532,5 +528,122 @@ export class CreateAccountPage {
 			type: 'Password',
 			description: `${password}`,
 		})
+	}
+
+	async createColoradoCustomer(
+		username: string,
+		password: string,
+		zipcode: string,
+		type: number,
+		logout: boolean = false,
+		address: string = '933 Alpine Ave, Boulder, CO, 80304',
+		state: string = 'CO',
+	) {
+		await test.step('Verify Layout', async () => { })
+
+		await test.step('Click Register Link', async () => {
+			await this.page.click('text=create an account')
+			await expect(this.page).toHaveURL('/register/')
+		})
+
+		await test.step('Enter Username', async () => {
+			await this.userNameField.click()
+			await this.userNameField.fill(username)
+		})
+
+		await test.step('Enter Passowrd', async () => {
+			await this.passwordField.click()
+			await this.passwordField.fill(password)
+		})
+
+		await test.step('Enter First Name', async () => {
+			await this.firstName.click()
+			await this.firstName.fill(username)
+		})
+
+		await test.step('Enter Last Name', async () => {
+			await this.lastName.click()
+			await this.lastName.fill(username)
+		})
+
+		await test.step('Enter Birthdate', async () => {
+			await this.birthMonth.selectOption('12')
+			await this.birthDay.selectOption('16')
+			await this.birthYear.selectOption('1988')
+		})
+
+		if (process.env.NEXT_VERSION === 'false') {
+			await test.step('Enter Zip Code', async () => {
+				await this.zipCode.click()
+				await this.zipCode.fill(zipcode)
+			})
+		} else {
+			await test.step('Enter Billing Address', async () => {
+				await this.address.click()
+				await this.address.fill(address)
+				await this.page.waitForTimeout(1000)
+				await this.page.keyboard.press('ArrowDown')
+				await this.page.keyboard.press('Enter')
+			})
+		}
+
+		await test.step('Enter Phone Number', async () => {
+			await this.phoneNumber.click()
+			await this.phoneNumber.fill(faker.phone.phoneNumber('###-###-####'))
+		})
+
+		await test.step('Submit New Customer Form', async () => {
+			await this.page.waitForTimeout(2000)
+			await this.page.click('button:has-text("Next")')
+			await this.page.waitForTimeout(1000)
+		})
+
+		await test.step('Upload Drivers License', async () => {
+			const dlUploadButton = await this.page.waitForSelector(
+				'input[name="svntn_core_personal_doc"]',
+			)
+			const [driversLicenseChooser] = await Promise.all([
+				this.page.waitForEvent('filechooser'),
+				dlUploadButton.click(),
+			])
+			await this.page.waitForTimeout(5000)
+			await driversLicenseChooser.setFiles('Medical-Card.png')
+			await this.page.waitForTimeout(5000)
+			await driversLicenseChooser.page()
+		})
+
+		if ((type == 1 && state === 'CO')) {
+			await test.step('Select Medical Usage Type', async () => {
+				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
+			})
+			await test.step('Upload Medical Card', async () => {
+				const medicalCardButton = await this.page.waitForSelector(
+					'input[name="svntn_core_medical_doc"]',
+				)
+				const [medicalCardChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medicalCardButton.click(),
+				])
+				await medicalCardChooser.setFiles('CA-DL.jpg')
+				await medicalCardChooser.page()
+				await this.page.waitForTimeout(5000)
+			})
+
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption('2023')
+			})
+			await test.step('Complete Usage Type Form', async () => {
+				await (await this.page.$('text=Register')).click()
+				await this.page.waitForTimeout(5000)
+				await expect(this.page).toHaveURL('/#pickup-deliver')
+			})
+		}
+
+		if (logout) {
+			await this.page.goto('/my-account')
+			await this.page.locator('text=Logout').click()
+		}
 	}
 }
