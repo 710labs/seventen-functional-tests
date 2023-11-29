@@ -24,6 +24,7 @@ test.describe('CO Order Tests', () => {
 		page,
 		browserName,
 	}, workerInfo) => {
+		const zipCode = '80304'
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -42,11 +43,11 @@ test.describe('CO Order Tests', () => {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
-		var cartTotals = await cartPage.verifyCart(`94020`)
-		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
+		var cartTotals = await cartPage.verifyCart(zipCode)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
 	test(`Basic Order - New Customer #medical @CO`, async ({ page, browserName }, workerInfo) => {
-		const zipCode = '94020'
+		const zipCode = '80304'
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -71,6 +72,7 @@ test.describe('CO Order Tests', () => {
 		page,
 		browserName,
 	}, workerInfo) => {
+		const zipCode = '80304'
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -89,13 +91,14 @@ test.describe('CO Order Tests', () => {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
-		var cartTotals = await cartPage.verifyCart(`94020`)
-		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
+		var cartTotals = await cartPage.verifyCart(zipCode)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})
 	test(`Basic Order - New Customer #recreational @CO`, async ({
 		page: page,
 		browserName,
 	}, workerInfo) => {
+		const zipCode = '80304'
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -112,7 +115,7 @@ test.describe('CO Order Tests', () => {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
-		var cartTotals = await cartPage.verifyCart(`90210`)
-		await checkOutPage.confirmCheckout(`90210`, cartTotals, 0)
+		var cartTotals = await cartPage.verifyCart(zipCode)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})
 })
