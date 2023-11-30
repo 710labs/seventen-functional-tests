@@ -23,7 +23,7 @@ export class ShopPage {
 		return Math.random() * (2 - -2 + -2)
 	}
 
-	async addProductsToCart(itemCount: number, mobile = false, fulfillment = "Delivery") {
+	async addProductsToCart(itemCount: number, mobile = false, fulfillment = "Pickup") {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
@@ -31,7 +31,7 @@ export class ShopPage {
 		})
 		await test.step('Select Fulfillment Method', async () => {
 			if (process.env.NEXT_VERSION === 'true') {
-				await this.page.waitForSelector('label:has-text("Delivery")')
+				await this.page.waitForSelector(`label:has-text("${fulfillment}")`)
 				await this.page.locator(`label:has-text("${fulfillment}") >> nth=0`).click()
 				await this.page.locator('#fulfillerSubmit').click()
 				await this.page.waitForTimeout(2000)
