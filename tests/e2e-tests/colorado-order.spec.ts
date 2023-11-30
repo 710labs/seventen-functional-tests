@@ -42,7 +42,7 @@ test.describe('CO Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
@@ -64,7 +64,7 @@ test.describe('CO Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addColoradoAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
@@ -90,7 +90,7 @@ test.describe('CO Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})
@@ -114,7 +114,7 @@ test.describe('CO Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addColoradoAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})
