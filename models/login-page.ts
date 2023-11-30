@@ -32,7 +32,7 @@ export class LoginPage {
 
 		await test.step('Click Login Button', async () => {
 			await this.loginButton.click()
-			await expect(this.page).toHaveURL('/')
+			await expect(this.page.url()).toMatch(/\/(#pickup-deliver|#pickup|)$/);
 		})
 	}
 }
