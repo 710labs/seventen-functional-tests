@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker'
 import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
 
 import zipcodes from '../utils/zipcodes-ca.json'
+import zipcodesCO from '../utils/zipcodes-co.json'
 
 export class CheckoutPage {
 	readonly page: Page
@@ -33,6 +34,7 @@ export class CheckoutPage {
 	checkoutButton: any
 	taxRates: any
 	zipcodes = zipcodes
+	zipcodesCO = zipcodesCO
 	apiContext: APIRequestContext
 
 	constructor(page: Page, apiContext: APIRequestContext) {
@@ -293,6 +295,63 @@ export class CheckoutPage {
 		} else {
 			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
 		}
+
+		await test.step('Submit New Customer Order', async () => {
+			await this.placeOrderButton.click()
+		})
+
+		return cartTotals
+	}
+
+	async confirmCheckoutColorado(
+		zipcode: string,
+		productList: any,
+		usageType: number,
+		singleZip: boolean = false,
+		address: string = '9779 Oak Pass Rd',
+	): Promise<any> {
+		const firstName = faker.name.firstName()
+		const lastName = faker.name.lastName()
+
+		let cartTotals
+		await test.step('Verify Layout', async () => {
+			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
+				'href',
+				'/terms-of-use',
+			)
+			await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
+		})
+
+		if (singleZip === false) {
+			for (let i = 0; i < this.zipcodesCO.length; i++) {
+				await test.step(`Verify Order Total for ${this.zipcodesCO[i]}`, async () => {
+					await this.addressModifierButton.click()
+					await this.zipCodeInput.click()
+					await this.zipCodeInput.fill(this.zipcodesCO[i])
+					await this.page.locator('text=Submit >> nth=0').click()
+					await this.page.waitForTimeout(1000)
+					cartTotals = await this.verifyCheckoutTotals(this.zipcodesCO[i], usageType, productList)
+				})
+			}
+		} else {
+			cartTotals = await this.verifyCheckoutTotals(zipcodesCO, usageType, productList)
+		}
+
+		await test.step(`Select Acuity Slot for ${zipcodesCO} `, async () => {
+			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+			await expect(
+				daySlot,
+				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await daySlot.click()
+
+			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+			await expect(
+				timeSlot,
+				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await timeSlot.click()
+		})
 
 		await test.step('Submit New Customer Order', async () => {
 			await this.placeOrderButton.click()

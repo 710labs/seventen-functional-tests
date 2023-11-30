@@ -44,7 +44,7 @@ test.describe('CO Order Tests', () => {
 		}
 		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
+		await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 1)
 	})
 	test(`Basic Order - New Customer #medical @CO`, async ({ page, browserName }, workerInfo) => {
 		const zipCode = '80304'
@@ -66,7 +66,7 @@ test.describe('CO Order Tests', () => {
 		}
 		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
+		await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 1)
 	})
 	test(`Basic Order - Existing Customer #recreational @CO`, async ({
 		page,
@@ -92,7 +92,7 @@ test.describe('CO Order Tests', () => {
 		}
 		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
+		await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 0)
 	})
 	test(`Basic Order - New Customer #recreational @CO`, async ({
 		page: page,
@@ -116,6 +116,6 @@ test.describe('CO Order Tests', () => {
 		}
 		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
+		await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 0)
 	})
 })
