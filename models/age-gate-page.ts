@@ -30,7 +30,10 @@ export class AgeGatePage {
 				)
 			}
 
-			if (this.page.url().includes('thelist.theflowery.co')) {
+			if (
+				this.page.url().includes('thelist.theflowery.co') ||
+				this.page.url().includes('thelist-co.710labs.com')
+			) {
 				await this.page.click('text=I Qualify')
 			} else {
 				await this.page.click("text=I'm over 21 or a qualified patient")
