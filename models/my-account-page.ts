@@ -62,4 +62,21 @@ export class MyAccountPage {
 			await this.page.click('button:has-text("Save address")')
 		})
 	}
+
+	async addColoradoAddress(
+		address: string = '933 Alpine Ave',
+		city: string = 'Boulder',
+		state: string = 'CO',
+		zipCode: string = '80304',
+	) {
+		await test.step('Update Customer Address', async () => {
+			await this.page.goto('/my-account/')
+			await this.addressesLink.click()
+			await this.editBillingAddressLink.click()
+			await this.addressLineOne.fill(address)
+			await this.city.fill(city)
+			await this.zipCode.fill(zipCode)
+			await this.page.click('button:has-text("Save address")')
+		})
+	}
 }
