@@ -1,4 +1,4 @@
-import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 import { TestOptions } from '../options'
