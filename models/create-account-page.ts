@@ -193,7 +193,31 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2023')
+				await this.medCardExpYear.selectOption('2024')
+			})
+		}
+
+		if (type == 1 && state === 'CO') {
+			await test.step('Select Medical Usage Type', async () => {
+				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
+			})
+			await test.step('Upload Medical Card', async () => {
+				const medicalCardButton = await this.page.waitForSelector(
+					'input[name="svntn_core_medical_doc"]',
+				)
+				const [medicalCardChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medicalCardButton.click(),
+				])
+				await medicalCardChooser.setFiles('CA-DL.jpg')
+				await medicalCardChooser.page()
+				await this.page.waitForTimeout(5000)
+			})
+
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption('2024')
 			})
 		}
 		if (state === 'FL') {
@@ -222,7 +246,7 @@ export class CreateAccountPage {
 
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2023')
+				await this.medCardExpYear.selectOption('2024')
 			})
 
 			await test.step('Complete Usage Type Form', async () => {
@@ -339,7 +363,7 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2023')
+				await this.medCardExpYear.selectOption('2024')
 			})
 			await test.step('Enter Med Card Number', async () => {
 				await this.medCardNumber.fill(medCardNumber)
@@ -367,7 +391,7 @@ export class CreateAccountPage {
 			await test.step('Enter DL Exp', async () => {
 				await this.driversLicenseExpMonth.selectOption('12')
 				await this.driversLicenseExpDay.selectOption('16')
-				await this.driversLicenseExpYear.selectOption('2023')
+				await this.driversLicenseExpYear.selectOption('2024')
 			})
 
 			await test.step('Enter DLNumber', async () => {
@@ -468,7 +492,7 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2023')
+				await this.medCardExpYear.selectOption('2024')
 			})
 		}
 
