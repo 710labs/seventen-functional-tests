@@ -31,7 +31,7 @@ export class ShopPage {
 		})
 		await test.step('Select Fulfillment Method', async () => {
 			if (process.env.NEXT_VERSION === 'true') {
-				await this.page.waitForSelector('label:has-text("Delivery")')
+				await this.page.waitForSelector(`label:has-text("${fulfillment}")`)
 				await this.page.locator(`label:has-text("${fulfillment}") >> nth=0`).click()
 				await this.page.locator('#fulfillerSubmit').click()
 				await this.page.waitForTimeout(2000)
@@ -117,5 +117,54 @@ export class ShopPage {
 					.click({ force: true })
 			}
 		}
+	}
+
+	async addProductsToCartPickup(itemCount: number, mobile = false, fulfillment = "Pickup") {
+		await test.step('Navigate to Shop page', async () => {
+			await this.page.waitForTimeout(3000)
+			await this.page.goto('/')
+			await this.page.waitForTimeout(3000)
+		})
+		await test.step('Select Fulfillment Method', async () => {
+			if (process.env.NEXT_VERSION === 'true') {
+				await this.page.waitForSelector(`label:has-text("${fulfillment}")`)
+				await this.page.locator(`label:has-text("${fulfillment}") >> nth=0`).click()
+				await this.page.locator('#fulfillerSubmit').click()
+				await this.page.waitForTimeout(2000)
+				await this.page.reload()
+			}
+		})
+		await test.step('Add Products to Cart', async () => {
+			itemCount = itemCount + (await this.randomizeCartItems())
+			await this.page.waitForSelector('[aria-label*="to your cart"]')
+			await this.page.waitForTimeout(5000)
+			const addToCartButtons = await this.page.locator('[aria-label*="to your cart"]')
+
+			for (let i = 0; i < itemCount; i++) {
+				await expect(
+					addToCartButtons.nth(i),
+					'Product Inventory is Low for this item. Please add more. ',
+				).toBeVisible()
+				await addToCartButtons.nth(i).click({ force: true })
+				await this.page.waitForTimeout(1500)
+			}
+			await this.page.keyboard.press('PageUp')
+			await this.page.waitForTimeout(2000)
+			if (this.workerInfo.project.name === 'Mobile Chrome') {
+				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
+			} else {
+				if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+					await this.page
+						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
+						.first()
+						.click({ force: true })
+				} else {
+					await this.page
+						.locator(`[href="${process.env.BASE_URL}cart/"]`)
+						.first()
+						.click({ force: true })
+				}
+			}
+		})
 	}
 }
