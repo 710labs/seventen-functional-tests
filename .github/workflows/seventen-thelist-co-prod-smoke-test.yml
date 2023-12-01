@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: prod-co thelist-co.710labs.com
-      ENV_ID: prod-ca
+      ENV_ID: prod-co
       EXECUTION_TYPE: Build Validation
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
