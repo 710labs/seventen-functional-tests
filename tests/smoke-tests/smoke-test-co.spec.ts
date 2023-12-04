@@ -66,11 +66,11 @@ test.describe('Basic Acceptance Tests CO', () => {
 				false,
 				address.fullAddress,
 				'CO',
-			)
+			)	
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile)
+			await shopPage.addProductsToCart(orderQuanity, mobile, 'Pickup')
 			cartTotals = await cartPage.verifyCart(address.zipcode)
 		})
 
