@@ -23,7 +23,7 @@ export class ShopPage {
 		return Math.random() * (2 - -2 + -2)
 	}
 
-	async addProductsToCart(itemCount: number, mobile = false, fulfillment = "Delivery") {
+	async addProductsToCart(itemCount: number, mobile = false, fulfillment = 'Delivery') {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
@@ -45,10 +45,7 @@ export class ShopPage {
 			const addToCartButtons = await this.page.locator('[aria-label*="to your cart"]')
 
 			for (let i = 0; i < itemCount; i++) {
-				await expect(
-					addToCartButtons.nth(i),
-					'Product Inventory is Low for this item. Please add more. ',
-				).toBeVisible()
+				await expect(addToCartButtons.nth(i)).toBeVisible()
 				await addToCartButtons.nth(i).click({ force: true })
 				await this.page.waitForTimeout(1500)
 			}
@@ -57,7 +54,7 @@ export class ShopPage {
 			if (this.workerInfo.project.name === 'Mobile Chrome') {
 				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
 			} else {
-				if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+				if (process.env.BASE_URL === 'https://thelist.theflowery.co/' || process.env.BASE_URL === 'https://thelist-co.710labs.com/') {
 					await this.page
 						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
 						.first()
@@ -119,7 +116,7 @@ export class ShopPage {
 		}
 	}
 
-	async addProductsToCartPickup(itemCount: number, mobile = false, fulfillment = "Pickup") {
+	async addProductsToCartPickup(itemCount: number, mobile = false, fulfillment = 'Pickup') {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
