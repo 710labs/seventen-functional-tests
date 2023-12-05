@@ -78,4 +78,5 @@ export const coloradoAddressess: any[] = [
 		zipcode: '80005',
 		fullAddress: '8671 West 78th Circle, Arvada, CO 80005',
 	},
+	
 ]
