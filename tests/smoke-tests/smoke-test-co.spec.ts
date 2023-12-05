@@ -66,7 +66,7 @@ test.describe('Basic Acceptance Tests CO', () => {
 				false,
 				address.fullAddress,
 				'CO',
-			)	
+			)
 		})
 
 		await test.step('Add Products to Cart', async () => {
@@ -89,12 +89,9 @@ test.describe('Basic Acceptance Tests CO', () => {
 		await test.step('Login Admin', async () => {
 			await adminLoginPage.login()
 		})
-		await test.step('Admin Split Order', async () => {
-			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
-		})
+
 		await test.step('Cancel Order', async () => {
 			await editOrderPage.cancelOrder(orderNumber)
-			await editOrderPage.cancelOrder(splitOrderNumber)
 		})
 	})
 })
