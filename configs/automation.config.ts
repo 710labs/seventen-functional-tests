@@ -19,7 +19,7 @@ const config: PlaywrightTestConfig = {
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
 				channels: ['tech-savagery-tests', '710labs-qatest-results'],
-				sendResults: 'always',
+				sendResults: 'on-failure',
 				layoutAsync: generateCustomLayoutAsync,
 				maxNumberOfFailuresToShow: 20,
 				meta: [

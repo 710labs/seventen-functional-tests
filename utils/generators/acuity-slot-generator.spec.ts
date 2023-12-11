@@ -41,62 +41,62 @@ test.describe('Acuity Automation', () => {
 
 				// Start Create Slot
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('#offer-class-btn')
 					.first()
 					.click()
 				// Select "Another Test Calendar"
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('select[name="calendar"]')
 					.selectOption({ label: slots[index].CalendarName })
 				// Date Selector
 				// Select Day of Month
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('#date-input')
 					.fill(`${slots[index].DateOffered}`)
 
 				// Select Time
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('[placeholder="Ex\\. 9\\:00am"]')
 					.click()
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('[placeholder="Ex\\. 9\\:00am"]')
 					.fill(`${slots[index].TimeOffered}`)
 				// Save Class
 				await Promise.all([
 					page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-					page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Save Class').click(),
+					page.frameLocator('[data-test="scheduling"]').locator('text=Save Class').click(),
 				])
 
 				//Edit Capacity
 				//Select Slot
 				//Prevent 12PM and 2PM collison
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.getByText(`${slots[index].LinkText}`, { exact: true })
 					.click()
 
 				// Click Edit
-				await page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Edit').click()
+				await page.frameLocator('[data-test="scheduling"]').locator('text=Edit').click()
 
 				// Edit Capacity Value
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('text=Max number of people for this class >> input[name="group_max"]')
 					.click()
 				await page
-					.frameLocator('[data-test="scheduling-iframe"]')
+					.frameLocator('[data-test="scheduling"]')
 					.locator('text=Max number of people for this class >> input[name="group_max"]')
 					.fill(slots[index].Availability)
 
 				// Save Slot
 				await Promise.all([
 					page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-					page.frameLocator('[data-test="scheduling-iframe"]').locator('text=Save Changes').click(),
+					page.frameLocator('[data-test="scheduling"]').locator('text=Save Changes').click(),
 				])
 			})
 		})
