@@ -31,7 +31,7 @@ test.describe('Acuity Automation', () => {
 	})
 
 	for (let index = 0; index < slots.length; index++) {
-		test(`Add Acuity Slots: ${slots[index].Partner_region_zone} - ${slots[index].DateOffered} - ${slots[index].TimeOffered} [${slots[index].Partner},${slots[index].Partner_region_zone},${slots[index].AppointmentID},${slots[index].URL},${slots[index].CalendarName},${slots[index].DateOffered},${slots[index].TimeOffered},${slots[index].LinkText},${slots[index].Availability}] @helper`, async ({}, workerInfo) => {
+		test(`Add Acuity Slots: ${slots[index].Partner_region_zone};${slots[index].AppointmentID};${slots[index].URL};${slots[index].DateOffered};${slots[index].CalendarName};${slots[index].DateOfferred};${slots[index].TimeOffered};${slots[index].LinkText};${slots[index].Availability} @helper`, async ({ }, workerInfo) => {
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 			await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 				//Navigate to Zone
