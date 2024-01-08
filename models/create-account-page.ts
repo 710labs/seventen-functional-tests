@@ -196,7 +196,7 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2024')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 		}
 		if (state === 'FL') {
@@ -225,7 +225,7 @@ export class CreateAccountPage {
 
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2024')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 
 			await test.step('Complete Usage Type Form', async () => {
@@ -327,7 +327,8 @@ export class CreateAccountPage {
 			await test.step('Enter DL Exp', async () => {
 				await this.driversLicenseExpMonth.selectOption(`${birthMonth}`)
 				await this.driversLicenseExpDay.selectOption(`${birthDay}`)
-				await this.driversLicenseExpYear.selectOption('2024')
+				await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+				//
 			})
 
 			await test.step('Enter DLNumber', async () => {
@@ -342,7 +343,7 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2024')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 			await test.step('Enter Med Card Number', async () => {
 				await this.medCardNumber.fill(medCardNumber)
@@ -370,7 +371,7 @@ export class CreateAccountPage {
 			await test.step('Enter DL Exp', async () => {
 				await this.driversLicenseExpMonth.selectOption('12')
 				await this.driversLicenseExpDay.selectOption('16')
-				await this.driversLicenseExpYear.selectOption('2024')
+				await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 
 			await test.step('Enter DLNumber', async () => {
@@ -471,7 +472,7 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2024')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 		}
 
@@ -637,7 +638,7 @@ export class CreateAccountPage {
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption('2024')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 			await test.step('Complete Usage Type Form', async () => {
 				await (await this.page.$('text=Register')).click()
