@@ -4,6 +4,7 @@ import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
 
 import zipcodes from '../utils/zipcodes-ca.json'
 import zipcodesCO from '../utils/zipcodes-co.json'
+import { fictionalAreacodes } from '../utils/data-generator'
 
 export class CheckoutPage {
 	readonly page: Page
@@ -274,7 +275,9 @@ export class CheckoutPage {
 
 		await test.step('Fill in Phone Number', async () => {
 			await this.phoneInput.click()
-			await this.phoneInput.fill('123-456-7890')
+			await this.phoneInput.fill(
+				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
+			)
 		})
 
 		await test.step('Fill in Order Notes', async () => {

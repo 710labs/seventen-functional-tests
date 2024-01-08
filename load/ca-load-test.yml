@@ -1,0 +1,14 @@
+config:
+  target: https://thelist-stage.710labs.com
+  phases:
+    - duration: 30
+      arrivalRate: 1
+      name: Basic Load Test 5 VU
+  engines:
+    playwright:
+      launchOptions:
+        headless: false
+  processor: './artillery-scripts.js'
+scenarios:
+  - engine: playwright
+    testFunction: 'caWorkflow'

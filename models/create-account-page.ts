@@ -1,5 +1,6 @@
 import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
 import { faker } from '@faker-js/faker'
+import { fictionalAreacodes } from '../utils/data-generator'
 
 export class CreateAccountPage {
 	readonly page: Page
@@ -39,7 +40,7 @@ export class CreateAccountPage {
 	//svntn_core_pxp_month
 
 	constructor(page: Page, apiContext: APIRequestContext) {
-		; (this.page = page),
+		;(this.page = page),
 			(this.apiContext = apiContext),
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
@@ -93,7 +94,7 @@ export class CreateAccountPage {
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90016',
 		state: string = 'CA',
 	) {
-		await test.step('Verify Layout', async () => { })
+		await test.step('Verify Layout', async () => {})
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
@@ -150,7 +151,9 @@ export class CreateAccountPage {
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
-			await this.phoneNumber.fill(faker.phone.phoneNumber('###-###-####'))
+			await this.phoneNumber.fill(
+				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
+			)
 		})
 
 		await test.step('Submit New Customer Form', async () => {
@@ -173,7 +176,7 @@ export class CreateAccountPage {
 			await driversLicenseChooser.page()
 		})
 
-		if ((type == 1 && state === 'CA')) {
+		if (type == 1 && state === 'CA') {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -234,7 +237,7 @@ export class CreateAccountPage {
 			await test.step('Complete Usage Type Form', async () => {
 				await (await this.page.$('text=Register')).click()
 				await this.page.waitForTimeout(5000)
-				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/);
+				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 			})
 		}
 
@@ -252,7 +255,7 @@ export class CreateAccountPage {
 		birthDay: number,
 		birthMonth: number,
 		birthYear: number,
-		phone: number,
+		phone: string,
 		type: string,
 		address: string,
 		medCardNumber: string,
@@ -379,7 +382,7 @@ export class CreateAccountPage {
 		await test.step('Complete Usage Type Form', async () => {
 			await await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
-			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/);
+			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
 	}
 
@@ -494,7 +497,7 @@ export class CreateAccountPage {
 		await test.step('Complete Usage Type Form', async () => {
 			await await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
-			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/);
+			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
 
 		test.info().annotations.push({
@@ -539,7 +542,7 @@ export class CreateAccountPage {
 		address: string = '933 Alpine Ave, Boulder, CO, 80304',
 		state: string = 'CO',
 	) {
-		await test.step('Verify Layout', async () => { })
+		await test.step('Verify Layout', async () => {})
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
@@ -589,7 +592,9 @@ export class CreateAccountPage {
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
-			await this.phoneNumber.fill(faker.phone.phoneNumber('###-###-####'))
+			await this.phoneNumber.fill(
+				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
+			)
 		})
 
 		await test.step('Submit New Customer Form', async () => {
@@ -612,7 +617,7 @@ export class CreateAccountPage {
 			await driversLicenseChooser.page()
 		})
 
-		if ((type == 1 && state === 'CO')) {
+		if (type == 1 && state === 'CO') {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -637,7 +642,7 @@ export class CreateAccountPage {
 			await test.step('Complete Usage Type Form', async () => {
 				await (await this.page.$('text=Register')).click()
 				await this.page.waitForTimeout(5000)
-				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/);
+				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 			})
 		}
 
