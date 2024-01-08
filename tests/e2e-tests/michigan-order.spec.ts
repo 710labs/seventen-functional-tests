@@ -7,6 +7,7 @@ import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { faker } from '@faker-js/faker'
+import { fictionalAreacodes } from '../../utils/data-generator'
 
 test.describe('MI Order Tests', () => {
 	test.describe.configure({ mode: 'parallel' })
@@ -48,7 +49,7 @@ test.describe('MI Order Tests', () => {
 				faker.datatype.number({ min: 1, max: 28 }),
 				faker.datatype.number({ min: 10, max: 12 }),
 				faker.datatype.number({ min: 1975, max: 2001 }),
-				faker.datatype.number({ min: 1111111111, max: 9999999999 }),
+				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
 				'recreational',
 				address,
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
@@ -121,7 +122,7 @@ test.describe('MI Order Tests', () => {
 				faker.datatype.number({ min: 1, max: 28 }),
 				faker.datatype.number({ min: 10, max: 12 }),
 				faker.datatype.number({ min: 1975, max: 2001 }),
-				faker.datatype.number({ min: 1111111111, max: 9999999999 }),
+				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
 				'recreational',
 				address,
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),

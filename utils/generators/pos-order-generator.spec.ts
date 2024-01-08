@@ -8,6 +8,7 @@ import { CartPage } from '../../models/cart-page'
 import { faker } from '@faker-js/faker'
 import { URL } from 'url'
 import posOrders from '../generators/pos-orders.json'
+import { fictionalAreacodes } from '../data-generator'
 
 test.describe('POS Order Generator', () => {
 	var orders = posOrders.filter(
@@ -53,7 +54,9 @@ test.describe('POS Order Generator', () => {
 		var dob_day = faker.datatype.number({ min: 10, max: 25 })
 		var dob_month = faker.datatype.number({ min: 10, max: 12 })
 		var dob_year = faker.datatype.number({ min: 1955, max: 2001 })
-		var phone = faker.phone.phoneNumber('###-###-####')
+		var phone = faker.phone.phoneNumber(
+			`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`,
+		)
 		var customer_type =
 			process.env.POSSYNC_CUSTOMER_TYPE === 'Random'
 				? faker.helpers.arrayElement(['Recreational', 'Medical'])
@@ -125,7 +128,7 @@ test.describe('POS Order Generator', () => {
 					.getByText(`${fulfillmentType}`, { exact: true })
 					.click()
 				await page.getByRole('button', { name: 'Submit' }).click()
- 
+
 				test.info().annotations.push({
 					type: 'Fulfillment Type',
 					description: `${fulfillmentType}`,
