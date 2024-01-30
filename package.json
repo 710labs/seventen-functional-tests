@@ -22,7 +22,8 @@
 		"smoke:test:prod:mi": "npx playwright test --grep @MI --config=configs/prod-mi.config.ts --workers=1",
 		"helper:acuityslots:dev": "npx playwright test -g \"Acuity Helpers\" --config=configs/automation.config.ts --project=Desktop Chrome --workers=10",
 		"helper:acuityslots": "npx playwright test -g \"Acuity Automation\" --config=configs/automation.config.ts --project=Desktop Chrome --workers=10",
-		"helper:possync_orders": "npx playwright test -g \"POS Order Generator\" --config=configs/pos-sync.config.ts --workers=10"
+		"helper:possync_orders": "npx playwright test -g \"POS Order Generator\" --config=configs/pos-sync.config.ts --workers=10",
+		"load:ca:dev": "npx artillery run load/ca-load-test.yml"
 	},
 	"repository": {
 		"type": "git",

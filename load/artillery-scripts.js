@@ -3,6 +3,12 @@ async function caWorkflow(page, vuContext, events, test) {
 	const userid = vuContext.vars.userid
 	const recordid = vuContext.vars.recordid
 
+	await step('HAR', async () => {
+		await page.routeFromHAR(`outputs/playwright-har-${recordid}.har`, {
+			update: true,
+		})
+	})
+
 	await step('Pass Age Gate', async () => {
 		await step('Load 710 Labs ', async () => {
 			await page.goto('https://thelist-stage.710labs.com')
@@ -19,6 +25,24 @@ async function caWorkflow(page, vuContext, events, test) {
 			await passwordField.click()
 			await passwordField.fill('qatester')
 		})
+	})
+
+	await step('Create Account ', async () => {
+		await step('Enter Account Info', async () => {})
+
+		await step('Enter Validation Info', async () => {})
+	})
+
+	await step('Create Cart', async () => {
+		await step('Enter Account Info', async () => {})
+
+		await step('Enter Validation Info', async () => {})
+	})
+
+	await step('Checkout Cart', async () => {
+		await step('Enter Delivery Info', async () => {})
+
+		await step('Complete Order', async () => {})
 	})
 }
 
