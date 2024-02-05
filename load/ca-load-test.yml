@@ -11,7 +11,7 @@ config:
           dir: 'outputs/'
       launchOptions:
         headless: false
-        tracesDir: 'outputs/'
+        # tracesDir: 'outputs/'
   processor: './artillery-scripts.js'
 scenarios:
   - engine: playwright
