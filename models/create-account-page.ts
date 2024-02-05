@@ -464,6 +464,12 @@ export class CreateAccountPage {
 					.setInputFiles('CA-DL.jpg')
 			})
 
+			await test.step('Enter Drivers License Exp', async () => {
+				await this.driversLicenseExpMonth.selectOption('12')
+				await this.driversLicenseExpDay.selectOption('16')
+				await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+			})
+
 			await test.step('Upload Medical Card', async () => {
 				await this.page.getByLabel('Medical Card Upload *').click()
 				await this.page.getByLabel('Medical Card Upload *').setInputFiles('Medical-Card.png')
