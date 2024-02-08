@@ -1,0 +1,52 @@
+name: Artillery Socket.IO Load Test
+ 
+on:
+  push:
+    branches:
+      - main
+
+ 
+jobs:
+  artillery:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # needed so that checkout of repository can happen
+      id-token: write # additionally needed now for OIDC
+ 
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        env:
+          SHOW_STACK_TRACE: true # in case there are issues, this can help with debugging
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.ARTILLERY_ROLE_ARN }} # arn of the role created in AWS, should be kept in GitHub Secrets
+          role-session-name: OIDCSession
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+ 
+      - name: Execute load tests on AWS (us-east-1 region)
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region us-east-1 --count 5 load/ca-load-test.yml
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: artillery-report
+          path: ./report.json # reference the generated report in the file system    
+
+      - name: Notify about failures
+        if: failure()
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,eventName,job,took,pullRequest
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # required in secrets    
