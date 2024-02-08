@@ -15,15 +15,6 @@ jobs:
       id-token: write # additionally needed now for OIDC
  
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        env:
-          SHOW_STACK_TRACE: true # in case there are issues, this can help with debugging
-        with:
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.ARTILLERY_ROLE_ARN }} # arn of the role created in AWS, should be kept in GitHub Secrets
-          role-session-name: OIDCSession
-
       - name: Checkout repository
         uses: actions/checkout@v2
  
