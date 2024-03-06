@@ -1,11 +1,5 @@
 name: Artillery Socket.IO Load Test
  
-on:
-  push:
-    branches:
-      - main
-
- 
 jobs:
   artillery:
     runs-on: ubuntu-latest
