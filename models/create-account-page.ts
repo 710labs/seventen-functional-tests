@@ -174,6 +174,12 @@ export class CreateAccountPage {
 			await driversLicenseChooser.setFiles('Medical-Card.png')
 			await this.page.waitForTimeout(5000)
 			await driversLicenseChooser.page()
+
+			await test.step('Enter Drivers License Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+			})
 		})
 
 		if (type == 1 && state === 'CA') {
