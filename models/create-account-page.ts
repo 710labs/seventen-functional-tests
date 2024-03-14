@@ -176,9 +176,9 @@ export class CreateAccountPage {
 			await driversLicenseChooser.page()
 
 			await test.step('Enter Drivers License Exp', async () => {
-				await this.medCardExpMonth.selectOption('12')
-				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+				await this.driversLicenseExpMonth.selectOption('12')
+				await this.driversLicenseExpDay.selectOption('16')
+				await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 		})
 
