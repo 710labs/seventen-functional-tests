@@ -105,14 +105,16 @@ test.describe('CA Order Tests', () => {
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
+		const zipCode = '90016';
+
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', '90210', 0)
+		await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 0)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
 		await shopPage.addProductsToCart(6, mobile)
-		var cartTotals = await cartPage.verifyCart(`90210`)
-		await checkOutPage.confirmCheckout(`90210`, cartTotals, 0)
+		var cartTotals = await cartPage.verifyCart(zipCode)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})
 })

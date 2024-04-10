@@ -12,7 +12,7 @@ import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 
 test.describe('Basic Acceptance Tests CA', () => {
-	const zipCode = '90210'
+	const zipCode = '90016'
 	const orderQuanity = 6
 	var orderNumber: any
 	var splitOrderNumber: string

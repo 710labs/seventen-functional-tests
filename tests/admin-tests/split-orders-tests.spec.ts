@@ -11,7 +11,7 @@ import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 
-const zipCode = '90210'
+const zipCode = '90016'
 const orderQuanity = 6
 var orderTotals: any
 var orderNumber: any
@@ -128,13 +128,13 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }
 test.skip(`Auto Assign Fulfilment - New Customer - No Previous Orders - Defaults to Pickup`, async ({
 	page,
 	browserName,
-}, workerInfo) => {})
+}, workerInfo) => { })
 test.skip(`Auto Assign Fulfilment - Existing Customer - Previou Order Pickup - Defaults to Pickup`, async ({
 	page,
 	browserName,
-}, workerInfo) => {})
+}, workerInfo) => { })
 
 test.skip(`Auto Assign Fulfilment - Existing Customer - Previou Order Delevery - Defaults to Delivery`, async ({
 	page,
 	browserName,
-}, workerInfo) => {})
+}, workerInfo) => { })
