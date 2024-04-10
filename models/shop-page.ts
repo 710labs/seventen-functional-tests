@@ -40,9 +40,9 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
-			await this.page.waitForSelector('[aria-label*="to your cart"]')
+			await this.page.waitForSelector('[aria-label*="Add to cart:"]')
 			await this.page.waitForTimeout(5000)
-			const addToCartButtons = await this.page.locator('[aria-label*="to your cart"]')
+			const addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
 
 			for (let i = 0; i < itemCount; i++) {
 				await expect(addToCartButtons.nth(i)).toBeVisible()
@@ -70,10 +70,10 @@ export class ShopPage {
 	}
 	async addSameProductToCart(itemCount: number) {
 		await test.step('Add Products to Cart', async () => {
-			await this.page.waitForSelector('[aria-label*="to your cart"]')
+			await this.page.waitForSelector('[aria-label*="Add to cart:"]')
 
 			const addToCartButtons = await this.page
-				.locator('[aria-label*="to your cart"]')
+				.locator('[aria-label*="Add to cart:"]')
 				.elementHandles()
 
 			for (let i = 0; i < itemCount; i++) {
@@ -133,9 +133,9 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
-			await this.page.waitForSelector('[aria-label*="to your cart"]')
+			await this.page.waitForSelector('[aria-label*="Add to cart:"]')
 			await this.page.waitForTimeout(5000)
-			const addToCartButtons = await this.page.locator('[aria-label*="to your cart"]')
+			const addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
 
 			for (let i = 0; i < itemCount; i++) {
 				await expect(
