@@ -51,7 +51,7 @@ export class AgeGatePage {
 		await test.step('Fail Age Gate', async () => {
 			await this.page.goto('/')
 			await this.page.click("text=I'm not 21 yet or don't qualify")
-			await expect(this.page.locator('.age-gate-error-message')).toHaveText(
+			await expect(this.page.locator('.age-gate__error')).toHaveText(
 				'You are not old enough to view this content',
 			)
 		})
