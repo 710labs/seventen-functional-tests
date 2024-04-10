@@ -105,7 +105,7 @@ test.describe('CA Order Tests', () => {
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
-		const zipCode = '90016';
+		const zipCode = '90210';
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')

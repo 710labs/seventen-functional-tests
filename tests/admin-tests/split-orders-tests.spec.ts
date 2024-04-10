@@ -11,7 +11,7 @@ import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 
-const zipCode = '90016'
+const zipCode = '90210'
 const orderQuanity = 6
 var orderTotals: any
 var orderNumber: any
