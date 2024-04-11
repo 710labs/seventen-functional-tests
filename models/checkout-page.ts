@@ -171,7 +171,7 @@ export class CheckoutPage {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.addressModifierButton.click()
-					await this.page.waitForTimeout(3000)
+					await this.zipCodeInput.waitFor({ state: 'visible' });
 					await this.zipCodeInput.click()
 					await this.zipCodeInput.fill(this.zipcodes[i])
 					await this.page.locator('text=Submit >> nth=0').click()
