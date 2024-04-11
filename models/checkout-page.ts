@@ -44,7 +44,7 @@ export class CheckoutPage {
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
 		this.phoneInput = this.page.locator('input[name="billing_phone"]')
 		this.addressLine1 = this.page.locator('input[name="billing_address_1"]')
-		this.addressModifierButton = this.page.locator('[data-modder="address"]')
+		this.addressModifierButton = this.page.locator('a.wcse-mod-link[data-modder="address"]')
 		this.addressModifierSubmitButton = this.page.locator('a > [data-mod="address"]')
 		this.city = this.page.locator('input[name="billing_city"]')
 		this.zipCodeInput = this.page.locator('input[name="billing_postcode"]')
