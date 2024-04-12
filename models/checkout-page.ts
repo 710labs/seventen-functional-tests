@@ -187,7 +187,7 @@ export class CheckoutPage {
 					// 		rect.right <= (window.innerWidth || document.documentElement.clientWidth)
 					// 	);
 					// });
-					const maxAttempts = 5;
+					const maxAttempts = 10;
 					let attempt = 0;
 					let windowChanged = false;
 
