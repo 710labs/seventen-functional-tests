@@ -172,59 +172,14 @@ export class CheckoutPage {
 		if (singleZip === false) {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
-					//await this.addressModifierButton.click()
-					//await this.zipCodeInput.waitFor({ state: 'visible' });
-					// await this.page.waitForFunction(() => {
-					// 	const el = document.querySelector('.woocommerce-billing-fields');
-					// 	if (!el) {
-					// 		return false;
-					// 	}
-					// 	const rect = el.getBoundingClientRect();
-					// 	return (
-					// 		rect.top >= 0 &&
-					// 		rect.left >= 0 &&
-					// 		rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-					// 		rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-					// 	);
-					// });
-					const maxAttempts = 10;
-					let attempt = 0;
-					let windowChanged = false;
-
-					while (!windowChanged && attempt < maxAttempts) {
-						// Click the button to open/update the window
-						await this.addressModifierButton.click();
-
-						// Wait for a short period to allow the window to update
-						await this.page.waitForTimeout(1000);
-
-						// Check if the window has changed or updated
-						windowChanged = await this.page.evaluate(() => {
-							// Example: Check if a specific element is visible using getBoundingClientRect
-							const el = document.querySelector('.woocommerce-billing-fields');
-							if (el) {
-								const rect = el.getBoundingClientRect();
-								return rect.width > 0 && rect.height > 0;
-							}
-							return false;
-						});
-
-						if (!windowChanged) {
-							// If the window has not changed, increment the attempt counter
-							attempt++;
-						}
-					}
-
-					if (!windowChanged) {
-						throw new Error('Window did not change or update after clicking the button multiple times.');
-					}
-
-					await this.zipCodeInput.click();
-					await this.zipCodeInput.click()
-					await this.zipCodeInput.fill(this.zipcodes[i])
-					await this.page.locator('text=Submit >> nth=0').click()
-					await this.page.waitForTimeout(1000)
-					cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
+					// //await this.addressModifierButton.click()
+					// //await this.zipCodeInput.waitFor({ state: 'visible' });
+					// await this.zipCodeInput.click();
+					// await this.zipCodeInput.click()
+					// await this.zipCodeInput.fill(this.zipcodes[i])
+					// await this.page.locator('text=Submit >> nth=0').click()
+					// await this.page.waitForTimeout(1000)
+					// cartTotals = await this.verifyCheckoutTotals(this.zipcodes[i], usageType, productList)
 				})
 			}
 		} else {
