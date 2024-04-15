@@ -45,7 +45,7 @@ export class CheckoutPage {
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
 		this.phoneInput = this.page.locator('input[name="billing_phone"]')
 		this.addressLine1 = this.page.locator('input[name="billing_address_1"]')
-		this.addressModifierButton = this.page.locator('a.wcse-mod-link[data-modder="address"]')
+		this.addressModifierButton = this.page.locator('a.wcse-mod-link[data-modder="address"]:has-text("Change")')
 		this.addressModifierWindow = this.page.locator('.woocommerce-billing-fields')
 		this.addressModifierSubmitButton = this.page.locator('a > [data-mod="address"]')
 		this.city = this.page.locator('input[name="billing_city"]')
@@ -173,14 +173,8 @@ export class CheckoutPage {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.addressModifierButton.waitFor({ state: 'visible' });
-					await this.addressModifierButton.click({ force: true });
+					await this.addressModifierButton.click();
 					await this.page.waitForTimeout(5000);
-					await this.page.evaluate(() => {
-						const overlay = document.querySelector('.woocommerce-billing-fields');
-						if (overlay instanceof HTMLElement) {
-							overlay.style.display = 'block';
-						}
-					});
 					await this.zipCodeInput.waitFor({ state: 'visible' });
 					await this.zipCodeInput.scrollIntoViewIfNeeded();
 					await this.zipCodeInput.click();
