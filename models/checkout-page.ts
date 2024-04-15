@@ -173,8 +173,14 @@ export class CheckoutPage {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.addressModifierButton.waitFor({ state: 'visible' });
-					await this.addressModifierButton.click({ force: true })
-					await this.page.waitForTimeout(5000)
+					await this.addressModifierButton.click({ force: true });
+					await this.page.waitForTimeout(5000);
+					await this.page.evaluate(() => {
+						const overlay = document.querySelector('.woocommerce-billing-fields');
+						if (overlay instanceof HTMLElement) {
+							overlay.style.display = 'block';
+						}
+					});
 					await this.zipCodeInput.waitFor({ state: 'visible' });
 					await this.zipCodeInput.scrollIntoViewIfNeeded();
 					await this.zipCodeInput.click();
