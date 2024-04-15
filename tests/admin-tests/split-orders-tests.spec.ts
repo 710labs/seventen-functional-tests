@@ -128,13 +128,13 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }
 test.skip(`Auto Assign Fulfilment - New Customer - No Previous Orders - Defaults to Pickup`, async ({
 	page,
 	browserName,
-}, workerInfo) => {})
+}, workerInfo) => { })
 test.skip(`Auto Assign Fulfilment - Existing Customer - Previou Order Pickup - Defaults to Pickup`, async ({
 	page,
 	browserName,
-}, workerInfo) => {})
+}, workerInfo) => { })
 
 test.skip(`Auto Assign Fulfilment - Existing Customer - Previou Order Delevery - Defaults to Delivery`, async ({
 	page,
 	browserName,
-}, workerInfo) => {})
+}, workerInfo) => { })
