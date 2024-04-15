@@ -15,6 +15,7 @@ export class CheckoutPage {
 	readonly city: Locator
 	readonly zipCodeInput: Locator
 	readonly addressModifierButton: Locator
+	readonly addressModifierWindow: Locator
 	readonly addressModifierSubmitButton: Locator
 	readonly comments: Locator
 	readonly subTotal: Locator
@@ -44,7 +45,8 @@ export class CheckoutPage {
 		this.lastNameInput = this.page.locator('input[name="billing_last_name"]')
 		this.phoneInput = this.page.locator('input[name="billing_phone"]')
 		this.addressLine1 = this.page.locator('input[name="billing_address_1"]')
-		this.addressModifierButton = this.page.locator('[data-modder="address"]')
+		this.addressModifierButton = this.page.locator('a.wcse-mod-link[data-modder="address"]:has-text("Change")')
+		this.addressModifierWindow = this.page.locator('.woocommerce-billing-fields')
 		this.addressModifierSubmitButton = this.page.locator('a > [data-mod="address"]')
 		this.city = this.page.locator('input[name="billing_city"]')
 		this.zipCodeInput = this.page.locator('input[name="billing_postcode"]')
@@ -170,7 +172,13 @@ export class CheckoutPage {
 		if (singleZip === false) {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
-					await this.addressModifierButton.click()
+					await this.addressModifierButton.waitFor({ state: 'visible' });
+					await this.page.waitForTimeout(1000);
+					await this.addressModifierButton.click();
+					// await this.page.waitForTimeout(1000);
+					await this.zipCodeInput.waitFor({ state: 'visible' });
+					await this.zipCodeInput.scrollIntoViewIfNeeded();
+					await this.zipCodeInput.click();
 					await this.zipCodeInput.click()
 					await this.zipCodeInput.fill(this.zipcodes[i])
 					await this.page.locator('text=Submit >> nth=0').click()
