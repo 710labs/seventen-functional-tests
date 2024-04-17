@@ -55,7 +55,7 @@
 		"@faker-js/faker": "^6.0.0-alpha.5",
 		"@playwright/test": "^1.40.1",
 		"@slack/web-api": "^6.8.1",
-		"artillery": "^2.0.3",
+		"artillery": "^2.0.8",
 		"cross-env": "^7.0.3",
 		"dotenv": "^16.0.0",
 		"find-config": "^1.0.0",
