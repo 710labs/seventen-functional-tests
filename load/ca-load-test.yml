@@ -1,8 +1,9 @@
 config:
-  target: https://thelist-dev.710labs.com
+  target: https://thelist-stage.710labs.com
   phases:
-    - duration: 5
+    - duration: 300
       arrivalRate: 1
+      maxVusers: 5
       name: Basic Load Test 5 VU
   engines:
     playwright:
