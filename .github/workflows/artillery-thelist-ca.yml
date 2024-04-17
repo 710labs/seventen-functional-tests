@@ -1,5 +1,6 @@
 name: Artillery Socket.IO Load Test
- 
+on: 
+  workflow_dispatch:
 jobs:
   artillery:
     runs-on: ubuntu-latest
