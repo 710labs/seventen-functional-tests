@@ -173,7 +173,7 @@ export class CheckoutPage {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.addressModifierButton.waitFor({ state: 'visible' });
-					await this.page.waitForTimeout(1000);
+					await this.page.waitForTimeout(2000);
 					await this.addressModifierButton.click();
 					// await this.page.waitForTimeout(1000);
 					await this.zipCodeInput.waitFor({ state: 'visible' });
