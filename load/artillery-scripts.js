@@ -1,11 +1,9 @@
-const faker = require('@faker-js/faker').faker
-
 async function caWorkflow(page, vuContext, events, test) {
 	const { step } = test
 	const userid = vuContext.vars.userid
 	const recordid = vuContext.vars.recordid
-	const userFirstName = faker.name.firstName()
-	const userLastName = faker.name.lastName()
+	const userFirstName = vuContext.vars.firstName
+	const userLastName = vuContext.vars.lastName
 	const userEmail = `${userFirstName.toLowerCase()}.${userLastName.toLowerCase()}@mail7.io`
 	const userAddress = '3377 S La Cienega Blvd, Los Angeles, CA 90016'
 
@@ -141,4 +139,4 @@ async function coWorkflow(page) {}
 
 async function miWorkflow(page) {}
 
-module.exports = { caWorkflow, coWorkflow, miWorkflow }
+export default { caWorkflow, coWorkflow, miWorkflow }
