@@ -4,7 +4,13 @@ config:
     - duration: 300
       arrivalRate: 1
       maxVusers: 5
-      name: Basic Load Test 5 VU
+      name: Basic Load Test 5 VU\
+  plugins:
+    faker:
+      locale: en
+  variables:
+    firstName: "$faker.name.firstName"
+    lastName: "$faker.name.lastName"
   engines:
     playwright:
       contextOtions:
