@@ -139,4 +139,8 @@ async function coWorkflow(page) {}
 
 async function miWorkflow(page) {}
 
-export default { caWorkflow, coWorkflow, miWorkflow }
+module.exports = {
+	caWorkflow,
+	coWorkflow,
+	miWorkflow,
+}
