@@ -4,7 +4,7 @@ on:
     inputs:
       target:
         type: choice
-        description: 'Target environment for load test.'
+        description: 'Environment'
         required: true
         options:
           - https://thelist-dev.710labs.com(CA)
@@ -17,11 +17,11 @@ on:
           - https://thelist-co.710labs.com
           - https://thelist.710labs.com
       virtual_users:
-        description: 'How many virtual users should the test have running concurrently'
+        description: 'Virtual
         required: false
         default: '1'
       duration:
-        description: 'How long should the load test run in seconds'
+        description: 'Duration (seconds)'
         required: true
         default: '300'
 jobs:
@@ -41,13 +41,15 @@ jobs:
           echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
           echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY  }}" >> $GITHUB_ENV
+
 
           # Set ARTILLERY_710_MODE based on INPUT.TARGET
-          if [[ $INPUT_TARGET == *"CA"* ]] || [[ $INPUT_TARGET == *"thelist.710labs.com"* ]]; then
+          if [[ ${{ github.event.inputs.target }} == *"CA"* ]] || [[ ${{ github.event.inputs.target }} == *"thelist.710labs.com"* ]]; then
             echo "ARTILLERY_710_MODE=ca" >> $GITHUB_ENV
-          elif [[ $INPUT_TARGET == *"MI"* ]] || [[ $INPUT_TARGET == *"thelist-mi.710labs.com"* ]]; then
+          elif [[ ${{ github.event.inputs.target }} == *"MI"* ]] || [[ ${{ github.event.inputs.target }} == *"thelist-mi.710labs.com"* ]]; then
             echo "ARTILLERY_710_MODE=mi" >> $GITHUB_ENV
-          elif [[ $INPUT_TARGET == *"CO"* ]] || [[ $INPUT_TARGET == *"thelist-co.710labs.com"* ]]; then
+          elif [[ ${{ github.event.inputs.target }} == *"CO"* ]] || [[ ${{ github.event.inputs.target }} == *"thelist-co.710labs.com"* ]]; then
             echo "ARTILLERY_710_MODE=co" >> $GITHUB_ENV
           else
             # Set a default value if none of the conditions match

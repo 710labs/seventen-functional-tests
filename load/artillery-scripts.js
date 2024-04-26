@@ -343,7 +343,7 @@ async function CA(page, vuContext, events, test) {
 		})
 		await step('Review Cart', async () => {
 			await step('Navigate To Cart', async () => {
-				await page.getByRole('link', { name: `my bag (${itemCount}) ` }).click()
+				await page.locator('a.cart-contents').click()
 			})
 			await step('Navigate To Checkout', async () => {
 				await page.getByRole('link', { name: 'Continue to checkout ' }).click()
