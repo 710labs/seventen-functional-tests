@@ -1,8 +1,0 @@
-config:
-  target: https://thelist-stage.710labs.com
-  engines:
-    playwright: {}
-  processor: "./artillery-scripts.js"
-scenarios:
-  - engine: playwright
-    testFunction: "coWorkflow"
