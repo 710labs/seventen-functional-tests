@@ -17,7 +17,7 @@ on:
           - https://thelist-co.710labs.com
           - https://thelist.710labs.com
       virtual_users:
-        description: 'Virtual
+        description: 'Virtual Users'
         required: false
         default: '1'
       duration:
