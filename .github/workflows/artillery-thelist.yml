@@ -51,7 +51,7 @@ jobs:
       - name: Execute load tests on AWS (us-east-1 region)
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region us-east-1 --count 1 load/artillery-${{ env.ARTILLERY_710_MODE }}-single-phase.yml --key ${{ env.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ env.ARTILLERY_710_MODE }} Load (${{ env.ARTILLERY_VIRTUAL_USERS }}VU @${{ env.ARTILLERY_ARRIVAL_RATE }}/sec - ${{ env.ARTILLERY_DURATION }}ms ),env:${{ env.ARTILLERY_TARGET }}(${{ env.ARTILLERY_TARGET }})"
+          command: run-fargate --region us-east-1 --count 1 load/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ github.event.inputs.mode }} Load (${{ github.event.inputs.virtual_users }}VU | ${{ github.event.inputs.mode }}seconds ),env:${{ github.event.inputs.target }}(${{ github.event.inputs.mode }})"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
