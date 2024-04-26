@@ -1,0 +1,98 @@
+name: Artillery Socket.IO Load Test
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        description: 'Target environment for load test.'
+        required: true
+        options:
+          - https://thelist-dev.710labs.com(CA)
+          - https://thelist-dev.710labs.com(CO)
+          - https://thelist-dev.710labs.com(MI)
+          - https://thelist-stage.710labs.com(CA)
+          - https://thelist-stage.710labs.com(CO)
+          - https://thelist-stage.710labs.com(MI)
+          - https://thelist-mi.710labs.com
+          - https://thelist-co.710labs.com
+          - https://thelist.710labs.com
+      virtual_users:
+        description: 'How many virtual users should the test have running concurrently'
+        required: false
+        default: '1'
+      duration:
+        description: 'How long should the load test run in seconds'
+        required: true
+        default: '300'
+jobs:
+  artillery:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # needed so that checkout of repository can happen
+      id-token: write # additionally needed now for OIDC
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set environment variables based on inputs
+        run: |
+          echo "ARTILLERY_TARGET=$INPUT_TARGET" >> $GITHUB_ENV
+          echo "ARTILLERY_VIRTUAL_USERS=${{ env.INPUT_VIRTUAL_USERS || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_DURATION=$INPUT_DURATION" >> $GITHUB_ENV
+
+          # Set ARTILLERY_710_MODE based on INPUT.TARGET
+          if [[ $INPUT_TARGET == *"CA"* ]] || [[ $INPUT_TARGET == *"thelist.710labs.com"* ]]; then
+            echo "ARTILLERY_710_MODE=ca" >> $GITHUB_ENV
+          elif [[ $INPUT_TARGET == *"MI"* ]] || [[ $INPUT_TARGET == *"thelist-mi.710labs.com"* ]]; then
+            echo "ARTILLERY_710_MODE=mi" >> $GITHUB_ENV
+          elif [[ $INPUT_TARGET == *"CO"* ]] || [[ $INPUT_TARGET == *"thelist-co.710labs.com"* ]]; then
+            echo "ARTILLERY_710_MODE=co" >> $GITHUB_ENV
+          else
+            # Set a default value if none of the conditions match
+            echo "ARTILLERY_710_MODE=default" >> $GITHUB_ENV
+          fi
+
+      - name: Execute load tests on AWS (us-east-1 region)
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region us-east-1 --count 1 load/artillery-${{ env.ARTILLERY_710_MODE }}-single-phase.yml --key ${{ env.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ env.ARTILLERY_710_MODE }} Load (${{ env.ARTILLERY_VIRTUAL_USERS }}VU @${{ env.ARTILLERY_ARRIVAL_RATE }}/sec - ${{ env.ARTILLERY_DURATION }}ms ),env:${{ env.ARTILLERY_TARGET }}"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Set current date as env variable
+        run: echo "NOW=$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: artillery-report
+          path: artillery-reports/$NOW-artillery-report.json
+
+      - name: Notify about failures
+        if: failure()
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,eventName,job,took,pullRequest
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack notifications
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                text: `${process.env.AS_WORKFLOW}\n${process.env.AS_JOB} (${process.env.AS_COMMIT}) of ${process.env.AS_REPO}@${process.env.AS_REF} by ${process.env.AS_AUTHOR} ${{ job.status }} in ${process.env.AS_TOOK}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always() # Pick up events even if the job fails or is canceled.

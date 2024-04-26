@@ -1,0 +1,16 @@
+config:
+  target: '{{ $env.ARTILLERY_TARGET }}'
+  phases:
+    - duration: '{{ $env.ARTILLERY_DURATION }}'
+      arrivalRate: 1
+      maxVusers: '{{ $env.ARTILLERY_VIRTUAL_USERS }}'
+      name: '{{ $env.ARTILLERY_VIRTUAL_USERS }} VU | {{ $env.ARTILLERY_DURATION }} seconds | {{ $env.ARTILLERY_TARGET }}'
+  engines:
+    playwright:
+      trace: true
+      launchOptions:
+        headless: true
+  processor: './artillery-scripts.js'
+scenarios:
+  - engine: playwright
+    testFunction: 'CA'
