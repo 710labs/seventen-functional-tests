@@ -41,15 +41,13 @@ jobs:
           echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
           echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY  }}" >> $GITHUB_ENV
+          echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY }}" >> $GITHUB_ENV
 
-
-          # Set ARTILLERY_710_MODE based on INPUT.TARGET
-          if [[ ${{ github.event.inputs.target }} == *"CA"* ]] || [[ ${{ github.event.inputs.target }} == *"thelist.710labs.com"* ]]; then
+          if [ "${{ github.event.inputs.target }}" == *"CA"* ] || [ "${{ github.event.inputs.target }}" == *"thelist.710labs.com"* ]; then
             echo "ARTILLERY_710_MODE=ca" >> $GITHUB_ENV
-          elif [[ ${{ github.event.inputs.target }} == *"MI"* ]] || [[ ${{ github.event.inputs.target }} == *"thelist-mi.710labs.com"* ]]; then
+          elif [ "${{ github.event.inputs.target }}" == *"MI"* ] || [ "${{ github.event.inputs.target }}" == *"thelist-mi.710labs.com"* ]; then
             echo "ARTILLERY_710_MODE=mi" >> $GITHUB_ENV
-          elif [[ ${{ github.event.inputs.target }} == *"CO"* ]] || [[ ${{ github.event.inputs.target }} == *"thelist-co.710labs.com"* ]]; then
+          elif [ "${{ github.event.inputs.target }}" == *"CO"* ] || [ "${{ github.event.inputs.target }}" == *"thelist-co.710labs.com"* ]; then
             echo "ARTILLERY_710_MODE=co" >> $GITHUB_ENV
           else
             # Set a default value if none of the conditions match
