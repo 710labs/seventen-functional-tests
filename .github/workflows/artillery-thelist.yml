@@ -38,7 +38,7 @@ jobs:
 
       - name: Set environment variables based on inputs
         run: |
-          echo "ARTILLERY_TARGET=${{ github.event.inputs.target}} >> $GITHUB_ENV
+          echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
           echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
 
