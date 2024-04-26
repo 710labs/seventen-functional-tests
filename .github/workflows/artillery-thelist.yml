@@ -38,9 +38,9 @@ jobs:
 
       - name: Set environment variables based on inputs
         run: |
-          echo "ARTILLERY_TARGET=$INPUT_TARGET" >> $GITHUB_ENV
-          echo "ARTILLERY_VIRTUAL_USERS=${{ env.INPUT_VIRTUAL_USERS || '1' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_DURATION=$INPUT_DURATION" >> $GITHUB_ENV
+          echo "ARTILLERY_TARGET=${{ github.event.inputs.target}} >> $GITHUB_ENV
+          echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
 
           # Set ARTILLERY_710_MODE based on INPUT.TARGET
           if [[ $INPUT_TARGET == *"CA"* ]] || [[ $INPUT_TARGET == *"thelist.710labs.com"* ]]; then
