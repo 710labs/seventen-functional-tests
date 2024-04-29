@@ -4,7 +4,7 @@ on:
     inputs:
       target:
         type: choice
-        description: 'Environment'
+        description: 'Url'
         required: true
         options:
           - https://thelist-dev.710labs.com
@@ -12,6 +12,14 @@ on:
           - https://thelist-mi.710labs.com
           - https://thelist-co.710labs.com
           - https://thelist.710labs.com
+      env:
+        type: choice
+        description: 'Environment'
+        required: true
+        options:
+          - dev
+          - stage
+          - prod
       mode:
         type: choice
         description: 'Mode'
@@ -31,6 +39,7 @@ on:
 jobs:
   artillery:
     runs-on: ubuntu-latest
+    environment: "gdfsgfd"
 
     permissions:
       contents: read # needed so that checkout of repository can happen
@@ -43,6 +52,7 @@ jobs:
       - name: Set environment variables based on inputs
         run: |
           echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
+          echo "ARTILLERY_ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
           echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
           echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY }}" >> $GITHUB_ENV
@@ -51,7 +61,7 @@ jobs:
       - name: Execute load tests on AWS (us-east-1 region)
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region us-east-1 --count 1 load/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ github.event.inputs.virtual_users }}VU | ${{ github.event.inputs.mode }}seconds,env:${{ github.event.inputs.target }}-${{ github.event.inputs.mode }}"
+          command: run-fargate --region us-east-1 --count 1 load/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ github.event.inputs.virtual_users }}VU | ${{ github.event.inputs.duration }}seconds,env:${{ github.event.inputs.env }}-${{ github.event.inputs.mode }}"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
