@@ -1,5 +1,8 @@
 config:
   target: 'https://thelist-stage.710labs.com'
+  includeFiles:
+    - CA-DL.jpg
+    - Medical-Card.png
   phases:
     - duration: 900
       arrivalRate: 1
