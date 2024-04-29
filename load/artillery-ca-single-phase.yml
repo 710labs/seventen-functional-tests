@@ -1,10 +1,10 @@
 config:
-  target: '{{ $env.ARTILLERY_TARGET }}'
+  target: 'https://thelist-stage.710labs.com'
   phases:
-    - duration: '{{ $env.ARTILLERY_DURATION }}'
+    - duration: 900
       arrivalRate: 1
-      maxVusers: '{{ $env.ARTILLERY_VIRTUAL_USERS }}'
-      name: '{{ $env.ARTILLERY_VIRTUAL_USERS }} VU | {{ $env.ARTILLERY_DURATION }} seconds | {{ $env.ARTILLERY_TARGET }}'
+      maxVusers: 10
+      name: '10 VU | 15 min | https://thelist-stage.710labs.com'
   engines:
     playwright:
       trace: true
