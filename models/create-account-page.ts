@@ -40,7 +40,7 @@ export class CreateAccountPage {
 	//svntn_core_pxp_month
 
 	constructor(page: Page, apiContext: APIRequestContext) {
-		; (this.page = page),
+		;(this.page = page),
 			(this.apiContext = apiContext),
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
@@ -94,7 +94,7 @@ export class CreateAccountPage {
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90210',
 		state: string = 'CA',
 	) {
-		await test.step('Verify Layout', async () => { })
+		await test.step('Verify Layout', async () => {})
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
@@ -504,6 +504,12 @@ export class CreateAccountPage {
 				await driversLicenseChooser.setFiles('CA-DL.jpg')
 				await this.page.waitForTimeout(5000)
 				await driversLicenseChooser.page()
+
+				await test.step('Enter Drivers License Exp', async () => {
+					await this.driversLicenseExpMonth.selectOption('12')
+					await this.driversLicenseExpDay.selectOption('16')
+					await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+				})
 			})
 		}
 
@@ -555,7 +561,7 @@ export class CreateAccountPage {
 		address: string = '933 Alpine Ave, Boulder, CO, 80304',
 		state: string = 'CO',
 	) {
-		await test.step('Verify Layout', async () => { })
+		await test.step('Verify Layout', async () => {})
 
 		await test.step('Click Register Link', async () => {
 			await this.page.click('text=create an account')
