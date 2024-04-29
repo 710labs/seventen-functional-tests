@@ -250,7 +250,7 @@ async function CA(page, vuContext, events, test) {
 						dlUploadButton.click(),
 					])
 					await page.waitForTimeout(5000)
-					await driversLicenseChooser.setFiles('artillery/CA-DL.jpg')
+					await driversLicenseChooser.setFiles('CA-DL.jpg')
 					await page.waitForTimeout(5000)
 				})
 				await step('Enter DL Exp', async () => {
@@ -283,7 +283,7 @@ async function CA(page, vuContext, events, test) {
 							medCardUploadButton.click(),
 						])
 						await page.waitForTimeout(5000)
-						await medicalCardChooser.setFiles('artillery/Medical-Card.png')
+						await medicalCardChooser.setFiles('Medical-Card.png')
 						await page.waitForTimeout(5000)
 					})
 					await step('Enter Medical Card Exp', async () => {
