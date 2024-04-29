@@ -62,7 +62,6 @@ jobs:
         uses: artilleryio/action-cli@v1
         with:
           command: run-fargate --region us-east-1 --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ github.event.inputs.virtual_users }}VU | ${{ github.event.inputs.duration }}seconds,env:${{ github.event.inputs.env }}-${{ github.event.inputs.mode }}"
-          working-directory: ./artillery
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
