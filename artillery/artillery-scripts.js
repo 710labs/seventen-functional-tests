@@ -363,6 +363,8 @@ async function CA(page, vuContext, events, test) {
 				const daySlot = await daySlots.nth(randomIndex)
 
 				await daySlot.click()
+
+				await page.waitForTimeout(5000)
 			})
 			await step('Select Slot Time', async () => {
 				const timeSlots = page.locator('#svntnAcuityTimeChoices label.acuityChoice')
