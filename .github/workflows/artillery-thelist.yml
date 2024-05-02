@@ -39,7 +39,7 @@ on:
 jobs:
   artillery:
     runs-on: ubuntu-latest
-    environment: "gdfsgfd"
+    environment: 'gdfsgfd'
 
     permissions:
       contents: read # needed so that checkout of repository can happen
@@ -61,7 +61,7 @@ jobs:
       - name: Execute load tests on AWS (us-east-1 region)
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region us-east-1 --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags "name:${{ github.event.inputs.virtual_users }}VU | ${{ github.event.inputs.duration }}seconds,env:${{ github.event.inputs.env }}-${{ github.event.inputs.mode }}"
+          command: run-fargate --region us-east-1 --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags "name:10VU | 15 min | stage-ca"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
