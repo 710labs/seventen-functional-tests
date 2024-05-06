@@ -6,8 +6,8 @@ config:
   phases:
     - duration: 900
       arrivalRate: 1
-      maxVusers: 30
-      name: '30 VU | 15 min | https://thelist-stage.710labs.com'
+      maxVusers: 3
+      name: '10 VU | 15 min | https://thelist-stage.710labs.com'
   engines:
     playwright:
       trace: true
