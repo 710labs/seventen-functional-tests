@@ -23,7 +23,12 @@ export class ShopPage {
 		return Math.random() * (2 - -2 + -2)
 	}
 
-	async addProductsToCart(itemCount: number, mobile = false, fulfillment = 'Delivery') {
+	async addProductsToCart(
+		itemCount: number,
+		mobile = false,
+		fulfillment = 'Delivery',
+		type = 'rec',
+	) {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
@@ -40,9 +45,21 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
-			await this.page.waitForSelector('[aria-label*="Add to cart:"]')
-			await this.page.waitForTimeout(5000)
-			const addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
+			var addToCartButtons
+
+			if (type === 'Recreational') {
+				await this.page.waitForSelector(
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+				)
+				await this.page.waitForTimeout(5000)
+				addToCartButtons = await this.page.locator(
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+				)
+			} else {
+				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
+				await this.page.waitForTimeout(5000)
+				addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
+			}
 
 			for (let i = 0; i < itemCount; i++) {
 				await expect(addToCartButtons.nth(i)).toBeVisible()
@@ -54,7 +71,10 @@ export class ShopPage {
 			if (this.workerInfo.project.name === 'Mobile Chrome') {
 				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
 			} else {
-				if (process.env.BASE_URL === 'https://thelist.theflowery.co/' || process.env.BASE_URL === 'https://thelist-co.710labs.com/') {
+				if (
+					process.env.BASE_URL === 'https://thelist.theflowery.co/' ||
+					process.env.BASE_URL === 'https://thelist-co.710labs.com/'
+				) {
 					await this.page
 						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
 						.first()
@@ -116,7 +136,12 @@ export class ShopPage {
 		}
 	}
 
-	async addProductsToCartPickup(itemCount: number, mobile = false, fulfillment = 'Pickup') {
+	async addProductsToCartPickup(
+		itemCount: number,
+		mobile = false,
+		fulfillment = 'Pickup',
+		type = 'Recreational',
+	) {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
 			await this.page.goto('/')
@@ -133,10 +158,21 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
-			await this.page.waitForSelector('[aria-label*="Add to cart:"]')
-			await this.page.waitForTimeout(5000)
-			const addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
+			var addToCartButtons
 
+			if (type === 'Recreational') {
+				await this.page.waitForSelector(
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+				)
+				await this.page.waitForTimeout(5000)
+				addToCartButtons = await this.page.locator(
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+				)
+			} else {
+				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
+				await this.page.waitForTimeout(5000)
+				addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
+			}
 			for (let i = 0; i < itemCount; i++) {
 				await expect(
 					addToCartButtons.nth(i),

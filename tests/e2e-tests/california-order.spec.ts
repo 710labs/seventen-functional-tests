@@ -41,7 +41,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 	})
@@ -63,7 +63,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
@@ -88,7 +88,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 	})
@@ -113,7 +113,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})
