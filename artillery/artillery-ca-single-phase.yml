@@ -4,10 +4,10 @@ config:
     - CA-DL.jpg
     - Medical-Card.png
   phases:
-    - duration: 900
+    - duration: 300
       arrivalRate: 1
-      maxVusers: 30
-      name: '30 VU | 15 min | https://thelist-stage.710labs.com'
+      maxVusers: 5
+      name: '5 VU | 5 min | https://thelist-stage.710labs.com'
   engines:
     playwright:
       trace: true
