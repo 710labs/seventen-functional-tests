@@ -7,7 +7,6 @@ config:
     - duration: 300
       arrivalRate: 1
       maxVusers: 5
-      name: '5 VU | 5 min | https://thelist-stage.710labs.com'
   engines:
     playwright:
       trace: true
