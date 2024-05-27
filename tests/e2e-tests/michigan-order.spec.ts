@@ -56,16 +56,9 @@ test.describe('MI Order Tests', () => {
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
 			)
 		})
-		await test.step(`Enter Fulfillment Method`, async () => {
-			await page.locator('#fulfillmentElement').getByText('Pickup', { exact: true }).click()
-			await page.getByRole('button', { name: 'Submit' }).click()
-		})
 
-		await test.step(`Add Products`, async () => {
-			var order = await faker.datatype.number({ min: 0, max: orders.length - 1 })
-			await test.step(`Load Cart - Order #${order}`, async () => {
-				await shopPage.addProductListToCart(orders[order])
-			})
+		await test.step(`Load Shopping Cart`, async () => {
+			await shopPage.addProductsToCart(6, false, 'Delivery', 'Recreational')
 		})
 
 		await test.step(`Navigate to Cart`, async () => {
