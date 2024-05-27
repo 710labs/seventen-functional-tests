@@ -28,7 +28,8 @@ export class AgeGatePage {
 
 			if (
 				this.page.url().includes('thelist.theflowery.co') ||
-				this.page.url().includes('thelist-co.710labs.com')
+				this.page.url().includes('thelist-co.710labs.com') ||
+				this.page.url().includes('thelist-mi.710labs.com')
 			) {
 				await this.page.click('text=I Qualify')
 			} else {
