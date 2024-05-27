@@ -50,7 +50,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
-			await ageGatePage.passAgeGate('FL')
+			await ageGatePage.passAgeGate()
 		})
 
 		await test.step('Enter List Password', async () => {
