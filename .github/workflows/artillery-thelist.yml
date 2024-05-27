@@ -58,10 +58,19 @@ jobs:
           echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY }}" >> $GITHUB_ENV
           echo "ARTILLERY_710_MODE=${{ github.event.inputs.mode }}" >> $GITHUB_ENV
 
+      - name: Strip quotes from environment variables
+        run: |
+          ARTILLERY_TARGET=$(echo $ARTILLERY_TARGET | sed 's/"//g')
+          ARTILLERY_VIRTUAL_USERS=$(echo $ARTILLERY_VIRTUAL_USERS | sed 's/"//g')
+          ARTILLERY_DURATION=$(echo $ARTILLERY_DURATION | sed 's/"//g')
+          echo "ARTILLERY_TARGET=$ARTILLERY_TARGET" >> $GITHUB_ENV
+          echo "ARTILLERY_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS" >> $GITHUB_ENV
+          echo "ARTILLERY_DURATION=$ARTILLERY_DURATION" >> $GITHUB_ENV
+
       - name: Execute load tests on AWS (us-east-1 region)
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region us-east-1 --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --overrides "{"config":{"phases":[{"name":"${{ github.event.inputs.virtual_users }} VU | ${{ github.event.inputs.duration }} seconds | ${{ github.event.inputs.target }}","duration":${{ github.event.inputs.duration }},"arrivalRate":1,"maxVusers":${{ github.event.inputs.virtual_users }}]}}" --tags "name:${{ github.event.inputs.virtual_users }} VU | ${{ github.event.inputs.duration }} seconds | ${{ github.event.inputs.target }}"
+          command: run-fargate --region us-east-1 --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --overrides "{"config":{"phases":[{"duration":${{ github.event.inputs.duration }},"arrivalRate":1,"maxVusers":${{ github.event.inputs.virtual_users }}]}}" --tags "name:1 VU | 60 seconds | https://thelist-dev.710labs.com"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
