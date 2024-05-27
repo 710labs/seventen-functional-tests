@@ -325,9 +325,21 @@ async function CA(page, vuContext, events, test) {
 	await step('Create Cart', async () => {
 		await step('Add Items To Cart', async () => {
 			await page.waitForTimeout(5000)
-			const addToCartButtons = await page.locator(
-				'a.button.product_type_simple.add_to_cart_button.ajax_add_to_cart',
-			)
+			var addToCartButtons
+
+			if (usageType === 'Recreational') {
+				await page.waitForSelector(
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+				)
+				await page.waitForTimeout(5000)
+				addToCartButtons = await page.locator(
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+				)
+			} else {
+				await page.waitForSelector('[aria-label*="Add to cart:"]')
+				await page.waitForTimeout(5000)
+				addToCartButtons = await page.locator('[aria-label*="Add to cart:"]')
+			}
 
 			const indices = Array.from({ length: itemCount }, (_, index) => index)
 
