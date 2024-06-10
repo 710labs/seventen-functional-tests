@@ -23,12 +23,6 @@ test.describe('Acuity Automation', () => {
 			await page.waitForTimeout(5000)
 		})
 	})
-	test.afterEach(async ({ page }, testInfo) => {
-		if (testInfo.status !== testInfo.expectedStatus) {
-			//Parse test title and add entry to failures.csv
-			console.log(testInfo.title)
-		}
-	})
 
 	for (let index = 0; index < slots.length; index++) {
 		test(`Add Acuity Slots: ${slots[index].Partner_region_zone};${slots[index].AppointmentID};${slots[index].URL};${slots[index].DateOffered};${slots[index].CalendarName};${slots[index].DateOfferred};${slots[index].TimeOffered};${slots[index].LinkText};${slots[index].Availability} @helper`, async ({ }, workerInfo) => {
