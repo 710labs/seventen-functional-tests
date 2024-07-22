@@ -64,10 +64,9 @@ export class ShopPage {
 			for (let i = 0; i < itemCount; i++) {
 				await expect(addToCartButtons.nth(i)).toBeVisible()
 				await addToCartButtons.nth(i).click({ force: true })
-				await expect(
-					this.page.locator('text="has been added to your"'),
-					'Expect Product Added to Cart Toast Message to Be Visible',
-				).toBeVisible()
+				await this.page.waitForSelector('text="has been added to your"');
+
+
 				await this.page.waitForTimeout(1500)
 			}
 			await this.page.keyboard.press('PageUp')
@@ -183,10 +182,7 @@ export class ShopPage {
 					'Product Add to Cart Button should be Visible and Active',
 				).toBeVisible()
 				await addToCartButtons.nth(i).click({ force: true })
-				await expect(
-					this.page.locator('text="has been added to your"'),
-					'Expect Product Added to Cart Toast Message to Be Visible',
-				).toBeVisible()
+				await this.page.waitForSelector('text="has been added to your"');
 
 				await this.page.waitForTimeout(1500)
 			}
