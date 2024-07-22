@@ -49,11 +49,11 @@ export class ShopPage {
 
 			if (type === 'Recreational') {
 				await this.page.waitForSelector(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
 				)
 				await this.page.waitForTimeout(5000)
 				addToCartButtons = await this.page.locator(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
 				)
 			} else {
 				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
@@ -64,6 +64,10 @@ export class ShopPage {
 			for (let i = 0; i < itemCount; i++) {
 				await expect(addToCartButtons.nth(i)).toBeVisible()
 				await addToCartButtons.nth(i).click({ force: true })
+				await expect(
+					this.page.locator('text="has been added to your"'),
+					'Expect Product Added to Cart Toast Message to Be Visible',
+				).toBeVisible()
 				await this.page.waitForTimeout(1500)
 			}
 			await this.page.keyboard.press('PageUp')
@@ -162,11 +166,11 @@ export class ShopPage {
 
 			if (type === 'Recreational') {
 				await this.page.waitForSelector(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
 				)
 				await this.page.waitForTimeout(5000)
 				addToCartButtons = await this.page.locator(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
 				)
 			} else {
 				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
@@ -176,9 +180,14 @@ export class ShopPage {
 			for (let i = 0; i < itemCount; i++) {
 				await expect(
 					addToCartButtons.nth(i),
-					'Product Inventory is Low for this item. Please add more. ',
+					'Product Add to Cart Button should be Visible and Active',
 				).toBeVisible()
 				await addToCartButtons.nth(i).click({ force: true })
+				await expect(
+					this.page.locator('text="has been added to your"'),
+					'Expect Product Added to Cart Toast Message to Be Visible',
+				).toBeVisible()
+
 				await this.page.waitForTimeout(1500)
 			}
 			await this.page.keyboard.press('PageUp')
