@@ -57,7 +57,7 @@ test.describe('MI Order Tests', () => {
 		})
 
 		await test.step(`Load Shopping Cart`, async () => {
-			await shopPage.addProductsToCart(6, false, 'Delivery', 'Recreational')
+			await shopPage.addProductsToCart(6, false, 'Pickup', 'Recreational')
 		})
 
 		await test.step(`Navigate to Cart`, async () => {
@@ -122,7 +122,7 @@ test.describe('MI Order Tests', () => {
 			)
 		})
 		await test.step(`Load Shopping Cart`, async () => {
-			await shopPage.addProductsToCart(6, false, 'Delivery', 'Recreational')
+			await shopPage.addProductsToCart(6, false, 'Pickup', 'Recreational')
 		})
 
 		await test.step(`Navigate to Cart`, async () => {
