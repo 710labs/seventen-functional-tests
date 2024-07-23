@@ -159,7 +159,7 @@ export class ShopPage {
 			products = await this.page.locator('li.product').filter({ hasNotText: 'Sold Out' })
 
 			if (type === 'Recreational') {
-				products = await products.filter({ hasNot: 'span.medOnly' })
+				products = await products.filter({ hasNot: this.page.locator('span.medOnly') })
 			}
 
 			for (let i = 0; i < itemCount; i++) {
