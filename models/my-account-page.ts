@@ -19,6 +19,7 @@ export class MyAccountPage {
 		this.page = page
 		this.ordersLink = page.locator('text=orders')
 		this.addressesLink = page.locator('text=Address Book')
+
 		this.accountDetailsLink = page.locator('a:has-text("Account details")')
 		this.cardsLink = page.locator('.woocommerce-MyAccount-navigation-link--id-med-card')
 		this.logoutLink = page.locator('text=Sign Out')
@@ -60,6 +61,17 @@ export class MyAccountPage {
 			await this.city.fill(city)
 			await this.zipCode.fill(zipCode)
 			await this.page.click('button:has-text("Save address")')
+		})
+	}
+
+	async addMedicalExp() {
+		await test.step('Update Customer Address', async () => {
+			const expYear = new Date().getFullYear() + 1
+			await this.page.goto('/my-account/eligibility')
+			await this.page.locator('#svntn_core_mxp_month').selectOption('01')
+			await this.page.locator('#svntn_core_mxp_day').selectOption('16')
+			await this.page.locator('#svntn_core_mxp_year').selectOption(`${expYear}`)
+			await this.page.waitForTimeout(3000)
 		})
 	}
 
