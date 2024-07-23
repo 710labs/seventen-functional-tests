@@ -65,7 +65,7 @@ export class MyAccountPage {
 	}
 
 	async addMedicalExp() {
-		await test.step('Update Customer Address', async () => {
+		await test.step('Update Med Card Expiration', async () => {
 			const expYear = new Date().getFullYear() + 1
 			await this.page.goto('/my-account/eligibility')
 			await this.page.locator('#svntn_core_mxp_month').selectOption('01')
