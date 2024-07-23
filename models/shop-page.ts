@@ -47,18 +47,20 @@ export class ShopPage {
 			itemCount = itemCount + (await this.randomizeCartItems())
 			var products
 			await this.page.waitForSelector('.add_to_cart_button')
-			products = await this.page.locator('li.product')
+			products = await this.page.locator('li.product').filter({ hasNotText: 'Sold Out' })
 
 			if (type === 'Recreational') {
-				products = products.filter({ hasNot: 'span.medOnly' })
+				products = products.filter({ hasNot: this.page.locator('span.medOnly') })
 			}
 
 			for (let i = 0; i < itemCount; i++) {
-				await expect(products.nth(i)).toBeVisible()
-				var productCard = products.nth(i)
-				var addToCartButton = productCard.locator('a.add_to_cart_button')
-				await addToCartButton.click({ force: true })
-				await this.page.waitForTimeout(1500)
+				await test.step(`Add Products # ${i + 1}`, async () => {
+					await expect(products.nth(i)).toBeVisible()
+					var productCard = products.nth(i)
+					var addToCartButton = productCard.locator('a.add_to_cart_button')
+					await addToCartButton.click({ force: true })
+					await this.page.waitForTimeout(1500)
+				})
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
@@ -154,18 +156,20 @@ export class ShopPage {
 			itemCount = itemCount + (await this.randomizeCartItems())
 			var products
 			await this.page.waitForSelector('.add_to_cart_button')
-			products = await this.page.locator('li.product')
+			products = await this.page.locator('li.product').filter({ hasNotText: 'Sold Out' })
 
 			if (type === 'Recreational') {
 				products = await products.filter({ hasNot: 'span.medOnly' })
 			}
 
 			for (let i = 0; i < itemCount; i++) {
-				await expect(products.nth(i)).toBeVisible()
-				var productCard = products.nth(i)
-				var addToCartButton = await productCard.locator('a.add_to_cart_button')
-				await addToCartButton.click({ force: true })
-				await this.page.waitForTimeout(1500)
+				await test.step(`Add Products # ${i + 1}`, async () => {
+					await expect(products.nth(i)).toBeVisible()
+					var productCard = products.nth(i)
+					var addToCartButton = productCard.locator('a.add_to_cart_button')
+					await addToCartButton.click({ force: true })
+					await this.page.waitForTimeout(1500)
+				})
 			}
 
 			await this.page.keyboard.press('PageUp')
