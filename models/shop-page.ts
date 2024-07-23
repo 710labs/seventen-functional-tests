@@ -45,29 +45,19 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
-			var addToCartButtons
+			var products
 			await this.page.waitForSelector('.add_to_cart_button')
+			products = await this.page.locator('li.product')
 
 			if (type === 'Recreational') {
-				await this.page.waitForSelector(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
-				)
-				await this.page.waitForTimeout(5000)
-				addToCartButtons = await this.page.$$eval('.add_to_cart_button', buttons =>
-					buttons.filter(
-						button =>
-							!button.closest('li').querySelector('.woocommerce-loop-product__title .medOnly'),
-					),
-				)
-			} else {
-				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
-				await this.page.waitForTimeout(5000)
-				addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
+				products = products.filter({ hasNot: 'span.medOnly' })
 			}
 
 			for (let i = 0; i < itemCount; i++) {
-				await expect(addToCartButtons.nth(i)).toBeVisible()
-				await addToCartButtons.nth(i).click({ force: true })
+				await expect(products.nth(i)).toBeVisible()
+				var productCard = products.nth(i)
+				var addToCartButton = productCard.locator('a.add_to_cart_button')
+				await addToCartButton.click({ force: true })
 				await this.page.waitForTimeout(1500)
 			}
 			await this.page.keyboard.press('PageUp')
@@ -162,30 +152,22 @@ export class ShopPage {
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
-			var addToCartButtons
+			var products
 			await this.page.waitForSelector('.add_to_cart_button')
+			products = await this.page.locator('li.product')
 
 			if (type === 'Recreational') {
-				await this.page.waitForTimeout(5000)
-				addToCartButtons = await this.page.$$eval('.add_to_cart_button', buttons =>
-					buttons.filter(
-						button =>
-							!button.closest('li').querySelector('.woocommerce-loop-product__title .medOnly'),
-					),
-				)
-			} else {
-				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
-				await this.page.waitForTimeout(5000)
-				addToCartButtons = await this.page.locator('[aria-label*="Add to cart:"]')
+				products = await products.filter({ hasNot: 'span.medOnly' })
 			}
+
 			for (let i = 0; i < itemCount; i++) {
-				await expect(
-					addToCartButtons.nth(i),
-					'Product Add to Cart Button should be Visible and Active',
-				).toBeVisible()
-				await addToCartButtons.nth(i).click({ force: true })
+				await expect(products.nth(i)).toBeVisible()
+				var productCard = products.nth(i)
+				var addToCartButton = await productCard.locator('a.add_to_cart_button')
+				await addToCartButton.click({ force: true })
 				await this.page.waitForTimeout(1500)
 			}
+
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
 			if (this.workerInfo.project.name === 'Mobile Chrome') {
