@@ -90,6 +90,7 @@ test.describe('CO Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
+		await myAccountPage.addMedicalExp()
 		await shopPage.addProductsToCartPickup(6, mobile)
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 0)
@@ -110,7 +111,12 @@ test.describe('CO Order Tests', () => {
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.createColoradoCustomer(`test+${uuidv4()}@710labs-test.com`, 'test1234!', '80304', 0)
+		await createAccountPage.createColoradoCustomer(
+			`test+${uuidv4()}@710labs-test.com`,
+			'test1234!',
+			'80304',
+			0,
+		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addColoradoAddress()
 		}

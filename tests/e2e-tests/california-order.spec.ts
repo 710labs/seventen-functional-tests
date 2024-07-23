@@ -41,7 +41,9 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
+		await myAccountPage.addMedicalExp()
+		
+		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Medical')
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 1)
 	})
@@ -63,7 +65,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
+		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Medical')
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1)
 	})
@@ -88,7 +90,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile, "Delivery", "Recreational")
+		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Recreational')
 		var cartTotals = await cartPage.verifyCart(`94020`)
 		await checkOutPage.confirmCheckout('94020', cartTotals, 0)
 	})
@@ -105,7 +107,7 @@ test.describe('CA Order Tests', () => {
 		const checkOutPage = new CheckoutPage(page, apiContext)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
-		const zipCode = '90210';
+		const zipCode = '90210'
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
@@ -113,7 +115,7 @@ test.describe('CA Order Tests', () => {
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress()
 		}
-		await shopPage.addProductsToCart(6, mobile, "Delivery", "Medical")
+		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Medical')
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 	})

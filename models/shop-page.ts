@@ -46,14 +46,18 @@ export class ShopPage {
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
 			var addToCartButtons
+			await this.page.waitForSelector('.add_to_cart_button')
 
 			if (type === 'Recreational') {
 				await this.page.waitForSelector(
 					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
 				)
 				await this.page.waitForTimeout(5000)
-				addToCartButtons = await this.page.locator(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
+				addToCartButtons = await this.page.$$eval('.add_to_cart_button', buttons =>
+					buttons.filter(
+						button =>
+							!button.closest('li').querySelector('.woocommerce-loop-product__title .medOnly'),
+					),
 				)
 			} else {
 				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
@@ -159,14 +163,15 @@ export class ShopPage {
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
 			var addToCartButtons
+			await this.page.waitForSelector('.add_to_cart_button')
 
 			if (type === 'Recreational') {
-				await this.page.waitForSelector(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
-				)
 				await this.page.waitForTimeout(5000)
-				addToCartButtons = await this.page.locator(
-					'//li[contains(@class, "product") and not(.//h2[contains(@class, "woocommerce-loop-product__title")]/span[contains(@class, "medOnly")])]//a[contains(@aria-label, "Add to cart:")]',
+				addToCartButtons = await this.page.$$eval('.add_to_cart_button', buttons =>
+					buttons.filter(
+						button =>
+							!button.closest('li').querySelector('.woocommerce-loop-product__title .medOnly'),
+					),
 				)
 			} else {
 				await this.page.waitForSelector('[aria-label*="Add to cart:"]')
