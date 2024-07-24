@@ -10,7 +10,7 @@ import { MyAccountPage } from '../../models/my-account-page'
 import zipcodes from '../../utils/zipcodes-fl.json'
 
 test(
-	`Basic Order - New Customer`,
+	`Basic Order - New Customer - Medical`,
 	{ tag: ['@medical', '@FL'] },
 	async ({ page, browserName }, workerInfo) => {
 		const apiContext = await request.newContext({
