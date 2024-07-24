@@ -21,7 +21,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 		})
 	})
 	test(
-		`Basic Order - Existing Customer`,
+		`Basic Order - Existing Customer - Medical`,
 		{ tag: ['@medical'] },
 		async ({ page, browserName }, workerInfo) => {
 			const ageGatePage = new AgeGatePage(page)
@@ -49,7 +49,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 		},
 	)
 	test(
-		`Basic Order - New Customer`,
+		`Basic Order - New Customer - Medical`,
 		{ tag: ['@medical'] },
 		async ({ page, browserName }, workerInfo) => {
 			const zipCode = '94020'
@@ -75,7 +75,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 		},
 	)
 	test(
-		`Basic Order - Existing Customer`,
+		`Basic Order - Existing Customer - Recreational`,
 		{ tag: ['@recreational'] },
 		async ({ page, browserName }, workerInfo) => {
 			const ageGatePage = new AgeGatePage(page)
@@ -101,7 +101,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 		},
 	)
 	test(
-		`Basic Order - New Customer`,
+		`Basic Order - New Customer - Recreational`,
 		{ tag: ['@recreational'] },
 		async ({ page: page, browserName }, workerInfo) => {
 			const ageGatePage = new AgeGatePage(page)

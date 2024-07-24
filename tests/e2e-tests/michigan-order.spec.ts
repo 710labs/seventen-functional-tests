@@ -13,7 +13,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 	test.describe.configure({ mode: 'parallel' })
 
 	test(
-		`Basic Order - New Customer`,
+		`Basic Order - New Customer - In State - Recreational`,
 		{ tag: ['@recreational', '@InState'] },
 		async ({ page, browserName }, workerInfo) => {
 			const address = '123 Eight Mile Rd MI'
@@ -75,7 +75,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 	)
 
 	test(
-		`Basic Order - New Customer`,
+		`Basic Order - New Customer - Out Of State - Recreational `,
 		{ tag: ['@recreational', '@OutOfState'] },
 		async ({ page, browserName, orders }, workerInfo) => {
 			const address = '123 Broadway New York'
