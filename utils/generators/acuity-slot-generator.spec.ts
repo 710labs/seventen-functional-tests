@@ -5,7 +5,6 @@ const { Parser } = require('json2csv')
 
 test.describe('Acuity Automation', () => {
 	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
-	test.describe.configure({ mode: 'parallel' })
 	let page: Page
 	test.beforeAll(async ({ browser }) => {
 		//remove existing test failures csv
@@ -17,15 +16,13 @@ test.describe('Acuity Automation', () => {
 			await page.locator('[placeholder="name\\@example\\.com"]').fill(`${process.env.ACUITY_USER}`)
 			await page.locator('[placeholder="Password"]').clear()
 			await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
-			await Promise.all([
-				page.locator('[data-test="login-button"]').click(),
-			])
+			await Promise.all([page.locator('[data-test="login-button"]').click()])
 			await page.waitForTimeout(5000)
 		})
 	})
 
 	for (let index = 0; index < slots.length; index++) {
-		test(`Add Acuity Slots: ${slots[index].Partner_region_zone};${slots[index].AppointmentID};${slots[index].URL};${slots[index].DateOffered};${slots[index].CalendarName};${slots[index].DateOfferred};${slots[index].TimeOffered};${slots[index].LinkText};${slots[index].Availability} @helper`, async ({ }, workerInfo) => {
+		test(`Add Acuity Slots: ${slots[index].Partner_region_zone};${slots[index].AppointmentID};${slots[index].URL};${slots[index].DateOffered};${slots[index].CalendarName};${slots[index].DateOfferred};${slots[index].TimeOffered};${slots[index].LinkText};${slots[index].Availability} @helper`, async ({}, workerInfo) => {
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 			await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 				//Navigate to Zone
@@ -88,10 +85,7 @@ test.describe('Acuity Automation', () => {
 					.fill(slots[index].Availability)
 
 				// Save Slot
-				await Promise.all([
-					page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-					page.frameLocator('[data-test="scheduling"]').locator('text=Save Changes').click(),
-				])
+				await page.frameLocator('[data-test="scheduling"]').locator('text=Save Changes').click()
 			})
 		})
 	}
