@@ -62,7 +62,6 @@
 		"fs": "^0.0.1-security",
 		"node-fetch": "^3.2.0",
 		"path": "^0.12.7",
-		"playwright": "^1.32.0",
 		"playwright-slack-report": "^1.1.25",
 		"uuid": "^8.3.2"
 	},
