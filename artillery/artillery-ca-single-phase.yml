@@ -4,9 +4,9 @@ config:
     - CA-DL.jpg
     - Medical-Card.png
   phases:
-    - duration: 300
+    - duration: 900
       arrivalRate: 1
-      maxVusers: 5
+      maxVusers: 10
   engines:
     playwright:
       trace: true
