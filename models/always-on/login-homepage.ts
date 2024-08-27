@@ -85,7 +85,9 @@ export class HomePageLogin {
 			now.getDate(),
 		).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(
 			now.getMinutes(),
-		).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`
+		).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}-${String(
+			now.getMilliseconds(),
+		).padStart(3, '0')}`
 
 		// enter a unique test email for test user
 		const newEmail = `test_auto_${timestamp}@test.com`
