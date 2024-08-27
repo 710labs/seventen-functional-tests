@@ -1,5 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayout from "./reporters/slack/slack-alert-layout"
+import generateCustomLayout from './reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 /* https://playwright.dev/docs/test-configuration */
@@ -23,10 +23,10 @@ const config: PlaywrightTestConfig = {
 			},
 		],
 		[
-			"./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+			'./node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
-				channels: ["tech-savagery-tests"], // provide one or more Slack channels
-				sendResults: "always", // "always" , "on-failure", "off"
+				channels: ['tech-savagery-tests'], // provide one or more Slack channels
+				sendResults: 'always', // "always" , "on-failure", "off"
 				layout: generateCustomLayout,
 				maxNumberOfFailuresToShow: 20,
 			},
@@ -40,6 +40,8 @@ const config: PlaywrightTestConfig = {
 			slowMo: 200,
 		},
 		trace: 'retain-on-failure',
+		screenshot: 'on',
+		video: 'on',
 	},
 	projects: [
 		{
