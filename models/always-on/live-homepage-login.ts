@@ -42,7 +42,7 @@ export class HomePageLogin {
 		this.createAccountButton = page.locator('button:has-text("Create Account")')
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 	}
-	async verifyShopLoadsBeforeSignIn(page) {
+	async verifyUserSignInModalAppears(page) {
 		await test.step('Verify the Homepage loads correctly', async () => {
 			//go to page
 			await page.goto('https://live-dev.710labs.com/')
@@ -125,13 +125,15 @@ export class HomePageLogin {
 		})
 	}
 	async verifyShopLoadsAfterSignIn(page) {
-		await this.userPopUpContainer.waitFor({ state: 'hidden' })
+		await test.step('Verify User Modal disspears and that shop page loads', async () => {
+			await this.userPopUpContainer.waitFor({ state: 'hidden' })
 
-		// // verify page title, logo, account and cart button are visible
-		await this.pageTitleSelector.waitFor({ state: 'visible' })
-		await expect(this.pageTitleSelector).toBeVisible()
-		await expect(this.accountButtonNav).toBeVisible()
-		await expect(this.cartButtonNav).toBeVisible()
+			// // verify page title, logo, account and cart button are visible
+			await this.pageTitleSelector.waitFor({ state: 'visible' })
+			await expect(this.pageTitleSelector).toBeVisible()
+			await expect(this.accountButtonNav).toBeVisible()
+			await expect(this.cartButtonNav).toBeVisible()
+		})
 	}
 }
 module.exports = { HomePageLogin }
