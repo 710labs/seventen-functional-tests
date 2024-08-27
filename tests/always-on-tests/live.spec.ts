@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { HomePageLogin } from '../../models/always-on/live-homepage-login.ts'
+import { HomePageLogin } from '../../models/always-on/login-homepage.ts'
 import { AccountPage } from '../../models/always-on/account-page.ts'
-import { HomePageCartActions } from '../../models/always-on/homepage-actions.ts'
+import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
 
 test.describe('Always On Tests', () => {
 	test.setTimeout(60000) // Set the timeout for all tests in this file
@@ -41,12 +41,26 @@ test.describe('Always On Tests', () => {
 		// verify that sign in modal appears again
 		await homePageLogin.verifyUserSignInModalAppears(page)
 	})
+	test('Add address for New User', async ({ page }) => {
+		const homePageLogin = new HomePageLogin(page)
+		const homePageActions = new HomePageActions(page)
+
+		// Verify that store homepage loads
+		await homePageLogin.verifyUserSignInModalAppears(page)
+		// register new user
+		await homePageLogin.registerNewUser(page)
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add adress
+		await homePageActions.enterAddress(page)
+		// verify that homepage loads again
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+	})
 	// test('Add Products to Cart', async ({ page }) => {
 	// 	const homePageLogin = new HomePageLogin(page)
 	// 	const homePageCartActions = new HomePageCartActions(page)
 
 	// 	// Verify that store homepage loads
-	// 	await homePageLogin.verifyShopLoadsBeforeSignIn(page)
+	// 	await homePageLogin.verifyUserSignInModalAppears(page)
 	// 	// log in existing user
 	// 	await homePageLogin.loginExistingUser(page)
 	// 	await homePageLogin.verifyShopLoadsAfterSignIn(page)
