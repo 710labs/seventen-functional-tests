@@ -55,15 +55,20 @@ test.describe('Always On Tests', () => {
 		// verify that homepage loads again
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 	})
-	// test('Add Products to Cart', async ({ page }) => {
-	// 	const homePageLogin = new HomePageLogin(page)
-	// 	const homePageCartActions = new HomePageCartActions(page)
+	test('Add Products to Cart - New User', async ({ page }) => {
+		const homePageLogin = new HomePageLogin(page)
+		const homePageActions = new HomePageActions(page)
 
-	// 	// Verify that store homepage loads
-	// 	await homePageLogin.verifyUserSignInModalAppears(page)
-	// 	// log in existing user
-	// 	await homePageLogin.loginExistingUser(page)
-	// 	await homePageLogin.verifyShopLoadsAfterSignIn(page)
-	// 	await homePageCartActions.addProductsToCart(4)
-	// })
+		// Verify that store homepage loads
+		await homePageLogin.verifyUserSignInModalAppears(page)
+		// register new user
+		await homePageLogin.registerNewUser(page)
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add adress
+		await homePageActions.enterAddress(page)
+		// verify that homepage loads again
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add products to cart
+		await homePageActions.addProductsToCart(page, 4)
+	})
 })
