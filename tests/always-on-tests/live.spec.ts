@@ -71,4 +71,21 @@ test.describe('Always On Tests', () => {
 		// add products to cart
 		await homePageActions.addProductsToCart(page, 4)
 	})
+	test('Checkout - New User', async ({ page }) => {
+		const homePageLogin = new HomePageLogin(page)
+		const homePageActions = new HomePageActions(page)
+
+		// Verify that store homepage loads
+		await homePageLogin.verifyUserSignInModalAppears(page)
+		// register new user
+		await homePageLogin.registerNewUser(page)
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add adress
+		await homePageActions.enterAddress(page)
+		// verify that homepage loads again
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add products to cart
+		await homePageActions.addProductsToCartUntilMinimumMet(page)
+		//await homePageActions.goToCheckout()
+	})
 })

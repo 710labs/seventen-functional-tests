@@ -17,7 +17,8 @@ export class HomePageActions {
 	readonly submitAddressButton: Locator
 	readonly cartDrawerContainer: Locator
 	readonly closeCartDrawerButton: Locator
-
+	readonly minimumNotMetLabel: Locator
+	readonly continueToCheckoutButton: Locator
 	constructor(page: Page) {
 		this.page = page
 		this.pageTitleSelector = page.locator('span.site-header-group')
@@ -33,6 +34,10 @@ export class HomePageActions {
 		this.closeCartDrawerButton = page.locator(
 			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
 		)
+		this.minimumNotMetLabel = page.locator(
+			'span.wpse-snacktoast-headline:has-text("Delivery minimum not met")',
+		)
+		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 	}
 	async enterAddress(page) {
 		await test.step('Click address button', async () => {
@@ -124,6 +129,73 @@ export class HomePageActions {
 			// Optionally, wait before adding the next product to account for any animations or delays
 			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
 		}
+	}
+
+	async addProductsToCartUntilMinimumMet(page) {
+		// Get all the products on the page
+		const products = await page.locator('ul.products li.product')
+
+		let i = 0
+		while (true) {
+			// Check if there are enough products to add
+			if (i >= (await products.count())) {
+				console.log(`Only ${await products.count()} products available on the page.`)
+				break
+			}
+
+			// Get the 'Add to Cart' button and product name for the current product
+			const product = products.nth(i)
+			const addToCartButton = product.locator('button.add_to_cart_button')
+			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+
+			// Click the 'Add to Cart' button
+			await addToCartButton.click()
+			await page.waitForTimeout(4000) // Adjust this timeout based on your app's behavior
+
+			// Wait for the cartDrawer to become visible
+			await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+			// Verify that the product was added to the cart by checking the cartDrawer
+			const cartItem = await page.locator(
+				`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
+			)
+			const isProductInCart = (await cartItem.count()) > 0
+
+			if (!isProductInCart) {
+				throw new Error(`Product "${productName}" was not found in the cart after being added.`)
+			}
+
+			console.log(`Product "${productName}" was successfully added to the cart.`)
+
+			// Check if the "Delivery minimum not met" banner is still visible
+			const isBannerVisible = await this.minimumNotMetLabel.isVisible()
+
+			if (!isBannerVisible) {
+				console.log('Minimum cart total met. Proceeding to checkout.')
+				//break out of loop to continue in the cart
+				break
+			}
+
+			// Close the cartDrawer
+			await this.closeCartDrawerButton.click()
+			// Wait for the cartDrawer to be hidden again
+			await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+			// Optionally, wait before adding the next product to account for any animations or delays
+			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
+
+			i++ // Increment to the next product
+		}
+
+		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
+		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+		await expect(this.continueToCheckoutButton).toBeVisible()
+		await this.continueToCheckoutButton.click()
+	}
+	async goToCheckout() {
+		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+		await expect(this.continueToCheckoutButton).toBeVisible()
+		await this.continueToCheckoutButton.click()
 	}
 }
 module.exports = { HomePageActions }
