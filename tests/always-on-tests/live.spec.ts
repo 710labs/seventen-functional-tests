@@ -24,7 +24,7 @@ test.describe('Always On Tests', () => {
 		// register new user
 		await homePageLogin.registerNewUser(page)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-		// add adress
+		// add adress for new user account
 		await homePageActions.enterAddress(page)
 		// verify that homepage loads again
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
@@ -67,18 +67,4 @@ test.describe('Always On Tests', () => {
 		// verify that sign in modal appears again
 		await homePageLogin.verifyUserSignInModalAppears(page)
 	})
-	// test('Add address for New User', async ({ page }) => {
-	// 	const homePageLogin = new HomePageLogin(page)
-	// 	const homePageActions = new HomePageActions(page)
-
-	// 	// Verify that store homepage loads
-	// 	await homePageLogin.verifyUserSignInModalAppears(page)
-	// 	// register new user
-	// 	await homePageLogin.registerNewUser(page)
-	// 	await homePageLogin.verifyShopLoadsAfterSignIn(page)
-	// 	// add adress
-	// 	await homePageActions.enterAddress(page)
-	// 	// verify that homepage loads again
-	// 	await homePageLogin.verifyShopLoadsAfterSignIn(page)
-	// })
 })
