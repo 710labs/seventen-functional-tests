@@ -44,8 +44,10 @@ export class HomePageLogin {
 	}
 	async verifyUserSignInModalAppears(page) {
 		await test.step('Verify the Homepage loads correctly', async () => {
+			const alwaysOnURL = process.env.ALWAYS_ON_URL || ''
+
 			//go to page
-			await page.goto('https://live-dev.710labs.com/')
+			await page.goto(alwaysOnURL)
 
 			// verify that email login/signup popup appears and that correct text displays
 			await this.userPopUpContainer.waitFor({ state: 'visible' })
