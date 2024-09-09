@@ -30,6 +30,10 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+      ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME}}
+      ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD}}
+      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV}}
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -40,4 +44,4 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run ci:test:always-on-dev
+        run: npm run live:ci:always-on-dev
