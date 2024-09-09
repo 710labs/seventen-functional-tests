@@ -8,7 +8,7 @@ import { OrderConfirmationPage } from '../../models/always-on/order-confirmation
 test.describe('Always On Tests', () => {
 	test.setTimeout(60000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
-	test('Rec New User - Happy Path test - Order Purchase', async ({ page }) => {
+	test('Rec New User - Happy Path test - Register & Checkout', async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
 		const homePageActions = new HomePageActions(page)
 		const checkoutPage = new CheckoutPage(page)
@@ -32,26 +32,38 @@ test.describe('Always On Tests', () => {
 		// verify order confirmation loads
 		await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 	})
-	test('Sign In existing user', async ({ page }) => {
+	test('MED New User - Happy Path test - Register & Checkout Med-Only Products', async ({
+		page,
+	}) => {
 		const homePageLogin = new HomePageLogin(page)
-		// Verify that store homepage loads
-		await homePageLogin.verifyUserSignInModalAppears(page)
-		// log in existing user
-		await homePageLogin.loginExistingUser(page)
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-	})
-	test('Sign Out Existing User', async ({ page }) => {
-		const homePageLogin = new HomePageLogin(page)
-		const accountPage = new AccountPage(page)
+		const homePageActions = new HomePageActions(page)
+		const checkoutPage = new CheckoutPage(page)
+		const orderConfirmation = new OrderConfirmationPage(page)
 
 		// Verify that store homepage loads
 		await homePageLogin.verifyUserSignInModalAppears(page)
+		// register new user
+		await homePageLogin.registerNewUser(page)
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add adress for new user account
+		await homePageActions.enterAddress(page)
+		// verify that homepage loads again
+		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		// add products to cart
+		await homePageActions.medAddProductsToCartUntilMinimumMet(page)
+		// verify that checkout page loads
+		await checkoutPage.verifyCheckoutPageLoads(page)
+		// enter in user info on checkoutpage
+		await checkoutPage.enterInfoForCheckout(page)
+		// verify order confirmation loads
+		await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+	})
+	test('Existing user -- Sign In & Sign Out', async ({ page }) => {
+		const homePageLogin = new HomePageLogin(page)
+		// Verify that store homepage loads
+		await homePageLogin.verifyUserSignInModalAppears(page)
 		// log in existing user
 		await homePageLogin.loginExistingUser(page)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-		// log out user
-		await accountPage.logOut(page)
-		// verify that sign in modal appears again
-		await homePageLogin.verifyUserSignInModalAppears(page)
 	})
 })
