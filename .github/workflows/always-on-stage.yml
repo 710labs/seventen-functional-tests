@@ -1,15 +1,15 @@
-name: Live Always On Tests - Dev
+name: Live Always On Tests - Stage
 on:
   schedule:
     - cron: '0 14 * * *'
   workflow_dispatch:
 jobs:
-  live-dev-tests:
+  live-stage-tests:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ENV: live-dev live-dev.710labs.com
-      ENV_ID: live-dev
+      ENV: live-stage live-stage.710labs.com
+      ENV_ID: live-stage
       EXECUTION_TYPE: Scheduled Run
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
@@ -32,7 +32,7 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
       ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME}}
       ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD}}
-      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV}}
+      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_STAGE}}
 
     steps:
       - uses: actions/checkout@v2
