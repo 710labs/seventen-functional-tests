@@ -10,6 +10,7 @@ export class CheckoutPage {
 	readonly yourInfoSection: Locator
 	readonly phoneInputField: Locator
 	readonly birthdayInputField: Locator
+	readonly saveContinueButton: Locator
 	readonly saveContinueButtonInfoSection: Locator
 	readonly saveContinueButtonPersonalDocument: Locator
 	readonly documentsSection: Locator
@@ -29,8 +30,9 @@ export class CheckoutPage {
 		this.yourInfoSection = page.locator('#checkout_info_step')
 		this.phoneInputField = page.locator('#fasd_phone')
 		this.birthdayInputField = page.locator('#fasd_dob')
+		this.saveContinueButton = page.locator('a.wpse-button-primary.fasd-form-submit')
 		this.saveContinueButtonInfoSection = page.locator('a.wpse-button-primary.fasd-form-submit')
-		this.saveContinueButtonPersonalDocument = page.locator('a.wpse-button-primary.fasd-form-maybe')
+		this.saveContinueButtonPersonalDocument = page.locator('a.wpse-button-primary.fasd-form-submit')
 		this.documentsSection = page.locator('#checkout_id')
 		this.idExpirationInput = page.locator('#doc_exp')
 		this.deliveryAppointmentSection = page.locator(
@@ -40,7 +42,7 @@ export class CheckoutPage {
 		this.deliveryTimeInputField = page.locator('#time_type.fasd-form-value.fasd-change-autosubmitx')
 		this.saveContinueButtonDelivery = page
 			.locator('a.wpse-button-primary.fasd-form-submit[href="#0"]')
-			.nth(1)
+			.nth(2)
 		this.paymentSection = page.locator(
 			'div#checkout_payment_step.wpse-checkout-step[data-stepping="1"][data-step="5"][data-valid="0"]',
 		)
@@ -105,7 +107,7 @@ export class CheckoutPage {
 				// Click on the body to remove focus from the input fields
 				await page.click('body')
 				// Click the Save & Continue button
-				await this.saveContinueButtonInfoSection.first().click()
+				await this.saveContinueButton.first().click()
 				// Wait for a short period to see if the error message appears
 				await page.waitForTimeout(1000) // Adjust timeout based on UI response time
 				// Check if the error message is displayed
@@ -133,7 +135,7 @@ export class CheckoutPage {
 			await this.idExpirationInput.type(`01/01/${newYear}`)
 			// Click on the body to remove focus from the input fields
 			await page.click('body')
-			await this.saveContinueButtonPersonalDocument.first().click()
+			await this.saveContinueButton.nth(1).click()
 			await page.waitForTimeout(1000) // Adjust timeout based on UI response time
 		})
 		await test.step('Delivery Appointment Section', async () => {
@@ -143,12 +145,12 @@ export class CheckoutPage {
 			await this.deliveryTimeInputField.waitFor({ state: 'visible' })
 			await this.deliveryTimeInputField.click()
 			await this.deliveryTimeInputField.selectOption({ index: 1 })
-			await this.saveContinueButtonDelivery.click()
+			await this.saveContinueButton.nth(2).click()
 		})
 		await test.step('Payment Section', async () => {
 			await this.paymentSection.waitFor({ state: 'visible' })
 			await this.cashOption.click()
-			await this.saveContinueButtonPayment.click()
+			await this.saveContinueButton.nth(3).click()
 		})
 		await test.step('Order Review Section', async () => {
 			await this.orderReviewSection.waitFor({ state: 'visible' })

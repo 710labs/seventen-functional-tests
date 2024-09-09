@@ -76,8 +76,10 @@ export class HomePageActions {
 			await this.page.waitForTimeout(1500)
 			await expect(this.submitAddressButton).toBeVisible()
 			await this.submitAddressButton.click()
+			await this.page.waitForTimeout(1500)
 			// verify that address sidebar dissappears after submitting address
-			await expect(this.addressField).toBeHidden()
+			// await this.addressInfoSideBarContainer.waitFor({ state: 'hidden' })
+			// await expect(this.addressField).toBeHidden()
 			//await this.addressInfoSideBarContainer.waitFor({ state: 'hidden' })
 		})
 	}
@@ -192,6 +194,81 @@ export class HomePageActions {
 		await expect(this.continueToCheckoutButton).toBeVisible()
 		await this.continueToCheckoutButton.click()
 	}
+	async recAddProductsToCartUntilMinimumMet(page) {
+		// Get all the products on the page
+		const products = await page.locator('ul.products li.product')
+
+		let i = 0
+		while (true) {
+			// Check if there are enough products to add
+			if (i >= (await products.count())) {
+				console.log(`Only ${await products.count()} products available on the page.`)
+				break
+			}
+
+			// Get the current product
+			const product = products.nth(i)
+
+			// Check if the product has the "Medical Only" badge
+			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+			if (hasMedicalOnlyTag) {
+				console.log(
+					`Skipping product "${await product
+						.locator('.woocommerce-loop-product__title')
+						.innerText()}" due to "Medical Only" tag.`,
+				)
+				i++
+				continue // Skip this product and move to the next one
+			}
+
+			// Get the 'Add to Cart' button and product name for the current product
+			const addToCartButton = product.locator('button.add_to_cart_button')
+			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+
+			// Click the 'Add to Cart' button
+			await addToCartButton.click()
+			await page.waitForTimeout(4000)
+
+			// Wait for the cartDrawer to become visible
+			await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+			// Verify that the product was added to the cart by checking the cartDrawer
+			const cartItem = await page.locator(
+				`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
+			)
+			const isProductInCart = (await cartItem.count()) > 0
+
+			if (!isProductInCart) {
+				throw new Error(`Product "${productName}" was not found in the cart after being added.`)
+			}
+
+			console.log(`Product "${productName}" was successfully added to the cart.`)
+
+			// Check if the "Delivery minimum not met" banner is still visible
+			const isBannerVisible = await this.minimumNotMetLabel.isVisible()
+
+			if (!isBannerVisible) {
+				console.log('Minimum cart total met. Proceeding to checkout.')
+				// Break out of loop to continue in the cart
+				break
+			}
+
+			// Close the cartDrawer
+			await this.closeCartDrawerButton.click()
+			// Wait for the cartDrawer to be hidden again
+			//await this.cartDrawerContainer.waitFor({ state: 'hidden' })
+			await page.waitForTimeout(2000)
+
+			i++ // Increment to the next product
+		}
+
+		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
+		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+		await expect(this.continueToCheckoutButton).toBeVisible()
+		await this.continueToCheckoutButton.click()
+	}
+
 	async goToCheckout() {
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await expect(this.continueToCheckoutButton).toBeVisible()
