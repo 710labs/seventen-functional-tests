@@ -234,7 +234,7 @@ export class HomePageActions {
 
 			// Click the 'Add to Cart' button
 			await addToCartButton.click()
-			await page.waitForTimeout(4000)
+			await page.waitForTimeout(5000)
 
 			// Wait for the cartDrawer to become visible
 			await this.cartDrawerContainer.waitFor({ state: 'visible' })
