@@ -12,6 +12,8 @@ export class HomePageActions {
 	readonly addToCartButtonGeneral: Locator
 	readonly enterAddressButtonDesktop: Locator
 	readonly enterAddressButtonMobile: Locator
+	readonly enterAddressButtonConciergeDesktop: Locator
+	readonly enterAddressButtonConciergeMobile: Locator
 	readonly addressInfoSideBarContainer: Locator
 	readonly addressField: Locator
 	readonly submitAddressButton: Locator
@@ -33,6 +35,10 @@ export class HomePageActions {
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 		this.enterAddressButtonDesktop = page.locator('#wide_flflmnt')
 		this.enterAddressButtonMobile = page.locator('#slim_flflmnt')
+		this.enterAddressButtonConciergeDesktop = page
+			.locator('a.wpse-button-storenav.wpse-openerize.flflmnt-alert span.--reactive-browse-origin')
+			.nth(0)
+		this.enterAddressButtonConciergeMobile = page.locator('nav.site-store-nav')
 		this.addressInfoSideBarContainer = page.locator('div.wpse-drawer[data-module="fulfillment"]')
 		this.addressField = page.locator('#fasd_address')
 		this.submitAddressButton = page.locator('button.wpse-button-primary.fasd-form-submit')
@@ -45,19 +51,33 @@ export class HomePageActions {
 		)
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 	}
-	async enterAddress(page) {
+	async enterAddress(page, storeType) {
 		await test.step('Click address button', async () => {
 			const viewportSize = await page.viewportSize()
-			if (viewportSize.width <= 768) {
-				// Mobile view
-				await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
-				await expect(this.enterAddressButtonMobile).toBeVisible()
-				await this.enterAddressButtonMobile.click()
-			} else {
-				// Desktop view
-				await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
-				await expect(this.enterAddressButtonDesktop).toBeVisible()
-				await this.enterAddressButtonDesktop.click()
+			if (storeType == 'concierge') {
+				if (viewportSize.width <= 768) {
+					// Mobile view Concierge
+					await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
+					await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
+					await this.enterAddressButtonConciergeMobile.click()
+				} else {
+					// Desktop view Concierge
+					await this.enterAddressButtonConciergeDesktop.waitFor({ state: 'visible' })
+					await expect(this.enterAddressButtonConciergeDesktop).toBeVisible()
+					await this.enterAddressButtonConciergeDesktop.click()
+				}
+			} else if (storeType == 'live') {
+				if (viewportSize.width <= 768) {
+					// Mobile view
+					await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
+					await expect(this.enterAddressButtonMobile).toBeVisible()
+					await this.enterAddressButtonMobile.click()
+				} else {
+					// Desktop view
+					await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
+					await expect(this.enterAddressButtonDesktop).toBeVisible()
+					await this.enterAddressButtonDesktop.click()
+				}
 			}
 		})
 		await test.step('Enter address info into field', async () => {
