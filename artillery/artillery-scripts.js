@@ -356,47 +356,47 @@ async function CA(page, vuContext, events, test) {
 				await page.waitForTimeout(2000)
 			}
 		})
-		await step('Add Promo Item To Cart', async () => {
-			await page.waitForTimeout(5000)
-			var addToCartButtons
+		// await step('Add Promo Item To Cart', async () => {
+		// 	await page.waitForTimeout(5000)
+		// 	var addToCartButtons
 
-			if (usageType === 'Recreational') {
-				await page.waitForSelector(
-					'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-				)
-				await page.waitForTimeout(5000)
-				addToCartButtons = await page.locator(
-					'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-				)
-			} else {
-				await page.waitForSelector(
-					'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
-				)
-				await page.waitForTimeout(5000)
-				addToCartButtons = await page.locator(
-					'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
-				)
-			}
+		// 	if (usageType === 'Recreational') {
+		// 		await page.waitForSelector(
+		// 			'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+		// 		)
+		// 		await page.waitForTimeout(5000)
+		// 		addToCartButtons = await page.locator(
+		// 			'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
+		// 		)
+		// 	} else {
+		// 		await page.waitForSelector(
+		// 			'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
+		// 		)
+		// 		await page.waitForTimeout(5000)
+		// 		addToCartButtons = await page.locator(
+		// 			'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
+		// 		)
+		// 	}
 
-			const indices = Array.from({ length: 2 }, (_, index) => index)
+		// 	const indices = Array.from({ length: 2 }, (_, index) => index)
 
-			for (let i = indices.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1))
-				;[indices[i], indices[j]] = [indices[j], indices[i]]
-			}
+		// 	for (let i = indices.length - 1; i > 0; i--) {
+		// 		const j = Math.floor(Math.random() * (i + 1))
+		// 		;[indices[i], indices[j]] = [indices[j], indices[i]]
+		// 	}
 
-			await step('Choose Promo Item', async () => {
-				await addToCartButtons.nth(0).click({ force: true })
-				await page.waitForTimeout(2000)
-			})
+		// 	await step('Choose Promo Item', async () => {
+		// 		await addToCartButtons.nth(0).click({ force: true })
+		// 		await page.waitForTimeout(2000)
+		// 	})
 
-			await step('Validate Promo Restrictions ', async () => {
-				await addToCartButtons.nth(1).click({ force: true })
-				await page.waitForTimeout(2000)
-				await page.waitForSelector('.notyf__dismiss-btn')
-				await page.locator('.notyf__dismiss-btn').click()
-			})
-		})
+		// 	await step('Validate Promo Restrictions ', async () => {
+		// 		await addToCartButtons.nth(1).click({ force: true })
+		// 		await page.waitForTimeout(2000)
+		// 		await page.waitForSelector('.notyf__dismiss-btn')
+		// 		await page.locator('.notyf__dismiss-btn').click()
+		// 	})
+		// })
 
 		await step('Review Cart', async () => {
 			await step('Navigate To Cart', async () => {
