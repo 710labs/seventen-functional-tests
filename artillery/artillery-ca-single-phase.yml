@@ -6,7 +6,7 @@ config:
   phases:
     - duration: 900
       arrivalRate: 1
-      maxVusers: 20
+      maxVusers: 10
   engines:
     playwright:
       trace: true
