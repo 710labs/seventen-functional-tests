@@ -5,7 +5,7 @@ import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
 import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 
-test.describe('Always On Tests', () => {
+test.describe('Live Tests', () => {
 	test.setTimeout(60000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	test('Rec New User - Happy Path test - Register & Checkout', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('Always On Tests', () => {
 		await homePageLogin.registerNewUser(page)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add adress for new user account
-		await homePageActions.enterAddress(page)
+		await homePageActions.enterAddress(page, 'live')
 		// verify that homepage loads again
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add products to cart
@@ -46,7 +46,7 @@ test.describe('Always On Tests', () => {
 		await homePageLogin.registerNewUser(page)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add adress for new user account
-		await homePageActions.enterAddress(page)
+		await homePageActions.enterAddress(page, 'live')
 		// verify that homepage loads again
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add products to cart
@@ -60,10 +60,12 @@ test.describe('Always On Tests', () => {
 	})
 	test('Existing user -- Sign In & Sign Out', async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
+		const accountPage = new AccountPage(page)
+
 		// Verify that store homepage loads
 		await homePageLogin.verifyUserSignInModalAppears(page)
 		// log in existing user
 		await homePageLogin.loginExistingUser(page)
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		await accountPage.logOut(page)
 	})
 })

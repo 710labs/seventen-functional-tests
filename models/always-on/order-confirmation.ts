@@ -16,7 +16,7 @@ export class OrderConfirmationPage {
 	async verifyOrderConfirmationPageLoads(page) {
 		await test.step('Verify the Checkout titleloads correctly', async () => {
 			// verify that checkout page title loads
-			await this.orderConfirmationTitle.waitFor({ state: 'visible' })
+			await this.orderConfirmationTitle.waitFor({ timeout: 20000, state: 'visible' })
 			await expect(this.orderConfirmationTitle).toBeVisible()
 		})
 	}
