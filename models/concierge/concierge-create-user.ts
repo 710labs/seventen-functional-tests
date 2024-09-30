@@ -179,7 +179,9 @@ export class ConciergeCreateUser {
 				//verify that returns to users page
 				await this.searchButton.click()
 				// look for email in table
-				const emailLocator = this.usersTableBodyDesktop.locator(`a[href*="${newUserEmail}"]`)
+				const emailLocator = this.usersTableBodyDesktop
+					.locator(`a[href*="${newUserEmail}"]`)
+					.first()
 				await emailLocator.scrollIntoViewIfNeeded()
 
 				// Wait for the element to be visible explicitly
