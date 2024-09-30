@@ -118,7 +118,7 @@ export class HomePageLogin {
 			// enter in Zip Code
 			await expect(this.zipCodeField).toBeVisible()
 			await this.zipCodeField.click()
-			await this.zipCodeField.fill(`90210`)
+			await this.zipCodeField.fill(`90232`)
 		})
 		await test.step('Click create account to create new user', async () => {
 			// click create account
