@@ -28,6 +28,7 @@ export class HomePageActions {
 	readonly issuingStateSelect: Locator
 	readonly expirationInput: Locator
 	readonly productPageAddToCartButton: Locator
+	readonly liveChangeAddressButton: Locator
 
 	constructor(page: Page) {
 		this.page = page
@@ -54,6 +55,7 @@ export class HomePageActions {
 		)
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.productPageAddToCartButton = page.locator('button[name="add-to-cart"]')
+		this.liveChangeAddressButton = page.locator('span.fasd-nested-unrollable')
 	}
 	async enterAddress(page, storeType) {
 		await test.step('Click address button', async () => {
@@ -76,11 +78,15 @@ export class HomePageActions {
 					await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonMobile).toBeVisible()
 					await this.enterAddressButtonMobile.click()
+					await expect(this.liveChangeAddressButton).toBeVisible()
+					await this.liveChangeAddressButton.click()
 				} else {
 					// Desktop view
 					await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonDesktop).toBeVisible()
 					await this.enterAddressButtonDesktop.click()
+					await expect(this.liveChangeAddressButton).toBeVisible()
+					await this.liveChangeAddressButton.click()
 				}
 			}
 		})

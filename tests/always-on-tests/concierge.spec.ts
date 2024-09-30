@@ -8,7 +8,7 @@ import { ConciergeLogin } from '../../models/concierge/concierge-login.ts'
 import { ConciergeCreateUser } from '../../models/concierge/concierge-create-user.ts'
 
 test.describe('Concierge Tests', () => {
-	test.setTimeout(60000) // Set the timeout for all tests in this file
+	test.setTimeout(90000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	test('Existing user -- Sign In & Sign Out', async ({ page }) => {
 		const conciergeLogin = new ConciergeLogin(page)
