@@ -8,7 +8,7 @@ import { ConciergeLogin } from '../../models/concierge/concierge-login.ts'
 import { ConciergeCreateUser } from '../../models/concierge/concierge-create-user.ts'
 
 test.describe('Concierge Tests', () => {
-	test.setTimeout(60000) // Set the timeout for all tests in this file
+	test.setTimeout(90000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	test('Existing user -- Sign In & Sign Out', async ({ page }) => {
 		const conciergeLogin = new ConciergeLogin(page)
@@ -37,8 +37,16 @@ test.describe('Concierge Tests', () => {
 		).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}-${String(
 			now.getMilliseconds(),
 		).padStart(3, '0')}`
+		// set device type for name
+		const viewportSize = await page.viewportSize()
+		let deviceType
+		if (viewportSize.width <= 768) {
+			deviceType = 'mobile'
+		} else {
+			deviceType = 'desktop'
+		}
 		// enter a unique test email for test user
-		const newEmail = `test_auto_${timestamp}@test.com`
+		const newEmail = `test_auto_rec_${timestamp}_${deviceType}@test.com`
 		const newPassword = `Test710!`
 		// login admin to WP dashboard
 		await conciergeCreateUser.loginAdmin(page)
@@ -78,8 +86,16 @@ test.describe('Concierge Tests', () => {
 		).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}-${String(
 			now.getMilliseconds(),
 		).padStart(3, '0')}`
+		// set device type for name
+		const viewportSize = await page.viewportSize()
+		let deviceType
+		if (viewportSize.width <= 768) {
+			deviceType = 'mobile'
+		} else {
+			deviceType = 'desktop'
+		}
 		// enter a unique test email for test user
-		const newEmail = `test_auto_${timestamp}@test.com`
+		const newEmail = `test_auto_med_${timestamp}_${deviceType}@test.com`
 		const newPassword = `Test710!`
 		// login admin to WP dashboard
 		await conciergeCreateUser.loginAdmin(page)

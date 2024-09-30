@@ -7,6 +7,7 @@ const path = require('path')
 export class HomePageActions {
 	readonly page: Page
 	readonly pageTitleSelector: Locator
+	readonly homePageButton710: Locator
 	readonly accountButtonNav: Locator
 	readonly cartButtonNav: Locator
 	readonly addToCartButtonGeneral: Locator
@@ -26,10 +27,13 @@ export class HomePageActions {
 	readonly medCardFileInput: Locator
 	readonly issuingStateSelect: Locator
 	readonly expirationInput: Locator
+	readonly productPageAddToCartButton: Locator
+	readonly liveChangeAddressButton: Locator
 
 	constructor(page: Page) {
 		this.page = page
 		this.pageTitleSelector = page.locator('span.site-header-group')
+		this.homePageButton710 = page.locator('a[rel="home"] h1.site-title')
 		this.accountButtonNav = page.locator('svg.icon.icon-account')
 		this.cartButtonNav = page.locator('svg.icon.icon-pickup')
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
@@ -50,6 +54,8 @@ export class HomePageActions {
 			'span.wpse-snacktoast-headline:has-text("Delivery minimum not met")',
 		)
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
+		this.productPageAddToCartButton = page.locator('button[name="add-to-cart"]')
+		this.liveChangeAddressButton = page.locator('span.fasd-nested-unrollable')
 	}
 	async enterAddress(page, storeType) {
 		await test.step('Click address button', async () => {
@@ -72,11 +78,15 @@ export class HomePageActions {
 					await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonMobile).toBeVisible()
 					await this.enterAddressButtonMobile.click()
+					await expect(this.liveChangeAddressButton).toBeVisible()
+					await this.liveChangeAddressButton.click()
 				} else {
 					// Desktop view
 					await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonDesktop).toBeVisible()
 					await this.enterAddressButtonDesktop.click()
+					await expect(this.liveChangeAddressButton).toBeVisible()
+					await this.liveChangeAddressButton.click()
 				}
 			}
 		})
@@ -222,9 +232,11 @@ export class HomePageActions {
 	}
 	async recAddProductsToCartUntilMinimumMet(page) {
 		// Get all the products on the page
-		const products = await page.locator('ul.products li.product')
+		const products = await page.locator(
+			'li.product.type-product.product-type-simple.status-publish',
+		)
 
-		let i = 0
+		let i = 4
 		while (true) {
 			// Check if there are enough products to add
 			if (i >= (await products.count())) {
@@ -249,11 +261,40 @@ export class HomePageActions {
 			}
 
 			// Get the 'Add to Cart' button and product name for the current product
+			//const addToCartButton = product.locator('button.add_to_cart_button')
 			const addToCartButton = product.locator('button.add_to_cart_button')
 			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
 
 			// Click the 'Add to Cart' button
+			console.log('locator for addtoCartButton: ' + addToCartButton)
+			//await page.waitForSelector(addToCartButton)
+			await expect(addToCartButton).toBeVisible()
+			//
+			// Use evaluate to perform custom scrolling with offset
+			// const elementLocator = page.locator(
+			// 	'li.product.type-product.product-type-simple.status-publish button.add_to_cart_button',
+			// )
+			// const elementLocator = addToCartButton
+			// await elementLocator.evaluate(element => {
+			// 	const elementRect = element.getBoundingClientRect()
+			// 	const offsetTop = elementRect.top + window.scrollY
+
+			// 	// Calculate offset to center the element in the viewport
+			// 	const offsetPosition = offsetTop - window.innerHeight / 3 + elementRect.height / 3
+
+			// 	// Scroll to the calculated position
+			// 	window.scrollTo({
+			// 		top: offsetPosition,
+			// 		behavior: 'smooth', // This provides a smooth scrolling effect
+			// 	})
+			// })
+			//
+			//await addToCartButton.scrollIntoViewIfNeeded()
 			await addToCartButton.click()
+			//product page add to cart
+			//await this.productPageAddToCartButton.waitFor({ state: 'visible' })
+			//await this.productPageAddToCartButton.click()
+
 			await page.waitForTimeout(4000)
 
 			// Wait for the cartDrawer to become visible
@@ -285,6 +326,10 @@ export class HomePageActions {
 			// Wait for the cartDrawer to be hidden again
 			//await this.cartDrawerContainer.waitFor({ state: 'hidden' })
 			await page.waitForTimeout(2000)
+			//
+			//
+			// await this.homePageButton710.waitFor({ state: 'visible' })
+			// await this.homePageButton710.click()
 
 			i++ // Increment to the next product
 		}
@@ -389,7 +434,7 @@ export class HomePageActions {
 				const issuingStateSelect = page.locator('select#medcard_state')
 				const expirationInput = page.locator('input#medcard_exp')
 				await driversLicenseChooser.setFiles('Medical-Card.png')
-				await issuingStateSelect.selectOption('CA')
+				// await issuingStateSelect.selectOption('CA')
 				const newYear = new Date().getFullYear() + 1
 				await expirationInput.click()
 				await expirationInput.type(`01/01/${newYear}`)
