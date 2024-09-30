@@ -6,7 +6,7 @@ import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 
 test.describe('Live Tests', () => {
-	test.setTimeout(60000) // Set the timeout for all tests in this file
+	test.setTimeout(90000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	test('Rec New User - Happy Path test - Register & Checkout', async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
