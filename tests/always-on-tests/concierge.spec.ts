@@ -6,10 +6,13 @@ import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 import { ConciergeLogin } from '../../models/concierge/concierge-login.ts'
 import { ConciergeCreateUser } from '../../models/concierge/concierge-create-user.ts'
+require('dotenv').config('.env')
 
 test.describe('Concierge Tests', () => {
 	test.setTimeout(90000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
+	const conciergeURL = process.env.CONCIERGE_URL || ''
+	console.log(`------- \n URL being tested: ${conciergeURL} -------- \n `)
 	test('Existing user -- Sign In & Sign Out', async ({ page }) => {
 		const conciergeLogin = new ConciergeLogin(page)
 		const accountPage = new AccountPage(page)

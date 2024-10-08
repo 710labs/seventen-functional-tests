@@ -89,7 +89,9 @@ export class ConciergeCreateUser {
 			await this.signInButton.click()
 		})
 		await test.step('Verify WP Dash loads', async () => {
-			await expect(page).toHaveURL('https://concierge-dev.710labs.com/wp-admin/')
+			const conciergeAdminURL = process.env.CONCIERGE_ADMIN_URL || ''
+			// Mobile view
+			await expect(page).toHaveURL(conciergeAdminURL)
 			await expect(this.dashboardTitle).toBeVisible()
 		})
 	}
@@ -129,6 +131,7 @@ export class ConciergeCreateUser {
 			await expect(this.newUserEmailField).toBeVisible()
 			await this.newUserEmailField.click()
 			await this.newUserEmailField.fill(newUserEmail)
+			console.log('new user email: ' + newUserEmail)
 			// enter First Name
 			await expect(this.firstNameField).toBeVisible()
 			await this.firstNameField.click()
