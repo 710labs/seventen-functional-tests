@@ -40,9 +40,11 @@ export class HomePageActions {
 		this.enterAddressButtonDesktop = page.locator('#wide_flflmnt')
 		this.enterAddressButtonMobile = page.locator('#slim_flflmnt')
 		this.enterAddressButtonConciergeDesktop = page
-			.locator('a.wpse-button-storenav.wpse-openerize.flflmnt-alert span.--reactive-browse-origin')
-			.nth(0)
-		this.enterAddressButtonConciergeMobile = page.locator('nav.site-store-nav')
+			.locator('a.wpse-button-storenav.wpse-openerize.flflmnt-alert')
+			.first()
+		this.enterAddressButtonConciergeMobile = page
+			.locator('a.wpse-button-storenav.wpse-openerize.flflmnt-alert')
+			.nth(1)
 		this.addressInfoSideBarContainer = page.locator('div.wpse-drawer[data-module="fulfillment"]')
 		this.addressField = page.locator('#fasd_address')
 		this.submitAddressButton = page.locator('button.wpse-button-primary.fasd-form-submit')
