@@ -31,6 +31,7 @@ const config: PlaywrightTestConfig = {
 				maxNumberOfFailuresToShow: 20,
 			},
 		],
+		['@estruyf/github-actions-reporter'],
 	],
 	use: {
 		acceptDownloads: true,
