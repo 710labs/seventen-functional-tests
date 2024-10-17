@@ -17,14 +17,14 @@ test.describe('Live Tests', () => {
 		// Verify that store homepage loads
 		await homePageLogin.verifyUserSignInModalAppears(page)
 		// register new user
-		await homePageLogin.registerNewUser(page)
+		await homePageLogin.registerNewUser(page, 'rec')
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add adress for new user account
 		await homePageActions.enterAddress(page, 'live')
 		// verify that homepage loads again
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add products to cart
-		await homePageActions.recAddProductsToCartUntilMinimumMet(page)
+		await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
 		// verify that checkout page loads
 		await checkoutPage.verifyCheckoutPageLoads(page)
 		// enter in user info on checkoutpage
@@ -43,14 +43,14 @@ test.describe('Live Tests', () => {
 		// Verify that store homepage loads
 		await homePageLogin.verifyUserSignInModalAppears(page)
 		// register new user
-		await homePageLogin.registerNewUser(page)
+		await homePageLogin.registerNewUser(page, 'med')
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add adress for new user account
 		await homePageActions.enterAddress(page, 'live')
 		// verify that homepage loads again
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		// add products to cart
-		await homePageActions.medAddProductsToCartUntilMinimumMet(page)
+		await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page)
 		// verify that checkout page loads
 		await checkoutPage.verifyCheckoutPageLoads(page)
 		// enter in user info on checkoutpage

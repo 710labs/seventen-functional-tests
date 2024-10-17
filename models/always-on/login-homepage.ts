@@ -80,7 +80,7 @@ export class HomePageLogin {
 			await this.signInButton.click()
 		})
 	}
-	async registerNewUser(page) {
+	async registerNewUser(page, userType) {
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -92,7 +92,7 @@ export class HomePageLogin {
 		).padStart(3, '0')}`
 
 		// enter a unique test email for test user
-		const newEmail = `test_auto_${timestamp}@test.com`
+		const newEmail = `test_auto_${userType}_${timestamp}@test.com`
 		await test.step('Enter new user email and continue to register user screen', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click()
