@@ -24,6 +24,8 @@ export class CheckoutPage {
 	readonly saveContinueButtonPayment: Locator
 	readonly orderReviewSection: Locator
 	readonly placeOrderButton: Locator
+	readonly pickUpLocationTitle: Locator
+
 	constructor(page: Page) {
 		this.page = page
 		this.checkoutPageTitle = page.locator('h2:has-text("Checkout")')
@@ -43,15 +45,14 @@ export class CheckoutPage {
 		this.saveContinueButtonDelivery = page
 			.locator('a.wpse-button-primary.fasd-form-submit[href="#0"]')
 			.nth(2)
-		this.paymentSection = page.locator(
-			'div#checkout_payment_step.wpse-checkout-step[data-stepping="1"][data-step="5"][data-valid="0"]',
-		)
+		this.paymentSection = page.locator('div#checkout_payment_step')
 		this.cashOption = page.locator('label[for="cash"]')
 		this.saveContinueButtonPayment = page
 			.locator('a.wpse-button-primary.fasd-form-submit[href="#0"]')
 			.nth(2)
 		this.orderReviewSection = page.locator('#checkout_checkout')
 		this.placeOrderButton = page.locator("//button[@id='place_order']")
+		this.pickUpLocationTitle = page.locator('h2:has-text("Pickup Location")')
 	}
 	async verifyCheckoutPageLoads(page) {
 		await test.step('Verify the Checkout titleloads correctly', async () => {
@@ -139,18 +140,28 @@ export class CheckoutPage {
 			await page.waitForTimeout(1000) // Adjust timeout based on UI response time
 		})
 		await test.step('Delivery Appointment Section', async () => {
-			await this.deliveryDayInputField.waitFor({ state: 'visible' })
-			await this.deliveryDayInputField.click()
-			await this.deliveryDayInputField.selectOption({ index: 1 })
-			await this.deliveryTimeInputField.waitFor({ state: 'visible' })
-			await this.deliveryTimeInputField.click()
-			await this.deliveryTimeInputField.selectOption({ index: 1 })
-			await this.saveContinueButton.nth(2).click()
+			// Check if the "order is Delivery or Pickup in order to fill out or not
+			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
+			// if its a delivery order, then do the following
+			if (!isPickupVisible) {
+				await this.deliveryDayInputField.waitFor({ state: 'visible' })
+				await this.deliveryDayInputField.click()
+				await this.deliveryDayInputField.selectOption({ index: 1 })
+				await this.deliveryTimeInputField.waitFor({ state: 'visible' })
+				await this.deliveryTimeInputField.click()
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
+				await this.saveContinueButton.nth(2).click()
+			}
 		})
 		await test.step('Payment Section', async () => {
 			await this.paymentSection.waitFor({ state: 'visible' })
 			await this.cashOption.click()
-			await this.saveContinueButton.nth(3).click()
+			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
+			if (!isPickupVisible) {
+				await this.saveContinueButton.nth(3).click()
+			} else {
+				await this.saveContinueButton.nth(2).click()
+			}
 		})
 		await test.step('Order Review Section', async () => {
 			await this.orderReviewSection.waitFor({ state: 'visible' })
