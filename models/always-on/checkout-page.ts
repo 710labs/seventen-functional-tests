@@ -87,7 +87,7 @@ export class CheckoutPage {
 			throw new Error('Failed to enter a unique phone number after multiple attempts.')
 		}
 	}
-	async enterInfoForCheckout(page) {
+	async medEnterInfoForCheckout(page) {
 		await test.step('Phone and Birthday input', async () => {
 			// Function to generate a random phone number
 			const generatePhoneNumber = () => {
@@ -153,6 +153,88 @@ export class CheckoutPage {
 				await this.saveContinueButton.nth(2).click()
 			}
 		})
+		await test.step('Payment Section', async () => {
+			await this.paymentSection.waitFor({ state: 'visible' })
+			await this.cashOption.click()
+			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
+			if (!isPickupVisible) {
+				await this.saveContinueButton.nth(3).click()
+			} else {
+				await this.saveContinueButton.nth(2).click()
+			}
+		})
+		await test.step('Order Review Section', async () => {
+			await this.orderReviewSection.waitFor({ state: 'visible' })
+			await this.placeOrderButton.click()
+		})
+	}
+	async recEnterInfoForCheckout(page) {
+		await test.step('Delivery Appointment Section', async () => {
+			// Check if the "order is Delivery or Pickup in order to fill out or not
+			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
+			// if its a delivery order, then do the following
+			if (!isPickupVisible) {
+				await this.deliveryDayInputField.waitFor({ state: 'visible' })
+				await this.deliveryDayInputField.click()
+				await this.deliveryDayInputField.selectOption({ index: 1 })
+				await this.deliveryTimeInputField.waitFor({ state: 'visible' })
+				await this.deliveryTimeInputField.click()
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
+				await this.saveContinueButton.first().click()
+			}
+		})
+		await test.step('Phone and Birthday input', async () => {
+			// Function to generate a random phone number
+			const generatePhoneNumber = () => {
+				const randomDigits = Math.floor(Math.random() * 9000000) + 1000000 // Generate a 7-digit random number
+				return `555-${randomDigits}`
+			}
+			let phoneErrorExists = true
+			while (phoneErrorExists) {
+				const phoneNumber = generatePhoneNumber()
+				// Verify that the phone input field is visible
+				await this.phoneInputField.waitFor({ state: 'visible' })
+				// Enter the phone number into the field
+				await this.phoneInputField.fill(phoneNumber)
+				// Enter the birthday
+				await this.birthdayInputField.waitFor({ state: 'visible' })
+				await this.birthdayInputField.click()
+				await this.birthdayInputField.type('01/01/1990')
+				// Click on the body to remove focus from the input fields
+				await page.click('body')
+				// Click the Save & Continue button
+				await this.saveContinueButton.nth(1).click()
+				// Wait for a short period to see if the error message appears
+				await page.waitForTimeout(1000) // Adjust timeout based on UI response time
+				// Check if the error message is displayed
+				phoneErrorExists = await page.isVisible('#fasd_phone_error:has-text("Already in use")')
+
+				if (phoneErrorExists) {
+					console.log(
+						`Phone number ${phoneNumber} is already in use. Retrying with a new number...`,
+					)
+				} else {
+					console.log(`Phone number ${phoneNumber} was successfully accepted.`)
+				}
+			}
+		})
+		await test.step('Personal Document section', async () => {
+			const dlUploadButton = await this.page.waitForSelector('#fasd_doc')
+			const [driversLicenseChooser] = await Promise.all([
+				this.page.waitForEvent('filechooser'),
+				dlUploadButton.click(),
+			])
+			await this.page.waitForTimeout(5000)
+			await driversLicenseChooser.setFiles('Medical-Card.png')
+			await this.idExpirationInput.click()
+			const newYear = new Date().getFullYear() + 1
+			await this.idExpirationInput.type(`01/01/${newYear}`)
+			// Click on the body to remove focus from the input fields
+			await page.click('body')
+			await this.saveContinueButton.nth(2).click()
+			await page.waitForTimeout(1000) // Adjust timeout based on UI response time
+		})
+
 		await test.step('Payment Section', async () => {
 			await this.paymentSection.waitFor({ state: 'visible' })
 			await this.cashOption.click()
