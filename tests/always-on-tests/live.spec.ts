@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, request, APIRequestContext } from '@playwright/test'
 import { HomePageLogin } from '../../models/always-on/login-homepage.ts'
 import { AccountPage } from '../../models/always-on/account-page.ts'
 import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
@@ -8,6 +8,15 @@ import { OrderConfirmationPage } from '../../models/always-on/order-confirmation
 test.describe('Live Tests', () => {
 	test.setTimeout(90000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
+	var apiContext: APIRequestContext
+	test.beforeAll(async () => {
+		apiContext = await request.newContext({
+			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
+			extraHTTPHeaders: {
+				'x-api-key': `${process.env.API_KEY}`,
+			},
+		})
+	})
 	test('Rec New User - Happy Path test - Register & Checkout', async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
 		const homePageActions = new HomePageActions(page)
