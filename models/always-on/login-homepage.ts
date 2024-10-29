@@ -93,6 +93,7 @@ export class HomePageLogin {
 
 		// enter a unique test email for test user
 		const newEmail = `test_auto_${userType}_${timestamp}@test.com`
+		console.log(`\n New user email ---> ${newEmail} \n`)
 		await test.step('Enter new user email and continue to register user screen', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click()
