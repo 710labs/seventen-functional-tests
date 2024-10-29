@@ -34,24 +34,29 @@ export async function generateCustomLayoutAsync(
 		}
 	}
 
+	const failSummarySet = new Set<string>()
+	const passSummarySet = new Set<string>()
+	const skipSummarySet = new Set<string>()
+
 	for (let i = 0; i < summaryResults.tests.length; i += 1) {
 		const { name, projectName, status } = summaryResults.tests[i]
+		const entry = `${name} [${projectName}]\n`
+
 		if (status === 'passed') {
-			passSummary.push(`${name} [${projectName}]\n`)
-			passSummary.sort()
-			passSummaryText = passSummary.join('')
+			passSummarySet.add(entry)
 		}
 		if (status === 'failed' || status === 'timedOut') {
-			failSummary.push(`${name} [${projectName}]\n`)
-			failSummary.sort()
-			failSummaryText = failSummary.join('')
+			failSummarySet.add(entry)
 		}
 		if (status === 'skipped') {
-			skipSummary.push(`${name} [${projectName}]\n`)
-			skipSummary.sort()
-			skipSummaryText = skipSummary.join('')
+			skipSummarySet.add(entry)
 		}
 	}
+
+	// Sort and join each summary after the loop
+	passSummaryText = Array.from(passSummarySet).sort().join('')
+	failSummaryText = Array.from(failSummarySet).sort().join('')
+	skipSummaryText = Array.from(skipSummarySet).sort().join('')
 
 	if (summaryResults.meta) {
 		for (let i = 0; i < summaryResults.meta.length; i += 1) {

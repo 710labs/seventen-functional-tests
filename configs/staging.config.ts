@@ -40,6 +40,7 @@ export default defineConfig<TestOptions>({
 			},
 		],
 		['../reporters/s3/pw-report-s3-upload.ts'],
+		['@estruyf/github-actions-reporter'],
 	],
 	use: {
 		acceptDownloads: true,
