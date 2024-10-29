@@ -47,7 +47,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run concierge:smoke:tests
+        run: npm run concierge:ci:tests
       - name: Upload Playwright Report
         if: always() # Ensures the report is uploaded even if tests fail
         uses: actions/upload-artifact@v3
