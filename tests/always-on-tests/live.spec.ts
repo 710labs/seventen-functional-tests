@@ -9,14 +9,8 @@ test.describe('Live Tests', () => {
 	test.setTimeout(90000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
-	test.beforeAll(async () => {
-		apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
-	})
+	const liveURL = process.env.ALWAYS_ON_UR || ''
+	console.log(`------- \n URL being tested: ${liveURL} -------- \n `)
 	test(
 		'Rec New User - Happy Path test - Register & Checkout',
 		{ tag: ['@recreational'] },
