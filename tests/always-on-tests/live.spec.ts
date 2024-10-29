@@ -17,57 +17,63 @@ test.describe('Live Tests', () => {
 			},
 		})
 	})
-	test('Rec New User - Happy Path test - Register & Checkout', async ({ page }) => {
-		const homePageLogin = new HomePageLogin(page)
-		const homePageActions = new HomePageActions(page)
-		const checkoutPage = new CheckoutPage(page)
-		const orderConfirmation = new OrderConfirmationPage(page)
+	test(
+		'Rec New User - Happy Path test - Register & Checkout',
+		{ tag: ['@recreational'] },
+		async ({ page }) => {
+			const homePageLogin = new HomePageLogin(page)
+			const homePageActions = new HomePageActions(page)
+			const checkoutPage = new CheckoutPage(page)
+			const orderConfirmation = new OrderConfirmationPage(page)
 
-		// Verify that store homepage loads
-		await homePageLogin.verifyUserSignInModalAppears(page)
-		// register new user
-		await homePageLogin.registerNewUser(page, 'rec')
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-		// add adress for new user account
-		await homePageActions.enterAddress(page, 'live')
-		// verify that homepage loads again
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-		// add products to cart
-		await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
-		// verify that checkout page loads
-		await checkoutPage.verifyCheckoutPageLoads(page)
-		// enter in user info on checkoutpage
-		await checkoutPage.recEnterInfoForCheckout(page)
-		// verify order confirmation loads
-		await orderConfirmation.verifyOrderConfirmationPageLoads(page)
-	})
-	test('MED New User - Happy Path test - Register & Checkout Med-Only Products', async ({
-		page,
-	}) => {
-		const homePageLogin = new HomePageLogin(page)
-		const homePageActions = new HomePageActions(page)
-		const checkoutPage = new CheckoutPage(page)
-		const orderConfirmation = new OrderConfirmationPage(page)
+			// Verify that store homepage loads
+			await homePageLogin.verifyUserSignInModalAppears(page)
+			// register new user
+			await homePageLogin.registerNewUser(page, 'rec')
+			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			// add adress for new user account
+			await homePageActions.enterAddress(page, 'live')
+			// verify that homepage loads again
+			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			// add products to cart
+			await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
+			// verify that checkout page loads
+			await checkoutPage.verifyCheckoutPageLoads(page)
+			// enter in user info on checkoutpage
+			await checkoutPage.recEnterInfoForCheckout(page)
+			// verify order confirmation loads
+			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+		},
+	)
+	test(
+		'MED New User - Happy Path test - Register & Checkout Med-Only Products',
+		{ tag: ['@medical'] },
+		async ({ page }) => {
+			const homePageLogin = new HomePageLogin(page)
+			const homePageActions = new HomePageActions(page)
+			const checkoutPage = new CheckoutPage(page)
+			const orderConfirmation = new OrderConfirmationPage(page)
 
-		// Verify that store homepage loads
-		await homePageLogin.verifyUserSignInModalAppears(page)
-		// register new user
-		await homePageLogin.registerNewUser(page, 'med')
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-		// add adress for new user account
-		await homePageActions.enterAddress(page, 'live')
-		// verify that homepage loads again
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
-		// add products to cart
-		await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page)
-		// verify that checkout page loads
-		await checkoutPage.verifyCheckoutPageLoads(page)
-		// enter in user info on checkoutpage
-		await checkoutPage.medEnterInfoForCheckout(page)
-		// verify order confirmation loads
-		await orderConfirmation.verifyOrderConfirmationPageLoads(page)
-	})
-	test('Existing user -- Sign In & Sign Out', async ({ page }) => {
+			// Verify that store homepage loads
+			await homePageLogin.verifyUserSignInModalAppears(page)
+			// register new user
+			await homePageLogin.registerNewUser(page, 'med')
+			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			// add adress for new user account
+			await homePageActions.enterAddress(page, 'live')
+			// verify that homepage loads again
+			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			// add products to cart
+			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page)
+			// verify that checkout page loads
+			await checkoutPage.verifyCheckoutPageLoads(page)
+			// enter in user info on checkoutpage
+			await checkoutPage.medEnterInfoForCheckout(page)
+			// verify order confirmation loads
+			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+		},
+	)
+	test('Existing user -- Sign In & Sign Out', { tag: ['@recreational'] }, async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
 		const accountPage = new AccountPage(page)
 
