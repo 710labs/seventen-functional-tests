@@ -10,7 +10,7 @@ jobs:
     env:
       ENV: live-stage live-stage.710labs.com
       ENV_ID: live-stage
-      EXECUTION_TYPE: Scheduled Run
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
