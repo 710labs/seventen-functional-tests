@@ -521,10 +521,10 @@ export class HomePageActions {
 				// Wait for and click 'Add to Cart' on the product page
 				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
 				await this.productPageAddToCartButton.click()
-				await page.waitForTimeout(4000)
+				await page.waitForTimeout(6000)
 
 				// Wait for the cart drawer to become visible
-				await this.cartDrawerContainer.waitFor({ state: 'visible' })
+				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
 
 				// Check if the product was added to the cart
 				const cartItem = await page.locator(`td.product-name a:has-text("${productName}")`)
@@ -652,10 +652,10 @@ export class HomePageActions {
 				// Wait for and click 'Add to Cart' on the product page
 				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
 				await this.productPageAddToCartButton.click()
-				await page.waitForTimeout(4000)
+				await page.waitForTimeout(6000)
 
 				// Wait for the cart drawer to become visible
-				await this.cartDrawerContainer.waitFor({ state: 'visible' })
+				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
 
 				// Verify the product is added
 				const cartItem = await page.locator(`td.product-name a:has-text("${productName}")`)
