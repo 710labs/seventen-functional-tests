@@ -6,7 +6,7 @@ import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 
 test.describe('Live Tests', () => {
-	test.setTimeout(90000) // Set the timeout for all tests in this file
+	test.setTimeout(240000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
 	const liveURL = process.env.ALWAYS_ON_UR || ''
@@ -34,8 +34,9 @@ test.describe('Live Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recEnterInfoForCheckout(page)
+			await checkoutPage.recEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
+			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 		},
 	)
@@ -62,8 +63,9 @@ test.describe('Live Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.medEnterInfoForCheckout(page)
+			await checkoutPage.medEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
+			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 		},
 	)
