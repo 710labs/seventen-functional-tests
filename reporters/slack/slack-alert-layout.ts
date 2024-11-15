@@ -95,7 +95,7 @@ export async function generateCustomLayoutAsync(
 						summaryResults.skipped > 0 ? `${summaryResults.skipped} (Skipped)` : ''
 					}\n${summaryResults.passed + summaryResults.failed + summaryResults.skipped} (Total)
 					` +
-					`\n\n ${failSummaryText.length > 0 ? 'Failures:' : ''} \n ${
+					`\n\n ${failSummaryText.length > 0 ? 'Failures or Flaky:' : ''} \n ${
 						failSummaryText.length > 0 ? failSummaryText : ''
 					}`,
 			},
