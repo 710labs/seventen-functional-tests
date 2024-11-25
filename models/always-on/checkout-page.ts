@@ -177,7 +177,7 @@ export class CheckoutPage {
 				await this.deliveryDayInputField.selectOption({ index: 2 })
 				await this.deliveryTimeInputField.selectOption({ index: 2 })
 				await this.deliveryTimeInputField.selectOption({ index: 2 })
-				await page.waitForTimeout(1000)
+				await page.waitForTimeout(2000)
 				const updatedDayValue = await this.deliveryDayInputField.inputValue()
 				const updatedTimeValue = await page.locator('#time_type option:checked').innerText()
 				await this.saveContinueButton.first().click()
