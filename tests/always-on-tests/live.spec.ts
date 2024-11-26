@@ -63,7 +63,7 @@ test.describe('Live Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.medEnterInfoForCheckoutAndEdit(page)
+			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
