@@ -335,7 +335,7 @@ export class CheckoutPage {
 			await this.placeOrderButton.click()
 		})
 	}
-	async conciergeMedEnterInfoForCheckoutAndEdit(page) {
+	async newMedEnterInfoForCheckoutAndEdit(page) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 		await test.step('Address for Delivery', async () => {
 			//Verify that checkout page displays original address entered previously
