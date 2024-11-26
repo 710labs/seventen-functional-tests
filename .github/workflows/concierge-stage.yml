@@ -36,6 +36,7 @@ jobs:
       CONCIERGE_ADMIN_URL: ${{ secrets.CONCIERGE_ADMIN_URL_STAGE}}
       ADMIN_CONCIERGE_USER: ${{ secrets.ADMIN_CONCIERGE_USER}}
       ADMIN_CONCIERGE_PASSWORD: ${{ secrets.ADMIN_CONCIERGE_PASSWORD}}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD}}
 
     steps:
       - uses: actions/checkout@v2
