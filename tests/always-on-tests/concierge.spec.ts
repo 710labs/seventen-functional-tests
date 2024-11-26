@@ -130,7 +130,7 @@ test.describe('Concierge Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recEnterInfoForCheckoutAndEdit(page)
+			await checkoutPage.conciergeMedEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 		},
