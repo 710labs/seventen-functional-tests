@@ -332,6 +332,7 @@ export class CheckoutPage {
 			const password = process.env.CHECKOUT_PASSWORD || ''
 			await this.passwordCheckoutField.fill(password)
 			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
 			// place order once password has been entered
 			await this.placeOrderButton.waitFor({ state: 'visible' })
 			await this.placeOrderButton.click()
@@ -560,6 +561,7 @@ export class CheckoutPage {
 			const password = process.env.CHECKOUT_PASSWORD || ''
 			await this.passwordCheckoutField.fill(password)
 			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
 			// place order once password has been entered
 			await this.placeOrderButton.waitFor({ state: 'visible' })
 			await this.placeOrderButton.click()
