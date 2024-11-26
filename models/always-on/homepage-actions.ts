@@ -186,69 +186,7 @@ export class HomePageActions {
 			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
 		}
 	}
-
-	async addProductsToCartUntilMinimumMet(page) {
-		// Get all the products on the page
-		const products = await page.locator('ul.products li.product')
-
-		let i = 0
-		while (true) {
-			// Check if there are enough products to add
-			if (i >= (await products.count())) {
-				console.log(`Only ${await products.count()} products available on the page.`)
-				break
-			}
-
-			// Get the 'Add to Cart' button and product name for the current product
-			const product = products.nth(i)
-			const addToCartButton = product.locator('button.add_to_cart_button')
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-
-			// Click the 'Add to Cart' button
-			await addToCartButton.click()
-			await page.waitForTimeout(4000) // Adjust this timeout based on your app's behavior
-
-			// Wait for the cartDrawer to become visible
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			// Verify that the product was added to the cart by checking the cartDrawer
-			const cartItem = await page.locator(
-				`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
-			)
-			const isProductInCart = (await cartItem.count()) > 0
-
-			if (!isProductInCart) {
-				throw new Error(`Product "${productName}" was not found in the cart after being added.`)
-			}
-
-			console.log(`Product "${productName}" was successfully added to the cart.`)
-
-			// Check if the "Delivery minimum not met" banner is still visible
-			const isBannerVisible = await this.minimumNotMetLabel.isVisible()
-
-			if (!isBannerVisible) {
-				console.log('Minimum cart total met. Proceeding to checkout.')
-				//break out of loop to continue in the cart
-				break
-			}
-
-			// Close the cartDrawer
-			await this.closeCartDrawerButton.click()
-			// Wait for the cartDrawer to be hidden again
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			// Optionally, wait before adding the next product to account for any animations or delays
-			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
-
-			i++ // Increment to the next product
-		}
-
-		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
-		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-		await expect(this.continueToCheckoutButton).toBeVisible()
-		await this.continueToCheckoutButton.click()
-	}
-	async recAddProductsToCartUntilMinimumMet(page) {
+	async conciergeRecAddProductsToCartUntilMinimumMet(page) {
 		// Get all the products on the page
 		const products = await page.locator(
 			'li.product.type-product.product-type-simple.status-publish',
@@ -344,7 +282,7 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.click()
 	}
 
-	async medAddProductsToCartUntilMinimumMet(page) {
+	async conciergeMedAddProductsToCartUntilMinimumMet(page) {
 		const products = await page.locator('ul.products li.product')
 		let i = 0
 		let medicalCardProvided = false
@@ -778,7 +716,8 @@ export class HomePageActions {
 		await expect(this.continueToCheckoutButton).toBeVisible()
 		await this.continueToCheckoutButton.click()
 	}
-
+	//
+	// FUTURE consolidated add to cart function
 	async consolidatedAddProductsToCartUntilMinimumMet(page, userType, siteName) {
 		const isMedical = userType === 'medical'
 		const isLiveSite = siteName === 'live'
@@ -908,7 +847,69 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await this.continueToCheckoutButton.click()
 	}
+	//
+	//
+	// async addProductsToCartUntilMinimumMet(page) {
+	// 	// Get all the products on the page
+	// 	const products = await page.locator('ul.products li.product')
 
+	// 	let i = 0
+	// 	while (true) {
+	// 		// Check if there are enough products to add
+	// 		if (i >= (await products.count())) {
+	// 			console.log(`Only ${await products.count()} products available on the page.`)
+	// 			break
+	// 		}
+
+	// 		// Get the 'Add to Cart' button and product name for the current product
+	// 		const product = products.nth(i)
+	// 		const addToCartButton = product.locator('button.add_to_cart_button')
+	// 		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+
+	// 		// Click the 'Add to Cart' button
+	// 		await addToCartButton.click()
+	// 		await page.waitForTimeout(4000) // Adjust this timeout based on your app's behavior
+
+	// 		// Wait for the cartDrawer to become visible
+	// 		await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+	// 		// Verify that the product was added to the cart by checking the cartDrawer
+	// 		const cartItem = await page.locator(
+	// 			`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
+	// 		)
+	// 		const isProductInCart = (await cartItem.count()) > 0
+
+	// 		if (!isProductInCart) {
+	// 			throw new Error(`Product "${productName}" was not found in the cart after being added.`)
+	// 		}
+
+	// 		console.log(`Product "${productName}" was successfully added to the cart.`)
+
+	// 		// Check if the "Delivery minimum not met" banner is still visible
+	// 		const isBannerVisible = await this.minimumNotMetLabel.isVisible()
+
+	// 		if (!isBannerVisible) {
+	// 			console.log('Minimum cart total met. Proceeding to checkout.')
+	// 			//break out of loop to continue in the cart
+	// 			break
+	// 		}
+
+	// 		// Close the cartDrawer
+	// 		await this.closeCartDrawerButton.click()
+	// 		// Wait for the cartDrawer to be hidden again
+	// 		await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+	// 		// Optionally, wait before adding the next product to account for any animations or delays
+	// 		await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
+
+	// 		i++ // Increment to the next product
+	// 	}
+
+	// 	// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
+	// 	await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+	// 	await expect(this.continueToCheckoutButton).toBeVisible()
+	// 	await this.continueToCheckoutButton.click()
+	// }
 	//
 	// function to only add MED-only products to a cart in order to test MED users
 	// function searches for med-only products with the med tag, adds that product to cart,

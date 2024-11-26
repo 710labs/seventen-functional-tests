@@ -70,7 +70,7 @@ test.describe('Concierge Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.recAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeRecAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
@@ -126,7 +126,7 @@ test.describe('Concierge Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.medAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
