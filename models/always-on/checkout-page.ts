@@ -52,6 +52,9 @@ export class CheckoutPage {
 	readonly lastNameField: Locator
 	readonly emailField: Locator
 	readonly saveContinueButtonAddress: Locator
+	readonly passwordCheckoutField: Locator
+	readonly passwordError: Locator
+	readonly submitPasswordButton: Locator
 	constructor(page: Page) {
 		this.page = page
 		this.checkoutPageTitle = page.locator('h2:has-text("Checkout")')
@@ -108,6 +111,11 @@ export class CheckoutPage {
 		this.firstNameField = page.locator('#fasd_fname')
 		this.lastNameField = page.locator('#fasd_lname')
 		this.emailField = page.locator('#fasd_email')
+		this.passwordCheckoutField = page.locator('#dev_pswrd')
+		this.passwordError = page.locator('p.fasd-input-error#dev_pswrd_error')
+		this.submitPasswordButton = page.locator(
+			'a.wpse-button-primary.fasd-form-submit:has-text("Submit")',
+		)
 	}
 	async recEnterInfoForCheckoutAndEdit(page) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
@@ -175,12 +183,14 @@ export class CheckoutPage {
 				await this.editButtonGenericLocator.nth(1).click()
 				await this.deliveryDayInputField.waitFor({ state: 'visible' })
 				await this.deliveryDayInputField.selectOption({ index: 2 })
+				await page.waitForTimeout(750)
 				await this.deliveryTimeInputField.selectOption({ index: 2 })
 				await this.deliveryTimeInputField.selectOption({ index: 2 })
 				await page.waitForTimeout(2000)
 				const updatedDayValue = await this.deliveryDayInputField.inputValue()
 				const updatedTimeValue = await page.locator('#time_type option:checked').innerText()
 				await this.saveContinueButton.first().click()
+				await page.waitForTimeout(2000)
 
 				// erify appointment date/time
 				const updatedReformattedDateExpectedUpdatedDayValue = await this.reformatDateToLongFormat(
@@ -306,8 +316,22 @@ export class CheckoutPage {
 			expect(paymentOptionSelector).toHaveText(expectedText)
 		})
 
-		await test.step('Order Review Section', async () => {
+		await test.step('Order Review & Password Section', async () => {
 			await this.orderReviewSection.waitFor({ state: 'visible' })
+			await this.passwordCheckoutField.waitFor({ state: 'visible' })
+			await this.submitPasswordButton.waitFor({ state: 'visible' })
+			//enter false password to verify enforcement
+			await this.passwordCheckoutField.click()
+			await this.passwordCheckoutField.fill('fakepassword')
+			await this.submitPasswordButton.click()
+			await expect(this.passwordError).toHaveText('Please verify password')
+			//enter correct password
+			await this.passwordCheckoutField.click()
+			const password = process.env.CHECKOUT_PASSWORD || ''
+			await this.passwordCheckoutField.fill(password)
+			await this.submitPasswordButton.click()
+			// place order once password has been entered
+			await this.placeOrderButton.waitFor({ state: 'visible' })
 			await this.placeOrderButton.click()
 		})
 	}
