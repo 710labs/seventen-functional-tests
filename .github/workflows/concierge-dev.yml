@@ -1,7 +1,7 @@
 name: Concierge - Dev
 on:
-  #schedule:
-   # - cron: '0 11 * * *'
+  schedule:
+    - cron: '0 11 * * *'
   workflow_dispatch:
 jobs:
   concierge-dev-tests:
@@ -36,6 +36,7 @@ jobs:
       CONCIERGE_ADMIN_URL: ${{ secrets.CONCIERGE_ADMIN_URL_DEV}}
       ADMIN_CONCIERGE_USER: ${{ secrets.ADMIN_CONCIERGE_USER}}
       ADMIN_CONCIERGE_PASSWORD: ${{ secrets.ADMIN_CONCIERGE_PASSWORD}}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD}}
 
     steps:
       - uses: actions/checkout@v2

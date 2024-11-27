@@ -15,7 +15,7 @@ export class OrderConfirmationPage {
 	}
 	async verifyOrderConfirmationPageLoads(page) {
 		await test.step('Verify the Checkout titleloads correctly', async () => {
-			await page.waitForTimeout(10000)
+			//await page.waitForTimeout(10000)
 			await page.waitForLoadState('networkidle') // Wait for all network requests to finish
 			// verify that checkout page title loads
 			await this.orderConfirmationTitle.waitFor({ timeout: 30000 })

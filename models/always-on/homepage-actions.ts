@@ -44,18 +44,18 @@ export class HomePageActions {
 		this.enterAddressButtonDesktop = page.locator('a.wpse-button-storenav.wpse-openerize').first()
 		this.enterAddressButtonMobile = page.locator('a.wpse-button-storenav.wpse-openerize').nth(1)
 		this.enterAddressButtonConciergeDesktop = page
-			.locator('a.wpse-button-storenav.wpse-openerize.flflmnt-alert')
+			.locator('.wpse-button-storenav.wpse-openerize')
 			.first()
 		this.enterAddressButtonConciergeMobile = page
-			.locator('a.wpse-button-storenav.wpse-openerize.flflmnt-alert')
+			.locator('.wpse-button-storenav.wpse-openerize')
 			.nth(1)
 		this.addressInfoSideBarContainer = page.locator('div.wpse-drawer[data-module="fulfillment"]')
 		this.addressField = page.locator('#fasd_address')
 		this.submitAddressButton = page.locator('button.wpse-button-primary.fasd-form-submit')
 		this.cartDrawerContainer = page.locator('#cartDrawer')
-		this.closeCartDrawerButton = page.locator(
-			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
-		)
+		this.closeCartDrawerButton = page
+			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
+			.nth(1)
 		this.minimumNotMetLabel = page.locator('div.wpse-snacktoast')
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.productPageAddToCartButton = page.locator('button.wpse-button-primary.fasd_to_cart')
@@ -65,6 +65,9 @@ export class HomePageActions {
 		this.liveCartTitle = page.locator('h6:has-text("Your cart from")')
 		this.medCartCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.viewCartButtonSimple = page.locator('a:has-text("View Cart")')
+		this.medicalOnlyBanner = page.locator('.wpse-snacktoast.warn-toast.med-issue')
+		this.issuingStateSelect = page.locator('#medcard_state')
+		this.expirationInput = page.locator('input#medcard_exp')
 	}
 	async enterAddress(page, storeType) {
 		await test.step('Click address button', async () => {
@@ -131,6 +134,12 @@ export class HomePageActions {
 	async randomizeCartItems() {
 		return Math.random() * (2 - -2 + -2)
 	}
+
+	async goToCheckout() {
+		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+		await expect(this.continueToCheckoutButton).toBeVisible()
+		await this.continueToCheckoutButton.click()
+	}
 	async addProductsToCart(page, numberOfItems) {
 		// Get all the products on the page
 		const products = await page.locator('ul.products li.product')
@@ -177,69 +186,7 @@ export class HomePageActions {
 			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
 		}
 	}
-
-	async addProductsToCartUntilMinimumMet(page) {
-		// Get all the products on the page
-		const products = await page.locator('ul.products li.product')
-
-		let i = 0
-		while (true) {
-			// Check if there are enough products to add
-			if (i >= (await products.count())) {
-				console.log(`Only ${await products.count()} products available on the page.`)
-				break
-			}
-
-			// Get the 'Add to Cart' button and product name for the current product
-			const product = products.nth(i)
-			const addToCartButton = product.locator('button.add_to_cart_button')
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-
-			// Click the 'Add to Cart' button
-			await addToCartButton.click()
-			await page.waitForTimeout(4000) // Adjust this timeout based on your app's behavior
-
-			// Wait for the cartDrawer to become visible
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			// Verify that the product was added to the cart by checking the cartDrawer
-			const cartItem = await page.locator(
-				`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
-			)
-			const isProductInCart = (await cartItem.count()) > 0
-
-			if (!isProductInCart) {
-				throw new Error(`Product "${productName}" was not found in the cart after being added.`)
-			}
-
-			console.log(`Product "${productName}" was successfully added to the cart.`)
-
-			// Check if the "Delivery minimum not met" banner is still visible
-			const isBannerVisible = await this.minimumNotMetLabel.isVisible()
-
-			if (!isBannerVisible) {
-				console.log('Minimum cart total met. Proceeding to checkout.')
-				//break out of loop to continue in the cart
-				break
-			}
-
-			// Close the cartDrawer
-			await this.closeCartDrawerButton.click()
-			// Wait for the cartDrawer to be hidden again
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			// Optionally, wait before adding the next product to account for any animations or delays
-			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
-
-			i++ // Increment to the next product
-		}
-
-		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
-		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-		await expect(this.continueToCheckoutButton).toBeVisible()
-		await this.continueToCheckoutButton.click()
-	}
-	async recAddProductsToCartUntilMinimumMet(page) {
+	async conciergeRecAddProductsToCartUntilMinimumMet(page) {
 		// Get all the products on the page
 		const products = await page.locator(
 			'li.product.type-product.product-type-simple.status-publish',
@@ -271,33 +218,15 @@ export class HomePageActions {
 
 			// Get the 'Add to Cart' button and product name for the current product
 			//const addToCartButton = product.locator('button.add_to_cart_button')
-			const addToCartButton = product.locator('button.add_to_cart_button')
+			const addToCartButton = product.locator(
+				'button.button.product_type_simple.fasd_to_cart.ajax_groove',
+			)
 			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
 
 			// Click the 'Add to Cart' button
 			console.log('locator for addtoCartButton: ' + addToCartButton)
 			//await page.waitForSelector(addToCartButton)
 			await expect(addToCartButton).toBeVisible()
-			//
-			// Use evaluate to perform custom scrolling with offset
-			// const elementLocator = page.locator(
-			// 	'li.product.type-product.product-type-simple.status-publish button.add_to_cart_button',
-			// )
-			// const elementLocator = addToCartButton
-			// await elementLocator.evaluate(element => {
-			// 	const elementRect = element.getBoundingClientRect()
-			// 	const offsetTop = elementRect.top + window.scrollY
-
-			// 	// Calculate offset to center the element in the viewport
-			// 	const offsetPosition = offsetTop - window.innerHeight / 3 + elementRect.height / 3
-
-			// 	// Scroll to the calculated position
-			// 	window.scrollTo({
-			// 		top: offsetPosition,
-			// 		behavior: 'smooth', // This provides a smooth scrolling effect
-			// 	})
-			// })
-			//
 			//await addToCartButton.scrollIntoViewIfNeeded()
 			await addToCartButton.click()
 			//product page add to cart
@@ -309,10 +238,13 @@ export class HomePageActions {
 			// Wait for the cartDrawer to become visible
 			await this.cartDrawerContainer.waitFor({ state: 'visible' })
 
-			// Verify that the product was added to the cart by checking the cartDrawer
 			const cartItem = await page.locator(
-				`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
+				`td.product-name:has(a:has-text("${productName.trim()}"))`,
 			)
+
+			const cartItems = await page.locator(`td.product-name a`).allTextContents()
+			console.log('Cart items in the drawer:', cartItems)
+
 			const isProductInCart = (await cartItem.count()) > 0
 
 			if (!isProductInCart) {
@@ -335,13 +267,14 @@ export class HomePageActions {
 			// Wait for the cartDrawer to be hidden again
 			//await this.cartDrawerContainer.waitFor({ state: 'hidden' })
 			await page.waitForTimeout(2000)
-			//
-			//
-			// await this.homePageButton710.waitFor({ state: 'visible' })
-			// await this.homePageButton710.click()
 
 			i++ // Increment to the next product
 		}
+
+		//click View Cart to go to Cart
+		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+		await expect(this.viewCartButtonSimple).toBeVisible()
+		await this.viewCartButtonSimple.click()
 
 		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
@@ -349,131 +282,119 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.click()
 	}
 
-	// function to only add MED-only products to a cart in order to test MED users
-	// function searches for med-only products with the med tag, adds that product to cart,
-	// checks if Med card needs to be added, adds the med card, and then verifies if cart minimum is reached
-	// adding the same med-only product to cart until the min is reached
-	async medAddProductsToCartUntilMinimumMet(page) {
-		// Get all the products on the page
+	async conciergeMedAddProductsToCartUntilMinimumMet(page) {
 		const products = await page.locator('ul.products li.product')
-
 		let i = 0
 		let medicalCardProvided = false
 
 		while (true) {
-			// Check if there are enough products to add
 			if (i >= (await products.count())) {
 				console.log(`Only ${await products.count()} products available on the page.`)
 				break
 			}
 
-			// Get the current product
 			const product = products.nth(i)
-
-			// Check if the product has the "Medical Only" badge
 			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
 
-			//search for product with a MED only tag, so that we can use that product to add to cart for Med user
 			if (!hasMedicalOnlyTag) {
-				// Skip the product if it does not have the "Medical Only" tag
 				console.log(
 					`Skipping product "${await product
 						.locator('.woocommerce-loop-product__title')
 						.innerText()}" as it is not "Medical Only".`,
 				)
 				i++
-				continue // Skip this product and move to the next one
+				continue
 			}
 
-			// Get the 'Add to Cart' button and product name for the current product
-			const addToCartButton = product.locator('button.add_to_cart_button')
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-
-			// Click the 'Add to Cart' button
-			await addToCartButton.click()
-			await page.waitForTimeout(4000)
-
-			// Wait for the cartDrawer to become visible
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			// Verify that the product was added to the cart by checking the cartDrawer
-			const cartItem = await page.locator(
-				`#cartDrawer .woocommerce-cart-form__cart-item .product-name a:has-text("${productName}")`,
+			const addToCartButton = product.locator(
+				'button.button.product_type_simple.fasd_to_cart.ajax_groove',
 			)
+			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+			const productNameNormalized = productName.trim()
+
+			// Add the product to the cart
+			await addToCartButton.click()
+			await page.waitForTimeout(3000)
+			await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+
+			const cartItem = page.locator(`td.product-name:has(a:has-text("${productNameNormalized}"))`)
 			const isProductInCart = (await cartItem.count()) > 0
 
 			if (!isProductInCart) {
-				throw new Error(`Product "${productName}" was not found in the cart after being added.`)
+				throw new Error(
+					`Product "${productNameNormalized}" was not found in the cart after being added.`,
+				)
 			}
 
-			console.log(`Product "${productName}" was successfully added to the cart.`)
+			console.log(`Product "${productNameNormalized}" was successfully added to the cart.`)
 
-			//if medical card info is already provided, then check if cart minimum has been reached yet
-			if (medicalCardProvided) {
-				// Check if the "Delivery minimum not met" banner is still visible
-				const isBannerVisible = await this.minimumNotMetLabel.isVisible()
-
-				if (!isBannerVisible) {
-					console.log('Minimum cart total met. Proceeding to checkout.')
-					// Break out of loop to continue in the cart
-					break
-				}
-				// Close the cartDrawer
-				await this.closeCartDrawerButton.click()
-				await page.waitForTimeout(2000)
-			}
-
-			// Check if the "Medical Only" banner is visible
-			const medicalOnlyBannerVisible = await page
-				.locator('.wpse-snacktoast.warn-toast.med-issue')
-				.isVisible()
-			if (medicalOnlyBannerVisible && !medicalCardProvided) {
-				console.log('Medical-only product in cart. Adding medical card information...')
-
-				// Click the "I have a medical card" checkbox
-				const medicalCardCheckbox = page.locator('input#med_included')
-				await medicalCardCheckbox.check()
-
-				// Add the medical card information
-				const medCardFileInput = page.locator('input#fasd_medcard')
-				const [driversLicenseChooser] = await Promise.all([
-					this.page.waitForEvent('filechooser'),
-					medCardFileInput.click(),
-				])
-				const issuingStateSelect = page.locator('select#medcard_state')
-				const expirationInput = page.locator('input#medcard_exp')
-				await driversLicenseChooser.setFiles('Medical-Card.png')
-				// await issuingStateSelect.selectOption('CA')
-				const newYear = new Date().getFullYear() + 1
-				await expirationInput.click()
-				await expirationInput.type(`01/01/${newYear}`)
-				// await expirationInput.fill(`01/01/${newYear}`) // Set the expiration date to a future date
-
-				// Submit the medical card information
-				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
-				await saveMedicalInfoButton.click()
-
-				// Set the flag to true since the medical card has been provided
-				medicalCardProvided = true
-
-				// Wait for any animations or loading to finish
+			// Check if the minimum banner is still visible
+			const isMinimumBannerVisible = await this.minimumNotMetLabel.isVisible()
+			if (!isMinimumBannerVisible) {
+				console.log('Minimum cart total met. Proceeding to check for medical card requirements.')
+				// View the cart
+				await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+				await this.viewCartButtonSimple.click()
+				//
 				await page.waitForTimeout(3000)
+				//
+				// wait for medical only banner
+				await this.medicalOnlyBanner.waitFor({ state: 'visible', timeout: 10000 })
+
+				// Check if the Medical Card Banner is visible
+				const medicalOnlyBannerVisible = await page
+					.locator('.wpse-snacktoast.warn-toast.med-issue')
+					.isVisible()
+				if (medicalOnlyBannerVisible && !medicalCardProvided) {
+					console.log('Medical-only product in cart. Adding medical card information...')
+
+					// Add the medical card information
+					const medicalCardCheckbox = page.locator('input#med_included')
+					await medicalCardCheckbox.check()
+
+					const medCardFileInput = page.locator('input#fasd_medcard')
+					const [fileChooser] = await Promise.all([
+						page.waitForEvent('filechooser'),
+						medCardFileInput.click(),
+					])
+					await fileChooser.setFiles('Medical-Card.png')
+
+					// const issuingStateSelect = page.locator('select#medcard_state')
+					// const expirationInput = page.locator('input#medcard_exp')
+					await this.issuingStateSelect.selectOption('CA')
+					const newYear = new Date().getFullYear() + 1
+					await this.expirationInput.click()
+					await this.expirationInput.type(`01/01/${newYear}`)
+
+					const saveMedicalInfoButton = page.locator(
+						'.fasd-form-submit:has-text("Save & Continue")',
+					)
+					await saveMedicalInfoButton.click()
+					medicalCardProvided = true
+
+					await page.waitForTimeout(3000)
+
+					// View the cart
+					await this.cartButtonNav.waitFor({ state: 'visible' })
+					await this.cartButtonNav.click()
+					await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+
+					// Proceed to checkout
+					console.log('All requirements met. Proceeding to Checkout.')
+					await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+					await this.continueToCheckoutButton.click()
+				}
+				//
+				// break loop if order minimum is met
+				break
 			}
 
-			//DOES NOT increment to next product in order to add the same MED Only product
+			// Close the cart drawer and wait before adding another product
+			await this.closeCartDrawerButton.click()
+			await page.waitForTimeout(2000)
+
 			//i++ // Increment to the next product
 		}
-
-		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
-		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-		await expect(this.continueToCheckoutButton).toBeVisible()
-		await this.continueToCheckoutButton.click()
-	}
-
-	async goToCheckout() {
-		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-		await expect(this.continueToCheckoutButton).toBeVisible()
-		await this.continueToCheckoutButton.click()
 	}
 
 	async liveRecAddProductsToCartUntilMinimumMet(page) {
@@ -482,7 +403,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 4
+		let i = 0
 		let firstProductAdded = false // Track if the first product has been added
 
 		while (true) {
@@ -520,8 +441,8 @@ export class HomePageActions {
 
 				// Wait for and click 'Add to Cart' on the product page
 				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.click()
-				await page.waitForTimeout(6000)
+				await this.productPageAddToCartButton.first().click({ force: true })
+				await page.waitForTimeout(5000)
 
 				// Wait for the cart drawer to become visible
 				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
@@ -623,7 +544,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 4
+		let i = 0
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
 
@@ -727,7 +648,7 @@ export class HomePageActions {
 				await page.waitForTimeout(2000)
 			}
 
-			i++ // Increment to the next product
+			//i++ // Increment to the next product
 		}
 
 		// Once the banner is no longer visible, proceed to Cart
@@ -793,6 +714,137 @@ export class HomePageActions {
 		// Proceed to checkout after medical info is provided
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await expect(this.continueToCheckoutButton).toBeVisible()
+		await this.continueToCheckoutButton.click()
+	}
+	//
+	// FUTURE consolidated add to cart function
+	async consolidatedAddProductsToCartUntilMinimumMet(page, userType, siteName) {
+		const isMedical = userType === 'medical'
+		const isLiveSite = siteName === 'live'
+
+		// Common locators and setup
+		const products = await page.locator(
+			'li.product.type-product.product-type-simple.status-publish',
+		)
+		let i = isLiveSite ? 4 : 0 // Adjust starting index for live vs concierge
+		let firstProductAdded = false
+		let medicalCardProvided = false
+
+		while (true) {
+			// Check if there are enough products
+			if (i >= (await products.count())) {
+				console.log(`Only ${await products.count()} products available on the page.`)
+				break
+			}
+
+			const product = products.nth(i)
+			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+			// Flow for medical users
+			if (isMedical && !hasMedicalOnlyTag) {
+				console.log(
+					`Skipping product "${await product
+						.locator('.woocommerce-loop-product__title')
+						.innerText()}" as it is not "Medical Only".`,
+				)
+				i++
+				continue
+			}
+
+			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+			const productNameNormalized = productName.trim()
+
+			if (!firstProductAdded && isLiveSite) {
+				// For live site, click into product page for the first product
+				const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
+				await productClickInto.click()
+				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
+				await this.productPageAddToCartButton.click()
+			} else {
+				// Add to cart directly from homepage
+				const addToCartButton = product.locator(
+					'button.button.product_type_simple.fasd_to_cart.ajax_groove',
+				)
+				await addToCartButton.click()
+			}
+
+			// Wait and verify the product is added to the cart
+			await page.waitForTimeout(4000)
+			await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+			const cartItem = await page.locator(
+				`td.product-name:has(a:has-text("${productNameNormalized}"))`,
+			)
+			const isProductInCart = (await cartItem.count()) > 0
+
+			if (!isProductInCart) {
+				throw new Error(
+					`Product "${productNameNormalized}" was not found in the cart after being added.`,
+				)
+			}
+
+			console.log(`Product "${productNameNormalized}" was successfully added to the cart.`)
+			firstProductAdded = true
+
+			// Check if the minimum banner is visible
+			const isMinimumBannerVisible = await this.minimumNotMetLabel.isVisible()
+			if (!isMinimumBannerVisible) {
+				console.log('Minimum cart total met. Proceeding to checkout.')
+				break
+			}
+
+			// Special handling for medical users if the medical card needs to be added
+			if (isMedical && !medicalCardProvided) {
+				const medicalOnlyBannerVisible = await page
+					.locator('.wpse-snacktoast.warn-toast.med-issue')
+					.isVisible()
+				if (medicalOnlyBannerVisible) {
+					console.log('Medical-only product in cart. Adding medical card information...')
+
+					const medicalCardCheckbox = page.locator('input#med_included')
+					await medicalCardCheckbox.check()
+
+					const medCardFileInput = page.locator('input#fasd_medcard')
+					const [fileChooser] = await Promise.all([
+						page.waitForEvent('filechooser'),
+						medCardFileInput.click(),
+					])
+					await fileChooser.setFiles('Medical-Card.png')
+
+					await this.issuingStateSelect.selectOption('CA')
+					const newYear = new Date().getFullYear() + 1
+					await this.expirationInput.click()
+					await this.expirationInput.type(`01/01/${newYear}`)
+
+					const saveMedicalInfoButton = page.locator(
+						'.fasd-form-submit:has-text("Save & Continue")',
+					)
+					await saveMedicalInfoButton.click()
+					medicalCardProvided = true
+
+					// Wait for the cart drawer to reappear
+					await this.cartButtonNav.waitFor({ state: 'visible' })
+					await this.cartButtonNav.click()
+					await this.cartDrawerContainer.waitFor({ state: 'visible' })
+				}
+			}
+
+			// Close cart drawer if still adding products
+			await this.closeCartDrawerButton.click()
+			await page.waitForTimeout(2000)
+
+			i++ // Increment to the next product
+		}
+
+		// Proceed to checkout
+		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+		await this.viewCartButtonSimple.click()
+
+		if (isLiveSite) {
+			await this.liveCartTitle.waitFor({ state: 'visible' })
+		}
+
+		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await this.continueToCheckoutButton.click()
 	}
 }
