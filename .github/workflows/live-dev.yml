@@ -33,6 +33,7 @@ jobs:
       ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME}}
       ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD}}
       ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV}}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD}}
 
     steps:
       - uses: actions/checkout@v2
