@@ -325,15 +325,16 @@ export class CheckoutPage {
 			//enter false password to verify enforcement
 			await this.passwordCheckoutField.click()
 			await this.passwordCheckoutField.fill('fakepassword')
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(1500)
 			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
 			await expect(this.passwordError).toHaveText('Please verify password')
 			await page.waitForTimeout(1500)
 			//enter correct password
 			await this.passwordCheckoutField.click()
 			const password = process.env.CHECKOUT_PASSWORD || ''
 			await this.passwordCheckoutField.fill(password)
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(1500)
 			await this.submitPasswordButton.click()
 			await page.waitForTimeout(1500)
 			// place order once password has been entered
@@ -557,15 +558,16 @@ export class CheckoutPage {
 			//enter false password to verify enforcement
 			await this.passwordCheckoutField.click()
 			await this.passwordCheckoutField.fill('fakepassword')
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(1500)
 			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
 			await expect(this.passwordError).toHaveText('Please verify password')
 			await page.waitForTimeout(1500)
 			//enter correct password
 			await this.passwordCheckoutField.click()
 			const password = process.env.CHECKOUT_PASSWORD || ''
 			await this.passwordCheckoutField.fill(password)
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(1500)
 			await this.submitPasswordButton.click()
 			await page.waitForTimeout(1500)
 			// place order once password has been entered
