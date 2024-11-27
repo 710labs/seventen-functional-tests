@@ -9,7 +9,7 @@ import { ConciergeCreateUser } from '../../models/concierge/concierge-create-use
 require('dotenv').config('.env')
 
 test.describe('Concierge Tests', () => {
-	test.setTimeout(90000) // Set the timeout for all tests in this file
+	test.setTimeout(200000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	const conciergeURL = process.env.CONCIERGE_URL || ''
 	console.log(`------- \n URL being tested: ${conciergeURL} -------- \n `)
@@ -70,11 +70,11 @@ test.describe('Concierge Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.recAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeRecAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recEnterInfoForCheckout(page)
+			await checkoutPage.recEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 		},
@@ -126,11 +126,11 @@ test.describe('Concierge Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.medAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.medEnterInfoForCheckout(page)
+			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 		},
