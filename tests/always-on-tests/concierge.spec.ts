@@ -56,7 +56,7 @@ test.describe('Concierge Tests', () => {
 			}
 			// enter a unique test email for test user
 			const newEmail = `test_auto_rec_${timestamp}_${deviceType}@test.com`
-			const newPassword = `Test710!`
+			const newPassword = process.env.CONCIERGE_USER_PASSWORD || ''
 			// login admin to WP dashboard
 			await conciergeCreateUser.loginAdmin(page)
 			//create new user as admin
@@ -112,7 +112,7 @@ test.describe('Concierge Tests', () => {
 			}
 			// enter a unique test email for test user
 			const newEmail = `test_auto_med_${timestamp}_${deviceType}@test.com`
-			const newPassword = `Test710!`
+			const newPassword = process.env.CONCIERGE_USER_PASSWORD || ''
 			// login admin to WP dashboard
 			await conciergeCreateUser.loginAdmin(page)
 			//create new user as admin

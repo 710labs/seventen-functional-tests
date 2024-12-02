@@ -71,7 +71,7 @@ export class ConciergeLogin {
 			await this.passwordField.waitFor({ state: 'visible' })
 			await expect(this.passwordField).toBeVisible()
 			await this.passwordField.click()
-			await this.passwordField.fill(this.newPassword)
+			await this.passwordField.fill(newPassword)
 			//enter false password to verify enforcement
 			await this.passwordField.click()
 			await this.passwordField.fill('falsepassword')
