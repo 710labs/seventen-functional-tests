@@ -22,6 +22,7 @@ export class HomePageLogin {
 	readonly zipCodeField: Locator
 	readonly createAccountButton: Locator
 	readonly addToCartButtonGeneral: Locator
+	readonly signInError: Locator
 
 	constructor(page: Page) {
 		this.alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
@@ -41,6 +42,7 @@ export class HomePageLogin {
 		this.zipCodeField = page.locator('input.fasd-form-value#reg_postcode')
 		this.createAccountButton = page.locator('button:has-text("Create Account")')
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
+		this.signInError = page.locator('.wpse-snacktoast-headline')
 	}
 	async verifyUserSignInModalAppears(page) {
 		await test.step('Verify the Homepage loads correctly', async () => {
@@ -66,6 +68,21 @@ export class HomePageLogin {
 			await this.emailFieldPopUp.click()
 			await this.emailFieldPopUp.fill(this.alwaysOnUsername)
 			await this.continueButtonPopUp.click()
+		})
+		await test.step('Enter false password & verify error', async () => {
+			// enter in Password
+			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
+			await expect(this.passwordFieldPopUp).toBeVisible()
+			await this.passwordFieldPopUp.click()
+			await this.passwordFieldPopUp.fill(this.alwaysOnPassword)
+			//enter false password to verify enforcement
+			await this.passwordFieldPopUp.click()
+			await this.passwordFieldPopUp.fill('falsepassword')
+			// click sign in button
+			await expect(this.signInButton).toBeVisible()
+			await this.signInButton.click()
+			await expect(this.signInError).toHaveText('Sign in unsuccessful')
+			await page.waitForTimeout(1500)
 		})
 		await test.step('Enter user password', async () => {
 			// enter in Password

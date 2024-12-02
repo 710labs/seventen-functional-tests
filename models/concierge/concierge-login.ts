@@ -12,6 +12,7 @@ export class ConciergeLogin {
 	readonly emailField: Locator
 	readonly passwordField: Locator
 	readonly signInButton: Locator
+	readonly signInError: Locator
 
 	constructor(page: Page) {
 		this.conciergeUser = process.env.CONCIERGE_USER || ''
@@ -21,6 +22,7 @@ export class ConciergeLogin {
 		this.emailField = page.locator('#username')
 		this.passwordField = page.locator('#password')
 		this.signInButton = page.locator('button[name="login"]')
+		this.signInError = page.locator('.wpse-snacktoast-headline')
 	}
 	async loginExistingUser(page) {
 		await test.step('Verify the Homepage loads correctly', async () => {
@@ -60,9 +62,26 @@ export class ConciergeLogin {
 			await expect(this.passwordField).toBeVisible()
 			await expect(this.signInButton).toBeVisible()
 		})
-		await test.step('Enter in user/password details to Login', async () => {
+		await test.step('Enter in email', async () => {
 			await this.emailField.click()
 			await this.emailField.fill(newUsername)
+		})
+		await test.step('Enter false password & verify error', async () => {
+			// enter in Password
+			await this.passwordField.waitFor({ state: 'visible' })
+			await expect(this.passwordField).toBeVisible()
+			await this.passwordField.click()
+			await this.passwordField.fill(this.newPassword)
+			//enter false password to verify enforcement
+			await this.passwordField.click()
+			await this.passwordField.fill('falsepassword')
+			// click sign in button
+			await expect(this.signInButton).toBeVisible()
+			await this.signInButton.click()
+			await expect(this.signInError).toHaveText('Sign in unsuccessful')
+			await page.waitForTimeout(1500)
+		})
+		await test.step('Enter in user/password details to Login', async () => {
 			await this.passwordField.click()
 			await this.passwordField.fill(newPassword)
 			await this.signInButton.click()
