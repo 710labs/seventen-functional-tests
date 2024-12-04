@@ -62,19 +62,17 @@ export class HomePageLogin {
 			await expect(this.continueButtonPopUp).toBeVisible()
 		})
 	}
-	async loginExistingUser(page) {
+	async loginExistingUser(page, userName, password) {
 		await test.step('Enter user email', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click()
-			await this.emailFieldPopUp.fill(this.alwaysOnUsername)
+			await this.emailFieldPopUp.fill(userName)
 			await this.continueButtonPopUp.click()
 		})
 		await test.step('Enter false password & verify error', async () => {
 			// enter in Password
 			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
 			await expect(this.passwordFieldPopUp).toBeVisible()
-			await this.passwordFieldPopUp.click()
-			await this.passwordFieldPopUp.fill(this.alwaysOnPassword)
 			//enter false password to verify enforcement
 			await this.passwordFieldPopUp.click()
 			await this.passwordFieldPopUp.fill('falsepassword')
@@ -89,7 +87,7 @@ export class HomePageLogin {
 			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
 			await expect(this.passwordFieldPopUp).toBeVisible()
 			await this.passwordFieldPopUp.click()
-			await this.passwordFieldPopUp.fill(this.alwaysOnPassword)
+			await this.passwordFieldPopUp.fill(password)
 		})
 		await test.step('Click Sign', async () => {
 			// click sign in button
