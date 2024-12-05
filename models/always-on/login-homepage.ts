@@ -36,7 +36,7 @@ export class HomePageLogin {
 		this.emailFieldPopUp = page.locator('#fasd_email')
 		this.continueButtonPopUp = page.locator('button:has-text("Continue")')
 		this.passwordFieldPopUp = page.locator('input.fasd-form-value#password')
-		this.signInButton = page.locator('button:has-text("Sign In")')
+		this.signInButton = page.locator('button:has-text("Sign in")')
 		this.firstNameField = page.locator('input.fasd-form-value#reg_fname')
 		this.lastNameField = page.locator('input.fasd-form-value#reg_lname')
 		this.zipCodeField = page.locator('input.fasd-form-value#reg_postcode')
@@ -62,7 +62,7 @@ export class HomePageLogin {
 			await expect(this.continueButtonPopUp).toBeVisible()
 		})
 	}
-	async loginExistingUser(page, userName, password) {
+	async loginExistingUser(page, falsePassword, userName, password) {
 		await test.step('Enter user email', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click()
@@ -73,11 +73,11 @@ export class HomePageLogin {
 			// enter in Password
 			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
 			await expect(this.passwordFieldPopUp).toBeVisible()
+			await expect(this.signInButton).toBeVisible()
 			//enter false password to verify enforcement
 			await this.passwordFieldPopUp.click()
-			await this.passwordFieldPopUp.fill('falsepassword')
+			await this.passwordFieldPopUp.fill(falsePassword)
 			// click sign in button
-			await expect(this.signInButton).toBeVisible()
 			await this.signInButton.click()
 			await expect(this.signInError).toHaveText('Sign in unsuccessful')
 			await page.waitForTimeout(1500)

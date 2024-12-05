@@ -557,7 +557,7 @@ export class CheckoutPage {
 			await this.submitPasswordButton.waitFor({ state: 'visible' })
 			//enter false password to verify enforcement
 			await this.passwordCheckoutField.click()
-			await this.passwordCheckoutField.fill('fakepassword')
+			await this.passwordCheckoutField.fill('wrongpassword')
 			await page.waitForTimeout(1500)
 			await this.submitPasswordButton.click()
 			await page.waitForTimeout(1500)
