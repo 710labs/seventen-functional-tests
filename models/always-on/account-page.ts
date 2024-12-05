@@ -166,7 +166,8 @@ export class AccountPage {
 		// click account button in nav bar
 		await this.accountButtonNav.click()
 	}
-	async verifyAccountPageElements(userType) {
+	async verifyAccountPageElements(userType, noOrders) {
+		await this.page.waitForTimeout(2000)
 		// Verify page title is visible
 		await expect(this.pageTitleSelector).toBeVisible()
 		// Verify Account button is visible
@@ -175,7 +176,7 @@ export class AccountPage {
 		await expect(this.signOutButton).toBeVisible()
 
 		// verify & edit Address Info
-		await this.enterAddressInfo()
+		await this.enterAddressInfo(noOrders)
 
 		// edit personal info
 		const newEmail = await this.editPersonalInfo(userType)
@@ -220,14 +221,21 @@ export class AccountPage {
 		await this.viewAllOrdersLink.click()
 		await this.page.goBack() // Navigate back to account page
 	}
-	async enterAddressInfo() {
+	// if being used when account has NO orders, pass true, if account already has orders, pass false
+	async enterAddressInfo(noOrders) {
 		// Verify Address section & link appear
+		await this.page.waitForTimeout(2000)
 		await expect(this.addressesSection).toBeVisible()
 		// click on edit address button
 		await this.editAddressesLink.waitFor({ state: 'visible' })
 		await expect(this.editAddressesLink).toBeVisible()
-		await this.editAddressesLink.click()
-		await this.editAddressesLink.click()
+		if (noOrders === true) {
+			await this.editAddressesLink.click()
+			//await this.editAddressesLink.click()
+		} else {
+			await this.editAddressesLink.click()
+			//await this.editAddressesLink.click()
+		}
 
 		//expect Header to be visible in drawer
 		await this.addressDrawerHeader.waitFor({ state: 'visible' })
@@ -250,8 +258,9 @@ export class AccountPage {
 		// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
 		await this.addressField.press('ArrowDown')
 		await this.addressField.press('Enter')
+		await this.page.waitForTimeout(2000)
 		await this.addressSubmitButton.click()
-		await this.addressSubmitButton.click()
+		//await this.addressSubmitButton.click()
 
 		//verify that account page now shows the updated address
 		expect(this.currentAddressDisplayed).toHaveText(newAddress)
@@ -294,7 +303,7 @@ export class AccountPage {
 		}
 		const newPhone = generatePhoneNumber()
 		await this.phoneInput.click()
-		await this.phoneInput.type(newPhone)
+		await this.phoneInput.fill(newPhone)
 		await this.birthdayInput.click()
 		const newBirthday = '01/02/1985'
 		await this.birthdayInput.type(newBirthday)
