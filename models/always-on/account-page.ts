@@ -416,11 +416,14 @@ export class AccountPage {
 		await this.passwordDrawerHeader.waitFor({ state: 'visible' })
 		// enter current password
 		await this.currentPasswordInput.fill(this.alwaysOnPassword)
+		await this.page.waitForTimeout(1500)
 		// enter new password
 		await this.newPasswordInput.fill(this.NEWalwaysOnPassword)
+		await this.page.waitForTimeout(1500)
 		//click change password button
 		await expect(this.changePasswordButton).toBeVisible()
 		await this.changePasswordButton.click()
+		await this.page.waitForTimeout(1000)
 	}
 	async normalizePhoneNumber(phone) {
 		// Remove all non-numeric characters first
