@@ -47,7 +47,12 @@ test.describe('Live Tests', () => {
 			// go to account page
 			await accountPage.goToAccountPage()
 			// verify that account page elements, buttons, and popup actions all work
-			const newEmail = await accountPage.verifyAccountPageElements('rec', false)
+			const newEmail = await accountPage.verifyAccountPageElements(
+				'rec',
+				false,
+				alwaysOnPassword,
+				NEWalwaysOnPassword,
+			)
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
@@ -85,7 +90,12 @@ test.describe('Live Tests', () => {
 			// go to account page
 			await accountPage.goToAccountPage()
 			// verify that account page elements, buttons, and popup actions all work
-			const newEmail = await accountPage.verifyAccountPageElements('med', false)
+			const newEmail = await accountPage.verifyAccountPageElements(
+				'med',
+				false,
+				alwaysOnPassword,
+				NEWalwaysOnPassword,
+			)
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
