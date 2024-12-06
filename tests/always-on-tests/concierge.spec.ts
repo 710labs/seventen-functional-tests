@@ -18,8 +18,11 @@ test.describe('Concierge Tests', () => {
 		const accountPage = new AccountPage(page)
 
 		const homePageLogin = new HomePageLogin(page)
+		// enter a unique test email for test user
+		const userEmail = process.env.CONCIERGE_USER || ''
+		const password = process.env.CONCIERGE_PASSWORD || ''
 		// log in existing user
-		await conciergeLogin.loginExistingUser(page)
+		await conciergeLogin.loginUser(page, userEmail, password)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		await accountPage.logOut(page)
 	})
@@ -56,13 +59,13 @@ test.describe('Concierge Tests', () => {
 			}
 			// enter a unique test email for test user
 			const newEmail = `test_auto_rec_${timestamp}_${deviceType}@test.com`
-			const newPassword = process.env.CONCIERGE_USER_PASSWORD || ''
+			const newPassword = process.env.CONCIERGE_PASSWORD || ''
 			// login admin to WP dashboard
 			await conciergeCreateUser.loginAdmin(page)
 			//create new user as admin
 			await conciergeCreateUser.createNewUser(page, newEmail, newPassword)
 			//login to shop as new user
-			await conciergeLogin.loginNewUserCreated(page, newEmail, newPassword)
+			await conciergeLogin.loginUser(page, newEmail, newPassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
@@ -112,13 +115,13 @@ test.describe('Concierge Tests', () => {
 			}
 			// enter a unique test email for test user
 			const newEmail = `test_auto_med_${timestamp}_${deviceType}@test.com`
-			const newPassword = process.env.CONCIERGE_USER_PASSWORD || ''
+			const newPassword = process.env.CONCIERGE_PASSWORD || ''
 			// login admin to WP dashboard
 			await conciergeCreateUser.loginAdmin(page)
 			//create new user as admin
 			await conciergeCreateUser.createNewUser(page, newEmail, newPassword)
 			//login to shop as new user
-			await conciergeLogin.loginNewUserCreated(page, newEmail, newPassword)
+			await conciergeLogin.loginUser(page, newEmail, newPassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account

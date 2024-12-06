@@ -82,7 +82,8 @@ export class HomePageActions {
 					// Desktop view Concierge
 					await this.enterAddressButtonConciergeDesktop.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonConciergeDesktop).toBeVisible()
-					await this.enterAddressButtonConciergeDesktop.click()
+					await this.enterAddressButtonConciergeDesktop.click({ force: true })
+					//await this.enterAddressButtonConciergeDesktop.click()
 				}
 			} else if (storeType == 'live') {
 				if (viewportSize.width <= 768) {

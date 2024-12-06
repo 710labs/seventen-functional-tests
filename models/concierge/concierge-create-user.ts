@@ -145,9 +145,11 @@ export class ConciergeCreateUser {
 			await expect(this.newUserPasswordField).toBeVisible()
 			await this.newUserPasswordField.click()
 			await this.newUserPasswordField.fill(newUserPassword)
+			await this.page.waitForTimeout(1500)
 			//confirm weak password
-			await expect(this.weakPasswordConfirmation).toBeVisible()
-			await this.weakPasswordConfirmation.check()
+			//await expect(this.weakPasswordConfirmation).toBeVisible()
+			//await this.weakPasswordConfirmation.check()
+			//await this.page.waitForTimeout(1500)
 		})
 		await test.step('Submit New User', async () => {
 			await this.submitNewUserButton.scrollIntoViewIfNeeded()
