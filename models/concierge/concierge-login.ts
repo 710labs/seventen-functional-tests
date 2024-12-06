@@ -47,7 +47,7 @@ export class ConciergeLogin {
 			await this.signInButton.click()
 		})
 	}
-	async loginUser(page, newUsername, newPassword) {
+	async loginUser(page, falsePassword, newUsername, newPassword) {
 		await test.step('Verify the Homepage loads correctly', async () => {
 			const conciergeURL = process.env.CONCIERGE_URL || ''
 
@@ -74,7 +74,7 @@ export class ConciergeLogin {
 			await this.passwordField.fill(newPassword)
 			//enter false password to verify enforcement
 			await this.passwordField.click()
-			await this.passwordField.fill('falsepassword')
+			await this.passwordField.fill(falsePassword)
 			// click sign in button
 			await expect(this.signInButton).toBeVisible()
 			await this.signInButton.click()
