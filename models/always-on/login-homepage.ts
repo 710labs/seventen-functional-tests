@@ -22,6 +22,7 @@ export class HomePageLogin {
 	readonly zipCodeField: Locator
 	readonly createAccountButton: Locator
 	readonly addToCartButtonGeneral: Locator
+	readonly signInError: Locator
 
 	constructor(page: Page) {
 		this.alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
@@ -35,12 +36,13 @@ export class HomePageLogin {
 		this.emailFieldPopUp = page.locator('#fasd_email')
 		this.continueButtonPopUp = page.locator('button:has-text("Continue")')
 		this.passwordFieldPopUp = page.locator('input.fasd-form-value#password')
-		this.signInButton = page.locator('button:has-text("Sign In")')
+		this.signInButton = page.locator('button:has-text("Sign in")')
 		this.firstNameField = page.locator('input.fasd-form-value#reg_fname')
 		this.lastNameField = page.locator('input.fasd-form-value#reg_lname')
 		this.zipCodeField = page.locator('input.fasd-form-value#reg_postcode')
 		this.createAccountButton = page.locator('button:has-text("Create Account")')
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
+		this.signInError = page.locator('.wpse-snacktoast-headline')
 	}
 	async verifyUserSignInModalAppears(page) {
 		await test.step('Verify the Homepage loads correctly', async () => {
@@ -60,19 +62,32 @@ export class HomePageLogin {
 			await expect(this.continueButtonPopUp).toBeVisible()
 		})
 	}
-	async loginExistingUser(page) {
+	async loginExistingUser(page, falsePassword, userName, password) {
 		await test.step('Enter user email', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click()
-			await this.emailFieldPopUp.fill(this.alwaysOnUsername)
+			await this.emailFieldPopUp.fill(userName)
 			await this.continueButtonPopUp.click()
+		})
+		await test.step('Enter false password & verify error', async () => {
+			// enter in Password
+			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
+			await expect(this.passwordFieldPopUp).toBeVisible()
+			await expect(this.signInButton).toBeVisible()
+			//enter false password to verify enforcement
+			await this.passwordFieldPopUp.click()
+			await this.passwordFieldPopUp.fill(falsePassword)
+			// click sign in button
+			await this.signInButton.click()
+			await expect(this.signInError).toHaveText('Sign in unsuccessful')
+			await page.waitForTimeout(1500)
 		})
 		await test.step('Enter user password', async () => {
 			// enter in Password
 			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
 			await expect(this.passwordFieldPopUp).toBeVisible()
 			await this.passwordFieldPopUp.click()
-			await this.passwordFieldPopUp.fill(this.alwaysOnPassword)
+			await this.passwordFieldPopUp.fill(password)
 		})
 		await test.step('Click Sign', async () => {
 			// click sign in button

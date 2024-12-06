@@ -34,6 +34,7 @@ jobs:
       ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD}}
       ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_STAGE}}
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD}}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD}}
 
     steps:
       - uses: actions/checkout@v2
