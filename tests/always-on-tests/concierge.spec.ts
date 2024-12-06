@@ -12,6 +12,9 @@ test.describe('Concierge Tests', () => {
 	test.setTimeout(200000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	const conciergeURL = process.env.CONCIERGE_URL || ''
+	const conciergeUsername = process.env.CONCIERGE_USER || ''
+	const conciergePassword = process.env.CONCIERGE_PASSWORD || ''
+	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 	console.log(`------- \n URL being tested: ${conciergeURL} -------- \n `)
 	test('Existing user -- Sign In & Sign Out', { tag: ['@recreational'] }, async ({ page }) => {
 		const conciergeLogin = new ConciergeLogin(page)
@@ -19,12 +22,12 @@ test.describe('Concierge Tests', () => {
 
 		const homePageLogin = new HomePageLogin(page)
 		// log in existing user
-		await conciergeLogin.loginExistingUser(page)
+		await conciergeLogin.loginUser(page, 'wrongpassword', conciergeUsername, conciergePassword)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		await accountPage.logOut(page)
 	})
 	test(
-		'Rec New User - Happy Path test - Create New User & Checkout',
+		'Rec New User - Happy Path test - Create New User, Place Order, Update Account Details, Re-Log In with New Creds',
 		{ tag: ['@recreational'] },
 		async ({ page }) => {
 			const conciergeLogin = new ConciergeLogin(page)
@@ -33,6 +36,7 @@ test.describe('Concierge Tests', () => {
 			const checkoutPage = new CheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
 			const conciergeCreateUser = new ConciergeCreateUser(page)
+			const accountPage = new AccountPage(page)
 
 			const now = new Date()
 			// Construct the timestamp string with date and time
@@ -56,13 +60,12 @@ test.describe('Concierge Tests', () => {
 			}
 			// enter a unique test email for test user
 			const newEmail = `test_auto_rec_${timestamp}_${deviceType}@test.com`
-			const newPassword = `Test710!`
 			// login admin to WP dashboard
 			await conciergeCreateUser.loginAdmin(page)
 			//create new user as admin
-			await conciergeCreateUser.createNewUser(page, newEmail, newPassword)
+			await conciergeCreateUser.createNewUser(page, newEmail, conciergePassword)
 			//login to shop as new user
-			await conciergeLogin.loginNewUserCreated(page, newEmail, newPassword)
+			await conciergeLogin.loginUser(page, 'wrongpassword', newEmail, conciergePassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
@@ -77,10 +80,23 @@ test.describe('Concierge Tests', () => {
 			await checkoutPage.recEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+			// go to account page
+			await accountPage.goToAccountPage()
+			// verify that account page elements, buttons, and popup actions all work
+			const updatedEmail = await accountPage.verifyAccountPageElements(
+				'rec',
+				false,
+				conciergePassword,
+				NEWalwaysOnPassword,
+			)
+			//log out
+			await accountPage.logOut(page)
+			// sign in with NEW password that was just updated
+			await conciergeLogin.loginUser(page, conciergePassword, updatedEmail, NEWalwaysOnPassword)
 		},
 	)
 	test(
-		'MED New User - Happy Path test - Create New User & Checkout',
+		'MED New User - Happy Path test - Create New User, Place Order, Update Account Details, Re-Log In with New Creds',
 		{ tag: ['@medical'] },
 		async ({ page }) => {
 			const conciergeLogin = new ConciergeLogin(page)
@@ -89,6 +105,7 @@ test.describe('Concierge Tests', () => {
 			const checkoutPage = new CheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
 			const conciergeCreateUser = new ConciergeCreateUser(page)
+			const accountPage = new AccountPage(page)
 
 			const now = new Date()
 			// Construct the timestamp string with date and time
@@ -112,13 +129,13 @@ test.describe('Concierge Tests', () => {
 			}
 			// enter a unique test email for test user
 			const newEmail = `test_auto_med_${timestamp}_${deviceType}@test.com`
-			const newPassword = `Test710!`
+			const newPassword = process.env.CONCIERGE_PASSWORD || ''
 			// login admin to WP dashboard
 			await conciergeCreateUser.loginAdmin(page)
 			//create new user as admin
-			await conciergeCreateUser.createNewUser(page, newEmail, newPassword)
+			await conciergeCreateUser.createNewUser(page, newEmail, conciergePassword)
 			//login to shop as new user
-			await conciergeLogin.loginNewUserCreated(page, newEmail, newPassword)
+			await conciergeLogin.loginUser(page, 'wrongpassword', newEmail, newPassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
@@ -133,6 +150,19 @@ test.describe('Concierge Tests', () => {
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+			// go to account page
+			await accountPage.goToAccountPage()
+			// verify that account page elements, buttons, and popup actions all work
+			const updatedEmail = await accountPage.verifyAccountPageElements(
+				'med',
+				false,
+				conciergePassword,
+				NEWalwaysOnPassword,
+			)
+			//log out
+			await accountPage.logOut(page)
+			// sign in with NEW password that was just updated
+			await conciergeLogin.loginUser(page, conciergePassword, updatedEmail, NEWalwaysOnPassword)
 		},
 	)
 })
