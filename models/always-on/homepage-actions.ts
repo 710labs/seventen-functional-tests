@@ -78,12 +78,27 @@ export class HomePageActions {
 					await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
 					await this.enterAddressButtonConciergeMobile.click()
+					// Check if the button is visible
+					if (await this.submitAddressButton.isVisible()) {
+						// Click the button if it's visible
+						console.log('Address drawer opened. Dont need to click Address button again.')
+					} else {
+						await this.enterAddressButtonConciergeMobile.click()
+						console.log('Click address button again')
+					}
 				} else {
 					// Desktop view Concierge
 					await this.enterAddressButtonConciergeDesktop.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonConciergeDesktop).toBeVisible()
-					await this.enterAddressButtonConciergeDesktop.click({ force: true })
-					//await this.enterAddressButtonConciergeDesktop.click()
+					await this.enterAddressButtonConciergeDesktop.click()
+					// Check if the button is visible
+					if (await this.submitAddressButton.isVisible()) {
+						// Click the button if it's visible
+						console.log('Address drawer opened. Dont need to click Address button again.')
+					} else {
+						await this.enterAddressButtonConciergeDesktop.click()
+						console.log('Click address button again')
+					}
 				}
 			} else if (storeType == 'live') {
 				if (viewportSize.width <= 768) {
@@ -91,15 +106,27 @@ export class HomePageActions {
 					await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonMobile).toBeVisible()
 					await this.enterAddressButtonMobile.click()
-					//await expect(this.liveChangeAddressButton).toBeVisible()
-					//await this.liveChangeAddressButton.click()
+					// Check if the button is visible
+					if (await this.submitAddressButton.isVisible()) {
+						// Click the button if it's visible
+						console.log('Address drawer opened. Dont need to click Address button again.')
+					} else {
+						await this.enterAddressButtonMobile.click()
+						console.log('Click address button again')
+					}
 				} else {
 					// Desktop view
 					await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
 					await expect(this.enterAddressButtonDesktop).toBeVisible()
 					await this.enterAddressButtonDesktop.click()
-					// await expect(this.liveChangeAddressButton).toBeVisible()
-					// await this.liveChangeAddressButton.click()
+					// Check if the button is visible
+					if (await this.submitAddressButton.isVisible()) {
+						// Click the button if it's visible
+						console.log('Address drawer opened. Dont need to click Address button again.')
+					} else {
+						await this.enterAddressButtonDesktop.click()
+						console.log('Click address button again')
+					}
 				}
 			}
 		})
