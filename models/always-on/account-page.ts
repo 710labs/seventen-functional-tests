@@ -166,7 +166,7 @@ export class AccountPage {
 		// click account button in nav bar
 		await this.accountButtonNav.click()
 	}
-	async verifyAccountPageElements(userType, noOrders) {
+	async verifyAccountPageElements(userType, noOrders, currentPassword, newPassword) {
 		await this.page.waitForTimeout(2000)
 		// Verify page title is visible
 		await expect(this.pageTitleSelector).toBeVisible()
@@ -189,7 +189,7 @@ export class AccountPage {
 			await this.editMedicalCard()
 		}
 		// verify password change
-		await this.editPassword()
+		await this.editPassword(currentPassword, newPassword)
 
 		console.log('All account page elements verified successfully.')
 		//return email to login with updated password
@@ -404,7 +404,7 @@ export class AccountPage {
 		// expect(isImagePopulated).toBe(true)
 	}
 
-	async editPassword() {
+	async editPassword(currentPassword, newPassword) {
 		// Verify Password section
 		await expect(this.passwordSection).toBeVisible()
 		await expect(this.editPasswordLink).toBeVisible()
@@ -415,10 +415,10 @@ export class AccountPage {
 		await expect(this.passwordDrawerHeader).toBeVisible()
 		await this.passwordDrawerHeader.waitFor({ state: 'visible' })
 		// enter current password
-		await this.currentPasswordInput.fill(this.alwaysOnPassword)
+		await this.currentPasswordInput.fill(currentPassword)
 		await this.page.waitForTimeout(1500)
 		// enter new password
-		await this.newPasswordInput.fill(this.NEWalwaysOnPassword)
+		await this.newPasswordInput.fill(newPassword)
 		await this.page.waitForTimeout(1500)
 		//click change password button
 		await expect(this.changePasswordButton).toBeVisible()

@@ -83,7 +83,12 @@ test.describe('Concierge Tests', () => {
 			// go to account page
 			await accountPage.goToAccountPage()
 			// verify that account page elements, buttons, and popup actions all work
-			const updatedEmail = await accountPage.verifyAccountPageElements('rec', false)
+			const updatedEmail = await accountPage.verifyAccountPageElements(
+				'rec',
+				false,
+				conciergePassword,
+				NEWalwaysOnPassword,
+			)
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
@@ -148,7 +153,12 @@ test.describe('Concierge Tests', () => {
 			// go to account page
 			await accountPage.goToAccountPage()
 			// verify that account page elements, buttons, and popup actions all work
-			const updatedEmail = await accountPage.verifyAccountPageElements('med', false)
+			const updatedEmail = await accountPage.verifyAccountPageElements(
+				'med',
+				false,
+				conciergePassword,
+				NEWalwaysOnPassword,
+			)
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
