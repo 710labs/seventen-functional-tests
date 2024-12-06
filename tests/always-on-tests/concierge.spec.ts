@@ -27,7 +27,7 @@ test.describe('Concierge Tests', () => {
 		await accountPage.logOut(page)
 	})
 	test(
-		'Rec New User - Happy Path test - Create New User & Checkout',
+		'Rec New User - Happy Path test - Create New User, Place Order, Update Account Details, Re-Log In with New Creds',
 		{ tag: ['@recreational'] },
 		async ({ page }) => {
 			const conciergeLogin = new ConciergeLogin(page)
@@ -96,7 +96,7 @@ test.describe('Concierge Tests', () => {
 		},
 	)
 	test(
-		'MED New User - Happy Path test - Create New User & Checkout',
+		'MED New User - Happy Path test - Create New User, Place Order, Update Account Details, Re-Log In with New Creds',
 		{ tag: ['@medical'] },
 		async ({ page }) => {
 			const conciergeLogin = new ConciergeLogin(page)
