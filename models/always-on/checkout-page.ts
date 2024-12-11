@@ -184,10 +184,10 @@ export class CheckoutPage {
 				// Edit and verify updated delivery day and time
 				await this.editButtonGenericLocator.nth(1).click()
 				await this.deliveryDayInputField.waitFor({ state: 'visible' })
-				await this.deliveryDayInputField.selectOption({ index: 2 })
+				await this.deliveryDayInputField.selectOption({ index: 1 })
 				await page.waitForTimeout(750)
-				await this.deliveryTimeInputField.selectOption({ index: 2 })
-				await this.deliveryTimeInputField.selectOption({ index: 2 })
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
 				await page.waitForTimeout(2000)
 				const updatedDayValue = await this.deliveryDayInputField.inputValue()
 				const updatedTimeValue = await page.locator('#time_type option:checked').innerText()
