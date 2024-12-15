@@ -69,7 +69,8 @@ test.describe('Concierge Tests', () => {
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
-			await homePageActions.enterAddress(page, 'concierge')
+			const address = '440 Rodeo Drive Beverly Hills'
+			await homePageActions.enterAddress(page, 'concierge', address)
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
@@ -138,8 +139,10 @@ test.describe('Concierge Tests', () => {
 			await conciergeLogin.loginUser(page, 'wrongpassword', newEmail, newPassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			const address = '440 Rodeo Drive Beverly Hills'
+			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
-			await homePageActions.enterAddress(page, 'concierge')
+			await homePageActions.enterAddress(page, 'concierge', address)
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
@@ -147,7 +150,7 @@ test.describe('Concierge Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page)
+			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, address, newAddress)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			// go to account page
