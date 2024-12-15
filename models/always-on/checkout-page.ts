@@ -119,11 +119,11 @@ export class CheckoutPage {
 	}
 	//
 	// recEnterInfoForCheckoutAndEdit currently used by both Live and Concierge REC tests
-	async recEnterInfoForCheckoutAndEdit(page) {
+	async recEnterInfoForCheckoutAndEdit(page, addressParam, newAddressParam) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 		await test.step('Address for Delivery', async () => {
 			//Verify that checkout page displays original address entered previously
-			const originalAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+			const originalAddress = addressParam
 			await expect(this.displayedAddress).toHaveText(originalAddress)
 			await page.waitForTimeout(1000)
 			// Edit delivery address
@@ -138,7 +138,7 @@ export class CheckoutPage {
 			await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
 			await expect(this.addressField).toBeVisible()
 			await this.addressField.click()
-			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
+			const newAddress = newAddressParam
 			await this.addressField.fill(newAddress)
 			const dropDownSelector = page.locator('.pac-item')
 			// Wait for the autocomplete suggestions to appear
@@ -344,46 +344,48 @@ export class CheckoutPage {
 	}
 	//
 	// newMedEnterInfoForCheckoutAndEdit currently used by both Live and Concierge MED tests
-	async newMedEnterInfoForCheckoutAndEdit(page) {
+	async newMedEnterInfoForCheckoutAndEdit(page, addressParam, newAddressParam) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 		await test.step('Address for Delivery', async () => {
-			//Verify that checkout page displays original address entered previously
-			const originalAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
-			await expect(this.displayedAddress).toHaveText(originalAddress)
-			await page.waitForTimeout(1000)
-			// Edit delivery address
-			await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
-			await this.editButtonGenericLocator.first().click()
-			await page.waitForTimeout(2000)
-			//click the add new address button
-			await this.addNewAddressButton.waitFor({ state: 'visible', timeout: 10000 }) // 30 seconds timeout
-			await expect(this.addNewAddressButton).toBeVisible()
-			await this.addNewAddressButton.click()
-			// Type the address into the text field
-			await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
-			await expect(this.addressField).toBeVisible()
-			await this.addressField.click()
-			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
-			await this.addressField.fill(newAddress)
-			const dropDownSelector = page.locator('.pac-item')
-			// Wait for the autocomplete suggestions to appear
-			await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-			// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-			// await this.addressField.press('ArrowDown')
-			// await this.addressField.press('Enter')
-			await dropDownSelector.first().click()
-			await page.waitForTimeout(1000)
-			//await this.checkoutPageTitle.click()
-			await this.saveContinueButtonAddress.first().click()
-			await page.waitForTimeout(1500)
-			// Verify that Change delivery zones pops up
-			await expect(this.changeDeliveryPopUp).toBeVisible()
-			await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
-			await expect(this.yesChangeAddressButton).toBeVisible()
-			await this.yesChangeAddressButton.click()
-			//Verify that address was updated correctly
-			const expectedNewTextDisplay = `2919 S La Cienega Blvd, Culver City, CA 90232`
-			await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
+			if (!isPickupVisible) {
+				//Verify that checkout page displays original address entered previously
+				const originalAddress = addressParam
+				await expect(this.displayedAddress).toHaveText(originalAddress)
+				await page.waitForTimeout(1000)
+				// Edit delivery address
+				await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
+				await this.editButtonGenericLocator.first().click()
+				await page.waitForTimeout(2000)
+				//click the add new address button
+				await this.addNewAddressButton.waitFor({ state: 'visible', timeout: 10000 }) // 30 seconds timeout
+				await expect(this.addNewAddressButton).toBeVisible()
+				await this.addNewAddressButton.click()
+				// Type the address into the text field
+				await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
+				await expect(this.addressField).toBeVisible()
+				await this.addressField.click()
+				const newAddress = newAddressParam
+				await this.addressField.fill(newAddress)
+				const dropDownSelector = page.locator('.pac-item')
+				// Wait for the autocomplete suggestions to appear
+				await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
+				// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
+				// await this.addressField.press('ArrowDown')
+				// await this.addressField.press('Enter')
+				await dropDownSelector.first().click()
+				await page.waitForTimeout(1000)
+				//await this.checkoutPageTitle.click()
+				await this.saveContinueButtonAddress.first().click()
+				await page.waitForTimeout(1500)
+				// Verify that Change delivery zones pops up
+				await expect(this.changeDeliveryPopUp).toBeVisible()
+				await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
+				await expect(this.yesChangeAddressButton).toBeVisible()
+				await this.yesChangeAddressButton.click()
+				//Verify that address was updated correctly
+				const expectedNewTextDisplay = newAddressParam
+				await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
+			}
 		})
 		await test.step('Delivery Appointment Section', async () => {
 			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
@@ -446,7 +448,11 @@ export class CheckoutPage {
 				const initialPhoneNum = await this.phoneInputField.inputValue()
 				const initialBirthday = await this.birthdayInputField.inputValue()
 				await page.click('body')
-				await this.saveContinueButton.nth(1).click()
+				if (isPickupVisible) {
+					await this.saveContinueButton.nth(0).click()
+				} else {
+					await this.saveContinueButton.nth(1).click()
+				}
 				await page.waitForTimeout(2000)
 				phoneErrorExists = await page.isVisible('#fasd_phone_error:has-text("Already in use")')
 				//Verify that phone & email display correctly (needs to be inside due to format)
@@ -460,7 +466,11 @@ export class CheckoutPage {
 				expect(this.displayedBirthday).toHaveText(firstDate)
 			}
 			// Edit phone number and birthday
-			await this.editButtonGenericLocator.nth(2).click()
+			if (isPickupVisible) {
+				await this.editButtonGenericLocator.nth(0).click()
+			} else {
+				await this.editButtonGenericLocator.nth(2).click()
+			}
 			const newPhoneNumber = generatePhoneNumber()
 			await this.phoneInputField.fill(newPhoneNumber)
 			const newDate = '02/02/1992'
@@ -472,7 +482,11 @@ export class CheckoutPage {
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits
-			await this.saveContinueButton.nth(1).click()
+			if (isPickupVisible) {
+				await this.saveContinueButton.nth(0).click()
+			} else {
+				await this.saveContinueButton.nth(1).click()
+			}
 			await page.waitForTimeout(2000)
 			// TODO: ADD for newEmail
 			//const newEmail =
@@ -505,7 +519,12 @@ export class CheckoutPage {
 			// Reformat the retrieved date to match the "MM/DD/YYYY" format
 			const initialMedExpDateReformatted = await this.reformatDate(initialMedExpDate)
 			await page.click('body')
-			await this.saveContinueButton.nth(2).click()
+			// Edit phone number and birthday
+			if (isPickupVisible) {
+				await this.saveContinueButton.nth(1).click()
+			} else {
+				await this.saveContinueButton.nth(2).click()
+			}
 			await page.waitForTimeout(1000)
 			//Verify orig card data is saved
 			expect(this.displayedPersonalExp).toContainText(`Exp: ${initialPersonalExpDate}`)
@@ -513,7 +532,11 @@ export class CheckoutPage {
 			await page.waitForTimeout(2000)
 
 			// Edit Personal & Medical ID info
-			await this.editButtonGenericLocator.nth(3).click()
+			if (isPickupVisible) {
+				await this.editButtonGenericLocator.nth(1).click()
+			} else {
+				await this.editButtonGenericLocator.nth(3).click()
+			}
 			const updatedYear = newYear + 1
 			const updatedPersonalExpDate = `10/25/${updatedYear}`
 			await this.idExpirationInput.type(updatedPersonalExpDate)
@@ -523,7 +546,11 @@ export class CheckoutPage {
 			// Add here
 			//
 			// save
-			await this.saveContinueButton.nth(2).click()
+			if (isPickupVisible) {
+				await this.saveContinueButton.nth(1).click()
+			} else {
+				await this.saveContinueButton.nth(2).click()
+			}
 			await page.waitForTimeout(1500)
 			//TODO: Verify that Personal & MED info updated correctly
 			expect(this.displayedPersonalExp).toContainText(`Exp: ${updatedPersonalExpDate}`)

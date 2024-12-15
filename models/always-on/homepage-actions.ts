@@ -69,7 +69,7 @@ export class HomePageActions {
 		this.issuingStateSelect = page.locator('#medcard_state')
 		this.expirationInput = page.locator('input#medcard_exp')
 	}
-	async enterAddress(page, storeType) {
+	async enterAddress(page, storeType, addressParam) {
 		await test.step('Click address button', async () => {
 			const viewportSize = await page.viewportSize()
 			if (storeType == 'concierge') {
@@ -136,8 +136,7 @@ export class HomePageActions {
 			await expect(this.addressInfoSideBarContainer).toBeVisible()
 			await expect(this.addressField).toBeVisible()
 
-			const address = '440 Rodeo Drive Beverly Hills'
-
+			const address = addressParam
 			// Type the address into the text field
 			await this.addressField.fill(address)
 
@@ -572,7 +571,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 0
+		let i = 4
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
 
@@ -599,9 +598,12 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.click()
-				await page.waitForTimeout(6000)
+				await this.productPageAddToCartButton.nth(1).waitFor({ state: 'visible' })
+				await this.productPageAddToCartButton.nth(1).hover()
+				await page.waitForTimeout(200)
+				await this.productPageAddToCartButton.nth(1).click()
+				await page.waitForTimeout(2000)
+				await page.waitForLoadState('networkidle') // Wait for all network requests to finish
 
 				// Wait for the cart drawer to become visible
 				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
@@ -676,7 +678,7 @@ export class HomePageActions {
 				await page.waitForTimeout(2000)
 			}
 
-			//i++ // Increment to the next product
+			i++ // Increment to the next product
 		}
 
 		// Once the banner is no longer visible, proceed to Cart
@@ -696,6 +698,15 @@ export class HomePageActions {
 		const medicalOnlyBannerVisible = await page
 			.locator('.wpse-snacktoast.warn-toast.med-issue')
 			.isVisible()
+
+		// verify medical cart banner shows when medical product is in cart
+		try {
+			await expect(this.medicalOnlyBanner).toBeVisible()
+		} catch (error) {
+			throw new Error(
+				'Med Card Verification not working -- Cart Banner for Med Products not showing',
+			)
+		}
 
 		if (medicalOnlyBannerVisible && !medicalCardProvided) {
 			console.log('Medical-only product in cart. Adding medical card information...')
