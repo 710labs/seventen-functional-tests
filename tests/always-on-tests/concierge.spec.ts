@@ -69,7 +69,8 @@ test.describe('Concierge Tests', () => {
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
-			const address = '440 Rodeo Drive Beverly Hills'
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			await homePageActions.enterAddress(page, 'concierge', address)
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
@@ -78,7 +79,7 @@ test.describe('Concierge Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recEnterInfoForCheckoutAndEdit(page)
+			await checkoutPage.recEnterInfoForCheckoutAndEdit(page, address, newAddress)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			// go to account page

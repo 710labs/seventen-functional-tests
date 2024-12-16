@@ -372,6 +372,14 @@ export class HomePageActions {
 				const medicalOnlyBannerVisible = await page
 					.locator('.wpse-snacktoast.warn-toast.med-issue')
 					.isVisible()
+				// verify medical cart banner shows when medical product is in cart
+				try {
+					await expect(this.medicalOnlyBanner).toBeVisible()
+				} catch (error) {
+					throw new Error(
+						'Med Card Verification not working -- Cart Banner for Med Products not showing',
+					)
+				}
 				if (medicalOnlyBannerVisible && !medicalCardProvided) {
 					console.log('Medical-only product in cart. Adding medical card information...')
 
@@ -713,6 +721,8 @@ export class HomePageActions {
 
 			// Click the "I have a medical card" checkbox
 			const medicalCardCheckbox = page.locator('input#med_included')
+			await medicalCardCheckbox.waitFor({ state: 'visible' })
+			await expect(medicalCardCheckbox).toBeVisible()
 			await medicalCardCheckbox.check()
 
 			// Add the medical card information
