@@ -37,5 +37,5 @@ test('Cart Timer Is Visible @MI @CA @CO', async ({ page, browserName }, workerIn
 
 	//Assert
 	await cartPage.cartCounter.waitFor()
-	await expect(cartPage.cartCounter).toContainText('Your item reservations are held for')
+	await expect(cartPage.cartCounter).toContainText('Your cart is reserved for')
 })
