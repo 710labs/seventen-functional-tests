@@ -606,10 +606,10 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.nth(1).waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.nth(1).hover()
+				await this.productPageAddToCartButton.first().waitFor({ state: 'visible' })
+				await this.productPageAddToCartButton.first().hover()
 				await page.waitForTimeout(200)
-				await this.productPageAddToCartButton.nth(1).click()
+				await this.productPageAddToCartButton.first().click()
 				await page.waitForTimeout(2000)
 				await page.waitForLoadState('networkidle') // Wait for all network requests to finish
 
