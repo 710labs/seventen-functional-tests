@@ -10,7 +10,7 @@ test.describe('Live Tests', () => {
 	test.setTimeout(240000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
-	const liveURL = process.env.ALWAYS_ON_UR || ''
+	const liveURL = process.env.ALWAYS_ON_URL || ''
 	const alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
 	const alwaysOnPassword = process.env.ALWAYS_ON_PASSWORD || ''
 	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
@@ -76,7 +76,7 @@ test.describe('Live Tests', () => {
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
-			const address = '2835 Camino del Rio S, San Diego, CA 92108'
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
 			await homePageActions.enterAddress(page, 'live', address)
@@ -87,7 +87,7 @@ test.describe('Live Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, address, newAddress)
+			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, liveURL, address, newAddress)
 			// verify order confirmation loads
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)

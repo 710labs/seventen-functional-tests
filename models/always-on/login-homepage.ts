@@ -30,7 +30,7 @@ export class HomePageLogin {
 		this.page = page
 		this.pageTitleSelector = page.locator('span.site-header-group')
 		this.accountButtonNav = page.locator('svg.icon.icon-account')
-		this.cartButtonNav = page.locator('svg.icon.icon-pickup')
+		this.cartButtonNav = page.locator('a.wpse-cart-openerize').first()
 		this.userPopUpContainer = page.locator('section.wpse-component #renderGateway')
 		this.userPopUpContainerText = page.locator('section.wpse-component #renderGateway header h2')
 		this.emailFieldPopUp = page.locator('#fasd_email')

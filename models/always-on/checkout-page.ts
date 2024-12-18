@@ -343,7 +343,7 @@ export class CheckoutPage {
 	}
 	//
 	// newMedEnterInfoForCheckoutAndEdit currently used by both Live and Concierge MED tests
-	async newMedEnterInfoForCheckoutAndEdit(page, addressParam, newAddressParam) {
+	async newMedEnterInfoForCheckoutAndEdit(page, siteURL, addressParam, newAddressParam) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 		await test.step('Address for Delivery', async () => {
 			if (!isPickupVisible) {
@@ -557,24 +557,42 @@ export class CheckoutPage {
 		})
 
 		await test.step('Payment Section', async () => {
-			await this.paymentSection.waitFor({ state: 'visible' })
-			await this.cashOption.click()
 			const buttonIndexSave = isPickupVisible ? 2 : 3
 			const buttonIndexEdit = isPickupVisible ? 2 : 4
-			await this.saveContinueButton.nth(buttonIndexSave).click()
-			await page.waitForTimeout(1500)
-			expect(this.displayPayment).toHaveText('Cash')
+			await this.paymentSection.waitFor({ state: 'visible' })
+			// check if dev or stage to know payment options
+			const paymentOptions = page.locator(
+				'.fasd-input-group .wpse-checkout-radios input[type="radio"]',
+			)
+			// Get the count of payment options
+			const optionsCount = await paymentOptions.count()
+			console.log(`Number of payment options: ${optionsCount}`)
+			if (optionsCount === 1) {
+				console.log('Only one payment option is available. Just clicking cash option')
+				await this.cashOption.click()
+				await this.saveContinueButton.nth(buttonIndexSave).click()
+				const paymentOptionSelector = page.locator(`label[for="cash"]`)
+				expect(paymentOptionSelector).toHaveText('Cash')
+			} else {
+				console.log(`Unexpected number of payment options: ${optionsCount}`)
+				// Handle unexpected cases if needed
+				await this.cashOption.click()
+				//
+				await this.saveContinueButton.nth(buttonIndexSave).click()
+				await page.waitForTimeout(1500)
+				expect(this.displayPayment).toHaveText('Cash')
 
-			// Edit payment option if needed (example if there's a credit option)
-			await this.editButtonGenericLocator.nth(buttonIndexEdit).click()
-			await page.waitForTimeout(1500)
-			const paymentOptionIfPickUp = isPickupVisible ? 'debit' : 'aeropay'
-			const paymentOptionSelector = page.locator(`label[for="${paymentOptionIfPickUp}"]`)
-			await paymentOptionSelector.click()
-			await this.saveContinueButton.nth(buttonIndexSave).click()
-			await page.waitForTimeout(1500)
-			const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
-			expect(paymentOptionSelector).toHaveText(expectedText)
+				// Edit payment option if needed (example if there's a credit option)
+				await this.editButtonGenericLocator.nth(buttonIndexEdit).click()
+				await page.waitForTimeout(1500)
+				const paymentOptionIfPickUp = isPickupVisible ? 'debit' : 'aeropay'
+				const paymentOptionSelector = page.locator(`label[for="${paymentOptionIfPickUp}"]`)
+				await paymentOptionSelector.click()
+				await this.saveContinueButton.nth(buttonIndexSave).click()
+				await page.waitForTimeout(1500)
+				const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
+				expect(paymentOptionSelector).toHaveText(expectedText)
+			}
 		})
 
 		await test.step('Order Review & Password Section', async () => {

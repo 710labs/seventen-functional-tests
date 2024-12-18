@@ -151,7 +151,7 @@ test.describe('Concierge Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, address, newAddress)
+			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, conciergeURL, address, newAddress)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			// go to account page
