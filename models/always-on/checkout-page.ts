@@ -122,42 +122,44 @@ export class CheckoutPage {
 	async recEnterInfoForCheckoutAndEdit(page, addressParam, newAddressParam) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 		await test.step('Address for Delivery', async () => {
-			//Verify that checkout page displays original address entered previously
-			await expect(this.displayedAddress).toHaveText(addressParam)
-			await page.waitForTimeout(1000)
-			// Edit delivery address
-			await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
-			await this.editButtonGenericLocator.first().click()
-			await page.waitForTimeout(2000)
-			//click the add new address button
-			await this.addNewAddressButton.waitFor({ state: 'visible', timeout: 10000 }) // 30 seconds timeout
-			await expect(this.addNewAddressButton).toBeVisible()
-			await this.addNewAddressButton.click()
-			// Type the address into the text field
-			await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
-			await expect(this.addressField).toBeVisible()
-			await this.addressField.click()
-			const newAddress = newAddressParam
-			await this.addressField.fill(newAddress)
-			const dropDownSelector = page.locator('.pac-item')
-			// Wait for the autocomplete suggestions to appear
-			await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-			// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-			// await this.addressField.press('ArrowDown')
-			// await this.addressField.press('Enter')
-			await dropDownSelector.first().click()
-			await page.waitForTimeout(1000)
-			//await this.checkoutPageTitle.click()
-			await this.saveContinueButtonAddress.first().click()
-			await page.waitForTimeout(1500)
-			// Verify that Change delivery zones pops up
-			await expect(this.changeDeliveryPopUp).toBeVisible()
-			await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
-			await expect(this.yesChangeAddressButton).toBeVisible()
-			await this.yesChangeAddressButton.click()
-			//Verify that address was updated correctly
-			const expectedNewTextDisplay = `2919 S La Cienega Blvd, Culver City, CA 90232`
-			await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
+			if (!isPickupVisible) {
+				//Verify that checkout page displays original address entered previously
+				await expect(this.displayedAddress).toHaveText(addressParam)
+				await page.waitForTimeout(1000)
+				// Edit delivery address
+				await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
+				await this.editButtonGenericLocator.first().click()
+				await page.waitForTimeout(2000)
+				//click the add new address button
+				await this.addNewAddressButton.waitFor({ state: 'visible', timeout: 10000 }) // 30 seconds timeout
+				await expect(this.addNewAddressButton).toBeVisible()
+				await this.addNewAddressButton.click()
+				// Type the address into the text field
+				await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
+				await expect(this.addressField).toBeVisible()
+				await this.addressField.click()
+				const newAddress = newAddressParam
+				await this.addressField.fill(newAddress)
+				const dropDownSelector = page.locator('.pac-item')
+				// Wait for the autocomplete suggestions to appear
+				await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
+				// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
+				// await this.addressField.press('ArrowDown')
+				// await this.addressField.press('Enter')
+				await dropDownSelector.first().click()
+				await page.waitForTimeout(1000)
+				//await this.checkoutPageTitle.click()
+				await this.saveContinueButtonAddress.first().click()
+				await page.waitForTimeout(1500)
+				// Verify that Change delivery zones pops up
+				await expect(this.changeDeliveryPopUp).toBeVisible()
+				await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
+				await expect(this.yesChangeAddressButton).toBeVisible()
+				await this.yesChangeAddressButton.click()
+				//Verify that address was updated correctly
+				const expectedNewTextDisplay = `2919 S La Cienega Blvd, Culver City, CA 90232`
+				await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
+			}
 		})
 		await test.step('Delivery Appointment Section', async () => {
 			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
@@ -540,6 +542,7 @@ export class CheckoutPage {
 			const updatedPersonalExpDate = `10/25/${updatedYear}`
 			await this.idExpirationInput.type(updatedPersonalExpDate)
 			const updatedMedExpDate = `09/09/${updatedYear}`
+			await this.medExpirationInput.type('')
 			await this.medExpirationInput.type(updatedMedExpDate)
 			//TODO: Add steps for editing image files for both Pers and Med
 			// Add here
