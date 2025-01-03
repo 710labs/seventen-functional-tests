@@ -140,8 +140,8 @@ test.describe('Concierge Tests', () => {
 			await conciergeLogin.loginUser(page, 'wrongpassword', newEmail, newPassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
-			const address = '440 Rodeo Drive Beverly Hills'
-			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+			const newAddress = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			// add adress for new user account
 			await homePageActions.enterAddress(page, 'concierge', address)
 			// verify that homepage loads again
