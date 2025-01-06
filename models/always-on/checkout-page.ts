@@ -204,6 +204,8 @@ export class CheckoutPage {
 			}
 		})
 		await test.step('Phone and Birthday input', async () => {
+			const indexPersonalInfoSave = isPickupVisible ? 0 : 1
+			const indexPersonalInfoEdit = isPickupVisible ? 0 : 1
 			// Function to generate a random phone number
 			const generatePhoneNumber = () => {
 				const randomDigits = Math.floor(Math.random() * 9000000) + 1000000
@@ -222,7 +224,7 @@ export class CheckoutPage {
 				const initialPhoneNum = await this.phoneInputField.inputValue()
 				const initialBirthday = await this.birthdayInputField.inputValue()
 				await page.click('body')
-				await this.saveContinueButton.nth(1).click()
+				await this.saveContinueButton.nth(indexPersonalInfoSave).click()
 				await page.waitForTimeout(2000)
 				phoneErrorExists = await page.isVisible('#fasd_phone_error:has-text("Already in use")')
 				//Verify that phone & email display correctly (needs to be inside due to format)
@@ -236,7 +238,7 @@ export class CheckoutPage {
 				expect(this.displayedBirthday).toHaveText(firstDate)
 			}
 			// Edit phone number and birthday
-			await this.editButtonGenericLocator.nth(2).click()
+			await this.editButtonGenericLocator.nth(indexPersonalInfoEdit).click()
 			const newPhoneNumber = generatePhoneNumber()
 			await this.phoneInputField.fill(newPhoneNumber)
 			const newDate = '02/02/1992'
@@ -248,7 +250,7 @@ export class CheckoutPage {
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits
-			await this.saveContinueButton.nth(1).click()
+			await this.saveContinueButton.nth(indexPersonalInfoSave).click()
 			await page.waitForTimeout(2000)
 			// TODO: ADD for newEmail
 			//const newEmail =
@@ -266,6 +268,8 @@ export class CheckoutPage {
 			expect(await this.displayedBirthday).toHaveText(newDate)
 		})
 		await test.step('Personal Document section', async () => {
+			const indexDocumentsSave = isPickupVisible ? 1 : 2
+			const indexDocumentsEdit = isPickupVisible ? 1 : 2
 			const dlUploadButton = await this.page.waitForSelector('#fasd_doc')
 			const [driversLicenseChooser] = await Promise.all([
 				this.page.waitForEvent('filechooser'),
@@ -278,13 +282,13 @@ export class CheckoutPage {
 			const initialPersonalExpDate = `04/10/${newYear}`
 			await this.idExpirationInput.type(initialPersonalExpDate)
 			await page.click('body')
-			await this.saveContinueButton.nth(2).click()
+			await this.saveContinueButton.nth(indexDocumentsSave).click()
 			await page.waitForTimeout(1000)
 			//Verify orig card data is saved
 			expect(this.displayedPersonalExp).toContainText(`Exp: ${initialPersonalExpDate}`)
 			await page.waitForTimeout(2000)
 			// Edit Personal  ID info
-			await this.editButtonGenericLocator.nth(3).click()
+			await this.editButtonGenericLocator.nth(indexDocumentsEdit).click()
 			const updatedYear = newYear + 1
 			const updatedPersonalExpDate = `10/25/${updatedYear}`
 			await this.idExpirationInput.type(updatedPersonalExpDate)
@@ -292,7 +296,7 @@ export class CheckoutPage {
 			// Add here
 			//
 			// save
-			await this.saveContinueButton.nth(2).click()
+			await this.saveContinueButton.nth(indexDocumentsSave).click()
 			await page.waitForTimeout(1500)
 			//TODO: Verify that Personal info updated correctly
 			expect(this.displayedPersonalExp).toContainText(`Exp: ${updatedPersonalExpDate}`)
