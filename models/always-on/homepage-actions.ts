@@ -314,16 +314,26 @@ export class HomePageActions {
 	async conciergeMedAddProductsToCartUntilMinimumMet(page) {
 		const products = await page.locator('ul.products li.product')
 		let i = 0
+		let medicalProductExists = false
 		let medicalCardProvided = false
 
-		while (true) {
-			if (i >= (await products.count())) {
-				console.log(`Only ${await products.count()} products available on the page.`)
+		let productCount = await products.count()
+
+		while (i <= productCount) {
+			if (i >= productCount) {
+				console.log(`Only ${productCount} products available on the page.`)
+				if (!medicalProductExists) {
+					throw new Error('No Medical Products found on this page/store/location')
+				}
 				break
 			}
 
 			const product = products.nth(i)
 			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+			if (hasMedicalOnlyTag) {
+				medicalProductExists = true
+			}
 
 			if (!hasMedicalOnlyTag) {
 				console.log(
@@ -367,22 +377,35 @@ export class HomePageActions {
 				//
 				await page.waitForTimeout(3000)
 				//
-				// wait for medical only banner
-				await this.medicalOnlyBanner.waitFor({ state: 'visible', timeout: 10000 })
-
-				// Check if the Medical Card Banner is visible
+				// // Check if the Medical Card Banner is visible
+				// const medicalOnlyBannerVisible = await page
+				// 	.locator('.wpse-snacktoast.warn-toast.med-issue')
+				// 	.isVisible()
 				const medicalOnlyBannerVisible = await page
-					.locator('.wpse-snacktoast.warn-toast.med-issue')
+					.locator('.wpse-snacktoast.warn-toast')
+					.first()
 					.isVisible()
-				// verify medical cart banner shows when medical product is in cart
-				try {
-					await expect(this.medicalOnlyBanner).toBeVisible()
-				} catch (error) {
-					throw new Error(
-						'Med Card Verification not working -- Cart Banner for Med Products not showing',
-					)
+				const medicalOnlyBannerText = await page
+					.locator('.wpse-snacktoast.warn-toast')
+					.first()
+					.textContent()
+
+				const isMedicalOnlyBannerCorrect =
+					medicalOnlyBannerVisible &&
+					medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+
+				if (!isMedicalOnlyBannerCorrect) {
+					throw new Error('Medical-Only Banner not showing in cart for medical only products')
 				}
-				if (medicalOnlyBannerVisible && !medicalCardProvided) {
+				// // verify medical cart banner shows when medical product is in cart
+				// try {
+				// 	await expect(this.medicalOnlyBanner).toBeVisible()
+				// } catch (error) {
+				// 	throw new Error(
+				// 		'Med Card Verification not working -- Cart Banner for Med Products not showing',
+				// 	)
+				// }
+				if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
 					console.log('Medical-only product in cart. Adding medical card information...')
 
 					// Add the medical card information
@@ -582,13 +605,19 @@ export class HomePageActions {
 		)
 
 		let i = 4
+		let medicalProductExists = false
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
 
-		while (true) {
+		let productCount = await products.count()
+
+		while (i <= productCount) {
 			// Check if there are enough products to add
-			if (i >= (await products.count())) {
-				console.log(`Only ${await products.count()} products available on the page.`)
+			if (i >= productCount) {
+				console.log(`Only ${productCount} products available on the page.`)
+				if (!medicalProductExists) {
+					throw new Error('No Medical Products found on this page/store/location')
+				}
 				break
 			}
 
@@ -597,6 +626,10 @@ export class HomePageActions {
 
 			// Check if the product has the "Medical Only" badge
 			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+			if (hasMedicalOnlyTag) {
+				medicalProductExists = true
+			}
 
 			if (!firstMedicalProductAdded && hasMedicalOnlyTag) {
 				// Add the first Medical-Only product to the cart
@@ -608,10 +641,10 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.first().waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.first().hover()
+				await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
+				await this.productPageAddToCartButton.nth(0).hover()
 				await page.waitForTimeout(200)
-				await this.productPageAddToCartButton.first().click()
+				await this.productPageAddToCartButton.nth(0).click()
 				await page.waitForTimeout(2000)
 				await page.waitForLoadState('networkidle') // Wait for all network requests to finish
 
@@ -705,33 +738,28 @@ export class HomePageActions {
 		await expect(this.liveCartTitle).toBeVisible()
 
 		// Check for the Medical Info banner and add medical card info
+		// const medicalOnlyBannerVisible = await page
+		// 	.locator('.wpse-snacktoast.warn-toast.med-issue')
+		// 	.isVisible()
+
 		const medicalOnlyBannerVisible = await page
-			.locator('.wpse-snacktoast.warn-toast.med-issue')
+			.locator('.wpse-snacktoast.warn-toast')
+			.first()
 			.isVisible()
+		const medicalOnlyBannerText = await page
+			.locator('.wpse-snacktoast.warn-toast')
+			.first()
+			.textContent()
 
-		// const urlString = this.URL
-		// if (urlString.includes('dev')) {
-		// 	console.log('dev env, do not verify med only banner since not working with dutchie instances')
-		// } else {
-		// 	// verify medical cart banner shows when medical product is in cart
-		// 	try {
-		// 		await expect(this.medicalOnlyBanner).toBeVisible()
-		// 	} catch (error) {
-		// 		throw new Error(
-		// 			'Med Card Verification not working -- Cart Banner for Med Products not showing',
-		// 		)
-		// 	}
-		// }
+		const isMedicalOnlyBannerCorrect =
+			medicalOnlyBannerVisible &&
+			medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
 
-		// try {
-		// 	await expect(this.medicalOnlyBanner).toBeVisible()
-		// } catch (error) {
-		// 	throw new Error(
-		// 		'Med Card Verification not working -- Cart Banner for Med Products not showing',
-		// 	)
-		// }
+		if (!isMedicalOnlyBannerCorrect) {
+			throw new Error('Medical-Only Banner not showing in cart for medical only products')
+		}
 
-		if (medicalOnlyBannerVisible && !medicalCardProvided) {
+		if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
 			console.log('Medical-only product in cart. Adding medical card information...')
 
 			// Click the "I have a medical card" checkbox
@@ -780,136 +808,234 @@ export class HomePageActions {
 		await expect(this.continueToCheckoutButton).toBeVisible()
 		await this.continueToCheckoutButton.click()
 	}
-	//
-	// FUTURE consolidated add to cart function
-	async consolidatedAddProductsToCartUntilMinimumMet(page, userType, siteName) {
-		const isMedical = userType === 'medical'
-		const isLiveSite = siteName === 'live'
 
-		// Common locators and setup
-		const products = await page.locator(
-			'li.product.type-product.product-type-simple.status-publish',
-		)
-		let i = isLiveSite ? 4 : 0 // Adjust starting index for live vs concierge
-		let firstProductAdded = false
+	//
+	// FUTURE consolidated Med add to cart function
+	async medAddProductsToCartUntilMinimumMet(
+		page,
+		{ mode = 'concierge', productSelector, startIndex = 0, isMultiStore = false },
+	) {
+		let i = startIndex
+		let medicalProductExists = false
+		let firstMedicalProductAdded = false
 		let medicalCardProvided = false
 
-		while (true) {
-			// Check if there are enough products
-			if (i >= (await products.count())) {
-				console.log(`Only ${await products.count()} products available on the page.`)
+		// Get all products using the passed-in selector
+		const products = await page.locator(productSelector)
+		const productCount = await products.count()
+
+		// Main loop
+		while (i <= productCount) {
+			if (i >= productCount) {
+				console.log(`Only ${productCount} products available on the page.`)
+				if (!medicalProductExists) {
+					throw new Error('No Medical Products found on this page/store/location')
+				}
 				break
 			}
 
 			const product = products.nth(i)
-			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+			const hasMedicalTag = await this.isMedicalProduct(product)
 
-			// Flow for medical users
-			if (isMedical && !hasMedicalOnlyTag) {
-				console.log(
-					`Skipping product "${await product
-						.locator('.woocommerce-loop-product__title')
-						.innerText()}" as it is not "Medical Only".`,
-				)
+			// Mark that we at least found a medical product
+			if (hasMedicalTag) {
+				medicalProductExists = true
+			}
+
+			// Skip product if it’s not medical
+			if (!hasMedicalTag) {
+				await this.logSkippingNonMedical(product)
 				i++
 				continue
 			}
 
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-			const productNameNormalized = productName.trim()
-
-			if (!firstProductAdded && isLiveSite) {
-				// For live site, click into product page for the first product
-				const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
-				await productClickInto.click()
-				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.click()
+			// Special flow for multi-store “Live” mode:
+			// If we haven’t added any medical product yet, we drill into the product page.
+			// Otherwise, we can add directly from the homepage (as your code demonstrates).
+			if (isMultiStore && !firstMedicalProductAdded) {
+				await this.addFirstMedicalProduct(page, product)
+				firstMedicalProductAdded = true
 			} else {
-				// Add to cart directly from homepage
-				const addToCartButton = product.locator(
-					'button.button.product_type_simple.fasd_to_cart.ajax_groove',
-				)
-				await addToCartButton.click()
+				// In Concierge mode, or subsequent adds in Live mode
+				await this.addMedicalProductDirect(page, product, mode)
 			}
 
-			// Wait and verify the product is added to the cart
-			await page.waitForTimeout(4000)
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			const cartItem = await page.locator(
-				`td.product-name:has(a:has-text("${productNameNormalized}"))`,
-			)
-			const isProductInCart = (await cartItem.count()) > 0
-
-			if (!isProductInCart) {
-				throw new Error(
-					`Product "${productNameNormalized}" was not found in the cart after being added.`,
-				)
+			// Check if min is met
+			const stillBelowMinimum = await this.minimumNotMetLabel.isVisible()
+			if (!stillBelowMinimum) {
+				console.log('Minimum cart total met. Proceeding to medical card requirements...')
+				// “View Cart” or navigate to cart for final checks
+				await this.goToCart(page)
+				await this.checkMedicalBannerAndMaybeUploadCard(page, medicalCardProvided)
+				break // Stop adding more products
 			}
 
-			console.log(`Product "${productNameNormalized}" was successfully added to the cart.`)
-			firstProductAdded = true
-
-			// Check if the minimum banner is visible
-			const isMinimumBannerVisible = await this.minimumNotMetLabel.isVisible()
-			if (!isMinimumBannerVisible) {
-				console.log('Minimum cart total met. Proceeding to checkout.')
-				break
+			// If in multi-store mode and min still not met, user returns to product list
+			if (isMultiStore) {
+				await this.continueShopping(page)
 			}
 
-			// Special handling for medical users if the medical card needs to be added
-			if (isMedical && !medicalCardProvided) {
-				const medicalOnlyBannerVisible = await page
-					.locator('.wpse-snacktoast.warn-toast.med-issue')
-					.isVisible()
-				if (medicalOnlyBannerVisible) {
-					console.log('Medical-only product in cart. Adding medical card information...')
+			i++
+		}
+	}
+	// 1) Check if a product is "Medical Only"
+	async isMedicalProduct(product) {
+		const count = await product.locator('.wpse-metabadge.med-metabadge').count()
+		return count > 0
+	}
 
-					const medicalCardCheckbox = page.locator('input#med_included')
-					await medicalCardCheckbox.check()
+	// 2) Log skipping message for non-medical product
+	async logSkippingNonMedical(product) {
+		const title = await product.locator('.woocommerce-loop-product__title').innerText()
+		console.log(`Skipping product "${title.trim()}" as it is not "Medical Only".`)
+	}
 
-					const medCardFileInput = page.locator('input#fasd_medcard')
-					const [fileChooser] = await Promise.all([
-						page.waitForEvent('filechooser'),
-						medCardFileInput.click(),
-					])
-					await fileChooser.setFiles('Medical-Card.png')
+	// 3) Add the FIRST medical-only product in Live mode
+	//    (where you click into product details, then add to cart)
+	async addFirstMedicalProduct(page, product) {
+		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+		const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
 
-					await this.issuingStateSelect.selectOption('CA')
-					const newYear = new Date().getFullYear() + 1
-					await this.expirationInput.click()
-					await this.expirationInput.type(`01/01/${newYear}`)
+		console.log(`Adding first medical-only product: ${productName}`)
+		await productClickInto.click()
 
-					const saveMedicalInfoButton = page.locator(
-						'.fasd-form-submit:has-text("Save & Continue")',
-					)
-					await saveMedicalInfoButton.click()
-					medicalCardProvided = true
+		// Wait and click "Add to Cart" on the product details page
+		await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
+		await this.productPageAddToCartButton.nth(0).click()
 
-					// Wait for the cart drawer to reappear
-					await this.cartButtonNav.waitFor({ state: 'visible' })
-					await this.cartButtonNav.click()
-					await this.cartDrawerContainer.waitFor({ state: 'visible' })
-				}
-			}
+		// Wait for the cart drawer
+		await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
 
-			// Close cart drawer if still adding products
-			await this.closeCartDrawerButton.click()
-			await page.waitForTimeout(2000)
+		// Verify it’s in the cart
+		await this.verifyProductInCart(page, productName)
+	}
 
-			i++ // Increment to the next product
+	// 4) Add a medical product directly from the product card
+	//    Used by Concierge or subsequent additions in Live
+	async addMedicalProductDirect(page, product, mode) {
+		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+		console.log(`Adding product from listing: ${productName}`)
+
+		if (mode === 'concierge') {
+			// Concierge: one store, direct "Add to Cart" button on the product card
+			const addBtn = product.locator('button.button.product_type_simple.fasd_to_cart.ajax_groove')
+			await addBtn.click()
+		} else {
+			// Live mode (after first product): you might still have a direct "Add to Cart" button
+			// Adjust if your selectors differ
+			const addBtn = product.locator('button.product_type_simple.fasd_to_cart.ajax_groove')
+			await addBtn.click()
 		}
 
-		// Proceed to checkout
+		// Wait for cart drawer
+		await page.waitForTimeout(4000)
+		await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+		// Verify it’s in the cart
+		await this.verifyProductInCart(page, productName)
+	}
+
+	// 5) Verify a product is in the cart
+	async verifyProductInCart(page, productName) {
+		// Ensure the cart item is rendered
+		await page.waitForSelector('td.product-name')
+
+		// Grab the text from that single cart item
+		const cartItemLocator = page.locator('td.product-name')
+		const cartItemText = await cartItemLocator.innerText()
+		const textTrimmed = cartItemText.trim()
+
+		// (Optional) Log it out to see exactly what text is returned
+		console.log('Cart item text:', textTrimmed)
+
+		// Check if it includes the product name
+		if (!textTrimmed.includes(productName)) {
+			throw new Error(`Product "${productName}" was not found in the cart after being added.`)
+		}
+
+		console.log(`Product "${productName}" was successfully found in the cart.`)
+	}
+
+	// 6) Go to cart (shared step in both modes)
+	async goToCart(page) {
 		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
 		await this.viewCartButtonSimple.click()
+		// Possibly wait for the cart page or cart drawer to appear
+		await page.waitForTimeout(2000)
+	}
 
-		if (isLiveSite) {
-			await this.liveCartTitle.waitFor({ state: 'visible' })
+	// 7) Check medical-only banner and optionally upload med card info
+	async checkMedicalBannerAndMaybeUploadCard(page, medicalCardProvided) {
+		// Check banner
+		const banner = page.locator('.wpse-snacktoast.warn-toast').nth(1)
+		const isBannerVisible = await banner.isVisible()
+		const bannerText = (await banner.textContent())?.trim() || ''
+
+		if (!isBannerVisible || !bannerText.includes('Medical-only product in cart')) {
+			throw new Error('Medical-Only Banner not showing in cart for medical-only products.')
 		}
 
+		// If the user hasn’t uploaded a medical card yet, do it now
+		if (!medicalCardProvided) {
+			console.log('Medical-only product in cart. Adding medical card information...')
+
+			const medicalCardCheckbox = page.locator('input#med_included')
+			await medicalCardCheckbox.check()
+
+			const medCardFileInput = page.locator('input#fasd_medcard')
+			const [fileChooser] = await Promise.all([
+				page.waitForEvent('filechooser'),
+				medCardFileInput.click(),
+			])
+			await fileChooser.setFiles('Medical-Card.png')
+
+			// State selection & expiration
+			await this.issuingStateSelect.selectOption('CA')
+			const newYear = new Date().getFullYear() + 1
+			await this.expirationInput.click()
+			await this.expirationInput.type(`01/01/${newYear}`)
+
+			// Click "Save & Continue"
+			const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
+			await saveMedicalInfoButton.click()
+			await page.waitForTimeout(3000)
+
+			// Re-open cart if needed
+			await this.cartButtonNav.waitFor({ state: 'visible' })
+			await this.cartButtonNav.click()
+			await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+			console.log('Medical card information saved. Proceeding to checkout...')
+		}
+
+		// Final checkout
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await this.continueToCheckoutButton.click()
+	}
+
+	// 8) Continue Shopping in Live mode
+	async continueShopping(page) {
+		// Typically, you click something like "Add more items to continue"
+		await this.cartContinueShoppingButton.waitFor({ state: 'visible' })
+		await this.cartContinueShoppingButton.click()
+		await page.waitForTimeout(2000)
+	}
+	async newConciergeMedAddProductsToCartUntilMinimumMet(page) {
+		return this.medAddProductsToCartUntilMinimumMet(page, {
+			mode: 'concierge',
+			productSelector: 'ul.products li.product',
+			startIndex: 0,
+			isMultiStore: false,
+		})
+	}
+
+	async newLiveMedAddProductsToCartUntilMinimumMet(page) {
+		return this.medAddProductsToCartUntilMinimumMet(page, {
+			mode: 'live',
+			productSelector: 'li.product.type-product.product-type-simple.status-publish',
+			startIndex: 4,
+			isMultiStore: true,
+		})
 	}
 }
 module.exports = { HomePageActions }
