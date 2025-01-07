@@ -162,7 +162,6 @@ export class CheckoutPage {
 			}
 		})
 		await test.step('Delivery Appointment Section', async () => {
-			const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 			if (!isPickupVisible) {
 				await this.deliveryDayInputField.waitFor({ state: 'visible' })
 				await this.deliveryDayInputField.selectOption({ index: 1 })
@@ -172,7 +171,7 @@ export class CheckoutPage {
 				// Retrieve the displayed text of the selected option
 				const initialTimeValue = await page.locator('#time_type option:checked').innerText()
 				console.log('Selected Text:', initialTimeValue)
-				await this.saveContinueButton.first().click()
+				await this.saveContinueButton.nth(0).click()
 				const appointmentSummary = this.displayedAppointment
 				const dateText = appointmentSummary.locator('p').nth(0)
 				const timeText = appointmentSummary.locator('p').nth(1)
@@ -192,7 +191,7 @@ export class CheckoutPage {
 				await page.waitForTimeout(2000)
 				const updatedDayValue = await this.deliveryDayInputField.inputValue()
 				const updatedTimeValue = await page.locator('#time_type option:checked').innerText()
-				await this.saveContinueButton.first().click()
+				await this.saveContinueButton.nth(0).click()
 				await page.waitForTimeout(2000)
 
 				// erify appointment date/time
@@ -205,7 +204,7 @@ export class CheckoutPage {
 		})
 		await test.step('Phone and Birthday input', async () => {
 			const indexPersonalInfoSave = isPickupVisible ? 0 : 1
-			const indexPersonalInfoEdit = isPickupVisible ? 0 : 1
+			const indexPersonalInfoEdit = isPickupVisible ? 1 : 2
 			// Function to generate a random phone number
 			const generatePhoneNumber = () => {
 				const randomDigits = Math.floor(Math.random() * 9000000) + 1000000
@@ -250,7 +249,7 @@ export class CheckoutPage {
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits
-			await this.saveContinueButton.nth(indexPersonalInfoSave).click()
+			await this.saveContinueButton.nth(indexPersonalInfoSave).click({ force: true })
 			await page.waitForTimeout(2000)
 			// TODO: ADD for newEmail
 			//const newEmail =
@@ -269,7 +268,7 @@ export class CheckoutPage {
 		})
 		await test.step('Personal Document section', async () => {
 			const indexDocumentsSave = isPickupVisible ? 1 : 2
-			const indexDocumentsEdit = isPickupVisible ? 1 : 2
+			const indexDocumentsEdit = isPickupVisible ? 2 : 3
 			const dlUploadButton = await this.page.waitForSelector('#fasd_doc')
 			const [driversLicenseChooser] = await Promise.all([
 				this.page.waitForEvent('filechooser'),
