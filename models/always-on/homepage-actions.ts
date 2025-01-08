@@ -245,6 +245,7 @@ export class HomePageActions {
 				console.log('Cart is now cleared and empty. Returning to store page to add products')
 				// Close the cart drawer and wait before adding product
 				await this.closeCart()
+				await page.waitForTimeout(3000) // Adjust this timeout based on your app's behavior
 			}
 		}
 	}
