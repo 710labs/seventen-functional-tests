@@ -44,7 +44,7 @@ test.describe('PROD Live Tests', () => {
 			// TODO: CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
 			// add products to cart
-			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'prod')
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
