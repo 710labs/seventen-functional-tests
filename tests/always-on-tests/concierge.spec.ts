@@ -80,6 +80,8 @@ test.describe('Concierge Tests', () => {
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
 			await checkoutPage.recEnterInfoForCheckoutAndEdit(page, address, newAddress)
+			//place order
+			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			// go to account page
@@ -152,6 +154,8 @@ test.describe('Concierge Tests', () => {
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, conciergeURL, address, newAddress)
+			//place order
+			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			// go to account page
