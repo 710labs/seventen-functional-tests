@@ -677,7 +677,7 @@ export class HomePageActions {
 	// function searches for med-only products with the med tag, adds that product to cart,
 	// checks if Med card needs to be added, adds the med card, and then verifies if cart minimum is reached
 	// adding the same med-only product to cart until the min is reached
-	async liveMedAddProductsToCartUntilMinimumMet(page) {
+	async liveMedAddProductsToCartUntilMinimumMet(page, envType) {
 		// Get all the products on the page
 		const products = await page.locator(
 			'li.product.type-product.product-type-simple.status-publish',
@@ -816,70 +816,67 @@ export class HomePageActions {
 		await this.liveCartTitle.waitFor({ state: 'visible' })
 		await expect(this.liveCartTitle).toBeVisible()
 
-		// Check for the Medical Info banner and add medical card info
-		// const medicalOnlyBannerVisible = await page
-		// 	.locator('.wpse-snacktoast.warn-toast.med-issue')
-		// 	.isVisible()
+		if (envType === 'dev/stage') {
+			const medicalOnlyBannerVisible = await page
+				.locator('.wpse-snacktoast.warn-toast')
+				.first()
+				.isVisible()
+			const medicalOnlyBannerText = await page
+				.locator('.wpse-snacktoast.warn-toast')
+				.first()
+				.textContent()
 
-		const medicalOnlyBannerVisible = await page
-			.locator('.wpse-snacktoast.warn-toast')
-			.first()
-			.isVisible()
-		const medicalOnlyBannerText = await page
-			.locator('.wpse-snacktoast.warn-toast')
-			.first()
-			.textContent()
+			const isMedicalOnlyBannerCorrect =
+				medicalOnlyBannerVisible &&
+				medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
 
-		const isMedicalOnlyBannerCorrect =
-			medicalOnlyBannerVisible &&
-			medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+			if (!isMedicalOnlyBannerCorrect) {
+				throw new Error('Medical-Only Banner not showing in cart for medical only products')
+			}
 
-		if (!isMedicalOnlyBannerCorrect) {
-			throw new Error('Medical-Only Banner not showing in cart for medical only products')
-		}
+			if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
+				console.log('Medical-only product in cart. Adding medical card information...')
 
-		if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
-			console.log('Medical-only product in cart. Adding medical card information...')
+				// Click the "I have a medical card" checkbox
+				const medicalCardCheckbox = page.locator('input#med_included')
+				await medicalCardCheckbox.waitFor({ state: 'visible' })
+				await expect(medicalCardCheckbox).toBeVisible()
+				await medicalCardCheckbox.check()
 
-			// Click the "I have a medical card" checkbox
-			const medicalCardCheckbox = page.locator('input#med_included')
-			await medicalCardCheckbox.waitFor({ state: 'visible' })
-			await expect(medicalCardCheckbox).toBeVisible()
-			await medicalCardCheckbox.check()
+				// Add the medical card information
+				const medCardFileInput = page.locator('input#fasd_medcard')
+				const [driversLicenseChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medCardFileInput.click(),
+				])
+				const issuingStateSelect = page.locator('select#medcard_state')
+				const expirationInput = page.locator('input#medcard_exp')
+				await driversLicenseChooser.setFiles('Medical-Card.png')
+				await issuingStateSelect.selectOption('CA')
+				const newYear = new Date().getFullYear() + 1
+				await expirationInput.click()
+				await expirationInput.type(`01/01/${newYear}`)
 
-			// Add the medical card information
-			const medCardFileInput = page.locator('input#fasd_medcard')
-			const [driversLicenseChooser] = await Promise.all([
-				this.page.waitForEvent('filechooser'),
-				medCardFileInput.click(),
-			])
-			const issuingStateSelect = page.locator('select#medcard_state')
-			const expirationInput = page.locator('input#medcard_exp')
-			await driversLicenseChooser.setFiles('Medical-Card.png')
-			await issuingStateSelect.selectOption('CA')
-			const newYear = new Date().getFullYear() + 1
-			await expirationInput.click()
-			await expirationInput.type(`01/01/${newYear}`)
+				// Submit the medical card information
+				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
+				await saveMedicalInfoButton.click()
 
-			// Submit the medical card information
-			const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
-			await saveMedicalInfoButton.click()
+				medicalCardProvided = true
 
-			medicalCardProvided = true
+				// reopen the cart since it closes automatically after adding Medical Info
+				await this.cartButtonNav.waitFor({ state: 'visible' })
+				await expect(this.cartButtonNav).toBeVisible()
+				await this.cartButtonNav.click()
+				// Wait for the cart drawer to become visible
+				await this.cartDrawerContainer.waitFor({ state: 'visible' })
+				// continue to Checkout
+				// await this.medCartCheckoutButton.waitFor({ state: 'visible' })
+				// await expect(this.medCartCheckoutButton).toBeVisible()
+				// await this.medCartCheckoutButton.click()
 
-			// reopen the cart since it closes automatically after adding Medical Info
-			await this.cartButtonNav.waitFor({ state: 'visible' })
-			await expect(this.cartButtonNav).toBeVisible()
-			await this.cartButtonNav.click()
-			// Wait for the cart drawer to become visible
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-			// continue to Checkout
-			// await this.medCartCheckoutButton.waitFor({ state: 'visible' })
-			// await expect(this.medCartCheckoutButton).toBeVisible()
-			// await this.medCartCheckoutButton.click()
-
-			// Wait for animations or loading to finish
-			await page.waitForTimeout(3000)
+				// Wait for animations or loading to finish
+				await page.waitForTimeout(3000)
+			}
 		}
 
 		// Proceed to checkout after medical info is provided

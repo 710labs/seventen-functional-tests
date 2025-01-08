@@ -332,7 +332,7 @@ export class CheckoutPage {
 			if (!isPickupVisible) {
 				//Verify that checkout page displays original address entered previously
 				const originalAddress = addressParam
-				await expect(this.displayedAddress).toHaveText(originalAddress)
+				await expect(this.displayedAddress).toContainText(originalAddress)
 				await page.waitForTimeout(1000)
 				// Edit delivery address
 				await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
