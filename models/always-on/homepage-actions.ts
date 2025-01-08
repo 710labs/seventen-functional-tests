@@ -76,66 +76,75 @@ export class HomePageActions {
 		this.issuingStateSelect = page.locator('#medcard_state')
 		this.expirationInput = page.locator('input#medcard_exp')
 	}
-	async enterAddress(page, storeType, addressParam) {
-		await test.step('Click address button', async () => {
-			const viewportSize = await page.viewportSize()
-			if (storeType == 'concierge') {
-				if (viewportSize.width <= 768) {
-					// Mobile view Concierge
-					await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
-					await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
+	async openAddressSection(page, storeType) {
+		const viewportSize = await page.viewportSize()
+		if (storeType == 'concierge') {
+			if (viewportSize.width <= 768) {
+				// Mobile view Concierge
+				await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
+				await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
+				await this.enterAddressButtonConciergeMobile.click()
+				// Check if the button is visible
+				if (await this.submitAddressButton.isVisible()) {
+					// Click the button if it's visible
+					console.log('Address drawer opened. Dont need to click Address button again.')
+				} else {
 					await this.enterAddressButtonConciergeMobile.click()
-					// Check if the button is visible
-					if (await this.submitAddressButton.isVisible()) {
-						// Click the button if it's visible
-						console.log('Address drawer opened. Dont need to click Address button again.')
-					} else {
-						await this.enterAddressButtonConciergeMobile.click()
-						console.log('Click address button again')
-					}
-				} else {
-					// Desktop view Concierge
-					await this.enterAddressButtonConciergeDesktop.waitFor({ state: 'visible' })
-					await expect(this.enterAddressButtonConciergeDesktop).toBeVisible()
-					await this.enterAddressButtonConciergeDesktop.click()
-					// Check if the button is visible
-					if (await this.submitAddressButton.isVisible()) {
-						// Click the button if it's visible
-						console.log('Address drawer opened. Dont need to click Address button again.')
-					} else {
-						await this.enterAddressButtonConciergeDesktop.click()
-						console.log('Click address button again')
-					}
+					console.log('Click address button again')
 				}
-			} else if (storeType == 'live') {
-				if (viewportSize.width <= 768) {
-					// Mobile view
-					await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
-					await expect(this.enterAddressButtonMobile).toBeVisible()
-					await this.enterAddressButtonMobile.click()
-					// Check if the button is visible
-					if (await this.submitAddressButton.isVisible()) {
-						// Click the button if it's visible
-						console.log('Address drawer opened. Dont need to click Address button again.')
-					} else {
-						await this.enterAddressButtonMobile.click()
-						console.log('Click address button again')
-					}
+			} else {
+				// Desktop view Concierge
+				await this.enterAddressButtonConciergeDesktop.waitFor({ state: 'visible' })
+				await expect(this.enterAddressButtonConciergeDesktop).toBeVisible()
+				await this.enterAddressButtonConciergeDesktop.click()
+				// Check if the button is visible
+				if (await this.submitAddressButton.isVisible()) {
+					// Click the button if it's visible
+					console.log('Address drawer opened. Dont need to click Address button again.')
 				} else {
-					// Desktop view
-					await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
-					await expect(this.enterAddressButtonDesktop).toBeVisible()
-					await this.enterAddressButtonDesktop.click()
-					// Check if the button is visible
-					if (await this.submitAddressButton.isVisible()) {
-						// Click the button if it's visible
-						console.log('Address drawer opened. Dont need to click Address button again.')
-					} else {
-						await this.enterAddressButtonDesktop.click()
-						console.log('Click address button again')
-					}
+					await this.enterAddressButtonConciergeDesktop.click()
+					console.log('Click address button again')
 				}
 			}
+		} else if (storeType == 'live') {
+			if (viewportSize.width <= 768) {
+				// Mobile view
+				await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
+				await expect(this.enterAddressButtonMobile).toBeVisible()
+				await this.enterAddressButtonMobile.click()
+				// Check if the button is visible
+				if (await this.submitAddressButton.isVisible()) {
+					// Click the button if it's visible
+					console.log('Address drawer opened. Dont need to click Address button again.')
+				} else {
+					await this.enterAddressButtonMobile.click()
+					console.log('Click address button again')
+				}
+			} else {
+				// Desktop view
+				await this.enterAddressButtonDesktop.waitFor({ state: 'visible' })
+				await expect(this.enterAddressButtonDesktop).toBeVisible()
+				await this.enterAddressButtonDesktop.click()
+				// Check if the button is visible
+				if (await this.submitAddressButton.isVisible()) {
+					// Click the button if it's visible
+					console.log('Address drawer opened. Dont need to click Address button again.')
+				} else {
+					await this.enterAddressButtonDesktop.click()
+					console.log('Click address button again')
+				}
+			}
+		}
+	}
+	async submitAddress(page) {
+		await this.page.waitForTimeout(1500)
+		await expect(this.submitAddressButton).toBeVisible()
+		await this.submitAddressButton.click()
+		await this.page.waitForTimeout(1500)
+	}
+	async enterAddress(page, storeType, addressParam) {
+		await test.step('Click address button', async () => {
+			await this.openAddressSection(page, storeType)
 		})
 		await test.step('Enter address info into field', async () => {
 			//verify address sidebar container AND address field are visible
@@ -155,14 +164,32 @@ export class HomePageActions {
 			await this.addressField.press('Enter')
 		})
 		await test.step('Click submit button', async () => {
-			await this.page.waitForTimeout(1500)
-			await expect(this.submitAddressButton).toBeVisible()
-			await this.submitAddressButton.click()
-			await this.page.waitForTimeout(1500)
-			// verify that address sidebar dissappears after submitting address
-			// await this.addressInfoSideBarContainer.waitFor({ state: 'hidden' })
-			// await expect(this.addressField).toBeHidden()
-			//await this.addressInfoSideBarContainer.waitFor({ state: 'hidden' })
+			await this.submitAddress(page)
+		})
+	}
+	async selectAddressFromList(page, storeType, addressToSelect) {
+		await test.step('Click address button', async () => {
+			await this.openAddressSection(page, storeType)
+		})
+		await test.step('Select Address', async () => {
+			// Locate a label containing the address text
+			const addressLabel = page.locator('#render_useraddress_component .fasd-radio-item label', {
+				hasText: addressToSelect,
+			})
+
+			// Inside this label, we have an <input type="radio"> to click
+			const radioInput = addressLabel.locator('input[type="radio"]')
+
+			// Check (select) the radio button
+			await radioInput.check()
+
+			// Optional: confirm it was checked
+			await expect(radioInput).toBeChecked()
+
+			console.log(`Selected address: "${addressToSelect}"`)
+		})
+		await test.step('Click submit button', async () => {
+			await this.submitAddress(page)
 		})
 	}
 	async randomizeCartItems() {
