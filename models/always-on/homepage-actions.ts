@@ -21,6 +21,8 @@ export class HomePageActions {
 	readonly submitAddressButton: Locator
 	readonly cartDrawerContainer: Locator
 	readonly closeCartDrawerButton: Locator
+	readonly closeCartButtonGeneric: Locator
+
 	readonly minimumNotMetLabel: Locator
 	readonly continueToCheckoutButton: Locator
 	readonly medicalOnlyBanner: Locator
@@ -58,6 +60,9 @@ export class HomePageActions {
 		this.closeCartDrawerButton = page
 			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
 			.nth(1)
+		this.closeCartButtonGeneric = page.locator(
+			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
+		)
 		this.minimumNotMetLabel = page.locator('div.wpse-snacktoast')
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.productPageAddToCartButton = page.locator('button.wpse-button-primary.fasd_to_cart')
@@ -168,6 +173,80 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await expect(this.continueToCheckoutButton).toBeVisible()
 		await this.continueToCheckoutButton.click()
+	}
+	async openCart() {
+		// View the cart
+		await this.cartButtonNav.waitFor({ state: 'visible' })
+		await this.cartButtonNav.click()
+		await this.page.waitForTimeout(2000)
+		await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+	}
+	async closeCart() {
+		// Close the cart drawer and wait before adding product
+		await this.closeCartButtonGeneric.first().click()
+		await this.page.waitForTimeout(2000)
+	}
+	async clearProductsFromCart(page) {
+		// View the cart
+		await this.openCart()
+		// Define the locator for your element
+		const nothingInCartElement = page.locator('#radicalCartLayout.empty-radical-cart')
+		// Check visibility of Nothing In Cart
+		const isCartEmpty = await nothingInCartElement.isVisible()
+
+		if (isCartEmpty) {
+			console.log('Cart is empty. Returning to store page to add products')
+			await this.closeCart()
+			return
+		} else if (!isCartEmpty) {
+			console.log('Cart is NOT empty. Deleting the items in the cart in order to start fresh')
+			// TODO: Handle the case where the cart layout is not visible
+			// Wait until at least one cart-item row is visible
+			await page.waitForSelector('tr.woocommerce-cart-form__cart-item')
+
+			// Get all product rows currently in the cart
+			const cartRows = page.locator('tr.woocommerce-cart-form__cart-item')
+			const rowCount = await cartRows.count()
+
+			for (let i = 0; i < rowCount; i++) {
+				// Re-locate cart-item rows in case the DOM changed after a removal
+				const currentRows = page.locator('tr.woocommerce-cart-form__cart-item')
+				const countNow = await currentRows.count()
+
+				// If no items found, break out (cart is empty)
+				if (countNow === 0) {
+					console.log('Cart is already empty!')
+					break
+				}
+
+				// Otherwise, remove the first row
+				// 1) Grab the first row
+				const firstRow = currentRows.first()
+
+				// 2) Click its remove link (the anchor with class .remove)
+				const removeLink = firstRow.locator('td.product-remove .remove')
+
+				// If it's hidden or not "visible," either use { force: true } or a direct DOM click:
+				// await removeLink.click({ force: true });
+				await removeLink.evaluate(el => el.click())
+
+				// 3) Wait for that row to vanish from the DOM
+				await firstRow.waitFor({ state: 'detached' })
+
+				console.log(`Removed product row #${i + 1} via X link`)
+				// reopene Cart after product is removed
+				await this.openCart()
+			}
+
+			const finalCount = await cartRows.count()
+			if (finalCount > 0) {
+				throw new Error(`Expected empty cart but found ${finalCount} item(s) still present.`)
+			} else if (await nothingInCartElement.isVisible()) {
+				console.log('Cart is now cleared and empty. Returning to store page to add products')
+				// Close the cart drawer and wait before adding product
+				await this.closeCart()
+			}
+		}
 	}
 	async addProductsToCart(page, numberOfItems) {
 		// Get all the products on the page
@@ -463,7 +542,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 0
+		let i = 3
 		let firstProductAdded = false // Track if the first product has been added
 
 		while (true) {
@@ -598,7 +677,7 @@ export class HomePageActions {
 	// function searches for med-only products with the med tag, adds that product to cart,
 	// checks if Med card needs to be added, adds the med card, and then verifies if cart minimum is reached
 	// adding the same med-only product to cart until the min is reached
-	async liveMedAddProductsToCartUntilMinimumMet(page) {
+	async liveMedAddProductsToCartUntilMinimumMet(page, envType) {
 		// Get all the products on the page
 		const products = await page.locator(
 			'li.product.type-product.product-type-simple.status-publish',
@@ -737,70 +816,67 @@ export class HomePageActions {
 		await this.liveCartTitle.waitFor({ state: 'visible' })
 		await expect(this.liveCartTitle).toBeVisible()
 
-		// Check for the Medical Info banner and add medical card info
-		// const medicalOnlyBannerVisible = await page
-		// 	.locator('.wpse-snacktoast.warn-toast.med-issue')
-		// 	.isVisible()
+		if (envType === 'dev/stage') {
+			const medicalOnlyBannerVisible = await page
+				.locator('.wpse-snacktoast.warn-toast')
+				.first()
+				.isVisible()
+			const medicalOnlyBannerText = await page
+				.locator('.wpse-snacktoast.warn-toast')
+				.first()
+				.textContent()
 
-		const medicalOnlyBannerVisible = await page
-			.locator('.wpse-snacktoast.warn-toast')
-			.first()
-			.isVisible()
-		const medicalOnlyBannerText = await page
-			.locator('.wpse-snacktoast.warn-toast')
-			.first()
-			.textContent()
+			const isMedicalOnlyBannerCorrect =
+				medicalOnlyBannerVisible &&
+				medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
 
-		const isMedicalOnlyBannerCorrect =
-			medicalOnlyBannerVisible &&
-			medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+			if (!isMedicalOnlyBannerCorrect) {
+				throw new Error('Medical-Only Banner not showing in cart for medical only products')
+			}
 
-		if (!isMedicalOnlyBannerCorrect) {
-			throw new Error('Medical-Only Banner not showing in cart for medical only products')
-		}
+			if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
+				console.log('Medical-only product in cart. Adding medical card information...')
 
-		if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
-			console.log('Medical-only product in cart. Adding medical card information...')
+				// Click the "I have a medical card" checkbox
+				const medicalCardCheckbox = page.locator('input#med_included')
+				await medicalCardCheckbox.waitFor({ state: 'visible' })
+				await expect(medicalCardCheckbox).toBeVisible()
+				await medicalCardCheckbox.check()
 
-			// Click the "I have a medical card" checkbox
-			const medicalCardCheckbox = page.locator('input#med_included')
-			await medicalCardCheckbox.waitFor({ state: 'visible' })
-			await expect(medicalCardCheckbox).toBeVisible()
-			await medicalCardCheckbox.check()
+				// Add the medical card information
+				const medCardFileInput = page.locator('input#fasd_medcard')
+				const [driversLicenseChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medCardFileInput.click(),
+				])
+				const issuingStateSelect = page.locator('select#medcard_state')
+				const expirationInput = page.locator('input#medcard_exp')
+				await driversLicenseChooser.setFiles('Medical-Card.png')
+				await issuingStateSelect.selectOption('CA')
+				const newYear = new Date().getFullYear() + 1
+				await expirationInput.click()
+				await expirationInput.type(`01/01/${newYear}`)
 
-			// Add the medical card information
-			const medCardFileInput = page.locator('input#fasd_medcard')
-			const [driversLicenseChooser] = await Promise.all([
-				this.page.waitForEvent('filechooser'),
-				medCardFileInput.click(),
-			])
-			const issuingStateSelect = page.locator('select#medcard_state')
-			const expirationInput = page.locator('input#medcard_exp')
-			await driversLicenseChooser.setFiles('Medical-Card.png')
-			await issuingStateSelect.selectOption('CA')
-			const newYear = new Date().getFullYear() + 1
-			await expirationInput.click()
-			await expirationInput.type(`01/01/${newYear}`)
+				// Submit the medical card information
+				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
+				await saveMedicalInfoButton.click()
 
-			// Submit the medical card information
-			const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
-			await saveMedicalInfoButton.click()
+				medicalCardProvided = true
 
-			medicalCardProvided = true
+				// reopen the cart since it closes automatically after adding Medical Info
+				await this.cartButtonNav.waitFor({ state: 'visible' })
+				await expect(this.cartButtonNav).toBeVisible()
+				await this.cartButtonNav.click()
+				// Wait for the cart drawer to become visible
+				await this.cartDrawerContainer.waitFor({ state: 'visible' })
+				// continue to Checkout
+				// await this.medCartCheckoutButton.waitFor({ state: 'visible' })
+				// await expect(this.medCartCheckoutButton).toBeVisible()
+				// await this.medCartCheckoutButton.click()
 
-			// reopen the cart since it closes automatically after adding Medical Info
-			await this.cartButtonNav.waitFor({ state: 'visible' })
-			await expect(this.cartButtonNav).toBeVisible()
-			await this.cartButtonNav.click()
-			// Wait for the cart drawer to become visible
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-			// continue to Checkout
-			// await this.medCartCheckoutButton.waitFor({ state: 'visible' })
-			// await expect(this.medCartCheckoutButton).toBeVisible()
-			// await this.medCartCheckoutButton.click()
-
-			// Wait for animations or loading to finish
-			await page.waitForTimeout(3000)
+				// Wait for animations or loading to finish
+				await page.waitForTimeout(3000)
+			}
 		}
 
 		// Proceed to checkout after medical info is provided

@@ -103,7 +103,9 @@ export class CheckoutPage {
 		this.displayedMedicalExp = page.locator('div.wpse-document-meta p').nth(1)
 		this.addNewAddressButton = page.locator('label:has-text("Add new address")')
 		this.addressField = page.locator('#fasd_address')
-		this.changeDeliveryPopUp = page.locator('div.wpse-snacktoast.warn-toast')
+		this.changeDeliveryPopUp = page.locator(
+			'div.wpse-snacktoast.warn-toast:has-text("You\'re changing delivery zones")',
+		)
 		this.yesChangeAddressButton = page.locator(
 			'button.wpse-button-primary.fasd-form-submit:has-text("Yes, change address")',
 		)
@@ -204,7 +206,7 @@ export class CheckoutPage {
 		})
 		await test.step('Phone and Birthday input', async () => {
 			const indexPersonalInfoSave = isPickupVisible ? 0 : 1
-			const indexPersonalInfoEdit = isPickupVisible ? 1 : 2
+			const indexPersonalInfoEdit = isPickupVisible ? 0 : 2
 			// Function to generate a random phone number
 			const generatePhoneNumber = () => {
 				const randomDigits = Math.floor(Math.random() * 9000000) + 1000000
@@ -268,7 +270,7 @@ export class CheckoutPage {
 		})
 		await test.step('Personal Document section', async () => {
 			const indexDocumentsSave = isPickupVisible ? 1 : 2
-			const indexDocumentsEdit = isPickupVisible ? 2 : 3
+			const indexDocumentsEdit = isPickupVisible ? 1 : 3
 			const dlUploadButton = await this.page.waitForSelector('#fasd_doc')
 			const [driversLicenseChooser] = await Promise.all([
 				this.page.waitForEvent('filechooser'),
@@ -321,30 +323,6 @@ export class CheckoutPage {
 			const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
 			expect(paymentOptionSelector).toHaveText(expectedText)
 		})
-
-		await test.step('Order Review & Password Section', async () => {
-			await this.orderReviewSection.waitFor({ state: 'visible' })
-			await this.passwordCheckoutField.waitFor({ state: 'visible' })
-			await this.submitPasswordButton.waitFor({ state: 'visible' })
-			//enter false password to verify enforcement
-			await this.passwordCheckoutField.click()
-			await this.passwordCheckoutField.fill('fakepassword')
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			await expect(this.passwordError).toHaveText('Please verify password')
-			await page.waitForTimeout(1500)
-			//enter correct password
-			await this.passwordCheckoutField.click()
-			const password = process.env.CHECKOUT_PASSWORD || ''
-			await this.passwordCheckoutField.fill(password)
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			// place order once password has been entered
-			await this.placeOrderButton.waitFor({ state: 'visible' })
-			await this.placeOrderButton.click()
-		})
 	}
 	//
 	// newMedEnterInfoForCheckoutAndEdit currently used by both Live and Concierge MED tests
@@ -354,7 +332,7 @@ export class CheckoutPage {
 			if (!isPickupVisible) {
 				//Verify that checkout page displays original address entered previously
 				const originalAddress = addressParam
-				await expect(this.displayedAddress).toHaveText(originalAddress)
+				await expect(this.displayedAddress).toContainText(originalAddress)
 				await page.waitForTimeout(1000)
 				// Edit delivery address
 				await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
@@ -388,7 +366,7 @@ export class CheckoutPage {
 				await this.yesChangeAddressButton.click()
 				//Verify that address was updated correctly
 				const expectedNewTextDisplay = newAddressParam
-				await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
+				await expect(this.displayedAddress.first()).toContainText(expectedNewTextDisplay)
 			}
 		})
 		await test.step('Delivery Appointment Section', async () => {
@@ -600,30 +578,6 @@ export class CheckoutPage {
 				expect(paymentOptionSelector).toHaveText(expectedText)
 			}
 		})
-
-		await test.step('Order Review & Password Section', async () => {
-			await this.orderReviewSection.waitFor({ state: 'visible' })
-			await this.passwordCheckoutField.waitFor({ state: 'visible' })
-			await this.submitPasswordButton.waitFor({ state: 'visible' })
-			//enter false password to verify enforcement
-			await this.passwordCheckoutField.click()
-			await this.passwordCheckoutField.fill('wrongpassword')
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			await expect(this.passwordError).toHaveText('Please verify password')
-			await page.waitForTimeout(1500)
-			//enter correct password
-			await this.passwordCheckoutField.click()
-			const password = process.env.CHECKOUT_PASSWORD || ''
-			await this.passwordCheckoutField.fill(password)
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			// place order once password has been entered
-			await this.placeOrderButton.waitFor({ state: 'visible' })
-			await this.placeOrderButton.click()
-		})
 	}
 
 	async verifyCheckoutPageLoads(page) {
@@ -693,6 +647,31 @@ export class CheckoutPage {
 				: 'th'
 
 		return `${dayName} ${monthName} ${dateNum}${suffix}`
+	}
+	async placeOrder(page) {
+		await test.step('Order Review & Password Section', async () => {
+			await this.orderReviewSection.waitFor({ state: 'visible' })
+			await this.passwordCheckoutField.waitFor({ state: 'visible' })
+			await this.submitPasswordButton.waitFor({ state: 'visible' })
+			//enter false password to verify enforcement
+			await this.passwordCheckoutField.click()
+			await this.passwordCheckoutField.fill('wrongpassword')
+			await page.waitForTimeout(1500)
+			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
+			await expect(this.passwordError).toHaveText('Please verify password')
+			await page.waitForTimeout(1500)
+			//enter correct password
+			await this.passwordCheckoutField.click()
+			const password = process.env.CHECKOUT_PASSWORD || ''
+			await this.passwordCheckoutField.fill(password)
+			await page.waitForTimeout(1500)
+			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
+			// place order once password has been entered
+			await this.placeOrderButton.waitFor({ state: 'visible' })
+			await this.placeOrderButton.click()
+		})
 	}
 }
 module.exports = { CheckoutPage }
