@@ -85,7 +85,7 @@ test.describe('Live Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'dev/stage')
 			//await homePageActions.newLiveMedAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
