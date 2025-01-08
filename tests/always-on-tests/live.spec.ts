@@ -43,6 +43,8 @@ test.describe('Live Tests', () => {
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			await checkoutPage.recEnterInfoForCheckoutAndEdit(page, address, newAddress)
+			//place order
+			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
@@ -89,6 +91,8 @@ test.describe('Live Tests', () => {
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, liveURL, address, newAddress)
+			//place order
+			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)

@@ -321,30 +321,6 @@ export class CheckoutPage {
 			const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
 			expect(paymentOptionSelector).toHaveText(expectedText)
 		})
-
-		await test.step('Order Review & Password Section', async () => {
-			await this.orderReviewSection.waitFor({ state: 'visible' })
-			await this.passwordCheckoutField.waitFor({ state: 'visible' })
-			await this.submitPasswordButton.waitFor({ state: 'visible' })
-			//enter false password to verify enforcement
-			await this.passwordCheckoutField.click()
-			await this.passwordCheckoutField.fill('fakepassword')
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			await expect(this.passwordError).toHaveText('Please verify password')
-			await page.waitForTimeout(1500)
-			//enter correct password
-			await this.passwordCheckoutField.click()
-			const password = process.env.CHECKOUT_PASSWORD || ''
-			await this.passwordCheckoutField.fill(password)
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			// place order once password has been entered
-			await this.placeOrderButton.waitFor({ state: 'visible' })
-			await this.placeOrderButton.click()
-		})
 	}
 	//
 	// newMedEnterInfoForCheckoutAndEdit currently used by both Live and Concierge MED tests
@@ -600,30 +576,6 @@ export class CheckoutPage {
 				expect(paymentOptionSelector).toHaveText(expectedText)
 			}
 		})
-
-		await test.step('Order Review & Password Section', async () => {
-			await this.orderReviewSection.waitFor({ state: 'visible' })
-			await this.passwordCheckoutField.waitFor({ state: 'visible' })
-			await this.submitPasswordButton.waitFor({ state: 'visible' })
-			//enter false password to verify enforcement
-			await this.passwordCheckoutField.click()
-			await this.passwordCheckoutField.fill('wrongpassword')
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			await expect(this.passwordError).toHaveText('Please verify password')
-			await page.waitForTimeout(1500)
-			//enter correct password
-			await this.passwordCheckoutField.click()
-			const password = process.env.CHECKOUT_PASSWORD || ''
-			await this.passwordCheckoutField.fill(password)
-			await page.waitForTimeout(1500)
-			await this.submitPasswordButton.click()
-			await page.waitForTimeout(1500)
-			// place order once password has been entered
-			await this.placeOrderButton.waitFor({ state: 'visible' })
-			await this.placeOrderButton.click()
-		})
 	}
 
 	async verifyCheckoutPageLoads(page) {
@@ -693,6 +645,31 @@ export class CheckoutPage {
 				: 'th'
 
 		return `${dayName} ${monthName} ${dateNum}${suffix}`
+	}
+	async placeOrder(page) {
+		await test.step('Order Review & Password Section', async () => {
+			await this.orderReviewSection.waitFor({ state: 'visible' })
+			await this.passwordCheckoutField.waitFor({ state: 'visible' })
+			await this.submitPasswordButton.waitFor({ state: 'visible' })
+			//enter false password to verify enforcement
+			await this.passwordCheckoutField.click()
+			await this.passwordCheckoutField.fill('wrongpassword')
+			await page.waitForTimeout(1500)
+			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
+			await expect(this.passwordError).toHaveText('Please verify password')
+			await page.waitForTimeout(1500)
+			//enter correct password
+			await this.passwordCheckoutField.click()
+			const password = process.env.CHECKOUT_PASSWORD || ''
+			await this.passwordCheckoutField.fill(password)
+			await page.waitForTimeout(1500)
+			await this.submitPasswordButton.click()
+			await page.waitForTimeout(1500)
+			// place order once password has been entered
+			await this.placeOrderButton.waitFor({ state: 'visible' })
+			await this.placeOrderButton.click()
+		})
 	}
 }
 module.exports = { CheckoutPage }
