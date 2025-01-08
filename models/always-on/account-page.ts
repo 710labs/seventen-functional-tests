@@ -165,8 +165,6 @@ export class AccountPage {
 		await expect(this.accountButtonNav).toBeVisible()
 		// click account button in nav bar
 		await this.accountButtonNav.click()
-	}
-	async verifyAccountPageElements(userType, noOrders, currentPassword, newPassword) {
 		await this.page.waitForTimeout(2000)
 		// Verify page title is visible
 		await expect(this.pageTitleSelector).toBeVisible()
@@ -174,13 +172,13 @@ export class AccountPage {
 		await expect(this.accountButtonNav).toBeVisible()
 		// Verify Sign Out link is visible and clickable
 		await expect(this.signOutButton).toBeVisible()
-
+	}
+	async verifyAccountPageElements(userType, noOrders, currentPassword, newPassword) {
+		await this.page.waitForTimeout(2000)
 		// verify & edit Address Info
 		await this.enterAddressInfo(noOrders)
-
 		// edit personal info
 		const newEmail = await this.editPersonalInfo(userType)
-
 		// add photo id
 		await this.editPhotoId()
 		// if userType is med, then add med card info
@@ -197,11 +195,7 @@ export class AccountPage {
 	}
 	async logOut(page) {
 		await test.step('Log out User', async () => {
-			// verify page title, logo, account and cart button are visible
-			await this.accountButtonNav.waitFor({ state: 'visible' })
-			await expect(this.accountButtonNav).toBeVisible()
-			// click account button in nav bar
-			await this.accountButtonNav.click()
+			await this.goToAccountPage()
 			// verify that sign out button appears
 			await this.signOutButton.waitFor({ state: 'visible' })
 			await expect(this.signOutButton).toBeVisible()
