@@ -26,7 +26,7 @@ test.describe('PROD Live Tests', () => {
 			const accountPage = new AccountPage(page)
 
 			// Verify that store homepage loads
-			await homePageLogin.verifyUserSignInModalAppears(page)
+			await homePageLogin.verifyUserSignInModalAppears(page, prodLiveURL)
 			// Login Existing Prod User
 			await homePageLogin.loginExistingUser(
 				page,
@@ -43,7 +43,7 @@ test.describe('PROD Live Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			//
-			// TODO: CLEAR CART IF PRODUCTS EXIST
+			// CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
 			// add products to cart
 			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'prod')
@@ -51,6 +51,9 @@ test.describe('PROD Live Tests', () => {
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, prodLiveURL, address, newAddress)
+			// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
+			await homePageActions.goToHomePage()
+			await homePageActions.clearProductsFromCart(page)
 			// logout
 			await accountPage.logOut(page)
 		},

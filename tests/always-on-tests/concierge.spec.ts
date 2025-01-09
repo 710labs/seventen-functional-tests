@@ -22,7 +22,13 @@ test.describe('Concierge Tests', () => {
 
 		const homePageLogin = new HomePageLogin(page)
 		// log in existing user
-		await conciergeLogin.loginUser(page, 'wrongpassword', conciergeUsername, conciergePassword)
+		await conciergeLogin.loginUser(
+			page,
+			conciergeURL,
+			'wrongpassword',
+			conciergeUsername,
+			conciergePassword,
+		)
 		await homePageLogin.verifyShopLoadsAfterSignIn(page)
 		await accountPage.logOut(page)
 	})
@@ -65,7 +71,13 @@ test.describe('Concierge Tests', () => {
 			//create new user as admin
 			await conciergeCreateUser.createNewUser(page, newEmail, conciergePassword)
 			//login to shop as new user
-			await conciergeLogin.loginUser(page, 'wrongpassword', newEmail, conciergePassword)
+			await conciergeLogin.loginUser(
+				page,
+				conciergeURL,
+				'wrongpassword',
+				newEmail,
+				conciergePassword,
+			)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
@@ -96,7 +108,13 @@ test.describe('Concierge Tests', () => {
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
-			await conciergeLogin.loginUser(page, conciergePassword, updatedEmail, NEWalwaysOnPassword)
+			await conciergeLogin.loginUser(
+				page,
+				conciergeURL,
+				conciergePassword,
+				updatedEmail,
+				NEWalwaysOnPassword,
+			)
 		},
 	)
 	test(
@@ -139,7 +157,7 @@ test.describe('Concierge Tests', () => {
 			//create new user as admin
 			await conciergeCreateUser.createNewUser(page, newEmail, conciergePassword)
 			//login to shop as new user
-			await conciergeLogin.loginUser(page, 'wrongpassword', newEmail, newPassword)
+			await conciergeLogin.loginUser(page, conciergeURL, 'wrongpassword', newEmail, newPassword)
 			//verify that shop loads upon log in
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
@@ -149,7 +167,7 @@ test.describe('Concierge Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page, 'dev/stage')
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
@@ -170,7 +188,13 @@ test.describe('Concierge Tests', () => {
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
-			await conciergeLogin.loginUser(page, conciergePassword, updatedEmail, NEWalwaysOnPassword)
+			await conciergeLogin.loginUser(
+				page,
+				conciergeURL,
+				conciergePassword,
+				updatedEmail,
+				NEWalwaysOnPassword,
+			)
 		},
 	)
 })

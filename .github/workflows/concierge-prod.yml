@@ -28,7 +28,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
-      CONCIERGE_URL: ${{ secrets.PROD_CONCIERGE_URL}}
+      PROD_CONCIERGE_URL: ${{ secrets.PROD_CONCIERGE_URL}}
       PROD_CONCIERGE_USERNAME: ${{ secrets.PROD_CONCIERGE_USERNAME}}
       PROD_CONCIERGE_PASSWORD: ${{ secrets.PROD_CONCIERGE_PASSWORD}}
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD}}

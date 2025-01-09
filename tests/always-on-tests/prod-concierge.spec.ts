@@ -29,6 +29,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 			const accountPage = new AccountPage(page)
 			await conciergeLogin.loginUser(
 				page,
+				prodConciergeURL,
 				'wrongpassword',
 				prodConciergeUsername,
 				prodConciergePassword,
@@ -38,14 +39,15 @@ test.describe('PROD CONCIERGE Tests', () => {
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
-			//await homePageActions.enterAddress(page, 'concierge', address)
+			await homePageActions.openConciergeAddress(page)
+			await homePageActions.selectAddressFromList(page, 'concierge', address)
 			// verify that homepage loads again
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
 			//
-			// TODO: CLEAR CART IF PRODUCTS EXIST
+			// CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
 			// add products to cart
-			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page, 'prod')
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
@@ -55,25 +57,9 @@ test.describe('PROD CONCIERGE Tests', () => {
 				address,
 				newAddress,
 			)
-			// verify order confirmation loads
-			//
-			//
-			// ?????? go account page or?
-			// go to account page
-			// await accountPage.goToAccountPage()
-			// // verify that account page elements, buttons, and popup actions all work
-			// const newEmail = await accountPage.verifyAccountPageElements(
-			// 	'med',
-			// 	false,
-			// 	alwaysOnPassword,
-			// 	NEWalwaysOnPassword,
-			// )
-			// //log out
-			// await accountPage.logOut(page)
-			// // sign in with NEW password that was just updated
-			// await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
-			//
-			//
+			// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
+			await homePageActions.goToHomePage()
+			await homePageActions.clearProductsFromCart(page)
 			// logout
 			await accountPage.logOut(page)
 		},

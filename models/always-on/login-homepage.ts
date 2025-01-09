@@ -44,12 +44,10 @@ export class HomePageLogin {
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 		this.signInError = page.locator('.wpse-snacktoast-headline')
 	}
-	async verifyUserSignInModalAppears(page) {
+	async verifyUserSignInModalAppears(page, URLparam) {
 		await test.step('Verify the Homepage loads correctly', async () => {
-			const alwaysOnURL = process.env.ALWAYS_ON_URL || ''
-
 			//go to page
-			await page.goto(alwaysOnURL)
+			await page.goto(URLparam)
 
 			// verify that email login/signup popup appears and that correct text displays
 			await this.userPopUpContainer.waitFor({ state: 'visible' })
