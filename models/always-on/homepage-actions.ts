@@ -203,9 +203,6 @@ export class HomePageActions {
 		})
 	}
 	async selectAddressFromList(page, storeType, addressToSelect) {
-		await test.step('Click address button', async () => {
-			await this.openAddressSection(page, storeType)
-		})
 		await test.step('Select Address', async () => {
 			// Locate a label containing the address text
 			const addressLabel = page.locator('#render_useraddress_component .fasd-radio-item label', {
