@@ -27,7 +27,7 @@ test.describe('Live Tests', () => {
 			const accountPage = new AccountPage(page)
 
 			// Verify that store homepage loads
-			await homePageLogin.verifyUserSignInModalAppears(page)
+			await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'rec')
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
@@ -74,7 +74,7 @@ test.describe('Live Tests', () => {
 			const accountPage = new AccountPage(page)
 
 			// Verify that store homepage loads
-			await homePageLogin.verifyUserSignInModalAppears(page)
+			await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
 			await homePageLogin.verifyShopLoadsAfterSignIn(page)
@@ -115,7 +115,7 @@ test.describe('Live Tests', () => {
 		const homePageLogin = new HomePageLogin(page)
 		const accountPage = new AccountPage(page)
 
-		await homePageLogin.verifyUserSignInModalAppears(page)
+		await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 		// Verify that store homepage loads
 		// log in existing user
 		await homePageLogin.loginExistingUser(page, 'wrongpassword', alwaysOnUsername, alwaysOnPassword)

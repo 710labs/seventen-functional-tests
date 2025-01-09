@@ -24,12 +24,10 @@ export class ConciergeLogin {
 		this.signInButton = page.locator('button[name="login"]')
 		this.signInError = page.locator('div.woocommerce-notices-wrapper ul.woocommerce-error')
 	}
-	async loginExistingUser(page) {
+	async loginExistingUser(page, URLparam) {
 		await test.step('Verify the Homepage loads correctly', async () => {
-			const conciergeURL = process.env.CONCIERGE_URL || ''
-
 			//go to page
-			await page.goto(conciergeURL)
+			await page.goto(URLparam)
 
 			// verify that email login/signup popup appears and that correct text displays
 			await this.pageTitleSelector.waitFor({ state: 'visible' })
@@ -47,12 +45,10 @@ export class ConciergeLogin {
 			await this.signInButton.click()
 		})
 	}
-	async loginUser(page, falsePassword, newUsername, newPassword) {
+	async loginUser(page, URLparam, falsePassword, newUsername, newPassword) {
 		await test.step('Verify the Homepage loads correctly', async () => {
-			const conciergeURL = process.env.CONCIERGE_URL || ''
-
 			//go to page
-			await page.goto(conciergeURL)
+			await page.goto(URLparam)
 
 			// verify that email login/signup popup appears and that correct text displays
 			await this.pageTitleSelector.waitFor({ state: 'visible' })

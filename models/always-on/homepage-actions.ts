@@ -78,7 +78,7 @@ export class HomePageActions {
 	}
 	async openAddressSection(page, storeType) {
 		const viewportSize = await page.viewportSize()
-		if (storeType == 'concierge') {
+		if (storeType === 'concierge') {
 			if (viewportSize.width <= 768) {
 				// Mobile view Concierge
 				await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
@@ -106,7 +106,7 @@ export class HomePageActions {
 					console.log('Click address button again')
 				}
 			}
-		} else if (storeType == 'live') {
+		} else if (storeType === 'live') {
 			if (viewportSize.width <= 768) {
 				// Mobile view
 				await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
@@ -135,6 +135,41 @@ export class HomePageActions {
 				}
 			}
 		}
+	}
+	async openConciergeAddress(page) {
+		const viewportSize = await page.viewportSize()
+		if (viewportSize.width <= 768) {
+			// Mobile view Concierge
+			await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
+			await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
+			await this.enterAddressButtonConciergeMobile.click()
+			// Check if the button is visible
+			if (await this.submitAddressButton.isVisible()) {
+				// Click the button if it's visible
+				console.log('Address drawer opened. Dont need to click Address button again.')
+			} else {
+				await this.enterAddressButtonConciergeMobile.click()
+				console.log('Click address button again')
+			}
+		} else {
+			// Desktop view Concierge
+			await this.enterAddressButtonConciergeDesktop.waitFor({ state: 'visible' })
+			await expect(this.enterAddressButtonConciergeDesktop).toBeVisible()
+			await this.enterAddressButtonConciergeDesktop.click()
+			// Check if the button is visible
+			if (await this.submitAddressButton.isVisible()) {
+				// Click the button if it's visible
+				console.log('Address drawer opened. Dont need to click Address button again.')
+			} else {
+				await this.enterAddressButtonConciergeDesktop.click()
+				console.log('Click address button again')
+			}
+		}
+	}
+	async goToHomePage() {
+		await this.homePageButton710.waitFor({ state: 'visible' })
+		await expect(this.homePageButton710).toBeVisible()
+		await this.homePageButton710.click()
 	}
 	async submitAddress(page) {
 		await this.page.waitForTimeout(1500)
@@ -214,6 +249,7 @@ export class HomePageActions {
 		await this.page.waitForTimeout(2000)
 	}
 	async clearProductsFromCart(page) {
+		await this.page.waitForTimeout(2000)
 		// View the cart
 		await this.openCart()
 		// Define the locator for your element
@@ -418,7 +454,7 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.click()
 	}
 
-	async conciergeMedAddProductsToCartUntilMinimumMet(page) {
+	async conciergeMedAddProductsToCartUntilMinimumMet(page, envType) {
 		const products = await page.locator('ul.products li.product')
 		let i = 0
 		let medicalProductExists = false
@@ -483,74 +519,72 @@ export class HomePageActions {
 				await this.viewCartButtonSimple.click()
 				//
 				await page.waitForTimeout(3000)
-				//
-				// // Check if the Medical Card Banner is visible
-				// const medicalOnlyBannerVisible = await page
-				// 	.locator('.wpse-snacktoast.warn-toast.med-issue')
-				// 	.isVisible()
-				const medicalOnlyBannerVisible = await page
-					.locator('.wpse-snacktoast.warn-toast')
-					.first()
-					.isVisible()
-				const medicalOnlyBannerText = await page
-					.locator('.wpse-snacktoast.warn-toast')
-					.first()
-					.textContent()
+				// check if envType is dev/stage or Prod. For Prod, skip adding Med info since using existing user
+				// with med card already populated
+				if (envType === 'dev/stage') {
+					const medicalOnlyBannerVisible = await page
+						.locator('.wpse-snacktoast.warn-toast')
+						.first()
+						.isVisible()
+					const medicalOnlyBannerText = await page
+						.locator('.wpse-snacktoast.warn-toast')
+						.first()
+						.textContent()
 
-				const isMedicalOnlyBannerCorrect =
-					medicalOnlyBannerVisible &&
-					medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+					const isMedicalOnlyBannerCorrect =
+						medicalOnlyBannerVisible &&
+						medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
 
-				if (!isMedicalOnlyBannerCorrect) {
-					throw new Error('Medical-Only Banner not showing in cart for medical only products')
+					if (!isMedicalOnlyBannerCorrect) {
+						throw new Error('Medical-Only Banner not showing in cart for medical only products')
+					}
+					// // verify medical cart banner shows when medical product is in cart
+					// try {
+					// 	await expect(this.medicalOnlyBanner).toBeVisible()
+					// } catch (error) {
+					// 	throw new Error(
+					// 		'Med Card Verification not working -- Cart Banner for Med Products not showing',
+					// 	)
+					// }
+					if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
+						console.log('Medical-only product in cart. Adding medical card information...')
+
+						// Add the medical card information
+						const medicalCardCheckbox = page.locator('input#med_included')
+						await medicalCardCheckbox.check()
+
+						const medCardFileInput = page.locator('input#fasd_medcard')
+						const [fileChooser] = await Promise.all([
+							page.waitForEvent('filechooser'),
+							medCardFileInput.click(),
+						])
+						await fileChooser.setFiles('Medical-Card.png')
+
+						// const issuingStateSelect = page.locator('select#medcard_state')
+						// const expirationInput = page.locator('input#medcard_exp')
+						await this.issuingStateSelect.selectOption('CA')
+						const newYear = new Date().getFullYear() + 1
+						await this.expirationInput.click()
+						await this.expirationInput.type(`01/01/${newYear}`)
+
+						const saveMedicalInfoButton = page.locator(
+							'.fasd-form-submit:has-text("Save & Continue")',
+						)
+						await saveMedicalInfoButton.click()
+						medicalCardProvided = true
+
+						await page.waitForTimeout(3000)
+
+						// View the cart
+						await this.cartButtonNav.waitFor({ state: 'visible' })
+						await this.cartButtonNav.click()
+						await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+					}
 				}
-				// // verify medical cart banner shows when medical product is in cart
-				// try {
-				// 	await expect(this.medicalOnlyBanner).toBeVisible()
-				// } catch (error) {
-				// 	throw new Error(
-				// 		'Med Card Verification not working -- Cart Banner for Med Products not showing',
-				// 	)
-				// }
-				if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
-					console.log('Medical-only product in cart. Adding medical card information...')
-
-					// Add the medical card information
-					const medicalCardCheckbox = page.locator('input#med_included')
-					await medicalCardCheckbox.check()
-
-					const medCardFileInput = page.locator('input#fasd_medcard')
-					const [fileChooser] = await Promise.all([
-						page.waitForEvent('filechooser'),
-						medCardFileInput.click(),
-					])
-					await fileChooser.setFiles('Medical-Card.png')
-
-					// const issuingStateSelect = page.locator('select#medcard_state')
-					// const expirationInput = page.locator('input#medcard_exp')
-					await this.issuingStateSelect.selectOption('CA')
-					const newYear = new Date().getFullYear() + 1
-					await this.expirationInput.click()
-					await this.expirationInput.type(`01/01/${newYear}`)
-
-					const saveMedicalInfoButton = page.locator(
-						'.fasd-form-submit:has-text("Save & Continue")',
-					)
-					await saveMedicalInfoButton.click()
-					medicalCardProvided = true
-
-					await page.waitForTimeout(3000)
-
-					// View the cart
-					await this.cartButtonNav.waitFor({ state: 'visible' })
-					await this.cartButtonNav.click()
-					await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
-
-					// Proceed to checkout
-					console.log('All requirements met. Proceeding to Checkout.')
-					await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-					await this.continueToCheckoutButton.click()
-				}
+				// Proceed to checkout
+				console.log('All requirements met. Proceeding to Checkout.')
+				await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+				await this.continueToCheckoutButton.click()
 				//
 				// break loop if order minimum is met
 				break
