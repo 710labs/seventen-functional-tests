@@ -178,6 +178,8 @@ jobs:
         run: npm run ci:test:dev:co
   nj-tests-dev:
       timeout-minutes: 60
+      needs: co-tests-dev
+      if: ${{ always() }}
       runs-on: ubuntu-latest
       env:
         ENV: dev-nj thelist-710labs.com
