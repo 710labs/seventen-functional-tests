@@ -217,4 +217,4 @@ jobs:
         - name: Install Playwright
           run: npx playwright install --with-deps
         - name: Run Playwright tests
-          run: npm run ci:test:dev:ca
+          run: npm run ci:test:dev:nj

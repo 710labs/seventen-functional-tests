@@ -15,6 +15,7 @@
 		"ci:test:staging:fl": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @FL",
 		"ci:test:staging:mi": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @MI",
 		"ci:test:staging:co": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @CO",
+		"ci:test:staging:nj": "npx playwright test --config=configs/staging.config.ts --workers=10 --grep @NJ",
 		"ci:test:prod:ca": "npx playwright test --config=configs/prod-ca.config.ts --workers=10 --grep @CA ",
 		"ci:test:prod:fl": "npx playwright test --config=configs/prod-fl.config.ts --workers=10 --grep @FL",
 		"live:ci:always-on": "npx playwright test tests/always-on-tests/live.spec.ts --config=configs/liveandconcierge.config.ts --workers=10",
