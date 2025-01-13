@@ -85,9 +85,9 @@ jobs:
             echo "MY_ENV_VARIABLE=development" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: "16.x"
+          node-version: 'node'
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CA
@@ -95,7 +95,6 @@ jobs:
         with:
           endpoint: ${{ env.POSSYNC_URL }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
-          node-version: '16.x'
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
