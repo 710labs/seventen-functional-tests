@@ -29,9 +29,9 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: "16.x"
+          node-version: 'node'
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CO

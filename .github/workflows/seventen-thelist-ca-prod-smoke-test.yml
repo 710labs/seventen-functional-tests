@@ -22,9 +22,9 @@ jobs:
       S3_REGION: ${{ secrets.S3_REGION}}
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: "16.x"
+          node-version: 'node'
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright

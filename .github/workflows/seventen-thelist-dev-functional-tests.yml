@@ -32,9 +32,9 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: 'node'
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CA
@@ -76,7 +76,7 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to FL
@@ -118,9 +118,9 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: 'node'
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to MI
@@ -162,9 +162,9 @@ jobs:
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: 'node'
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CO
