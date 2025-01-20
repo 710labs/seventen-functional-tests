@@ -3,8 +3,35 @@ on:
   schedule:
     - cron: '0 14 * * *'
   workflow_dispatch:
+    inputs:
+      ca:
+        description: 'Run tests for CA'
+        required: false
+        default: false
+        type: boolean
+      fl:
+        description: 'Run tests for FL'
+        required: false
+        default: false
+        type: boolean
+      mi:
+        description: 'Run tests for MI'
+        required: false
+        default: false
+        type: boolean
+      co:
+        description: 'Run tests for CO'
+        required: false
+        default: false
+        type: boolean
+      nj:
+        description: 'Run tests for NJ'
+        required: false
+        default: false
+        type: boolean
 jobs:
   ca-tests-dev:
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.ca == 'true' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -47,8 +74,8 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
   fl-tests-dev:
-    needs: ca-tests-dev
-    if: ${{ always() }}
+    if: ${{ github.event_name == 'schedule' || (github.event.inputs.fl == 'true' && (github.event.inputs.ca == 'true' || github.event_name == 'schedule')) }}
+    needs: ${{ github.event.inputs.ca == 'true' && 'ca-tests-dev' || null }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -89,9 +116,9 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:fl
   mi-tests-dev:
-    needs: fl-tests-dev
+    if: ${{ github.event_name == 'schedule' || (github.event.inputs.mi == 'true' && (github.event.inputs.fl == 'true' || github.event_name == 'schedule')) }}
+    needs: ${{ github.event.inputs.fl == 'true' && 'fl-tests-dev' || null }}
     timeout-minutes: 60
-    if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       ENV: dev-mi thelist-710labs.com
@@ -133,9 +160,9 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:mi
   co-tests-dev:
-    needs: mi-tests-dev
+    if: ${{ github.event_name == 'schedule' || (github.event.inputs.co == 'true' && (github.event.inputs.mi == 'true' || github.event_name == 'schedule')) }}
+    needs: ${{ github.event.inputs.mi == 'true' && 'mi-tests-dev' || null }}
     timeout-minutes: 60
-    if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       ENV: dev-co thelist-710labs.com
@@ -178,8 +205,8 @@ jobs:
         run: npm run ci:test:dev:co
   nj-tests-dev:
       timeout-minutes: 60
-      needs: co-tests-dev
-      if: ${{ always() }}
+      if: ${{ github.event_name == 'schedule' || (github.event.inputs.nj == 'true' && (github.event.inputs.co == 'true' || github.event_name == 'schedule')) }}
+      needs: ${{ github.event.inputs.co == 'true' && 'co-tests-dev' || null }}
       runs-on: ubuntu-latest
       env:
         ENV: dev-nj thelist-710labs.com
