@@ -74,8 +74,8 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:ca
   fl-tests-dev:
-    if: ${{ github.event_name == 'schedule' || (github.event.inputs.fl == 'true' && (github.event.inputs.ca == 'true' || github.event_name == 'schedule')) }}
-    needs: ${{ github.event.inputs.ca == 'true' && 'ca-tests-dev' || null }}
+    needs: [ca-tests-dev]
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.fl == 'true' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -116,8 +116,8 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:fl
   mi-tests-dev:
-    if: ${{ github.event_name == 'schedule' || (github.event.inputs.mi == 'true' && (github.event.inputs.fl == 'true' || github.event_name == 'schedule')) }}
-    needs: ${{ github.event.inputs.fl == 'true' && 'fl-tests-dev' || null }}
+    needs: [fl-tests-dev]
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.mi == 'true' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -160,8 +160,8 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:dev:mi
   co-tests-dev:
-    if: ${{ github.event_name == 'schedule' || (github.event.inputs.co == 'true' && (github.event.inputs.mi == 'true' || github.event_name == 'schedule')) }}
-    needs: ${{ github.event.inputs.mi == 'true' && 'mi-tests-dev' || null }}
+    needs: [mi-tests-dev]
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.co == 'true' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -205,8 +205,8 @@ jobs:
         run: npm run ci:test:dev:co
   nj-tests-dev:
       timeout-minutes: 60
-      if: ${{ github.event_name == 'schedule' || (github.event.inputs.nj == 'true' && (github.event.inputs.co == 'true' || github.event_name == 'schedule')) }}
-      needs: ${{ github.event.inputs.co == 'true' && 'co-tests-dev' || null }}
+      needs: [co-tests-dev]
+      if: ${{ github.event_name == 'schedule' || github.event.inputs.nj == 'true' }}
       runs-on: ubuntu-latest
       env:
         ENV: dev-nj thelist-710labs.com
