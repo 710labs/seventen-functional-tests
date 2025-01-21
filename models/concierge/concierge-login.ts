@@ -22,7 +22,7 @@ export class ConciergeLogin {
 		this.emailField = page.locator('#username')
 		this.passwordField = page.locator('#password')
 		this.signInButton = page.locator('button[name="login"]')
-		this.signInError = page.locator('.wc-block-components-notice-banner__content')
+		this.signInError = page.locator('.woocommerce-error')
 	}
 	async loginExistingUser(page, URLparam) {
 		await test.step('Verify the Homepage loads correctly', async () => {
