@@ -39,7 +39,7 @@ export class ConciergeCreateUser {
 		this.adminConciergeUser = process.env.ADMIN_CONCIERGE_USER || ''
 		this.adminConciergePassword = process.env.ADMIN_CONCIERGE_PASSWORD || ''
 		this.page = page
-		this.pageTitleSelector = page.locator('h1')
+		this.pageTitleSelector = page.locator('h1.screen-reader-text:has-text("Log In")')
 		this.emailField = page.locator('#user_login.input')
 		this.passwordField = page.locator('#user_pass')
 		this.signInButton = page.locator('#wp-submit')
