@@ -1,6 +1,27 @@
 name: thelist-tests-stage-build-validation
 on:
   workflow_dispatch:
+    inputs:
+      ca:
+        description: 'CA'
+        required: false
+        default: true
+        type: boolean
+      mi:
+        description: 'MI'
+        required: false
+        default: true
+        type: boolean
+      co:
+        description: 'CO'
+        required: false
+        default: true
+        type: boolean
+      nj:
+        description: 'NJ'
+        required: false
+        default: true
+        type: boolean
 jobs:
   ca-tests-staging:
     timeout-minutes: 60
@@ -45,9 +66,11 @@ jobs:
       - name: Run Playwright tests
         run: npm run ci:test:staging:ca
   mi-tests-staging:
-    needs: ca-tests-staging
     timeout-minutes: 60
-    if: ${{ always() }}
+    needs: [ca-tests-staging]
+    if: |
+      always() &&
+      (github.event_name == 'schedule' || github.event.inputs.mi == 'true')
     runs-on: ubuntu-latest
     env:
       ENV: staging-mi thelist-710labs.com
@@ -92,9 +115,11 @@ jobs:
           endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
   co-tests-staging:
-    needs: mi-tests-staging
     timeout-minutes: 60
-    if: ${{ always() }}
+    needs: [mi-tests-staging]
+    if: |
+      always() &&
+      (github.event_name == 'schedule' || github.event.inputs.co == 'true')
     runs-on: ubuntu-latest
     env:
       ENV: staging-co thelist-710labs.com
@@ -139,6 +164,10 @@ jobs:
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
   nj-tests-staging:
     timeout-minutes: 60
+    needs: [co-tests-staging]
+    if: |
+      always() &&
+      (github.event_name == 'schedule' || github.event.inputs.nj == 'true')
     runs-on: ubuntu-latest
     env:
       ENV: staging-nj thelist-710labs.com
