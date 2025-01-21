@@ -7,27 +7,27 @@ on:
       ca:
         description: 'CA'
         required: false
-        default: false
+        default: true
         type: boolean
       fl:
         description: 'FL'
         required: false
-        default: false
+        default: true
         type: boolean
       mi:
         description: 'MI'
         required: false
-        default: false
+        default: true
         type: boolean
       co:
         description: 'CO'
         required: false
-        default: false
+        default: true
         type: boolean
       nj:
         description: 'NJ'
         required: false
-        default: false
+        default: true
         type: boolean
 jobs:
   ca-tests-dev:
@@ -77,7 +77,6 @@ jobs:
     needs: [ca-tests-dev]
     if: |
       always() &&
-      (needs.ca-tests-dev.result == 'success' || needs.ca-tests-dev.result == 'skipped') &&
       (github.event_name == 'schedule' || github.event.inputs.fl == 'true')
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -122,7 +121,6 @@ jobs:
     needs: [fl-tests-dev]
     if: |
       always() &&
-      (needs.fl-tests-dev.result == 'success' || needs.fl-tests-dev.result == 'skipped') &&
       (github.event_name == 'schedule' || github.event.inputs.mi == 'true')
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -217,7 +215,6 @@ jobs:
     needs: [co-tests-dev]
     if: |
       always() &&
-      (needs.co-tests-dev.result == 'success' || needs.co-tests-dev.result == 'skipped') &&
       (github.event_name == 'schedule' || github.event.inputs.nj == 'true')
     runs-on: ubuntu-latest
     env:
