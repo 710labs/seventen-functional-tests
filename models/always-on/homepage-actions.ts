@@ -910,11 +910,17 @@ export class HomePageActions {
 				])
 				const issuingStateSelect = page.locator('select#medcard_state')
 				const expirationInput = page.locator('input#medcard_exp')
+				const medCardNumber = page.locator('input#medcard_no')
 				await driversLicenseChooser.setFiles('Medical-Card.png')
 				await issuingStateSelect.selectOption('CA')
 				const newYear = new Date().getFullYear() + 1
 				await expirationInput.click()
 				await expirationInput.type(`01/01/${newYear}`)
+				// random integer for med card number
+				const length = Math.floor(Math.random() * 9) + 1
+				const randomInteger = Math.floor(Math.random() * 10 ** length)
+				await medCardNumber.click()
+				await medCardNumber.type(`${randomInteger}`)
 
 				// Submit the medical card information
 				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
