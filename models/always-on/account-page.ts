@@ -384,12 +384,19 @@ export class AccountPage {
 		const newYear = new Date().getFullYear() + 1
 		const medExpDate = `04/10/${newYear}`
 		await this.medExpDateInput.type(medExpDate)
+		// medcard #
+		const medCardNumber = this.page.locator('input#medcard_no')
+		const length = Math.floor(Math.random() * 9) + 1
+		const randomInteger = Math.floor(Math.random() * 10 ** length)
+		await medCardNumber.click()
+		await medCardNumber.type(`${randomInteger}`)
 		// click save and continue button
 		await expect(this.medSaveAndContinueButton).toBeVisible()
 		await this.medSaveAndContinueButton.click()
 		// Verify that Exp date matches inputted value
 		await this.page.waitForTimeout(1000)
 		expect(this.dispalyedMedIDExp).toHaveText(`Exp: ${medExpDate}`)
+
 		// Verify that saved image popuates
 		// Call the function to verify the image
 		// const imageContainerSelector =
