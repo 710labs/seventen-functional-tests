@@ -563,6 +563,12 @@ export class HomePageActions {
 						const newYear = new Date().getFullYear() + 1
 						await this.expirationInput.click()
 						await this.expirationInput.type(`01/01/${newYear}`)
+						// random integer for med card number
+						const medCardNumber = page.locator('input#medcard_no')
+						const length = Math.floor(Math.random() * 9) + 1
+						const randomInteger = Math.floor(Math.random() * 10 ** length)
+						await medCardNumber.click()
+						await medCardNumber.type(`${randomInteger}`)
 
 						const saveMedicalInfoButton = page.locator(
 							'.fasd-form-submit:has-text("Save & Continue")',
@@ -915,6 +921,12 @@ export class HomePageActions {
 				const newYear = new Date().getFullYear() + 1
 				await expirationInput.click()
 				await expirationInput.type(`01/01/${newYear}`)
+				// random integer for med card number
+				const medCardNumber = page.locator('input#medcard_no')
+				const length = Math.floor(Math.random() * 9) + 1
+				const randomInteger = Math.floor(Math.random() * 10 ** length)
+				await medCardNumber.click()
+				await medCardNumber.type(`${randomInteger}`)
 
 				// Submit the medical card information
 				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
