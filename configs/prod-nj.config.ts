@@ -17,13 +17,6 @@ export default defineConfig<TestOptions>({
 		['list'],
 		['html'],
 		[
-			'playwright-tesults-reporter',
-			{
-				'tesults-target':
-					'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo',
-			},
-		],
-		[
 			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
 			{
 				channels: ['tech-savagery-tests', '710labs-qatest-results'],
@@ -59,33 +52,6 @@ export default defineConfig<TestOptions>({
 		trace: 'on',
 		video: 'on',
 		screenshot: 'on',
-		orders: [
-			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-			],
-			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-			],
-			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-			],
-			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-			],
-			[
-				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)
-				'1271376', //Guava (https://thelist-stage.710labs.com/product/guava/)
-				'1261669', //Bad Apple #7 (https://thelist-stage.710labs.com/product/bad-apple-7/)
-			],
-		],
 	},
 	projects: [
 		{
@@ -94,12 +60,12 @@ export default defineConfig<TestOptions>({
 				...devices['Desktop Chrome'],
 			},
 		},
-		{
-			name: 'Mobile Chrome',
-			use: {
-				...devices['Pixel 5'],
-			},
-		},
+		// {
+		// 	name: 'Mobile Chrome',
+		// 	use: {
+		// 		...devices['Pixel 5'],
+		// 	},
+		// },
 		// {
 		//   name: 'mobile-safari',
 		//   use: {

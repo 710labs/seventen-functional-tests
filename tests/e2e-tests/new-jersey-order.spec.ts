@@ -47,7 +47,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 			}
 			await myAccountPage.addMedicalExp()
 
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Medical')
+			await shopPage.addProductsToCart(6, mobile, 'Pickup', 'Medical')
 			var cartTotals = await cartPage.verifyCart(zipcode)
 			await checkOutPage.confirmCheckout(zipcode, cartTotals, 1)
 		},
@@ -76,7 +76,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress(address, city, state, zipcode)
 			}
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Medical')
+			await shopPage.addProductsToCart(6, mobile, 'Pickup', 'Medical')
 			var cartTotals = await cartPage.verifyCart(zipcode)
 			await checkOutPage.confirmCheckout(zipcode, cartTotals, 1)
 		},
@@ -106,7 +106,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress(address, city, state, zipcode)
 			}
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Recreational')
+			await shopPage.addProductsToCart(6, mobile, 'Pickup', 'Recreational')
 			var cartTotals = await cartPage.verifyCart(zipcode)
 			await checkOutPage.confirmCheckout(zipcode, cartTotals, 0)
 		},
@@ -139,10 +139,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 				address,
 				state,
 			)
-			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-				await myAccountPage.addAddress(address, city, state, zipcode)
-			}
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'Recreational')
+			await shopPage.addProductsToCart(6, mobile, 'Pickup', 'Recreational')
 			var cartTotals = await cartPage.verifyCart(zipcode)
 			await checkOutPage.confirmCheckout(zipcode, cartTotals, 0)
 		},

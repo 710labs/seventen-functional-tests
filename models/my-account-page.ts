@@ -60,6 +60,7 @@ export class MyAccountPage {
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
 			await this.zipCode.fill(zipCode)
+			await this.page.getByLabel('State *').selectOption(state)
 			await this.page.click('button:has-text("Save address")')
 		})
 	}
