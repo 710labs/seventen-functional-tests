@@ -93,6 +93,7 @@ export class CreateAccountPage {
 		logout: boolean = false,
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90210',
 		state: string = 'CA',
+		medCardNumber: string = '1234567890',
 	) {
 		await test.step('Verify Layout', async () => {})
 
@@ -203,6 +204,34 @@ export class CreateAccountPage {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+			})
+		}
+
+		if (type == 1 && state === 'NJ') {
+			await test.step('Select Medical Usage Type', async () => {
+				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
+			})
+			await test.step('Upload Medical Card', async () => {
+				const medicalCardButton = await this.page.waitForSelector(
+					'input[name="svntn_core_medical_doc"]',
+				)
+				const [medicalCardChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medicalCardButton.click(),
+				])
+				await medicalCardChooser.setFiles('CA-DL.jpg')
+				await medicalCardChooser.page()
+				await this.page.waitForTimeout(5000)
+			})
+
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption('12')
+				await this.medCardExpDay.selectOption('16')
+				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+			})
+
+			await test.step('Enter Med Card Number', async () => {
+				await this.medCardNumber.fill(medCardNumber)
 			})
 		}
 		if (state === 'FL') {

@@ -57,7 +57,7 @@ test.describe('Basic Acceptance Tests NJ', () => {
 		})
 
 		await test.step('Create Account', async () => {
-			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'CA')
+			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'NJ')
 		})
 
 		await test.step('Add Products to Cart', async () => {
