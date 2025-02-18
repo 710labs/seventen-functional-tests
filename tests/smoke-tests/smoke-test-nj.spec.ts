@@ -18,7 +18,6 @@ test.describe('Basic Acceptance Tests NJ', () => {
 	var splitOrderNumber: string
 	var cartTotals: any
 
-
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const apiContext = await request.newContext({
@@ -62,7 +61,7 @@ test.describe('Basic Acceptance Tests NJ', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile)
+			await shopPage.addProductsToCart(orderQuanity, mobile, 'Pickup')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
