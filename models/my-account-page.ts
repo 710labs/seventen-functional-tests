@@ -61,7 +61,7 @@ export class MyAccountPage {
 			await this.city.fill(city)
 			await this.zipCode.fill(zipCode)
 
-			if ((state = 'NJ')) {
+			if (state == 'NJ') {
 				await this.page.getByLabel('State *').selectOption(state)
 			}
 			await this.page.click('button:has-text("Save address")')
