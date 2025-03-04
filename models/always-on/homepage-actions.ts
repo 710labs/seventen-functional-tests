@@ -644,7 +644,7 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
+				await this.productPageAddToCartButton.first().waitFor({ state: 'visible' })
 				await this.productPageAddToCartButton.first().click({ force: true })
 				await page.waitForTimeout(5000)
 
