@@ -110,7 +110,7 @@ export class AccountPage {
 		this.lastNameInput = page.locator('input#fasd_lname')
 		this.emailInput = page.locator('input#fasd_email')
 		this.phoneInput = page.locator('input#fasd_phone')
-		this.birthdayInput = page.locator('input#fasd_dob')
+		this.birthdayInput = page.locator('input#fasd_dob').nth(1)
 		this.persInfoUpdateButton = page.locator('a.wpse-button-primary.fasd-form-submit').nth(2)
 		this.displayedUserFirstName = page.locator('span.--reactive-user-fname')
 		this.displayedUserLastName = page.locator('span.--reactive-user-lname')
