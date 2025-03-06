@@ -391,7 +391,7 @@ export class AccountPage {
 		await medCardNumber.click()
 		await medCardNumber.type(`${randomInteger}`)
 		const firstDate = '01/01/1990'
-		const medBirthday = this.page.locator('#fasd_dob')
+		const medBirthday = this.page.locator('#fasd_dob').first()
 		await medBirthday.click()
 		await medBirthday.type(firstDate)
 		// click save and continue button
