@@ -927,6 +927,10 @@ export class HomePageActions {
 				const randomInteger = Math.floor(Math.random() * 10 ** length)
 				await medCardNumber.click()
 				await medCardNumber.type(`${randomInteger}`)
+				const firstDate = '01/01/1990'
+				const medBirthday = page.locator('#fasd_dob')
+				await medBirthday.click()
+				await medBirthday.type(firstDate)
 
 				// Submit the medical card information
 				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')
