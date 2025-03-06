@@ -390,6 +390,10 @@ export class AccountPage {
 		const randomInteger = Math.floor(Math.random() * 10 ** length)
 		await medCardNumber.click()
 		await medCardNumber.type(`${randomInteger}`)
+		const firstDate = '01/01/1990'
+		const medBirthday = this.page.locator('#fasd_dob')
+		await medBirthday.click()
+		await medBirthday.type(firstDate)
 		// click save and continue button
 		await expect(this.medSaveAndContinueButton).toBeVisible()
 		await this.medSaveAndContinueButton.click()
