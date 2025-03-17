@@ -644,8 +644,8 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.first().click({ force: true })
+				await this.productPageAddToCartButton.nth(1).waitFor({ state: 'visible' })
+				await this.productPageAddToCartButton.nth(1).click({ force: true })
 				await page.waitForTimeout(5000)
 
 				// Wait for the cart drawer to become visible
@@ -748,7 +748,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 4
+		let i = 1
 		let medicalProductExists = false
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
@@ -927,6 +927,10 @@ export class HomePageActions {
 				const randomInteger = Math.floor(Math.random() * 10 ** length)
 				await medCardNumber.click()
 				await medCardNumber.type(`${randomInteger}`)
+				const firstDate = '01/01/1990'
+				const medBirthday = page.locator('#fasd_dob')
+				await medBirthday.click()
+				await medBirthday.type(firstDate)
 
 				// Submit the medical card information
 				const saveMedicalInfoButton = page.locator('.fasd-form-submit:has-text("Save & Continue")')

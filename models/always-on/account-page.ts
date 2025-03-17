@@ -110,7 +110,7 @@ export class AccountPage {
 		this.lastNameInput = page.locator('input#fasd_lname')
 		this.emailInput = page.locator('input#fasd_email')
 		this.phoneInput = page.locator('input#fasd_phone')
-		this.birthdayInput = page.locator('input#fasd_dob')
+		this.birthdayInput = page.locator('input#fasd_dob').nth(1)
 		this.persInfoUpdateButton = page.locator('a.wpse-button-primary.fasd-form-submit').nth(2)
 		this.displayedUserFirstName = page.locator('span.--reactive-user-fname')
 		this.displayedUserLastName = page.locator('span.--reactive-user-lname')
@@ -253,7 +253,7 @@ export class AccountPage {
 		await this.addressField.press('ArrowDown')
 		await this.addressField.press('Enter')
 		await this.page.waitForTimeout(2000)
-		await this.addressSubmitButton.click()
+		await this.addressSubmitButton.click({ force: true })
 		//await this.addressSubmitButton.click()
 
 		//verify that account page now shows the updated address
@@ -289,6 +289,7 @@ export class AccountPage {
 		// enter a unique test email for test user
 		const newEmail = `edited_user_${userType}_${timestamp}@test.com`
 		console.log(`\n New user email ---> ${newEmail} \n`)
+		await this.emailInput.click({ force: true })
 		await this.emailInput.fill(newEmail)
 		//edit phone number
 		const generatePhoneNumber = () => {
@@ -296,14 +297,14 @@ export class AccountPage {
 			return `555-${randomDigits}`
 		}
 		const newPhone = generatePhoneNumber()
-		await this.phoneInput.click()
+		await this.phoneInput.click({ force: true })
 		await this.phoneInput.fill(newPhone)
-		await this.birthdayInput.click()
+		await this.birthdayInput.click({ force: true })
 		const newBirthday = '01/02/1985'
 		await this.birthdayInput.type(newBirthday)
 		// click Update button
 		await expect(this.personalInfoHeader).toBeVisible()
-		await this.persInfoUpdateButton.click()
+		await this.persInfoUpdateButton.click({ force: true })
 		await this.page.waitForTimeout(2000)
 		// Verify that displayed Pers Info matches updates
 		expect(this.displayedUserFirstName).toHaveText(newFirstName)
@@ -336,18 +337,19 @@ export class AccountPage {
 		// add id image file
 		const [driversLicenseChooser] = await Promise.all([
 			this.page.waitForEvent('filechooser'),
-			this.uploadIDInput.click(),
+			this.uploadIDInput.click({ force: true }),
 		])
 		//Enter Personal ID info (Med already exists from pre-cart step)
 		await driversLicenseChooser.setFiles('Medical-Card.png')
 		// Add Exp date
-		await this.expirationInput.click()
+		await this.expirationInput.click({ force: true })
 		const newYear = new Date().getFullYear() + 1
 		const personalExpDate = `04/10/${newYear}`
 		await this.expirationInput.type(personalExpDate)
 		// click save and continue button
 		await expect(this.photoIDSaveAndContinueButton).toBeVisible()
-		await this.photoIDSaveAndContinueButton.click()
+		await this.photoIDSaveAndContinueButton.click({ force: true })
+		await this.photoIDSaveAndContinueButton.click({ force: true })
 		// Verify that Exp date matches inputted value
 		await this.page.waitForTimeout(1000)
 		expect(this.dispalyedPhotoIDExp).toHaveText(`Exp: ${personalExpDate}`)
@@ -364,7 +366,7 @@ export class AccountPage {
 		await expect(this.editMedicalCardLink).toBeVisible()
 		// Click "Edit Photo ID" and navigate back
 		await this.editMedicalCardLink.scrollIntoViewIfNeeded()
-		await this.editMedicalCardLink.click()
+		await this.editMedicalCardLink.click({ force: true })
 		//expect Header to be visible in drawer
 		await this.medDrawerHeader.waitFor({ state: 'visible' })
 		await expect(this.medDrawerHeader).toBeVisible()
@@ -373,14 +375,14 @@ export class AccountPage {
 		// add id image file
 		const [medCardLicenseChooser] = await Promise.all([
 			this.page.waitForEvent('filechooser'),
-			this.medCardInput.click(),
+			this.medCardInput.click({ force: true }),
 		])
 		//Enter Personal ID info (Med already exists from pre-cart step)
 		await medCardLicenseChooser.setFiles('Medical-Card.png')
 		// add issuing state
 		await this.medStateDropDown.selectOption('CA')
 		// Add Exp date
-		await this.medExpDateInput.click()
+		await this.medExpDateInput.click({ force: true })
 		const newYear = new Date().getFullYear() + 1
 		const medExpDate = `04/10/${newYear}`
 		await this.medExpDateInput.type(medExpDate)
@@ -388,11 +390,15 @@ export class AccountPage {
 		const medCardNumber = this.page.locator('input#medcard_no')
 		const length = Math.floor(Math.random() * 9) + 1
 		const randomInteger = Math.floor(Math.random() * 10 ** length)
-		await medCardNumber.click()
+		await medCardNumber.click({ force: true })
 		await medCardNumber.type(`${randomInteger}`)
+		const firstDate = '01/01/1990'
+		const medBirthday = this.page.locator('#fasd_dob').first()
+		await medBirthday.click({ force: true })
+		await medBirthday.type(firstDate)
 		// click save and continue button
 		await expect(this.medSaveAndContinueButton).toBeVisible()
-		await this.medSaveAndContinueButton.click()
+		await this.medSaveAndContinueButton.click({ force: true })
 		// Verify that Exp date matches inputted value
 		await this.page.waitForTimeout(1000)
 		expect(this.dispalyedMedIDExp).toHaveText(`Exp: ${medExpDate}`)
@@ -410,7 +416,7 @@ export class AccountPage {
 		await expect(this.passwordSection).toBeVisible()
 		await expect(this.editPasswordLink).toBeVisible()
 		await this.passwordSection.scrollIntoViewIfNeeded()
-		await this.editPasswordLink.click()
+		await this.editPasswordLink.click({ force: true })
 		//wait for drawer header
 		await this.passwordDrawerHeader.waitFor({ state: 'visible' })
 		await expect(this.passwordDrawerHeader).toBeVisible()
@@ -423,7 +429,7 @@ export class AccountPage {
 		await this.page.waitForTimeout(1500)
 		//click change password button
 		await expect(this.changePasswordButton).toBeVisible()
-		await this.changePasswordButton.click()
+		await this.changePasswordButton.click({ force: true })
 		await this.page.waitForTimeout(1000)
 	}
 	async normalizePhoneNumber(phone) {
