@@ -110,7 +110,7 @@ export class AccountPage {
 		this.lastNameInput = page.locator('input#fasd_lname')
 		this.emailInput = page.locator('input#fasd_email')
 		this.phoneInput = page.locator('input#fasd_phone')
-		this.birthdayInput = page.locator('input#fasd_dob').nth(1)
+		this.birthdayInput = page.locator('input#fasd_dob').nth(0)
 		this.persInfoUpdateButton = page.locator('a.wpse-button-primary.fasd-form-submit').nth(2)
 		this.displayedUserFirstName = page.locator('span.--reactive-user-fname')
 		this.displayedUserLastName = page.locator('span.--reactive-user-lname')
@@ -299,6 +299,8 @@ export class AccountPage {
 		const newPhone = generatePhoneNumber()
 		await this.phoneInput.click({ force: true })
 		await this.phoneInput.fill(newPhone)
+		await this.phoneInput.click({ force: true })
+		await this.birthdayInput.click({ force: true })
 		await this.birthdayInput.click({ force: true })
 		const newBirthday = '01/02/1985'
 		await this.birthdayInput.type(newBirthday)
@@ -393,9 +395,9 @@ export class AccountPage {
 		await medCardNumber.click({ force: true })
 		await medCardNumber.type(`${randomInteger}`)
 		const firstDate = '01/01/1990'
-		const medBirthday = this.page.locator('#fasd_dob').first()
-		await medBirthday.click({ force: true })
-		await medBirthday.type(firstDate)
+		//const medBirthday = this.page.locator('#fasd_dob').first()
+		//await medBirthday.click({ force: true })
+		//await medBirthday.type(firstDate)
 		// click save and continue button
 		await expect(this.medSaveAndContinueButton).toBeVisible()
 		await this.medSaveAndContinueButton.click({ force: true })
