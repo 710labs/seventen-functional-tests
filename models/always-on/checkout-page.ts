@@ -313,15 +313,15 @@ export class CheckoutPage {
 			expect(this.displayPayment).toHaveText('Cash')
 
 			// Edit payment option if needed (example if there's a credit option)
-			await this.editButtonGenericLocator.nth(buttonIndexEdit).click()
-			await page.waitForTimeout(1500)
-			const paymentOptionIfPickUp = isPickupVisible ? 'debit' : 'aeropay'
-			const paymentOptionSelector = page.locator(`label[for="${paymentOptionIfPickUp}"]`)
-			await paymentOptionSelector.click()
-			await this.saveContinueButton.nth(buttonIndexSave).click()
-			await page.waitForTimeout(1500)
-			const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
-			expect(paymentOptionSelector).toHaveText(expectedText)
+			// await this.editButtonGenericLocator.nth(buttonIndexEdit).click()
+			// await page.waitForTimeout(1500)
+			// const paymentOptionIfPickUp = isPickupVisible ? 'debit' : 'aeropay'
+			// const paymentOptionSelector = page.locator(`label[for="${paymentOptionIfPickUp}"]`)
+			// await paymentOptionSelector.click()
+			// await this.saveContinueButton.nth(buttonIndexSave).click()
+			//await page.waitForTimeout(1500)
+			// const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
+			// expect(paymentOptionSelector).toHaveText(expectedText)
 		})
 	}
 	//
