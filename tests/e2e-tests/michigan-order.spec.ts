@@ -40,10 +40,14 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 			})
 
 			await test.step(`Create Account`, async () => {
+				var fakeFirstName = faker.name.firstName()
+				var fakeLastName = faker.name.lastName()
+				var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+				// 'fakeFirstName_fakeLastName@test_710labs_playwright.com'
 				await createAccountPage.createMichiganCustomer(
-					faker.name.firstName(),
-					faker.name.lastName(),
-					faker.internet.email(),
+					fakeFirstName,
+					fakeLastName,
+					fakeEmail,
 					faker.internet.password(),
 					faker.datatype.number({ min: 1, max: 28 }),
 					faker.datatype.number({ min: 10, max: 12 }),
@@ -102,10 +106,14 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 			})
 
 			await test.step(`Create Account`, async () => {
+				var fakeFirstName = faker.name.firstName()
+				var fakeLastName = faker.name.lastName()
+				var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+				// 'fakeFirstName_fakeLastName@test_710labs_playwright.com'
 				await createAccountPage.createMichiganCustomer(
-					faker.name.firstName(),
-					faker.name.lastName(),
-					faker.internet.email(),
+					fakeFirstName,
+					fakeLastName,
+					fakeEmail,
 					faker.internet.password(),
 					faker.datatype.number({ min: 1, max: 28 }),
 					faker.datatype.number({ min: 10, max: 12 }),
