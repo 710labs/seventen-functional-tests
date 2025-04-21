@@ -69,7 +69,8 @@ export class ShopPage {
 			} else {
 				if (
 					process.env.BASE_URL === 'https://thelist.theflowery.co/' ||
-					process.env.BASE_URL === 'https://thelist-co.710labs.com/'
+					process.env.BASE_URL === 'https://thelist-co.710labs.com/' ||
+					process.env.BASE_URL === 'https://thelist-mi.710labs.com/'
 				) {
 					await this.page
 						.locator(`[href="${process.env.BASE_URL}reservations/"]`)

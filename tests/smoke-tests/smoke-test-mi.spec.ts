@@ -38,6 +38,11 @@ test.describe('Basic Acceptance Tests MI', () => {
 		])
 
 		const address = '123 Eight Mile Rd MI'
+		var fakeFirstName = faker.name.firstName()
+		var fakeLastName = faker.name.lastName()
+		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
+
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -60,10 +65,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Create Account`, async () => {
-			var fakeFirstName = faker.name.firstName()
-			var fakeLastName = faker.name.lastName()
-			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
-
 			await createAccountPage.createMichiganCustomer(
 				fakeFirstName,
 				fakeLastName,
@@ -113,7 +114,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile)
+			await shopPage.addProductsToCart(orderQuanity, mobile, "Pickup")
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
