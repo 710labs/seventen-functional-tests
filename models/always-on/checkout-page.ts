@@ -3,6 +3,7 @@ import test, { expect, Locator, Page } from '@playwright/test'
 const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
+import { faker } from '@faker-js/faker'
 
 export class CheckoutPage {
 	readonly page: Page
@@ -246,8 +247,8 @@ export class CheckoutPage {
 			await this.birthdayInputField.click()
 			await this.birthdayInputField.type(newDate)
 			// TODO: Edit First/Last name and Email
-			const newFirstName = 'New First'
-			const newLastName = 'New Last Automation'
+			const newFirstName = faker.name.firstName?.() || faker.person.firstName()
+			const newLastName = faker.name.lastName?.() || faker.person.lastName()
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits
@@ -459,8 +460,8 @@ export class CheckoutPage {
 			await this.birthdayInputField.click()
 			await this.birthdayInputField.type(newDate)
 			// TODO: Edit First/Last name and Email
-			const newFirstName = 'New First'
-			const newLastName = 'New Last Automation'
+			const newFirstName = faker.name.firstName?.() || faker.person.firstName()
+			const newLastName = faker.name.lastName?.() || faker.person.lastName()
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits

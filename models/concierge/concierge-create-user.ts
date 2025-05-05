@@ -3,6 +3,7 @@ import test, { expect, Locator, Page } from '@playwright/test'
 const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
+const { faker } = require('@faker-js/faker')
 
 export class ConciergeCreateUser {
 	readonly adminConciergeUser: string
@@ -135,11 +136,17 @@ export class ConciergeCreateUser {
 			// enter First Name
 			await expect(this.firstNameField).toBeVisible()
 			await this.firstNameField.click()
-			await this.firstNameField.fill('Automation Test User')
+			// Generate random first name using faker
+			const randomFirstName = faker.name.firstName?.() || faker.person.firstName()
+			await this.firstNameField.fill(randomFirstName)
+
 			// enter Last Name
 			await expect(this.lastNameField).toBeVisible()
 			await this.lastNameField.click()
-			await this.lastNameField.fill('Automation Test User')
+
+			// Generate random last name using faker
+			const randomLastName = faker.name.lastName?.() || faker.person.lastName()
+			await this.lastNameField.fill(randomLastName)
 			// enter Password
 			await this.newUserPasswordField.scrollIntoViewIfNeeded()
 			await expect(this.newUserPasswordField).toBeVisible()
