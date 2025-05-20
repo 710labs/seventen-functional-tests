@@ -834,7 +834,7 @@ export class HomePageActions {
 				console.log('Adding product from homepage: ' + productName)
 				await expect(addToCartButton).toBeVisible()
 				await addToCartButton.click()
-				await page.waitForTimeout(4000)
+				await page.waitForTimeout(7000)
 
 				// Wait for the cart drawer to become visible
 				await this.cartDrawerContainer.waitFor({ state: 'visible' })
