@@ -136,7 +136,7 @@ export class AccountPage {
 		this.dispalyedPhotoIDExp = page.locator('.wpse-document-meta p').first()
 		// Medical Card
 		this.medicalCardSection = page.locator('h3:has-text("Medical card")')
-		this.editMedicalCardLink = page.locator('a.specific-link[data-module="meddoc"]')
+		this.editMedicalCardLink = page.locator('a.specific-link[data-module="meddoc"]').first()
 		this.medDrawerHeader = page.locator('h2:has-text("Replace your med card on file")')
 		this.medCardInput = page.locator('input#fasd_medcard')
 		this.addMedCardButton = page.locator('button.wpse-button-secondary.fasd-file-pseudobutton')
@@ -330,7 +330,7 @@ export class AccountPage {
 		await expect(this.editPhotoIdLink).toBeVisible()
 		// Click "Edit Photo ID" and navigate back
 		await this.photoIdSection.scrollIntoViewIfNeeded()
-		await this.editPhotoIdLink.click()
+		await this.editPhotoIdLink.click({ force: true })
 		//expect Header to be visible in drawer
 		await this.photoDrawerHeader.waitFor({ state: 'visible' })
 		await expect(this.photoDrawerHeader).toBeVisible()
@@ -377,6 +377,7 @@ export class AccountPage {
 		// add id image file
 		const [medCardLicenseChooser] = await Promise.all([
 			this.page.waitForEvent('filechooser'),
+			this.medCardInput.scrollIntoViewIfNeeded(),
 			this.medCardInput.click({ force: true }),
 		])
 		//Enter Personal ID info (Med already exists from pre-cart step)
