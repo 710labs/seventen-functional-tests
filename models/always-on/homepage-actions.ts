@@ -789,7 +789,7 @@ export class HomePageActions {
 				await this.productPageAddToCartButton.nth(0).hover()
 				await page.waitForTimeout(200)
 				await this.productPageAddToCartButton.nth(0).click()
-				await page.waitForTimeout(2000)
+				await page.waitForTimeout(8000)
 				await page.waitForLoadState('networkidle') // Wait for all network requests to finish
 
 				// Wait for the cart drawer to become visible

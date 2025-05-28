@@ -52,6 +52,9 @@ test.describe('PROD Live Tests', () => {
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, prodLiveURL, address, newAddress)
+			//
+			// CANT HAVE PLACE ORDER // CLICK SUBMIT BUTTON SINCE THIS IS FOR PROD
+			//
 			// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
 			await homePageActions.goToHomePage()
 			await homePageActions.clearProductsFromCart(page)
