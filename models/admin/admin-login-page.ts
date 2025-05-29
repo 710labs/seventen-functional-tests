@@ -10,7 +10,7 @@ export class AdminLogin {
 		this.page = page
 		this.userNameField = page.locator('input[name="log"]')
 		this.passwordField = page.locator('input[name="pwd"]')
-		this.loginButton = page.locator('text=Log In')
+		this.loginButton = page.locator('input[name="wp-submit"]')
 	}
 
 	async login() {
