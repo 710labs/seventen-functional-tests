@@ -86,7 +86,7 @@ export class CheckoutPage {
 		this.orderReviewSection = page.locator('#checkout_checkout')
 		this.placeOrderButton = page.locator("//button[@id='place_order']")
 		this.pickUpLocationTitle = page.locator('h2:has-text("Pickup Location")')
-		this.editButtonGenericLocator = page.locator('a.wpse-checkout-unroller:has-text("Edit")')
+		this.editButtonGenericLocator = page.locator('a.wpse-checkout-unroller')
 		this.editAddressInfoButton = page.locator('a.wpse-checkout-unroller:has-text("Edit")').first()
 		this.editPhoneInfoButton = page.locator('a.wpse-checkout-unroller:has-text("Edit")').nth(2)
 		this.editDocumentInfoButton = page.locator('a.wpse-checkout-unroller:has-text("Edit")').nth(3)
@@ -330,7 +330,7 @@ export class CheckoutPage {
 	}
 	//
 	// newMedEnterInfoForCheckoutAndEdit currently used by both Live and Concierge MED tests
-	async newMedEnterInfoForCheckoutAndEdit(page, siteURL, addressParam, newAddressParam) {
+	async newMedEnterInfoForCheckoutAndEdit(page, siteEnv, addressParam, newAddressParam) {
 		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
 		await test.step('Address for Delivery', async () => {
 			if (!isPickupVisible) {
@@ -427,6 +427,7 @@ export class CheckoutPage {
 			const firstDate = '01/01/1990'
 			while (phoneErrorExists) {
 				phoneNumber = generatePhoneNumber()
+				await this.page.waitForTimeout(2000)
 				await this.phoneInputField.waitFor({ state: 'visible' })
 				await this.phoneInputField.fill(phoneNumber)
 				await this.birthdayInputField.click()
@@ -583,6 +584,219 @@ export class CheckoutPage {
 				const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
 				expect(paymentOptionSelector).toHaveText(expectedText)
 			}
+		})
+	}
+
+	async recExistingCheckoutAndEdit(page, addressParam, newAddressParam) {
+		const isPickupVisible = await this.pickUpLocationTitle.isVisible()
+		await test.step('Address for Delivery', async () => {
+			if (!isPickupVisible) {
+				//Verify that checkout page displays original address entered previously
+				await expect(this.displayedAddress).toHaveText(addressParam)
+				await page.waitForTimeout(1000)
+				// Edit delivery address
+				await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
+				await this.editButtonGenericLocator.first().click()
+				await page.waitForTimeout(2000)
+				//click the add new address button
+				await this.addNewAddressButton.waitFor({ state: 'visible', timeout: 10000 }) // 30 seconds timeout
+				await expect(this.addNewAddressButton).toBeVisible()
+				await this.addNewAddressButton.click()
+				// Type the address into the text field
+				await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
+				await expect(this.addressField).toBeVisible()
+				await this.addressField.click()
+				const newAddress = newAddressParam
+				await this.addressField.fill(newAddress)
+				const dropDownSelector = page.locator('.pac-item')
+				// Wait for the autocomplete suggestions to appear
+				await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
+				// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
+				// await this.addressField.press('ArrowDown')
+				// await this.addressField.press('Enter')
+				await dropDownSelector.first().click()
+				await page.waitForTimeout(1000)
+				//await this.checkoutPageTitle.click()
+				await this.saveContinueButtonAddress.first().click()
+				await page.waitForTimeout(1500)
+				// Verify that Change delivery zones pops up
+				await expect(this.changeDeliveryPopUp).toBeVisible()
+				await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
+				await expect(this.yesChangeAddressButton).toBeVisible()
+				await this.yesChangeAddressButton.click()
+				//Verify that address was updated correctly
+				const expectedNewTextDisplay = `2919 S La Cienega Blvd, Culver City, CA 90232`
+				await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
+			}
+		})
+		await test.step('Delivery Appointment Section', async () => {
+			if (!isPickupVisible) {
+				await this.deliveryDayInputField.waitFor({ state: 'visible' })
+				await this.deliveryDayInputField.selectOption({ index: 1 })
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
+				const initialDayValue = await this.deliveryDayInputField.inputValue()
+				//const initialTimeValue = await this.deliveryTimeInputField.inputValue()
+				// Retrieve the displayed text of the selected option
+				const initialTimeValue = await page.locator('#time_type option:checked').innerText()
+				console.log('Selected Text:', initialTimeValue)
+				await this.saveContinueButton.nth(0).click()
+				const appointmentSummary = this.displayedAppointment
+				const dateText = appointmentSummary.locator('p').nth(0)
+				const timeText = appointmentSummary.locator('p').nth(1)
+				const reformattedDateExpectedInitialDayValue = await this.reformatDateToLongFormat(
+					initialDayValue,
+				)
+				await expect(dateText).toHaveText(reformattedDateExpectedInitialDayValue)
+				await expect(timeText).toHaveText(initialTimeValue)
+
+				// Edit and verify updated delivery day and time
+				await this.editButtonGenericLocator.nth(1).click()
+				await this.deliveryDayInputField.waitFor({ state: 'visible' })
+				await this.deliveryDayInputField.selectOption({ index: 1 })
+				await page.waitForTimeout(750)
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
+				await this.deliveryTimeInputField.selectOption({ index: 1 })
+				await page.waitForTimeout(2000)
+				const updatedDayValue = await this.deliveryDayInputField.inputValue()
+				const updatedTimeValue = await page.locator('#time_type option:checked').innerText()
+				await this.saveContinueButton.nth(0).click()
+				await page.waitForTimeout(2000)
+
+				// erify appointment date/time
+				const updatedReformattedDateExpectedUpdatedDayValue = await this.reformatDateToLongFormat(
+					updatedDayValue,
+				)
+				await expect(dateText).toHaveText(updatedReformattedDateExpectedUpdatedDayValue)
+				await expect(timeText).toHaveText(updatedTimeValue)
+			}
+		})
+		await test.step('Phone and Birthday input', async () => {
+			console.log('Editing phone and birthday')
+			await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
+			await this.editButtonGenericLocator.first().click({ force: true })
+			await this.editButtonGenericLocator.first().click({ force: true })
+			await this.phoneInputField.waitFor({ state: 'visible' })
+			console.log('After clicking edit button')
+			const indexPersonalInfoSave = isPickupVisible ? 0 : 1
+			const indexPersonalInfoEdit = isPickupVisible ? 0 : 2
+			// Function to generate a random phone number
+			const generatePhoneNumber = () => {
+				const randomDigits = Math.floor(Math.random() * 9000000) + 1000000
+				return `555-${randomDigits}`
+			}
+			// Enter initial phone number and birthday
+			let phoneErrorExists = true
+			let phoneNumber
+			const firstDate = '01/01/1990'
+			while (phoneErrorExists) {
+				phoneNumber = generatePhoneNumber()
+				await this.phoneInputField.waitFor({ state: 'visible' })
+				await this.phoneInputField.fill(phoneNumber)
+				await this.birthdayInputField.click()
+				await this.birthdayInputField.type(firstDate)
+				const initialPhoneNum = await this.phoneInputField.inputValue()
+				const initialBirthday = await this.birthdayInputField.inputValue()
+				await this.page.click('body')
+				await this.page.waitForTimeout(1000)
+				await this.saveContinueButton.nth(indexPersonalInfoSave).click()
+				await this.page.waitForTimeout(4000)
+				phoneErrorExists = await page.isVisible('#fasd_phone_error:has-text("Already in use")')
+				//Verify that phone & email display correctly (needs to be inside due to format)
+				//reformat phone number to match
+				const normalizedReceived = await this.normalizePhoneNumber(
+					await this.displayedPhoneNumber.textContent(),
+				)
+				const normalizedExpected = await this.normalizePhoneNumber(initialPhoneNum)
+				// Verify that displayed equals Initial values
+				expect(normalizedReceived).toBe(normalizedExpected)
+				expect(this.displayedBirthday).toHaveText(firstDate)
+			}
+			// Edit phone number and birthday
+			await this.editButtonGenericLocator.nth(indexPersonalInfoEdit).click()
+			const newPhoneNumber = generatePhoneNumber()
+			await this.phoneInputField.fill(newPhoneNumber)
+			const newDate = '02/02/1992'
+			await this.birthdayInputField.click()
+			await this.birthdayInputField.type(newDate)
+			// TODO: Edit First/Last name and Email
+			const newFirstName = faker.name.firstName?.() || faker.person.firstName()
+			const newLastName = faker.name.lastName?.() || faker.person.lastName()
+			await this.firstNameField.fill(newFirstName)
+			await this.lastNameField.fill(newLastName)
+			// save edits
+			await this.saveContinueButton.nth(indexPersonalInfoSave).click({ force: true })
+			await page.waitForTimeout(2000)
+			// TODO: ADD for newEmail
+			//const newEmail =
+			// TODO: Verify edits to First/Last, Email, Phone, and Birthday
+			expect(this.displayedFirstName).toHaveText(newFirstName)
+			// Fix for special characters like apostrophes in last names
+			const displayedLastName = (await this.displayedLastName.textContent()) || ''
+			expect(displayedLastName.replace(/\\/g, '')).toEqual(newLastName)
+			//expect(this.displayedEmail).toHaveText(newEmail)
+			const normalizedReceived2 = await this.normalizePhoneNumber(
+				await this.displayedPhoneNumber.textContent(),
+			)
+			const normalizedExpected2 = await this.normalizePhoneNumber(newPhoneNumber)
+			// Perform the assertion
+			expect(normalizedReceived2).toBe(normalizedExpected2)
+			//expect(this.displayedPhoneNumber).toHaveText(newPhoneNumber)
+			expect(await this.displayedBirthday).toHaveText(newDate)
+		})
+		await test.step('Personal Document section', async () => {
+			const indexDocumentsSave = isPickupVisible ? 1 : 2
+			const indexDocumentsEdit = isPickupVisible ? 1 : 3
+			const dlUploadButton = await this.page.waitForSelector('#fasd_doc')
+			const [driversLicenseChooser] = await Promise.all([
+				this.page.waitForEvent('filechooser'),
+				dlUploadButton.click(),
+			])
+			//Enter Personal ID info (Med already exists from pre-cart step)
+			await driversLicenseChooser.setFiles('Medical-Card.png')
+			await this.idExpirationInput.click()
+			const newYear = new Date().getFullYear() + 1
+			const initialPersonalExpDate = `04/10/${newYear}`
+			await this.idExpirationInput.type(initialPersonalExpDate)
+			await page.click('body')
+			await this.saveContinueButton.nth(indexDocumentsSave).click()
+			await page.waitForTimeout(1000)
+			//Verify orig card data is saved
+			expect(this.displayedPersonalExp).toContainText(`Exp: ${initialPersonalExpDate}`)
+			await page.waitForTimeout(2000)
+			// Edit Personal  ID info
+			await this.editButtonGenericLocator.nth(indexDocumentsEdit).click()
+			const updatedYear = newYear + 1
+			const updatedPersonalExpDate = `10/25/${updatedYear}`
+			await this.idExpirationInput.type(updatedPersonalExpDate)
+			//TODO: Add steps for editing image files
+			// Add here
+			//
+			// save
+			await this.saveContinueButton.nth(indexDocumentsSave).click()
+			await page.waitForTimeout(1500)
+			//TODO: Verify that Personal info updated correctly
+			expect(this.displayedPersonalExp).toContainText(`Exp: ${updatedPersonalExpDate}`)
+		})
+
+		await test.step('Payment Section', async () => {
+			await this.paymentSection.waitFor({ state: 'visible' })
+			await this.cashOption.click()
+			const buttonIndexSave = isPickupVisible ? 2 : 3
+			const buttonIndexEdit = isPickupVisible ? 2 : 4
+			await this.saveContinueButton.nth(buttonIndexSave).click()
+			await page.waitForTimeout(1500)
+			expect(this.displayPayment).toHaveText('Cash')
+
+			// Edit payment option if needed (example if there's a credit option)
+			// await this.editButtonGenericLocator.nth(buttonIndexEdit).click()
+			// await page.waitForTimeout(1500)
+			// const paymentOptionIfPickUp = isPickupVisible ? 'debit' : 'aeropay'
+			// const paymentOptionSelector = page.locator(`label[for="${paymentOptionIfPickUp}"]`)
+			// await paymentOptionSelector.click()
+			// await this.saveContinueButton.nth(buttonIndexSave).click()
+			//await page.waitForTimeout(1500)
+			// const expectedText = isPickupVisible ? 'Debit' : 'Aeropay'
+			// expect(paymentOptionSelector).toHaveText(expectedText)
 		})
 	}
 

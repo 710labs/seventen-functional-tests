@@ -11,13 +11,13 @@ test.describe('PROD Live Tests', () => {
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
 	const prodLiveURL = process.env.PROD_LIVE_URL || ''
-	const prodLiveUsername = process.env.PROD_LIVE_USERNAME || ''
-	const prodLivePassword = process.env.PROD_LIVE_PASSWORD || ''
+	const prodLiveUsername = process.env.PROD_LIVE_REC_USERNAME || ''
+	const prodLivePassword = process.env.PROD_LIVE_REC_PASSWORD || ''
 	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 
 	console.log(`------- \n URL being tested: ${prodLiveURL} -------- \n `)
 	test(
-		'Prod check - MED EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
+		'Prod Live check - EXISTING REC User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
 		{ tag: ['@medical'] },
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
@@ -47,11 +47,11 @@ test.describe('PROD Live Tests', () => {
 			// CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
 			// add products to cart
-			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'prod')
+			await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, prodLiveURL, address, newAddress)
+			await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress)
 			//
 			// CANT HAVE PLACE ORDER // CLICK SUBMIT BUTTON SINCE THIS IS FOR PROD
 			//
