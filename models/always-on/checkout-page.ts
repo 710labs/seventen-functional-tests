@@ -674,7 +674,7 @@ export class CheckoutPage {
 			console.log('Editing phone and birthday')
 			await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
 			await this.editButtonGenericLocator.first().click({ force: true })
-			await this.editButtonGenericLocator.first().click({ force: true })
+			//await this.editButtonGenericLocator.first().click({ force: true })
 			await this.phoneInputField.waitFor({ state: 'visible' })
 			console.log('After clicking edit button')
 			const indexPersonalInfoSave = isPickupVisible ? 0 : 1
