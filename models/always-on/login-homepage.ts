@@ -63,7 +63,7 @@ export class HomePageLogin {
 	async loginExistingUser(page, falsePassword, userName, password) {
 		await test.step('Enter user email', async () => {
 			// enter email in field and click Continue button
-			await this.emailFieldPopUp.click()
+			await this.emailFieldPopUp.click({ force: true })
 			await this.emailFieldPopUp.fill(userName)
 			await this.continueButtonPopUp.click()
 		})
