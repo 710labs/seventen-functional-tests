@@ -22,6 +22,7 @@
 		"live:smoke:always-on": "npx playwright test tests/always-on-tests/live.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
 		"prod-live:smoke:always-on": "npx playwright test tests/always-on-tests/prod-live.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
 		"prod-concierge:smoke:always-on": "npx playwright test tests/always-on-tests/prod-concierge.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
+		"prod-employee:smoke:always-on": "npx playwright test tests/always-on-tests/prod-employee.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
 		"concierge:ci:tests": "npx playwright test tests/always-on-tests/concierge.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
 		"smoke:test:prod:ca": "npx playwright test smoke-test-ca --config=configs/prod-ca.config.ts --workers=1",
 		"smoke:test:prod:co": "npx playwright test smoke-test-co --config=configs/prod-co.config.ts --workers=1",

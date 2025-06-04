@@ -1,0 +1,54 @@
+name: EMPLOYEE - PRODUCTION smoke check
+on:
+  workflow_dispatch:
+jobs:
+  live-dev-tests:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ENV: employee-prod employee-store.710labs.com
+      ENV_ID: employee-prod
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      RUN_ID: ${{github.run_number}}
+      UNIQUE_RUN_ID: ${{github.run_id}}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
+      S3_BUCKET: ${{ secrets.S3_BUCKET}}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
+      S3_SECRET: ${{ secrets.S3_SECRET}}
+      S3_REGION: ${{ secrets.S3_REGION}}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+      PROD_EMPLOYEE_URL: ${{ secrets.PROD_EMPLOYEE_URL}}
+      PROD_EMPLOYEE_USERNAME: ${{ secrets.PROD_EMPLOYEE_USERNAME}}
+      PROD_EMPLOYEE_PASSWORD: ${{ secrets.PROD_EMPLOYEE_PASSWORD}}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD}}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD}}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 'node'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npm run prod-employee:smoke:always-on
+      - name: Upload Playwright Report
+        if: always() # Ensures the report is uploaded even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 3

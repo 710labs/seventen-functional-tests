@@ -47,9 +47,7 @@ export class HomePageActions {
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 		this.enterAddressButtonDesktop = page.locator('a.wpse-button-storenav.wpse-openerize').first()
 		this.enterAddressButtonMobile = page.locator('a.wpse-button-storenav.wpse-openerize').nth(1)
-		this.enterAddressButtonConciergeDesktop = page
-			.locator('.wpse-button-storenav.wpse-openerize')
-			.first()
+		this.enterAddressButtonConciergeDesktop = page.locator('a[data-module="fulfillment"]').first()
 		this.enterAddressButtonConciergeMobile = page
 			.locator('.wpse-button-storenav.wpse-openerize')
 			.nth(1)
@@ -355,251 +353,430 @@ export class HomePageActions {
 			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
 		}
 	}
-	async conciergeRecAddProductsToCartUntilMinimumMet(page) {
-		// Get all the products on the page
-		const products = await page.locator(
-			'li.product.type-product.product-type-simple.status-publish',
-		)
 
-		let i = 4
-		while (true) {
-			// Check if there are enough products to add
-			if (i >= (await products.count())) {
-				console.log(`Only ${await products.count()} products available on the page.`)
-				break
-			}
-
-			// Get the current product
-			const product = products.nth(i)
-
-			// Check if the product has the "Medical Only" badge
-			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
-
-			if (hasMedicalOnlyTag) {
-				console.log(
-					`Skipping product "${await product
-						.locator('.woocommerce-loop-product__title')
-						.innerText()}" due to "Medical Only" tag.`,
-				)
-				i++
-				continue // Skip this product and move to the next one
-			}
-
-			// Get the 'Add to Cart' button and product name for the current product
-			//const addToCartButton = product.locator('button.add_to_cart_button')
-			const addToCartButton = product.locator(
-				'button.button.product_type_simple.fasd_to_cart.ajax_groove',
-			)
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-
-			// Click the 'Add to Cart' button
-			console.log('locator for addtoCartButton: ' + addToCartButton)
-			//await page.waitForSelector(addToCartButton)
-			await expect(addToCartButton).toBeVisible()
-			//await addToCartButton.scrollIntoViewIfNeeded()
-			await addToCartButton.click()
-			//product page add to cart
-			//await this.productPageAddToCartButton.waitFor({ state: 'visible' })
-			//await this.productPageAddToCartButton.click()
-
-			await page.waitForTimeout(4000)
-
-			// Wait for the cartDrawer to become visible
-			await this.cartDrawerContainer.waitFor({ state: 'visible' })
-
-			const cartItem = await page.locator(
-				`td.product-name:has(a:has-text("${productName.trim()}"))`,
-			)
-
-			const cartItems = await page.locator(`td.product-name a`).allTextContents()
-			console.log('Cart items in the drawer:', cartItems)
-
-			const isProductInCart = (await cartItem.count()) > 0
-
-			if (!isProductInCart) {
-				throw new Error(`Product "${productName}" was not found in the cart after being added.`)
-			}
-
-			console.log(`Product "${productName}" was successfully added to the cart.`)
-
-			// Check if the "Delivery minimum not met" banner is still visible
-			const isBannerVisible = await this.minimumNotMetLabel.isVisible()
-
-			if (!isBannerVisible) {
-				console.log('Minimum cart total met. Proceeding to checkout.')
-				// Break out of loop to continue in the cart
-				break
-			}
-
-			// Close the cartDrawer
-			await this.closeCartDrawerButton.click()
-			// Wait for the cartDrawer to be hidden again
-			//await this.cartDrawerContainer.waitFor({ state: 'hidden' })
-			await page.waitForTimeout(2000)
-
-			i++ // Increment to the next product
-		}
-
-		//click View Cart to go to Cart
-		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
-		await expect(this.viewCartButtonSimple).toBeVisible()
-		await this.viewCartButtonSimple.click()
-
-		// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
-		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-		await expect(this.continueToCheckoutButton).toBeVisible()
-		await this.continueToCheckoutButton.click()
-	}
-
-	async conciergeMedAddProductsToCartUntilMinimumMet(page, envType) {
+	async addUntilMinimumMet(page, { shouldAddProduct, onMinimumReached, startIndex = 4 }) {
+		// Unified product locator
 		const products = await page.locator('ul.products li.product')
-		let i = 0
-		let medicalProductExists = false
-		let medicalCardProvided = false
+		let i = startIndex
+		const total = await products.count()
 
-		let productCount = await products.count()
-
-		while (i <= productCount) {
-			if (i >= productCount) {
-				console.log(`Only ${productCount} products available on the page.`)
-				if (!medicalProductExists) {
-					throw new Error('No Medical Products found on this page/store/location')
-				}
-				break
-			}
-
+		while (i < total) {
 			const product = products.nth(i)
-			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
 
-			if (hasMedicalOnlyTag) {
-				medicalProductExists = true
-			}
-
-			if (!hasMedicalOnlyTag) {
-				console.log(
-					`Skipping product "${await product
-						.locator('.woocommerce-loop-product__title')
-						.innerText()}" as it is not "Medical Only".`,
-				)
+			// Decide whether to add this product
+			const wantThis = await shouldAddProduct(product)
+			if (!wantThis) {
 				i++
 				continue
 			}
 
-			const addToCartButton = product.locator(
-				'button.button.product_type_simple.fasd_to_cart.ajax_groove',
-			)
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-			const productNameNormalized = productName.trim()
+			// Click “Add to Cart”
+			const addBtn = product.locator('button.button.product_type_simple.fasd_to_cart.ajax_groove')
+			const name = (await product.locator('.woocommerce-loop-product__title').innerText()).trim()
+			await expect(addBtn).toBeVisible()
+			await addBtn.click()
 
-			// Add the product to the cart
-			await addToCartButton.click()
+			// Wait for the drawer, then verify item is in cart
 			await page.waitForTimeout(3000)
 			await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
 
-			const cartItem = page.locator(`td.product-name:has(a:has-text("${productNameNormalized}"))`)
-			const isProductInCart = (await cartItem.count()) > 0
-
-			if (!isProductInCart) {
-				throw new Error(
-					`Product "${productNameNormalized}" was not found in the cart after being added.`,
-				)
+			const cartItemLocator = page.locator(`td.product-name:has(a:has-text("${name}"))`)
+			if ((await cartItemLocator.count()) === 0) {
+				throw new Error(`Product "${name}" was not found in the cart after being added.`)
 			}
 
-			console.log(`Product "${productNameNormalized}" was successfully added to the cart.`)
+			// Check if the “minimum not met” banner is still visible
+			const stillNeedsMore = await this.minimumNotMetLabel.isVisible()
+			if (stillNeedsMore) {
+				// Close drawer and continue to next product
+				await this.closeCartDrawerButton.click()
+				await page.waitForTimeout(2000)
+				i++
+				continue
+			}
 
-			// Check if the minimum banner is still visible
-			const isMinimumBannerVisible = await this.minimumNotMetLabel.isVisible()
-			if (!isMinimumBannerVisible) {
-				console.log('Minimum cart total met. Proceeding to check for medical card requirements.')
-				// View the cart
-				await this.viewCartButtonSimple.waitFor({ state: 'visible' })
-				await this.viewCartButtonSimple.click()
-				//
-				await page.waitForTimeout(3000)
-				// check if envType is dev/stage or Prod. For Prod, skip adding Med info since using existing user
-				// with med card already populated
-				if (envType === 'dev/stage') {
-					const medicalOnlyBannerVisible = await page
-						.locator('.wpse-snacktoast.warn-toast')
-						.first()
-						.isVisible()
-					const medicalOnlyBannerText = await page
-						.locator('.wpse-snacktoast.warn-toast')
-						.first()
-						.textContent()
+			// Minimum reached → invoke the callback
+			await onMinimumReached()
+			return
+		}
 
-					const isMedicalOnlyBannerCorrect =
-						medicalOnlyBannerVisible &&
-						medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+		// If we exit the loop without meeting minimum:
+		console.log(`Reached end of product list (count = ${total}) without meeting the minimum.`)
+	}
 
-					if (!isMedicalOnlyBannerCorrect) {
-						throw new Error('Medical-Only Banner not showing in cart for medical only products')
-					}
-					// // verify medical cart banner shows when medical product is in cart
-					// try {
-					// 	await expect(this.medicalOnlyBanner).toBeVisible()
-					// } catch (error) {
-					// 	throw new Error(
-					// 		'Med Card Verification not working -- Cart Banner for Med Products not showing',
-					// 	)
-					// }
-					if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
-						console.log('Medical-only product in cart. Adding medical card information...')
+	/**
+	 * Add non–medical ("recreational") products until minimum is met.
+	 * Skips any product with a “Medical Only” badge.
+	 */
+	async conciergeRecAddProductsToCartUntilMinimumMet(page) {
+		// Predicate: only add if there is NO .med-metabadge element
+		async function recFilter(productEl) {
+			const hasBadge = (await productEl.locator('.wpse-metabadge.med-metabadge').count()) > 0
+			if (hasBadge) {
+				const title = await productEl.locator('.woocommerce-loop-product__title').innerText()
+				console.log(`Skipping "${title.trim()}" (medical only).`)
+				return false
+			}
+			return true
+		}
 
-						// Add the medical card information
-						const medicalCardCheckbox = page.locator('input#med_included')
-						await medicalCardCheckbox.check()
+		// Once the minimum is met, go straight to View Cart → Continue to Checkout
+		async function recOnMinimum() {
+			console.log('Recreational: minimum reached → going to checkout.')
+			await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+			await expect(this.viewCartButtonSimple).toBeVisible()
+			await this.viewCartButtonSimple.click()
 
-						const medCardFileInput = page.locator('input#fasd_medcard')
-						const [fileChooser] = await Promise.all([
-							page.waitForEvent('filechooser'),
-							medCardFileInput.click(),
-						])
-						await fileChooser.setFiles('Medical-Card.png')
+			await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+			await expect(this.continueToCheckoutButton).toBeVisible()
+			await this.continueToCheckoutButton.click()
+		}
 
-						// const issuingStateSelect = page.locator('select#medcard_state')
-						// const expirationInput = page.locator('input#medcard_exp')
-						await this.issuingStateSelect.selectOption('CA')
-						const newYear = new Date().getFullYear() + 1
-						await this.expirationInput.click()
-						await this.expirationInput.type(`01/01/${newYear}`)
-						// random integer for med card number
-						const medCardNumber = page.locator('input#medcard_no')
-						const length = Math.floor(Math.random() * 9) + 1
-						const randomInteger = Math.floor(Math.random() * 10 ** length)
-						await medCardNumber.click()
-						await medCardNumber.type(`${randomInteger}`)
+		await this.addUntilMinimumMet(page, {
+			shouldAddProduct: recFilter.bind(this),
+			onMinimumReached: recOnMinimum.bind(this),
+			startIndex: 4,
+		})
+	}
 
-						const saveMedicalInfoButton = page.locator(
-							'.fasd-form-submit:has-text("Save & Continue")',
-						)
-						await saveMedicalInfoButton.click()
-						medicalCardProvided = true
+	/**
+	 * Add medical-only products until minimum is met.
+	 * Skips any product without a “Medical Only” badge. Throws if none found.
+	 *
+	 * @param {import('@playwright/test').Page} page
+	 * @param {string} envType — 'dev', 'stage', or 'prod'
+	 */
+	async conciergeMedAddProductsToCartUntilMinimumMet(page, envType) {
+		let sawAnyMed = false
+		let medCardUploaded = false
 
-						await page.waitForTimeout(3000)
+		// Predicate: only add if there IS a .med-metabadge element
+		async function medFilter(productEl) {
+			const hasBadge = (await productEl.locator('.wpse-metabadge.med-metabadge').count()) > 0
+			if (hasBadge) {
+				sawAnyMed = true
+				return true
+			} else {
+				const title = await productEl.locator('.woocommerce-loop-product__title').innerText()
+				console.log(`Skipping "${title.trim()}" (not a medical-only item).`)
+				return false
+			}
+		}
 
-						// View the cart
-						await this.cartButtonNav.waitFor({ state: 'visible' })
-						await this.cartButtonNav.click()
-						await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
-					}
+		// Once the minimum is met, verify medical-only banner (in dev/stage), upload card, then checkout
+		async function medOnMinimum() {
+			console.log('Medical: minimum reached → verifying medical-only banner & ID.')
+			// 1) View Cart
+			await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+			await this.viewCartButtonSimple.click()
+			await page.waitForTimeout(3000)
+
+			// 2) In dev/stage, check for the “Medical-only product in cart” toast
+			if (envType === 'dev' || envType === 'stage') {
+				const toast = page.locator('.wpse-snacktoast.warn-toast').first()
+				const text = (await toast.textContent())?.trim() ?? ''
+				const isCorrect = (await toast.isVisible()) && text.includes('Medical-only product in cart')
+
+				if (!isCorrect) {
+					throw new Error('Medical-only banner did not appear for a medical product.')
 				}
-				// Proceed to checkout
-				console.log('All requirements met. Proceeding to Checkout.')
-				await this.continueToCheckoutButton.waitFor({ state: 'visible' })
-				await this.continueToCheckoutButton.click()
-				//
-				// break loop if order minimum is met
-				break
+
+				if (!medCardUploaded) {
+					console.log('Uploading medical card...')
+					// 3) Check box & upload card
+					await page.locator('input#med_included').check()
+					const [fileChooser] = await Promise.all([
+						page.waitForEvent('filechooser'),
+						page.locator('input#fasd_medcard').click(),
+					])
+					await fileChooser.setFiles('Medical-Card.png')
+
+					// 4) Fill in state, expiration, random card number
+					await this.issuingStateSelect.selectOption('CA')
+					const nextYear = new Date().getFullYear() + 1
+					await this.expirationInput.click()
+					await this.expirationInput.type(`01/01/${nextYear}`)
+
+					const randomNumInput = page.locator('input#medcard_no')
+					const len = Math.floor(Math.random() * 9) + 1
+					const randInt = Math.floor(Math.random() * 10 ** len)
+					await randomNumInput.click()
+					await randomNumInput.type(`${randInt}`)
+
+					await page.locator('.fasd-form-submit:has-text("Save & Continue")').click()
+					medCardUploaded = true
+
+					// Wait for the cart drawer to reappear so we can verify
+					await page.waitForTimeout(3000)
+					await this.cartButtonNav.waitFor({ state: 'visible' })
+					await this.cartButtonNav.click()
+					await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+				}
 			}
 
-			// Close the cart drawer and wait before adding another product
-			await this.closeCartDrawerButton.click()
-			await page.waitForTimeout(2000)
+			// 5) Finally, click Continue to Checkout
+			console.log('All medical requirements satisfied → checkout.')
+			await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+			await this.continueToCheckoutButton.click()
+		}
 
-			//i++ // Increment to the next product
+		// Run the shared helper
+		await this.addUntilMinimumMet(page, {
+			shouldAddProduct: medFilter.bind(this),
+			onMinimumReached: medOnMinimum.bind(this),
+			startIndex: 4,
+		})
+
+		// After exiting, ensure at least one medical-only product was found
+		if (!sawAnyMed) {
+			throw new Error('No medical-only products were found on this page/store/location.')
 		}
 	}
+	// async conciergeRecAddProductsToCartUntilMinimumMet(page) {
+	// 	// Get all the products on the page
+	// 	const products = await page.locator(
+	// 		'li.product.type-product.product-type-simple.status-publish',
+	// 	)
+
+	// 	let i = 4
+	// 	while (true) {
+	// 		// Check if there are enough products to add
+	// 		if (i >= (await products.count())) {
+	// 			console.log(`Only ${await products.count()} products available on the page.`)
+	// 			break
+	// 		}
+
+	// 		// Get the current product
+	// 		const product = products.nth(i)
+
+	// 		// Check if the product has the "Medical Only" badge
+	// 		const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+	// 		if (hasMedicalOnlyTag) {
+	// 			console.log(
+	// 				`Skipping product "${await product
+	// 					.locator('.woocommerce-loop-product__title')
+	// 					.innerText()}" due to "Medical Only" tag.`,
+	// 			)
+	// 			i++
+	// 			continue // Skip this product and move to the next one
+	// 		}
+
+	// 		// Get the 'Add to Cart' button and product name for the current product
+	// 		//const addToCartButton = product.locator('button.add_to_cart_button')
+	// 		const addToCartButton = product.locator(
+	// 			'button.button.product_type_simple.fasd_to_cart.ajax_groove',
+	// 		)
+	// 		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+
+	// 		// Click the 'Add to Cart' button
+	// 		console.log('locator for addtoCartButton: ' + addToCartButton)
+	// 		//await page.waitForSelector(addToCartButton)
+	// 		await expect(addToCartButton).toBeVisible()
+	// 		//await addToCartButton.scrollIntoViewIfNeeded()
+	// 		await addToCartButton.click()
+	// 		//product page add to cart
+	// 		//await this.productPageAddToCartButton.waitFor({ state: 'visible' })
+	// 		//await this.productPageAddToCartButton.click()
+
+	// 		await page.waitForTimeout(4000)
+
+	// 		// Wait for the cartDrawer to become visible
+	// 		await this.cartDrawerContainer.waitFor({ state: 'visible' })
+
+	// 		const cartItem = await page.locator(
+	// 			`td.product-name:has(a:has-text("${productName.trim()}"))`,
+	// 		)
+
+	// 		const cartItems = await page.locator(`td.product-name a`).allTextContents()
+	// 		console.log('Cart items in the drawer:', cartItems)
+
+	// 		const isProductInCart = (await cartItem.count()) > 0
+
+	// 		if (!isProductInCart) {
+	// 			throw new Error(`Product "${productName}" was not found in the cart after being added.`)
+	// 		}
+
+	// 		console.log(`Product "${productName}" was successfully added to the cart.`)
+
+	// 		// Check if the "Delivery minimum not met" banner is still visible
+	// 		const isBannerVisible = await this.minimumNotMetLabel.isVisible()
+
+	// 		if (!isBannerVisible) {
+	// 			console.log('Minimum cart total met. Proceeding to checkout.')
+	// 			// Break out of loop to continue in the cart
+	// 			break
+	// 		}
+
+	// 		// Close the cartDrawer
+	// 		await this.closeCartDrawerButton.click()
+	// 		// Wait for the cartDrawer to be hidden again
+	// 		//await this.cartDrawerContainer.waitFor({ state: 'hidden' })
+	// 		await page.waitForTimeout(2000)
+
+	// 		i++ // Increment to the next product
+	// 	}
+
+	// 	//click View Cart to go to Cart
+	// 	await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+	// 	await expect(this.viewCartButtonSimple).toBeVisible()
+	// 	await this.viewCartButtonSimple.click()
+
+	// 	// Once the banner is no longer visible, proceed to click the "Continue to checkout" button
+	// 	await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+	// 	await expect(this.continueToCheckoutButton).toBeVisible()
+	// 	await this.continueToCheckoutButton.click()
+	// }
+
+	// async conciergeMedAddProductsToCartUntilMinimumMet(page, envType) {
+	// 	const products = await page.locator('ul.products li.product')
+	// 	let i = 0
+	// 	let medicalProductExists = false
+	// 	let medicalCardProvided = false
+
+	// 	let productCount = await products.count()
+
+	// 	while (i <= productCount) {
+	// 		if (i >= productCount) {
+	// 			console.log(`Only ${productCount} products available on the page.`)
+	// 			if (!medicalProductExists) {
+	// 				throw new Error('No Medical Products found on this page/store/location')
+	// 			}
+	// 			break
+	// 		}
+
+	// 		const product = products.nth(i)
+	// 		const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+	// 		if (hasMedicalOnlyTag) {
+	// 			medicalProductExists = true
+	// 		}
+
+	// 		if (!hasMedicalOnlyTag) {
+	// 			console.log(
+	// 				`Skipping product "${await product
+	// 					.locator('.woocommerce-loop-product__title')
+	// 					.innerText()}" as it is not "Medical Only".`,
+	// 			)
+	// 			i++
+	// 			continue
+	// 		}
+
+	// 		const addToCartButton = product.locator(
+	// 			'button.button.product_type_simple.fasd_to_cart.ajax_groove',
+	// 		)
+	// 		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+	// 		const productNameNormalized = productName.trim()
+
+	// 		// Add the product to the cart
+	// 		await addToCartButton.click()
+	// 		await page.waitForTimeout(3000)
+	// 		await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+
+	// 		const cartItem = page.locator(`td.product-name:has(a:has-text("${productNameNormalized}"))`)
+	// 		const isProductInCart = (await cartItem.count()) > 0
+
+	// 		if (!isProductInCart) {
+	// 			throw new Error(
+	// 				`Product "${productNameNormalized}" was not found in the cart after being added.`,
+	// 			)
+	// 		}
+
+	// 		console.log(`Product "${productNameNormalized}" was successfully added to the cart.`)
+
+	// 		// Check if the minimum banner is still visible
+	// 		const isMinimumBannerVisible = await this.minimumNotMetLabel.isVisible()
+	// 		if (!isMinimumBannerVisible) {
+	// 			console.log('Minimum cart total met. Proceeding to check for medical card requirements.')
+	// 			// View the cart
+	// 			await this.viewCartButtonSimple.waitFor({ state: 'visible' })
+	// 			await this.viewCartButtonSimple.click()
+	// 			//
+	// 			await page.waitForTimeout(3000)
+	// 			// check if envType is dev/stage or Prod. For Prod, skip adding Med info since using existing user
+	// 			// with med card already populated
+	// 			if (envType === 'dev/stage') {
+	// 				const medicalOnlyBannerVisible = await page
+	// 					.locator('.wpse-snacktoast.warn-toast')
+	// 					.first()
+	// 					.isVisible()
+	// 				const medicalOnlyBannerText = await page
+	// 					.locator('.wpse-snacktoast.warn-toast')
+	// 					.first()
+	// 					.textContent()
+
+	// 				const isMedicalOnlyBannerCorrect =
+	// 					medicalOnlyBannerVisible &&
+	// 					medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+
+	// 				if (!isMedicalOnlyBannerCorrect) {
+	// 					throw new Error('Medical-Only Banner not showing in cart for medical only products')
+	// 				}
+	// 				// // verify medical cart banner shows when medical product is in cart
+	// 				// try {
+	// 				// 	await expect(this.medicalOnlyBanner).toBeVisible()
+	// 				// } catch (error) {
+	// 				// 	throw new Error(
+	// 				// 		'Med Card Verification not working -- Cart Banner for Med Products not showing',
+	// 				// 	)
+	// 				// }
+	// 				if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
+	// 					console.log('Medical-only product in cart. Adding medical card information...')
+
+	// 					// Add the medical card information
+	// 					const medicalCardCheckbox = page.locator('input#med_included')
+	// 					await medicalCardCheckbox.check()
+
+	// 					const medCardFileInput = page.locator('input#fasd_medcard')
+	// 					const [fileChooser] = await Promise.all([
+	// 						page.waitForEvent('filechooser'),
+	// 						medCardFileInput.click(),
+	// 					])
+	// 					await fileChooser.setFiles('Medical-Card.png')
+
+	// 					// const issuingStateSelect = page.locator('select#medcard_state')
+	// 					// const expirationInput = page.locator('input#medcard_exp')
+	// 					await this.issuingStateSelect.selectOption('CA')
+	// 					const newYear = new Date().getFullYear() + 1
+	// 					await this.expirationInput.click()
+	// 					await this.expirationInput.type(`01/01/${newYear}`)
+	// 					// random integer for med card number
+	// 					const medCardNumber = page.locator('input#medcard_no')
+	// 					const length = Math.floor(Math.random() * 9) + 1
+	// 					const randomInteger = Math.floor(Math.random() * 10 ** length)
+	// 					await medCardNumber.click()
+	// 					await medCardNumber.type(`${randomInteger}`)
+
+	// 					const saveMedicalInfoButton = page.locator(
+	// 						'.fasd-form-submit:has-text("Save & Continue")',
+	// 					)
+	// 					await saveMedicalInfoButton.click()
+	// 					medicalCardProvided = true
+
+	// 					await page.waitForTimeout(3000)
+
+	// 					// View the cart
+	// 					await this.cartButtonNav.waitFor({ state: 'visible' })
+	// 					await this.cartButtonNav.click()
+	// 					await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+	// 				}
+	// 			}
+	// 			// Proceed to checkout
+	// 			console.log('All requirements met. Proceeding to Checkout.')
+	// 			await this.continueToCheckoutButton.waitFor({ state: 'visible' })
+	// 			await this.continueToCheckoutButton.click()
+	// 			//
+	// 			// break loop if order minimum is met
+	// 			break
+	// 		}
+
+	// 		// Close the cart drawer and wait before adding another product
+	// 		await this.closeCartDrawerButton.click()
+	// 		await page.waitForTimeout(2000)
+
+	// 		//i++ // Increment to the next product
+	// 	}
+	// }
 
 	async liveRecAddProductsToCartUntilMinimumMet(page) {
 		// Get all the products on the page
@@ -748,7 +925,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 1
+		let i = 4
 		let medicalProductExists = false
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
