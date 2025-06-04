@@ -50,7 +50,7 @@ export class ConciergeCreateUser {
 		this.mobileAllUsersTab = page.locator('a:has-text("All Users")')
 		this.mobileMenuButton = page.locator('span.screen-reader-text:has-text("Menu")')
 		this.userPageTitle = page.locator('.wp-heading-inline:has-text("Users")')
-		this.addNewUserButton = page.locator('.page-title-action:has-text("Add New User")')
+		this.addNewUserButton = page.locator('.page-title-action')
 		this.newUserPageTitle = page.locator('#add-new-user')
 		this.newUserUsernameField = page.locator('#user_login')
 		this.newUserEmailField = page.locator('#email')

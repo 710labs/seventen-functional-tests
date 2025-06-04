@@ -7,18 +7,18 @@ import { OrderConfirmationPage } from '../../models/always-on/order-confirmation
 import { ConciergeLogin } from '../../models/concierge/concierge-login.ts'
 require('dotenv').config('.env')
 
-test.describe('PROD CONCIERGE Tests', () => {
+test.describe('PROD EMPLOYEE-STORE Tests', () => {
 	test.setTimeout(240000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
-	const prodConciergeURL = process.env.PROD_CONCIERGE_URL || ''
-	const prodConciergeUsername = process.env.PROD_CONCIERGE_USERNAME || ''
-	const prodConciergePassword = process.env.PROD_CONCIERGE_PASSWORD || ''
+	const prodConciergeURL = process.env.PROD_EMPLOYEE_URL || ''
+	const prodConciergeUsername = process.env.PROD_EMPLOYEE_USERNAME || ''
+	const prodConciergePassword = process.env.PROD_EMPLOYEE_PASSWORD || ''
 	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 
 	console.log(`------- \n URL being tested: ${prodConciergeURL} -------- \n `)
 	test(
-		'Prod Concierge check - MED EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
+		'Prod Employee-Store check - REC EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
 		{ tag: ['@medical'] },
 		async ({ page }) => {
 			const conciergeLogin = new ConciergeLogin(page)
