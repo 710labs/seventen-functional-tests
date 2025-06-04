@@ -1,4 +1,4 @@
-name: EMPLOYEE - PRODUCTION smoke check
+name: Employee - PRODUCTION smoke check
 on:
   workflow_dispatch:
 jobs:
