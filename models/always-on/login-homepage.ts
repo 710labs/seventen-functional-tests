@@ -54,7 +54,7 @@ export class HomePageLogin {
 			await expect(this.userPopUpContainer).toBeVisible()
 			await expect(this.userPopUpContainerText).toBeVisible()
 			const popUpText = await this.userPopUpContainerText.textContent()
-			expect(popUpText).toBe('Enter your email to join us or sign in.')
+			expect(popUpText).toBe('Shop 710 Labs from dispensaries near you.')
 			//verify that email field appears
 			await expect(this.emailFieldPopUp).toBeVisible()
 			await expect(this.continueButtonPopUp).toBeVisible()
