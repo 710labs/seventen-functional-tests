@@ -207,29 +207,29 @@ export class CheckoutPage {
 		})
 		await test.step('Phone and Birthday input', async () => {
 			console.log('Editing phone and birthday')
-			await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
+			//await this.editButtonGenericLocator.first().waitFor({ state: 'visible' })
 
 			// Retry loop to ensure phone input field becomes visible
-			let retryCount = 0
-			const maxRetries = 5
-			while (retryCount < maxRetries) {
-				await this.editButtonGenericLocator.first().click({ force: true })
-				await this.page.waitForTimeout(1000) // Small wait between attempts
+			// let retryCount = 0
+			// const maxRetries = 5
+			// while (retryCount < maxRetries) {
+			// 	await this.editButtonGenericLocator.first().click({ force: true })
+			// 	await this.page.waitForTimeout(1000) // Small wait between attempts
 
-				// Check if phone input field is visible
-				const isPhoneFieldVisible = await this.phoneInputField.isVisible()
-				if (isPhoneFieldVisible) {
-					console.log(`Phone input field is visible after ${retryCount + 1} attempt(s)`)
-					break
-				}
+			// 	// Check if phone input field is visible
+			// 	const isPhoneFieldVisible = await this.phoneInputField.isVisible()
+			// 	if (isPhoneFieldVisible) {
+			// 		console.log(`Phone input field is visible after ${retryCount + 1} attempt(s)`)
+			// 		break
+			// 	}
 
-				retryCount++
-				console.log(`Phone input field not visible, retry ${retryCount}/${maxRetries}`)
+			// 	retryCount++
+			// 	console.log(`Phone input field not visible, retry ${retryCount}/${maxRetries}`)
 
-				if (retryCount === maxRetries) {
-					throw new Error(`Phone input field did not become visible after ${maxRetries} attempts`)
-				}
-			}
+			// 	if (retryCount === maxRetries) {
+			// 		throw new Error(`Phone input field did not become visible after ${maxRetries} attempts`)
+			// 	}
+			// }
 
 			await this.phoneInputField.waitFor({ state: 'visible' })
 			console.log('After clicking edit button')
