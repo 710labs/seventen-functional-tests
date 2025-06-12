@@ -23,6 +23,17 @@ export class HomePageLogin {
 	readonly createAccountButton: Locator
 	readonly addToCartButtonGeneral: Locator
 	readonly signInError: Locator
+	// “Shop by Store” heading
+	readonly shopByStoreTitle: Locator
+	// first store card and specific store link
+	readonly firstStoreCard: Locator
+
+	// “Shop by Category” heading
+	readonly shopByCategoryTitle: Locator
+	// all category cards + a specific one
+	readonly categoryCards: Locator
+	readonly concentratesCard: Locator
+	readonly flowerCard: Locator
 
 	constructor(page: Page) {
 		this.alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
@@ -43,6 +54,13 @@ export class HomePageLogin {
 		this.createAccountButton = page.locator('button:has-text("Create Account")')
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 		this.signInError = page.locator('.wpse-snacktoast-headline')
+		// Shop by Store
+		this.shopByStoreTitle = page.locator('h1.shop-category-head:has-text("Shop by Store")')
+		this.firstStoreCard = page.locator('li.wpse-detailed-radio').first()
+		// Shop by Category
+		this.shopByCategoryTitle = page.locator('h1.shop-category-head:has-text("Shop by Category")')
+		this.concentratesCard = page.locator('li.wpse-category-button:has-text("Concentrates")')
+		this.flowerCard = page.locator('li.wpse-category-button:has-text("Flower")')
 	}
 	async verifyUserSignInModalAppears(page, URLparam) {
 		await test.step('Verify the Homepage loads correctly', async () => {
@@ -151,6 +169,12 @@ export class HomePageLogin {
 			await expect(this.pageTitleSelector).toBeVisible()
 			await expect(this.accountButtonNav).toBeVisible()
 			await expect(this.cartButtonNav).toBeVisible()
+			// Verify that Shop by Store displays
+			await expect(this.shopByStoreTitle).toBeVisible()
+			await expect(this.firstStoreCard).toBeVisible()
+			await expect(this.shopByCategoryTitle).toBeVisible()
+			await expect(this.concentratesCard).toBeVisible()
+			await expect(this.flowerCard).toBeVisible()
 		})
 	}
 }
