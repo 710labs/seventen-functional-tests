@@ -29,7 +29,7 @@ test.describe('Concierge Tests', () => {
 			conciergeUsername,
 			conciergePassword,
 		)
-		await homePageLogin.verifyShopLoadsAfterSignIn(page)
+		await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 		await accountPage.logOut(page)
 	})
 	test(
@@ -79,13 +79,13 @@ test.describe('Concierge Tests', () => {
 				conciergePassword,
 			)
 			//verify that shop loads upon log in
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			await homePageActions.enterAddress(page, 'concierge', address)
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
 			await homePageActions.conciergeRecAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
@@ -159,13 +159,13 @@ test.describe('Concierge Tests', () => {
 			//login to shop as new user
 			await conciergeLogin.loginUser(page, conciergeURL, 'wrongpassword', newEmail, newPassword)
 			//verify that shop loads upon log in
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			// add adress for new user account
 			await homePageActions.enterAddress(page, 'concierge', address)
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
 			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page, 'dev/stage')
 			// verify that checkout page loads
