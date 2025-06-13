@@ -30,11 +30,11 @@ test.describe('Live Tests', () => {
 			await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'rec')
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
 			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
 			await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
@@ -77,13 +77,13 @@ test.describe('Live Tests', () => {
 			await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			const address = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			const newAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			// add adress for new user account
 			await homePageActions.enterAddress(page, 'live', address)
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
 			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'dev/stage')
 			//await homePageActions.newLiveMedAddProductsToCartUntilMinimumMet(page)
