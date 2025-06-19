@@ -123,10 +123,7 @@ export class ShopPage {
 				process.env.BASE_URL === 'https://thelist.theflowery.co/' ||
 				process.env.BASE_URL === 'https://thelist-mi.710labs.com/'
 			) {
-				await this.page
-					.locator(`[href="${process.env.BASE_URL}reservations/"]`)
-					.first()
-					.click({ force: true })
+				await this.page.locator(`page.getByTestId('footer-cart');`).first().click({ force: true })
 			} else {
 				await this.page
 					.locator(`[href="${process.env.BASE_URL}cart/"]`)
