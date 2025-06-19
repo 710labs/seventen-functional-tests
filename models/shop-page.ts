@@ -119,11 +119,16 @@ export class ShopPage {
 		if (this.workerInfo.project.name === 'Mobile Chrome') {
 			await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
 		} else {
-			if (
-				process.env.BASE_URL === 'https://thelist.theflowery.co/' ||
-				process.env.BASE_URL === 'https://thelist-mi.710labs.com/'
-			) {
-				await this.page.locator(`page.getByTestId('footer-cart');`).first().click({ force: true })
+			if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+				await this.page
+					.locator(`[href="${process.env.BASE_URL}reservations/"]`)
+					.first()
+					.click({ force: true })
+			} else if (process.env.BASE_URL === 'https://thelist-mi.710labs.com/') {
+				await this.page
+					.locator(`a.cart-contents[title="View your shopping cart"]`)
+					.first()
+					.click({ force: true })
 			} else {
 				await this.page
 					.locator(`[href="${process.env.BASE_URL}cart/"]`)
