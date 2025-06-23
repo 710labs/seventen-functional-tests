@@ -12,11 +12,13 @@ export class ShopPage {
 	readonly rememberMeCheckBox: Locator
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
+	readonly cartTitle: Locator
 	constructor(page: Page, browserName: any, workerInfo: TestInfo) {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
 		this.baseUrl = process.env.BASE_URL
+		this.cartTitle = this.page.locator('h1.injected-title:has-text("Cart")')
 	}
 
 	async randomizeCartItems() {
@@ -125,10 +127,31 @@ export class ShopPage {
 					.first()
 					.click({ force: true })
 			} else if (process.env.BASE_URL === 'https://thelist-mi.710labs.com/') {
-				await this.page
-					.locator(`a.cart-contents[title="View your shopping cart"]`)
-					.first()
-					.click({ force: true })
+				// Retry loop to ensure cart page loads
+				let retryCount = 0
+				const maxRetries = 5
+				while (retryCount < maxRetries) {
+					console.log(`Attempting to navigate to cart, attempt ${retryCount + 1}/${maxRetries}`)
+					await this.page
+						.locator(`a.cart-contents[title="View your shopping cart"]`)
+						.first()
+						.click({ force: true })
+					// Wait a moment for the page to respond
+					await this.page.waitForTimeout(3000)
+					// Check if cart title is visible
+					const isCartTitleVisible = await this.cartTitle.isVisible()
+					if (isCartTitleVisible) {
+						console.log(`Cart page loaded successfully after ${retryCount + 1} attempt(s)`)
+						break
+					}
+					retryCount++
+					console.log(`Cart title not visible, retry ${retryCount}/${maxRetries}`)
+					if (retryCount === maxRetries) {
+						throw new Error(`Cart page did not load after ${maxRetries} attempts`)
+					}
+				}
+				// Final confirmation that cart title is present
+				await this.cartTitle.waitFor({ timeout: 30000 })
 			} else {
 				await this.page
 					.locator(`[href="${process.env.BASE_URL}cart/"]`)
