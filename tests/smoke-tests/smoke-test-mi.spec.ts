@@ -42,7 +42,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 		var fakeLastName = faker.name.lastName()
 		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
 
-
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -99,27 +98,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 
 		await test.step(`Complete Order`, async () => {
 			await checkOutPage.placeOrderButton.click()
-		})
-
-		await test.step('Pass Age Gate', async () => {
-			await ageGatePage.passAgeGate()
-		})
-
-		await test.step('Enter List Password', async () => {
-			await listPassword.submitPassword('qatester')
-		})
-
-		await test.step('Create Account', async () => {
-			await createAccountPage.create(fakeEmail, 'test1234', zipCode, 1, false, address, 'CA')
-		})
-
-		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, "Pickup")
-			cartTotals = await cartPage.verifyCart(zipCode)
-		})
-
-		await test.step('Choose Fulfillment Slot + Verify Checkout', async () => {
-			await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
 		})
 
 		await test.step('Comfirm Order Details on /order-received', async () => {
