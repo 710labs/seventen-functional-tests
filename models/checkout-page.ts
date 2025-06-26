@@ -212,6 +212,34 @@ export class CheckoutPage {
 
 		return cartTotals
 	}
+	async posCheckout() {
+		await test.step(`Select Acuity Slot `, async () => {
+			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+			await expect(
+				daySlot,
+				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await daySlot.click()
+
+			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+			await expect(
+				timeSlot,
+				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await timeSlot.click()
+		})
+
+		await test.step('Submit New Customer Order', async () => {
+			await this.placeOrderButton.click()
+		})
+		await test.step('Verify Order Submitted', async () => {
+			const successMsg = this.page.locator('p.woocommerce-thankyou-order-received')
+			// this will retry until the element is visible (default timeout 30s)
+			await expect(successMsg).toBeVisible()
+			// (optionally) assert on its text once it’s visible
+			await expect(successMsg).toHaveText('Thank you. Your order has been received.')
+		})
+	}
 
 	async selectSlot() {
 		await test.step(`Select Acuity Slot`, async () => {

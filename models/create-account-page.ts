@@ -640,9 +640,7 @@ export class CreateAccountPage {
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
-			await this.phoneNumber.fill(
-				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
-			)
+			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
 		await test.step('Submit New Customer Form', async () => {
@@ -693,6 +691,206 @@ export class CreateAccountPage {
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
+			await test.step('Complete Usage Type Form', async () => {
+				await (await this.page.$('text=Register')).click()
+				await this.page.waitForTimeout(5000)
+				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
+			})
+		}
+
+		if (logout) {
+			await this.page.goto('/my-account')
+			await this.page.locator('text=Logout').click()
+		}
+	}
+	async createPOS(
+		name: string,
+		// existing:
+		password: string,
+		zipcode: string,
+		type: number,
+		// leave logout last so it can still default
+		logout: boolean = false,
+		// address stays
+		address: string,
+		state: string,
+		// new DL expiration pieces
+		expMonth: string,
+		expDay: string,
+		expYear: string,
+	) {
+		await test.step('Create username', async () => {})
+
+		await test.step('Click Register Link', async () => {
+			await this.page.click('text=create an account')
+			await expect(this.page).toHaveURL('/register/')
+		})
+
+		await test.step('Enter Username', async () => {
+			await this.userNameField.click()
+			await this.userNameField.fill(`${name}@test.com`)
+		})
+
+		await test.step('Enter Password', async () => {
+			await this.passwordField.click()
+			await this.passwordField.fill(password)
+		})
+
+		await test.step('Enter First Name', async () => {
+			await this.firstName.click()
+			await this.firstName.fill(name)
+		})
+
+		await test.step('Enter Last Name', async () => {
+			await this.lastName.click()
+			await this.lastName.fill(name)
+		})
+
+		await test.step('Enter Birthdate', async () => {
+			await this.birthMonth.selectOption('12')
+			await this.birthDay.selectOption('16')
+			await this.birthYear.selectOption('1988')
+		})
+
+		if (process.env.NEXT_VERSION === 'false') {
+			await test.step('Enter Zip Code', async () => {
+				await this.zipCode.click()
+				await this.zipCode.fill(zipcode)
+			})
+		} else {
+			await test.step('Enter Billing Address', async () => {
+				await this.address.click()
+				await this.address.fill(address)
+				await this.page.waitForTimeout(1000)
+				await this.page.keyboard.press('ArrowDown')
+				await this.page.keyboard.press('Enter')
+			})
+		}
+
+		if (process.env.NEXT_VERSION === 'true' && state === 'FL') {
+			await test.step('Enter PatientId', async () => {
+				await this.patientId.click()
+				await this.patientId.fill('1234abcd')
+			})
+		}
+
+		await test.step('Enter Phone Number', async () => {
+			await this.phoneNumber.click()
+			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
+		})
+
+		await test.step('Submit New Customer Form', async () => {
+			await this.page.waitForTimeout(2000)
+			await this.page.click('button:has-text("Next")')
+			await this.page.waitForTimeout(1000)
+		})
+
+		// --- Drivers License upload & exp using parameters ---
+		await test.step('Upload Drivers License', async () => {
+			const dlUploadButton = await this.page.waitForSelector(
+				'input[name="svntn_core_personal_doc"]',
+			)
+			const [driversLicenseChooser] = await Promise.all([
+				this.page.waitForEvent('filechooser'),
+				dlUploadButton.click(),
+			])
+			await this.page.waitForTimeout(5000)
+			await driversLicenseChooser.setFiles('CA-DL.jpg')
+			await this.page.waitForTimeout(5000)
+			await driversLicenseChooser.page()
+
+			await test.step('Enter Drivers License Exp', async () => {
+				await expect(this.driversLicenseExpMonth).toBeVisible()
+
+				await this.driversLicenseExpMonth.selectOption(expMonth)
+				await this.driversLicenseExpDay.selectOption(expDay)
+				await this.driversLicenseExpYear.selectOption(expYear)
+			})
+		})
+
+		// --- Medical usage branches stay the same but use medExp params ---
+		await test.step('Select Medical Usage Type', async () => {
+			await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
+		})
+		await test.step('Upload Medical Card', async () => {
+			const medicalCardButton = await this.page.waitForSelector(
+				'input[name="svntn_core_medical_doc"]',
+			)
+			const [medicalCardChooser] = await Promise.all([
+				this.page.waitForEvent('filechooser'),
+				medicalCardButton.click(),
+			])
+			await medicalCardChooser.setFiles('Medical-Card.png')
+			await medicalCardChooser.page()
+			await this.page.waitForTimeout(5000)
+		})
+
+		await test.step('Enter Med Card Exp', async () => {
+			await this.medCardExpMonth.selectOption(expMonth)
+			await this.medCardExpDay.selectOption(expDay)
+			await this.medCardExpYear.selectOption(expYear)
+		})
+
+		if (type == 1 && state === 'NJ') {
+			await test.step('Select Medical Usage Type', async () => {
+				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
+			})
+			await test.step('Upload Medical Card', async () => {
+				const medicalCardButton = await this.page.waitForSelector(
+					'input[name="svntn_core_medical_doc"]',
+				)
+				const [medicalCardChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medicalCardButton.click(),
+				])
+				await medicalCardChooser.setFiles('CA-DL.jpg')
+				await medicalCardChooser.page()
+				await this.page.waitForTimeout(5000)
+			})
+
+			await test.step('Enter Med Card Exp', async () => {
+				await this.medCardExpMonth.selectOption(expMonth)
+				await this.medCardExpDay.selectOption(expDay)
+				await this.medCardExpYear.selectOption(expYear)
+			})
+
+			await test.step('Enter Med Card Number', async () => {
+				await this.medCardNumber.fill('1234567890')
+			})
+		}
+
+		if (state === 'FL') {
+			await test.step('Upload Medical Card', async () => {
+				const medicalCardButton = await this.page.waitForSelector(
+					'input[name="svntn_core_medical_doc"]',
+				)
+				const [medicalCardChooser] = await Promise.all([
+					this.page.waitForEvent('filechooser'),
+					medicalCardButton.click(),
+				])
+				await medicalCardChooser.setFiles('Medical-Card.png')
+				await medicalCardChooser.page()
+			})
+			await test.step('Enter Med Card Exp', async () => {
+				await expect(this.medCardExpMonth).toBeVisible()
+				await expect(this.medCardExpMonth).toBeEnabled()
+				await expect(this.medCardExpDay).toBeVisible()
+				await expect(this.medCardExpDay).toBeEnabled()
+				await expect(this.medCardExpYear).toBeVisible()
+				await expect(this.medCardExpYear).toBeEnabled()
+
+				await this.page.waitForTimeout(5000)
+				await this.medCardExpMonth.selectOption(expMonth)
+				await this.medCardExpDay.selectOption(expMonth)
+				await this.medCardExpYear.selectOption(expMonth)
+			})
+
+			await test.step('Complete Usage Type Form', async () => {
+				await (await this.page.$('text=Register')).click()
+				await this.page.waitForTimeout(5000)
+				await expect(this.page).toHaveURL('/#deliver')
+			})
+		} else {
 			await test.step('Complete Usage Type Form', async () => {
 				await (await this.page.$('text=Register')).click()
 				await this.page.waitForTimeout(5000)

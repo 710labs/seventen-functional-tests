@@ -1,0 +1,37 @@
+POS,Test ID,Round,Customer Name,Test Name,Zipcode,State,Address,Woo Expiry Date,Exp Month,Exp Day,Exp Year,POS has ID?,POS Expiry Date,POS / WOo Δ days,Woo Δ days,Expected Action
+Dutchie,TC01-D,4,Dutchie+TC01-D+4,Dutchie_01_Create_When_POS_None,48161,MI,"14750 Laplaisance Rd, Monroe, MI",2025-08-03,08,03,2025,No,N/A,N/A,45,Create POS record with Woo data
+Dutchie,TC02-D,4,Dutchie+TC02-D+4,Dutchie_02_No_Update_When_Woo_Expired_POS_None,48161,MI,"14751 Laplaisance Rd, Monroe, MI",2025-07-01,07,01,2025,No,N/A,N/A,–49,Do nothing (Woo expired)
+Dutchie,TC03-D,4,Dutchie+TC03-D+4,Dutchie_03_Update_When_POS_Expired,48161,MI,"14752 Laplaisance Rd, Monroe, MI",2025-10-15,10,15,2025,Yes,2025-05-15,-153,119,Update POS with Woo data
+Dutchie,TC04-D,4,Dutchie+TC04-D+4,Dutchie_04_Update_When_POS_<30d_Woo_≥30d,48161,MI,"14753 Laplaisance Rd, Monroe, MI",2025-08-30,08,30,2025,Yes,2025-07-09,-52,72,Update POS with Woo data
+Dutchie,TC05-D,4,Dutchie+TC05-D+4,Dutchie_05_No_Update_When_Both_<30d_POS_Trusted,48161,MI,"14754 Laplaisance Rd, Monroe, MI",2025-07-01,07,01,2025,Yes,2025-06-30,-1,12,Do not update
+Dutchie,TC06-D,4,Dutchie+TC06-D+4,Dutchie_06_No_Update_When_POS_≥30d,48161,MI,"14755 Laplaisance Rd, Monroe, MI",2025-07-10,07,10,2025,Yes,2025-08-20,41,21,Do not update
+Dutchie,TC07-D,4,Dutchie+TC07-D+4,Dutchie_07_Update_When_POS_NoExpiry_Woo_>14d,48161,MI,"14756 Laplaisance Rd, Monroe, MI",2025-07-05,07,5,2025,Yes,none,-,16,Update POS with Woo expiry
+Dutchie,TC08-D,4,Dutchie+TC08-D+4,Dutchie_08_No_Update_When_POS_NoExpiry_Woo_≤14d,48161,MI,"14757 Laplaisance Rd, Monroe, MI",2025-06-25,06,25,2025,Yes,none,-,6,Do not update (if you enforce >14d)
+Dutchie,TC09-D,4,Dutchie+TC09-D+4,Dutchie_09_No_Update_When_POS_NoExpiry_Woo_Expired,48161,MI,"14758 Laplaisance Rd, Monroe, MI",2025-07-01,07,01,2025,Yes,none,-,–18,Do nothing
+Dutchie,TC10-D,4,Dutchie+TC10-D+4,Dutchie_10_No_Update_When_POS_<30d_Woo_Expired,48161,MI,"14759 Laplaisance Rd, Monroe, MI",2025-07-01,07,01,2025,Yes,2025-07-01,0,–18,Do nothing
+Dutchie,TC11-D,4,Dutchie+TC11-D+4,Dutchie_11_No_Update_When_Both_Unexpired_POS_≥30d,48161,MI,"14760 Laplaisance Rd, Monroe, MI",2025-08-01,08,01,2025,Yes,2025-09-01,31,43,Do not update
+Dutchie,TC12-D,4,Dutchie+TC12-D+4,Dutchie_11_No_Update_When_Both_<30d_POS_Trusted2,48161,MI,"14761 Laplaisance Rd, Monroe, MI",2025-07-10,07,10,2025,Yes,2025-06-29,-11,21,Do not update
+Blaze,TC01-B,4,Blaze+TC01-B+4,Blaze_01_Create_When_POS_None,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-08-03,08,03,2025,No,N/A,N/A,45,Create POS record with Woo data
+Blaze,TC02-B,4,Blaze+TC02-B+4,Blaze_02_No_Update_When_Woo_Expired_POS_None,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-01,07,01,2025,No,N/A,N/A,–49,Do nothing (Woo expired)
+Blaze,TC03-B,4,Blaze+TC03-B+4,Blaze_03_Update_When_POS_Expired,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-10-15,10,15,2025,Yes,2025-05-15,-153,119,Update POS with Woo data
+Blaze,TC04-B,4,Blaze+TC04-B+4,Blaze_04_Update_When_POS_<30d_Woo_≥30d,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-08-30,08,30,2025,Yes,2025-07-09,-52,72,Update POS with Woo data
+Blaze,TC05-B,4,Blaze+TC05-B+4,Blaze_05_No_Update_When_Both_<30d_POS_Trusted,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-01,07,01,2025,Yes,2025-06-30,-1,12,Do not update
+Blaze,TC06-B,4,Blaze+TC06-B+4,Blaze_06_No_Update_When_POS_≥30d,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-10,07,10,2025,Yes,2025-08-20,41,21,Do not update
+Blaze,TC07-B,4,Blaze+TC07-B+4,Blaze_07_Update_When_POS_NoExpiry_Woo_>14d,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-05,07,5,2025,Yes,expired,-,16,Update POS with Woo expiry
+Blaze,TC08-B,4,Blaze+TC08-B+4,Blaze_08_No_Update_When_POS_NoExpiry_Woo_≤14d,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-25,07,25,2025,Yes,expired,-,6,Do not update (if you enforce >14d)
+Blaze,TC09-B,4,Blaze+TC09-B+4,Blaze_09_No_Update_When_POS_NoExpiry_Woo_Expired,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-01,07,01,2025,Yes,expired,-,–18,Do nothing
+Blaze,TC10-B,4,Blaze+TC10-B+4,Blaze_10_No_Update_When_POS_<30d_Woo_Expired,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-01,07,01,2025,Yes,2025-07-01,0,–18,Do nothing
+Blaze,TC11-B,4,Blaze+TC11-B+4,Blaze_11_No_Update_When_Both_Unexpired_POS_≥30d,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-08-01,07,01,2025,Yes,2025-09-01,31,43,Do not update
+Blaze,TC12-B,4,Blaze+TC12-B+4,Blaze_12_No_Update_When_Both_<30d_POS_Trusted2,90016,CA,"3324 S La Cienega Blvd, Los Angeles, CA",2025-07-10,07,10,2025,Yes,2025-06-29,10,21,Do not update
+Treez,TC01-Tr,4,Treez+TC01-Tr+4,Treez_01_Create_When_POS_None,90014,CA,"735 S Broadway, Los Angeles, CA",2025-08-03,08,03,2025,No,N/A,N/A,45,Create POS record with Woo data
+Treez,TC02-Tr,4,Treez+TC02-Tr+4,Treez_02_No_Update_When_Woo_Expired_POS_None,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-01,07,01,2025,No,N/A,N/A,–49,Do nothing (Woo expired)
+Treez,TC03-Tr,4,Treez+TC03-Tr+4,Treez_03_Update_When_POS_Expired,90014,CA,"735 S Broadway, Los Angeles, CA",2025-10-15,10,15,2025,Yes,2025-05-15,-153,119,Update POS with Woo data
+Treez,TC04-Tr,4,Treez+TC04-Tr+4,Treez_04_Update_When_POS_<30d_Woo_≥30d,90014,CA,"735 S Broadway, Los Angeles, CA",2025-08-30,08,30,2025,Yes,2025-07-09,-52,72,Update POS with Woo data
+Treez,TC05-Tr,4,Treez+TC05-Tr+4,Treez_05_No_Update_When_Both_<30d_POS_Trusted,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-01,07,01,2025,Yes,2025-06-30,-1,12,Do not update
+Treez,TC06-Tr,4,Treez+TC06-Tr+4,Treez_06_No_Update_When_POS_≥30d,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-10,07,10,2025,Yes,2025-08-20,41,21,Do not update
+Treez,TC07-Tr,4,Treez+TC07-Tr+4,Treez_07_Update_When_POS_NoExpiry_Woo_>14d,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-05,07,5,2025,Yes,none,-,16,Update POS with Woo expiry
+Treez,TC08-Tr,4,Treez+TC08-Tr+4,Treez_08_No_Update_When_POS_NoExpiry_Woo_≤14d,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-25,07,25,2025,Yes,none,-,6,Do not update (if you enforce >14d)
+Treez,TC09-Tr,4,Treez+TC09-Tr+4,Treez_09_No_Update_When_POS_NoExpiry_Woo_Expired,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-01,07,01,2025,Yes,none,-,–18,Do nothing
+Treez,TC10-Tr,4,Treez+TC10-Tr+4,Treez_10_No_Update_When_POS_<30d_Woo_Expired,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-01,07,01,2025,Yes,2025-07-01,0,–18,Do nothing
+Treez,TC11-Tr,4,Treez+TC11-Tr+4,Treez_11_No_Update_When_Both_Unexpired_POS_≥30d,90014,CA,"735 S Broadway, Los Angeles, CA",2025-08-01,08,01,2025,Yes,2025-09-01,31,43,Do not update
+Treez,TC12-Tr,4,Treez+TC12-Tr+4,Treez_12_No_Update_When_Both_<30d_POS_Trusted2,90014,CA,"735 S Broadway, Los Angeles, CA",2025-07-10,07,10,2025,Yes,2025-06-29,-11,21,Do not update
