@@ -10,7 +10,7 @@ export class CartPage {
 	cartTotal: any
 	usageType: any
 	apiContext: APIRequestContext
-	cartCounter:Locator
+	cartCounter: Locator
 
 	constructor(
 		page: Page,
