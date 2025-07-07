@@ -35,14 +35,14 @@ test.describe('PROD Live Tests', () => {
 				prodLivePassword,
 			)
 
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
 			await homePageActions.openAddressSection(page, 'live')
 			await homePageActions.selectAddressFromList(page, 'live', address)
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			//
 			// CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
