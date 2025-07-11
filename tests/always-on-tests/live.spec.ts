@@ -27,9 +27,12 @@ test.describe('Live Tests', () => {
 			const accountPage = new AccountPage(page)
 
 			// Verify that store homepage loads
-			await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
+			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			await homePageActions.addSingleProductToCart(page)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'rec')
+			// go to main store page
+			await homePageActions.goToMainStorePage(page)
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add adress for new user account
 			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
@@ -60,6 +63,9 @@ test.describe('Live Tests', () => {
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
+			// Re-prompt the sign in modal by adding a product to cart
+			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			await homePageActions.addSingleProductToCart(page)
 			await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
 		},
 	)
@@ -74,9 +80,12 @@ test.describe('Live Tests', () => {
 			const accountPage = new AccountPage(page)
 
 			// Verify that store homepage loads
-			await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
+			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			await homePageActions.addSingleProductToCart(page)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
+			// go to main store page
+			await homePageActions.goToMainStorePage(page)
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			const address = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			const newAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
@@ -108,14 +117,22 @@ test.describe('Live Tests', () => {
 			//log out
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
+			// Re-prompt the sign in modal by adding a product to cart
+			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			await homePageActions.addSingleProductToCart(page)
 			await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
 		},
 	)
 	test('Existing user -- Sign In & Sign Out', { tag: ['@recreational'] }, async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
 		const accountPage = new AccountPage(page)
+		const homePageActions = new HomePageActions(page)
 
-		await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
+		// Verify that store homepage loads
+		await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+		await homePageActions.addSingleProductToCart(page)
+		//
+		//await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 		// Verify that store homepage loads
 		// log in existing user
 		await homePageLogin.loginExistingUser(page, 'wrongpassword', alwaysOnUsername, alwaysOnPassword)

@@ -831,9 +831,19 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.nth(0).click({ force: true })
-				await page.waitForTimeout(5000)
+				// Wait for and click 'Add to Cart' on the product page
+				// await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
+				// await this.productPageAddToCartButton.nth(0).hover()
+				// await page.waitForTimeout(200)
+				// await this.productPageAddToCartButton.nth(0).click()
+				const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
+				await addToCart.waitFor({ state: 'visible' })
+				// wait for it to appear...
+				await expect(addToCart).toBeVisible()
+				// …and click it
+				await addToCart.click()
+				await page.waitForTimeout(8000)
+				await page.waitForLoadState('networkidle')
 
 				// Wait for the cart drawer to become visible
 				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
@@ -935,7 +945,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 0
+		let i = 3
 		let medicalProductExists = false
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
@@ -972,10 +982,16 @@ export class HomePageActions {
 				await productClickInto.click()
 
 				// Wait for and click 'Add to Cart' on the product page
-				await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
-				await this.productPageAddToCartButton.nth(0).hover()
-				await page.waitForTimeout(200)
-				await this.productPageAddToCartButton.nth(0).click()
+				// await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
+				// await this.productPageAddToCartButton.nth(0).hover()
+				// await page.waitForTimeout(200)
+				// await this.productPageAddToCartButton.nth(0).click()
+				const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
+				await addToCart.waitFor({ state: 'visible' })
+				// wait for it to appear...
+				await expect(addToCart).toBeVisible()
+				// …and click it
+				await addToCart.click()
 				await page.waitForTimeout(8000)
 				await page.waitForLoadState('networkidle') // Wait for all network requests to finish
 
@@ -1350,6 +1366,12 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 		await this.continueToCheckoutButton.click()
 	}
+	async goToMainStorePage(page) {
+		// Typically, you click something like "Add more items to continue"
+		await this.homePageButton710.waitFor({ state: 'visible' })
+		await this.homePageButton710.click()
+		await page.waitForTimeout(2000)
+	}
 
 	// 8) Continue Shopping in Live mode
 	async continueShopping(page) {
@@ -1374,6 +1396,62 @@ export class HomePageActions {
 			startIndex: 4,
 			isMultiStore: true,
 		})
+	}
+
+	async addSingleProductToCart(page) {
+		// Get all the products on the page
+		const products = await page.locator(
+			'li.product.type-product.product-type-simple.status-publish',
+		)
+
+		let i = 0 // Start from index 3 like the original function
+
+		while (true) {
+			// Check if there are enough products to add
+			if (i >= (await products.count())) {
+				throw new Error(
+					`Only ${await products.count()} products available on the page. Could not find a suitable product to add.`,
+				)
+			}
+
+			// Get the current product
+			const product = products.nth(i)
+
+			// Check if the product has the "Medical Only" badge
+			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+			if (hasMedicalOnlyTag) {
+				const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+				console.log(`Skipping product "${productName}" due to "Medical Only" tag.`)
+				i++
+				continue // Skip this product and move to the next one
+			}
+
+			// Found a suitable product, proceed to add it
+			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+			const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
+
+			console.log(`Adding product "${productName}" to cart`)
+			console.log('locator for productClickInto: ' + productClickInto)
+
+			await expect(productClickInto).toBeVisible()
+			await productClickInto.click()
+
+			// Wait for and click 'Add to Cart' on the product page
+			// await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
+			// await this.productPageAddToCartButton.nth(0).click({ force: true })
+			// await page.waitForTimeout(5000)
+
+			// grabs the first visible button whose name is “Add to cart”
+			const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
+			// wait for it to appear...
+			await expect(addToCart).toBeVisible()
+			// …and click it
+			await addToCart.click()
+
+			console.log(`Product "${productName}" add to cart button clicked. Function complete.`)
+			break // Exit the function after adding one product
+		}
 	}
 }
 module.exports = { HomePageActions }
