@@ -66,7 +66,6 @@ export class HomePageLogin {
 		await test.step('Verify the Homepage loads correctly', async () => {
 			//go to page
 			await page.goto(URLparam)
-
 			// verify that email login/signup popup appears and that correct text displays
 			await this.userPopUpContainer.waitFor({ state: 'visible' })
 			await expect(this.userPopUpContainer).toBeVisible()
@@ -76,6 +75,40 @@ export class HomePageLogin {
 			//verify that email field appears
 			await expect(this.emailFieldPopUp).toBeVisible()
 			await expect(this.continueButtonPopUp).toBeVisible()
+		})
+	}
+	// new test for user not need to sign in
+	async newTestverifyUserSignInModalAppears(page, URLparam) {
+		await test.step('Verify the Homepage loads correctly', async () => {
+			//go to page
+			await page.goto(URLparam)
+			//verif that main store page loads
+			// // verify page title, logo, account and cart button are visible
+			await this.pageTitleSelector.waitFor({ state: 'visible' })
+			await expect(this.pageTitleSelector).toBeVisible()
+			await expect(this.accountButtonNav).toBeVisible()
+			await expect(this.cartButtonNav).toBeVisible()
+			// Verify that Shop by Store displays
+			await expect(this.shopByStoreTitle).toBeVisible()
+			await expect(this.firstStoreCard).toBeVisible()
+			await expect(this.shopByCategoryTitle).toBeVisible()
+			await expect(this.concentratesCard).toBeVisible()
+			await expect(this.flowerCard).toBeVisible()
+			// click on Product and then add to cart to prompt sign in modal
+			// const products = await page.locator(
+			// 	'li.product.type-product.product-type-simple.status-publish',
+			// )
+			// await products.first().click()
+
+			// // verify that email login/signup popup appears and that correct text displays
+			// await this.userPopUpContainer.waitFor({ state: 'visible' })
+			// await expect(this.userPopUpContainer).toBeVisible()
+			// await expect(this.userPopUpContainerText).toBeVisible()
+			// const popUpText = await this.userPopUpContainerText.textContent()
+			// expect(popUpText).toBe('Shop 710 Labs from dispensaries near you.')
+			// //verify that email field appears
+			// await expect(this.emailFieldPopUp).toBeVisible()
+			// await expect(this.continueButtonPopUp).toBeVisible()
 		})
 	}
 	async loginExistingUser(page, falsePassword, userName, password) {
