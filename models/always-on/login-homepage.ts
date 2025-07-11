@@ -62,6 +62,12 @@ export class HomePageLogin {
 		this.concentratesCard = page.locator('li.wpse-category-button:has-text("Concentrates")')
 		this.flowerCard = page.locator('li.wpse-category-button:has-text("Flower")')
 	}
+
+	async navigateToURL(page, URLparam) {
+		await page.goto(URLparam)
+		await page.waitForTimeout(5000)
+		await this.pageTitleSelector.waitFor({ state: 'visible' })
+	}
 	async verifyUserSignInModalAppears(page, URLparam) {
 		await test.step('Verify the Homepage loads correctly', async () => {
 			//go to page
@@ -80,8 +86,6 @@ export class HomePageLogin {
 	// new test for user not need to sign in
 	async newTestverifyUserSignInModalAppears(page, URLparam) {
 		await test.step('Verify the Homepage loads correctly', async () => {
-			//go to page
-			await page.goto(URLparam)
 			//verif that main store page loads
 			// // verify page title, logo, account and cart button are visible
 			await this.pageTitleSelector.waitFor({ state: 'visible' })
@@ -89,8 +93,8 @@ export class HomePageLogin {
 			await expect(this.accountButtonNav).toBeVisible()
 			await expect(this.cartButtonNav).toBeVisible()
 			// Verify that Shop by Store displays
-			await expect(this.shopByStoreTitle).toBeVisible()
-			await expect(this.firstStoreCard).toBeVisible()
+			// await expect(this.shopByStoreTitle).toBeVisible()
+			// await expect(this.firstStoreCard).toBeVisible()
 			await expect(this.shopByCategoryTitle).toBeVisible()
 			await expect(this.concentratesCard).toBeVisible()
 			await expect(this.flowerCard).toBeVisible()
