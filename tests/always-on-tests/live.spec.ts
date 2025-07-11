@@ -25,6 +25,9 @@ test.describe('Live Tests', () => {
 			const checkoutPage = new CheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
 			const accountPage = new AccountPage(page)
+			// add adress for new user account
+			await homePageLogin.navigateToURL(page, liveURL)
+			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
@@ -33,8 +36,7 @@ test.describe('Live Tests', () => {
 			await homePageLogin.registerNewUser(page, 'rec')
 			// go to main store page
 			await homePageActions.goToMainStorePage(page)
-			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
-			// add adress for new user account
+			// // add adress for new user account
 			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
@@ -78,14 +80,18 @@ test.describe('Live Tests', () => {
 			const checkoutPage = new CheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
 			const accountPage = new AccountPage(page)
+			// add adress for new user account
+			await homePageLogin.navigateToURL(page, liveURL)
+			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 			await homePageActions.addSingleProductToCart(page)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
+			await page.reload()
 			// go to main store page
-			await homePageActions.goToMainStorePage(page)
+			await homePageActions.goToAccountPage(page)
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			const address = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			const newAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
@@ -127,12 +133,13 @@ test.describe('Live Tests', () => {
 		const homePageLogin = new HomePageLogin(page)
 		const accountPage = new AccountPage(page)
 		const homePageActions = new HomePageActions(page)
-
+		// add adress for new user account
+		await homePageLogin.navigateToURL(page, liveURL)
 		// Verify that store homepage loads
 		await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 		await homePageActions.addSingleProductToCart(page)
 		//
-		//await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
+		await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 		// Verify that store homepage loads
 		// log in existing user
 		await homePageLogin.loginExistingUser(page, 'wrongpassword', alwaysOnUsername, alwaysOnPassword)
