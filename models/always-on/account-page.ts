@@ -265,7 +265,10 @@ export class AccountPage {
 		await expect(this.editPersonalInfoLink).toBeVisible()
 		// click "Edit Personal Info" and navigate back
 		await this.personalInfoHeader.scrollIntoViewIfNeeded()
-		await this.editPersonalInfoLink.click()
+		await this.page.waitForTimeout(1000)
+		await this.editPersonalInfoLink.click({ force: true })
+		await this.editPersonalInfoLink.click({ force: true })
+		await this.page.waitForTimeout(1000)
 		//expect Header to be visible in drawer
 		await this.personalInfoDrawerHeader.waitFor({ state: 'visible' })
 		await expect(this.personalInfoDrawerHeader).toBeVisible()
@@ -290,6 +293,7 @@ export class AccountPage {
 		const newEmail = `edited_user_${userType}_${timestamp}@test.com`
 		console.log(`\n New user email ---> ${newEmail} \n`)
 		await this.emailInput.click({ force: true })
+		await this.page.waitForTimeout(1000)
 		await this.emailInput.fill(newEmail)
 		//edit phone number
 		const generatePhoneNumber = () => {
@@ -432,6 +436,7 @@ export class AccountPage {
 		await this.page.waitForTimeout(1500)
 		//click change password button
 		await expect(this.changePasswordButton).toBeVisible()
+		await this.changePasswordButton.click({ force: true })
 		await this.changePasswordButton.click({ force: true })
 		await this.page.waitForTimeout(1000)
 	}
