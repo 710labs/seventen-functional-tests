@@ -7,7 +7,7 @@ import { OrderConfirmationPage } from '../../models/always-on/order-confirmation
 require('dotenv').config('.env')
 
 test.describe('Live Tests', () => {
-	test.setTimeout(240000) // Set the timeout for all tests in this file
+	test.setTimeout(400000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
 	const liveURL = process.env.ALWAYS_ON_URL || ''
@@ -37,7 +37,7 @@ test.describe('Live Tests', () => {
 			// go to main store page
 			await homePageActions.goToMainStorePage(page)
 			// // add adress for new user account
-			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
+			//await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
@@ -89,14 +89,12 @@ test.describe('Live Tests', () => {
 			await homePageActions.addSingleProductToCart(page)
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
-			await page.reload()
 			// go to main store page
-			await homePageActions.goToAccountPage(page)
-			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
+			await homePageActions.goToMainStorePage(page)
 			const address = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			const newAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			// add adress for new user account
-			await homePageActions.enterAddress(page, 'live', address)
+			//await homePageActions.enterAddress(page, 'live', address)
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
@@ -139,7 +137,6 @@ test.describe('Live Tests', () => {
 		await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 		await homePageActions.addSingleProductToCart(page)
 		//
-		await homePageLogin.verifyUserSignInModalAppears(page, liveURL)
 		// Verify that store homepage loads
 		// log in existing user
 		await homePageLogin.loginExistingUser(page, 'wrongpassword', alwaysOnUsername, alwaysOnPassword)

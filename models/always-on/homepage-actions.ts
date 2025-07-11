@@ -1373,6 +1373,7 @@ export class HomePageActions {
 	}
 	async goToMainStorePage(page) {
 		// Typically, you click something like "Add more items to continue"
+		await page.waitForTimeout(2000)
 		await this.homePageButton710.waitFor({ state: 'visible' })
 		await this.homePageButton710.click({ force: true })
 		await this.homePageButton710.click({ force: true })

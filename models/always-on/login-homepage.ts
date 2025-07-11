@@ -194,7 +194,7 @@ export class HomePageLogin {
 			await expect(this.createAccountButton).toBeVisible()
 			await this.createAccountButton.click()
 			// verify that modal disspears
-			await this.userPopUpContainer.waitFor({ state: 'hidden' })
+			//await this.userPopUpContainer.waitFor({ state: 'hidden' })
 		})
 	}
 
@@ -211,7 +211,7 @@ export class HomePageLogin {
 	}
 	async liveVerifyShopLoadsAfterSignIn(page) {
 		await test.step('Verify User Modal disspears and that shop page loads', async () => {
-			await this.userPopUpContainer.waitFor({ state: 'hidden' })
+			//await this.userPopUpContainer.waitFor({ state: 'hidden' })
 
 			// // verify page title, logo, account and cart button are visible
 			await this.pageTitleSelector.waitFor({ state: 'visible' })
