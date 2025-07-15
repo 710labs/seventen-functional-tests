@@ -530,8 +530,11 @@ export class HomePageActions {
 
 					const rnd = Math.floor(Math.random() * 1e6)
 					await page.locator('input#medcard_no').fill(`${rnd}`)
+					const firstDate = '01/01/1990'
+					const medBirthday = page.locator('#fasd_dob')
+					await medBirthday.click()
+					await medBirthday.type(firstDate)
 					await page.locator('.fasd-form-submit:has-text("Save & Continue")').click()
-
 					// wait for cart drawer to reappear
 					await page.waitForTimeout(3000)
 					await this.cartButtonNav.waitFor({ state: 'visible' })
