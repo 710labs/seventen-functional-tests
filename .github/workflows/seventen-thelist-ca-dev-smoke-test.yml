@@ -31,20 +31,24 @@ jobs:
         run: npx playwright install --with-deps
       #
       # Run your smoke tests and capture the Order ID from the log
-      - name: Run Playwright tests & capture Order ID
+      - name: Run Playwright smoke tests & capture OrderID
         id: smoke
         run: |
           echo "🔍 Running smoke tests…"
-          # Run the tests and tee so we still see the output in the logs
-          TEST_OUTPUT=$(npm run smoke:test:dev:ca | tee /dev/tty)
-          # Extract the numeric ID after "OrderID="
-          ORDER_ID=$(echo "$TEST_OUTPUT" | grep -oE 'OrderID=[0-9]+' | cut -d'=' -f2)
-          if [ -z "$ORDER_ID" ]; then
-            echo "⚠️  No OrderID found in test output. Skipping cancel step."
-          else
-            echo "✅  Found OrderID=$ORDER_ID"
-            # Set it as a step output
+          # Run tests, save all output (stdout+stderr) to a file, but don't fail the step yet
+          npm run smoke:test:dev:ca > smoke_output.log 2>&1 || true
+          # Echo the log so you can see it in Actions UI
+          cat smoke_output.log
+
+          # Look for the first occurrence of "OrderID=12345"
+          ORDER_ID=$(grep -oE 'OrderID=[0-9]+' smoke_output.log | head -1 | cut -d'=' -f2)
+
+          if [ -n "$ORDER_ID" ]; then
+            echo "✅ Found OrderID=$ORDER_ID"
+            # Expose it as this step's output
             echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  No OrderID found in smoke_output.log."
           fi
       - uses: actions/upload-artifact@v4
         if: failure()
