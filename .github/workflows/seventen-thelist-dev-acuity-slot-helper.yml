@@ -1,7 +1,7 @@
-name: thelist-acuity-slot-helper-dev
+name: Old - Acuity Slot Helper
 on:
   #schedule:
-    #- cron: "0 6 * * 1,3,5"
+  #- cron: "0 6 * * 1,3,5"
   workflow_dispatch:
 jobs:
   acuity-slot-helper:
@@ -40,5 +40,5 @@ jobs:
           SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
           SLACK_MESSAGE: Executed Acuity Slot Helper in Dev. Status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Task Run Status thelist-ca-acuity-slot-helper
-          SLACK_USERNAME: "710 Functional Tests"
+          SLACK_USERNAME: '710 Functional Tests'
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

@@ -1,4 +1,4 @@
-name: thelist-tests-pr-validation
+name: Old - List PR Validation
 on:
   workflow_dispatch:
   pull_request:
@@ -147,7 +147,7 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_DEV }}
-      RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
