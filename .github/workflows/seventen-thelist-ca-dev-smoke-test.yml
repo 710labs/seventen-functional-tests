@@ -29,10 +29,38 @@ jobs:
         run: npm ci
       - name: Install Playwright
         run: npx playwright install --with-deps
-      - name: Run Playwright tests
-        run: npm run smoke:test:prod:ca
+      #
+      # Run your smoke tests and capture the Order ID from the log
+      - name: Run Playwright tests & capture Order ID
+        id: smoke
+        run: |
+          echo "🔍 Running smoke tests…"
+          # Run the tests and tee so we still see the output in the logs
+          TEST_OUTPUT=$(npm run smoke:test:dev:ca | tee /dev/tty)
+          # Extract the numeric ID after "OrderID="
+          ORDER_ID=$(echo "$TEST_OUTPUT" | grep -oE 'OrderID=[0-9]+' | cut -d'=' -f2)
+          if [ -z "$ORDER_ID" ]; then
+            echo "⚠️  No OrderID found in test output. Skipping cancel step."
+          else
+            echo "✅  Found OrderID=$ORDER_ID"
+            # Set it as a step output
+            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
+          fi
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
           path: playwright-report/
+      #
+      # Finally, cancel that order via WooCommerce REST API
+      - name: Cancel test order via WooCommerce API
+        if: ${{ always() && steps.smoke.outputs.orderID != '' }}
+        env:
+          WC_CONSUMER_KEY: ${{ secrets.WOO_DEV_KEY }}
+          WC_CONSUMER_SECRET: ${{ secrets.WOO_DEV_SECRET }}
+        run: |
+          echo "🛠  Cancelling order ${{ steps.smoke.outputs.orderID }}…"
+          curl -X PUT "${{ env.BASE_URL }}/wp-json/wc/v3/orders/${{ steps.smoke.outputs.orderID }}" \
+            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"cancelled"}'
