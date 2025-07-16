@@ -31,24 +31,22 @@ jobs:
         run: npx playwright install --with-deps
       #
       # Run your smoke tests and capture the Order ID from the log
-      - name: Run Playwright smoke tests & capture OrderID
-        id: smoke
+      - name: Run Playwright smoke tests
         run: |
-          echo "🔍 Running smoke tests…"
-          # Run tests, save all output (stdout+stderr) to a file, but don't fail the step yet
-          npm run smoke:test:dev:ca > smoke_output.log 2>&1 || true
-          # Echo the log so you can see it in Actions UI
-          cat smoke_output.log
-
-          # Look for the first occurrence of "OrderID=12345"
-          ORDER_ID=$(grep -oE 'OrderID=[0-9]+' smoke_output.log | head -1 | cut -d'=' -f2)
-
-          if [ -n "$ORDER_ID" ]; then
-            echo "✅ Found OrderID=$ORDER_ID"
-            # Expose it as this step's output
+          npm run smoke:test:dev:ca
+        # even if this fails, we still want the next steps to try to run:
+        continue-on-error: true
+      # ─────────────────────────────────────────────────────
+      # Extract the order ID from the file
+      - name: Read order_id.txt
+        id: extract
+        run: |
+          if [ -f order_id.txt ]; then
+            ORDER_ID=$(cat order_id.txt | tr -d '\r\n')
+            echo "✅ Found Order ID: $ORDER_ID"
             echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
           else
-            echo "⚠️  No OrderID found in smoke_output.log."
+            echo "⚠️  order_id.txt not found, skipping cancellation."
           fi
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -57,14 +55,15 @@ jobs:
           path: playwright-report/
       #
       # Finally, cancel that order via WooCommerce REST API
+      # Finally: cancel via WooCommerce API
       - name: Cancel test order via WooCommerce API
-        if: ${{ always() && steps.smoke.outputs.orderID != '' }}
+        if: ${{ steps.extract.outputs.orderID != '' }}
         env:
           WC_CONSUMER_KEY: ${{ secrets.WOO_DEV_KEY }}
           WC_CONSUMER_SECRET: ${{ secrets.WOO_DEV_SECRET }}
         run: |
-          echo "🛠  Cancelling order ${{ steps.smoke.outputs.orderID }}…"
-          curl -X PUT "${{ env.BASE_URL }}/wp-json/wc/v3/orders/${{ steps.smoke.outputs.orderID }}" \
+          echo "🛠 Cancelling order ${{ steps.extract.outputs.orderID }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ steps.extract.outputs.orderID }}" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
