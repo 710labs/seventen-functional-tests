@@ -1,4 +1,4 @@
-name: Dev - Concierge
+name: Concierge - Dev
 on:
   schedule:
     - cron: '0 11 * * *'

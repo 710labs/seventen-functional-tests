@@ -1,4 +1,4 @@
-name: Dev - Live
+name: Live - Dev
 on:
   schedule:
     - cron: '0 11 * * *'

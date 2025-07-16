@@ -1,4 +1,4 @@
-name: Stage - Live
+name: Live - Stage
 on:
   #schedule:
   #- cron: '0 11 * * *'
