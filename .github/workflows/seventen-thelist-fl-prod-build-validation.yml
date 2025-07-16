@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: prod-fl thelist.theflowery.co
-      EXECUTION_TYPE: Build Validation
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       ENV_ID: prod-fl
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}

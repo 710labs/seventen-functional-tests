@@ -7,7 +7,7 @@ jobs:
     env:
       ENV: dev-ca thelist-dev.710labs.com
       ENV_ID: dev-ca
-      EXECUTION_TYPE: Build Validation
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
