@@ -106,22 +106,22 @@ export class CreateAccountPage {
 
 		await test.step('Enter Username', async () => {
 			await this.userNameField.click()
-			await this.userNameField.fill(firstName)
+			await this.userNameField.fill(username)
 		})
 
 		await test.step('Enter Passowrd', async () => {
 			await this.passwordField.click()
-			await this.passwordField.fill(lastName)
+			await this.passwordField.fill(password)
 		})
 
 		await test.step('Enter First Name', async () => {
 			await this.firstName.click()
-			await this.firstName.fill(username)
+			await this.firstName.fill(firstName)
 		})
 
 		await test.step('Enter Last Name', async () => {
 			await this.lastName.click()
-			await this.lastName.fill(username)
+			await this.lastName.fill(lastName)
 		})
 
 		await test.step('Enter Birthdate', async () => {

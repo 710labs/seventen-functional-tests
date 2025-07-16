@@ -10,6 +10,8 @@ import { AdminLogin } from '../../models/admin/admin-login-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
+import { faker } from '@faker-js/faker'
+import { fictionalAreacodes } from '../../utils/data-generator'
 
 test.describe('Basic Acceptance Tests NJ', () => {
 	const zipCode = '07901'
@@ -35,6 +37,10 @@ test.describe('Basic Acceptance Tests NJ', () => {
 			},
 		])
 		const address = '13 Huntley Rd, Summit City'
+		var fakeFirstName = faker.name.firstName() + '_Test'
+		var fakeLastName = faker.name.lastName() + '_Test'
+		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -57,7 +63,17 @@ test.describe('Basic Acceptance Tests NJ', () => {
 		})
 
 		await test.step('Create Account', async () => {
-			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'NJ')
+			await createAccountPage.create(
+				fakeFirstName,
+				fakeLastName,
+				fakeEmail,
+				'test1234',
+				zipCode,
+				1,
+				false,
+				address,
+				'NJ',
+			)
 		})
 
 		await test.step('Add Products to Cart', async () => {
