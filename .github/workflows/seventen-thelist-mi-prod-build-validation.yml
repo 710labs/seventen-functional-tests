@@ -1,4 +1,4 @@
-name: List - Prod - MI - Build Validation
+name: List - MI - Prod - Build Validation
 on: workflow_dispatch
 jobs:
   build-validation-prod-mi:

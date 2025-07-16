@@ -1,4 +1,4 @@
-name: List - Prod - NJ - Build Validation
+name: List - NJ - Prod - Build Validation
 on: workflow_dispatch
 jobs:
   smoke-test-prod-nj:

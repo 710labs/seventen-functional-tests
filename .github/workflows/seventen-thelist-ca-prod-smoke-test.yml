@@ -1,4 +1,4 @@
-name: List - Prod - CA - Smoke Test
+name: List - CA - Prod - Smoke Test
 on: workflow_dispatch
 jobs:
   smoke-test-prod-ca:
