@@ -63,19 +63,16 @@ test.describe('Basic Acceptance Tests CO', () => {
 		})
 
 		await test.step('Create Account', async () => {
-			await createAccountPage.createMichiganCustomer(
+			await createAccountPage.create(
 				fakeFirstName,
 				fakeLastName,
 				fakeEmail,
-				faker.internet.password(),
-				faker.datatype.number({ min: 1, max: 28 }),
-				faker.datatype.number({ min: 10, max: 12 }),
-				faker.datatype.number({ min: 1975, max: 2001 }),
-				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
-				'recreational',
-				address,
-				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
-				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
+				'test1234',
+				address.zipcode,
+				1,
+				false,
+				address.fullAddress,
+				'CO',
 			)
 		})
 
