@@ -1,4 +1,4 @@
-name: List - Dev - CO - Build Validation
+name: List - CO - Dev - Build Validation
 on:
   workflow_dispatch:
 jobs:

@@ -1,4 +1,4 @@
-name: List - Stage - CA - Functional Tests
+name: List - CA - Stage - Functional Tests
 on:
   workflow_dispatch:
 jobs:
