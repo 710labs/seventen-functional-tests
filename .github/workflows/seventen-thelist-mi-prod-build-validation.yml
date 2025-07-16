@@ -7,7 +7,7 @@ jobs:
     env:
       ENV: prod-mi thelist-mi.710labs.com
       ENV_ID: prod-mi
-      EXECUTION_TYPE: Build Validation
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}

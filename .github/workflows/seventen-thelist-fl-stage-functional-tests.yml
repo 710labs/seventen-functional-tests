@@ -8,7 +8,7 @@ jobs:
     env:
       ENV: stage-fl thelist-stage.710labs.com
       ENV_ID: stage-fl
-      EXECUTION_TYPE: Stage Env Functional Tests
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
