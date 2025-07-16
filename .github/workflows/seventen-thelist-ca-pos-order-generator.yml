@@ -1,4 +1,4 @@
-name: Old - POS Order Generator - Ca
+name: Old - POS Order Generator - CA
 on:
   workflow_dispatch:
     inputs:
