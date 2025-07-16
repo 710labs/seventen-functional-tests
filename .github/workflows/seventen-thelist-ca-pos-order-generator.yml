@@ -1,19 +1,19 @@
-name: thelist-ca-pos-order-generator
+name: Old - POS Order Generator - Ca
 on:
   workflow_dispatch:
     inputs:
       order_count:
-        description: "Order Count"
+        description: 'Order Count'
         required: true
-        default: "1"
+        default: '1'
       prefix:
-        description: "Unique Prefix"
+        description: 'Unique Prefix'
         required: false
-        default: ""
+        default: ''
       address:
-        description: "Address"
+        description: 'Address'
         required: false
-        default: "3324 S La Cienega Blvd, Los Angeles"
+        default: '3324 S La Cienega Blvd, Los Angeles'
       fulfillment_type:
         type: choice
         description: Fulfillment Type
