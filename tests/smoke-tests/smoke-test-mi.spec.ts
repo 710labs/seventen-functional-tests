@@ -81,7 +81,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Load Shopping Cart`, async () => {
-			await shopPage.addProductsToCart(6, false, 'Pickup', 'Recreational')
+			await shopPage.addProductsToCart(8, false, 'Pickup', 'Recreational')
 		})
 
 		await test.step(`Navigate to Cart`, async () => {

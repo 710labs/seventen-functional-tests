@@ -15,7 +15,7 @@ import { coloradoAddressess } from '../../utils/data-generator'
 import { fictionalAreacodes } from '../../utils/data-generator'
 
 test.describe('Basic Acceptance Tests CO', () => {
-	const orderQuanity = 6
+	const orderQuanity = 8
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any

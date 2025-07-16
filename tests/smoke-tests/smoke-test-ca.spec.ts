@@ -15,7 +15,7 @@ import { fictionalAreacodes } from '../../utils/data-generator'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
-	const orderQuanity = 6
+	const orderQuanity = 8
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any
