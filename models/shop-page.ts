@@ -55,14 +55,24 @@ export class ShopPage {
 				products = products.filter({ hasNot: this.page.locator('span.medOnly') })
 			}
 
-			for (let i = 0; i < itemCount; i++) {
-				await test.step(`Add Products # ${i + 1}`, async () => {
-					await expect(products.nth(i)).toBeVisible()
-					var productCard = products.nth(i)
-					var addToCartButton = productCard.locator('a.add_to_cart_button')
-					await addToCartButton.click({ force: true })
-					await this.page.waitForTimeout(1500)
-				})
+			// for (let i = 0; i < itemCount; i++) {
+			// 	await test.step(`Add Products # ${i + 1}`, async () => {
+			// 		await expect(products.nth(i)).toBeVisible()
+			// 		var productCard = products.nth(i)
+			// 		var addToCartButton = productCard.locator('a.add_to_cart_button')
+			// 		await addToCartButton.click({ force: true })
+			// 		await this.page.waitForTimeout(1500)
+			// 	})
+			// }
+			const warning = this.page.locator('p.wcse-warning-button')
+			let index = 0
+			// Keep adding until the "minimum not met" warning disappears
+			while (await warning.isVisible()) {
+				const card = products.nth(index % (await products.count()))
+				await expect(card).toBeVisible()
+				await card.locator('a.add_to_cart_button').click({ force: true })
+				await this.page.waitForTimeout(1500)
+				index++
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
