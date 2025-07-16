@@ -1,4 +1,4 @@
-name: thelist-tests-stage-build-validation
+name: List - Stage - All States
 on:
   workflow_dispatch:
     inputs:

@@ -10,6 +10,8 @@ import { AdminLogin } from '../../models/admin/admin-login-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
+import { faker } from '@faker-js/faker'
+import { fictionalAreacodes } from '../../utils/data-generator'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
@@ -17,7 +19,6 @@ test.describe('Basic Acceptance Tests CA', () => {
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any
-
 
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
@@ -36,6 +37,10 @@ test.describe('Basic Acceptance Tests CA', () => {
 			},
 		])
 		const address = '123 Rodeo Dr Beverly Hills'
+		var fakeFirstName = faker.name.firstName() + '_Test'
+		var fakeLastName = faker.name.lastName() + '_Test'
+		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -58,7 +63,20 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 
 		await test.step('Create Account', async () => {
-			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'CA')
+			await createAccountPage.createMichiganCustomer(
+				fakeFirstName,
+				fakeLastName,
+				fakeEmail,
+				faker.internet.password(),
+				faker.datatype.number({ min: 1, max: 28 }),
+				faker.datatype.number({ min: 10, max: 12 }),
+				faker.datatype.number({ min: 1975, max: 2001 }),
+				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
+				'recreational',
+				address,
+				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
+				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
+			)
 		})
 
 		await test.step('Add Products to Cart', async () => {

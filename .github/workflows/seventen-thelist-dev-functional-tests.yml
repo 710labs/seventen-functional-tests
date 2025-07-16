@@ -1,4 +1,4 @@
-name: thelist-tests-dev
+name: List - Dev - All States
 on:
   schedule:
     - cron: '0 14 * * *'
