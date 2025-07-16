@@ -1,4 +1,4 @@
-name: PROD - Concierge smoke check
+name: Concierge - Prod
 on:
   workflow_dispatch:
 jobs:

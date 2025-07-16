@@ -1,4 +1,4 @@
-name: PROD - Live smoke check
+name: Live - PROD - Smoke check
 on:
   workflow_dispatch:
 jobs:
