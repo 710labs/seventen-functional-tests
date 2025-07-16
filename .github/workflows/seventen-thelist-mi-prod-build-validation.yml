@@ -1,4 +1,4 @@
-name: thelist-mi-tests-prod-build-validation
+name: List - Prod - MI - Build Validation
 on: workflow_dispatch
 jobs:
   build-validation-prod-mi:

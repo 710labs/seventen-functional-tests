@@ -1,4 +1,4 @@
-name: thelist-ca-tests-stage
+name: List - Stage - CA - Functional Tests
 on:
   workflow_dispatch:
 jobs:
@@ -15,7 +15,7 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
-      RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
+      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
@@ -56,5 +56,5 @@ jobs:
           SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
           SLACK_MESSAGE: env-stage-ca(https://thelist-dev.710labs.com) status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Test Run Status (thelist-ca-stage)
-          SLACK_USERNAME: "710 Functional Tests"
+          SLACK_USERNAME: '710 Functional Tests'
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
