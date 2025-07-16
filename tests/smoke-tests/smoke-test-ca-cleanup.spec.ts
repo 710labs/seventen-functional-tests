@@ -14,14 +14,14 @@ import { faker } from '@faker-js/faker'
 import { fictionalAreacodes } from '../../utils/data-generator'
 import { writeFileSync } from 'fs'
 
-test.describe('Basic Acceptance Tests CA', () => {
+test.describe('Smoke Test CA Cleanup', () => {
 	const zipCode = '90210'
 	const orderQuanity = 6
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any
 
-	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context }, workerInfo) => {
+	test(`Smoke Test CA Cleanup @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
