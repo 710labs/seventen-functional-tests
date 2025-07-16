@@ -12,6 +12,7 @@ import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 import { faker } from '@faker-js/faker'
 import { fictionalAreacodes } from '../../utils/data-generator'
+import { writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
@@ -88,7 +89,8 @@ test.describe('Basic Acceptance Tests CA', () => {
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.getOrderNumber()
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
-			console.log(`Woo OrderID=${orderNumber}`)
+			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
+			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
 		})
 		await test.step('Logout Consumer', async () => {
 			await myAccountPage.logout()
