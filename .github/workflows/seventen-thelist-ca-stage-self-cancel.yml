@@ -57,69 +57,6 @@ jobs:
             # still emit the output key, just blank
             echo "orderID=" >> $GITHUB_OUTPUT
           fi
-
-  # ──────────────────────────────────────────────────────────────────────────────
-  # Cleanup: Cancel Test Order
-  # ──────────────────────────────────────────────────────────────────────────────
-name: List - CA - Stage - Self-Cancel POC
-on: workflow_dispatch
-
-jobs:
-  smoke:
-    name: Smoke Tests (Stage CA)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      ENV: stage-ca thelist-stage.710labs.com
-      ENV_ID: stage-ca
-      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
-      ADMIN_USER: ${{ secrets.ADMIN_USER }}
-      ADMIN_PW: ${{ secrets.ADMIN_PW }}
-      API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
-      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
-      BYPASS_TAX_CALC: true
-      NEXT_VERSION: true
-      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN }}
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-
-    # expose the order-id out to downstream jobs
-    outputs:
-      order-id: ${{ steps.extract.outputs.orderID }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 'node'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright
-        run: npx playwright install --with-deps
-
-      - name: Run Playwright smoke tests
-        id: smoke_test
-        run: npm run smoke:test:dev:ca
-        # <-- no continue-on-error here so failures are marked
-
-      - name: Read order_id.txt
-        id: extract
-        run: |
-          if [[ -f order_id.txt ]]; then
-            ORDER_ID=$(<order_id.txt)
-            echo "✅ Found Order ID: $ORDER_ID"
-            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️  order_id.txt not found; setting empty orderID"
-            # still emit the output key, just blank
-            echo "orderID=" >> $GITHUB_OUTPUT
-          fi
   cleanup:
     name: Cleanup Cancel Test Order
     needs: smoke
@@ -141,4 +78,3 @@ jobs:
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
-
