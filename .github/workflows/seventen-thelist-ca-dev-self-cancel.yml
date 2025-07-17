@@ -1,7 +1,7 @@
-name: List - CA - Dev - Smoke Test
+name: List - CA - Dev - Self-Cancel POC
 on: workflow_dispatch
 jobs:
-  smoke-test-dev-ca:
+  self-cancel-dev-ca:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
