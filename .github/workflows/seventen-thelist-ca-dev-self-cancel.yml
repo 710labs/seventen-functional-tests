@@ -1,9 +1,11 @@
 name: List - CA - Dev - Self-Cancel POC
 on: workflow_dispatch
+
 jobs:
-  self-cancel-dev-ca:
-    timeout-minutes: 60
+  smoke:
+    name: Smoke Tests (Dev CA)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       ENV: dev-ca thelist-dev.710labs.com
       ENV_ID: dev-ca
@@ -15,57 +17,64 @@ jobs:
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
-      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
-      S3_BUCKET: ${{ secrets.S3_BUCKET}}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY}}
-      S3_SECRET: ${{ secrets.S3_SECRET}}
-      S3_REGION: ${{ secrets.S3_REGION}}
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+
+    # expose the order-id out to downstream jobs
+    outputs:
+      order-id: ${{ steps.extract.outputs.orderID }}
+
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-node@v3
         with:
           node-version: 'node'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Install Playwright
         run: npx playwright install --with-deps
-      #
-      # Run your smoke tests and capture the Order ID from the log
+
       - name: Run Playwright smoke tests
-        run: |
-          npm run smoke:test:dev:ca
-        # even if this fails, we still want the next steps to try to run:
-        continue-on-error: true
-      # ─────────────────────────────────────────────────────
-      # Extract the order ID from the file
+        id: smoke_test
+        run: npm run smoke:test:dev:ca
+        # <-- no continue-on-error here so failures are marked
+
       - name: Read order_id.txt
         id: extract
         run: |
-          if [ -f order_id.txt ]; then
-            ORDER_ID=$(cat order_id.txt | tr -d '\r\n')
+          if [[ -f order_id.txt ]]; then
+            ORDER_ID=$(<order_id.txt)
             echo "✅ Found Order ID: $ORDER_ID"
             echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
           else
-            echo "⚠️  order_id.txt not found, skipping cancellation."
+            echo "⚠️  order_id.txt not found; setting empty orderID"
+            # still emit the output key, just blank
+            echo "orderID=" >> $GITHUB_OUTPUT
           fi
-      #
-      # Finally, cancel that order via WooCommerce REST API
-      # Finally: cancel via WooCommerce API
+  cleanup:
+    name: Cleanup Cancel Test Order
+    needs: smoke
+    runs-on: ubuntu-latest
+    # always run this job, even if `smoke` failed
+    if: always()
+    env:
+      WC_CONSUMER_KEY: ${{ secrets.WOO_DEV_KEY }}
+      WC_CONSUMER_SECRET: ${{ secrets.WOO_DEV_SECRET }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+
+    steps:
       - name: Cancel test order via WooCommerce API
-        if: ${{ steps.extract.outputs.orderID != '' }}
-        env:
-          WC_CONSUMER_KEY: ${{ secrets.WOO_DEV_KEY }}
-          WC_CONSUMER_SECRET: ${{ secrets.WOO_DEV_SECRET }}
+        # only call if we actually got an ID
+        if: ${{ needs.smoke.outputs.order-id != '' }}
         run: |
-          echo "🛠 Cancelling order ${{ steps.extract.outputs.orderID }}…"
-          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ steps.extract.outputs.orderID }}" \
+          echo "🛠 Cancelling order ${{ needs.smoke.outputs.order-id }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke.outputs.order-id }}" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
-      - name: Upload Playwright Report
-        if: always() # Ensures the report is uploaded even if tests fail
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 3
