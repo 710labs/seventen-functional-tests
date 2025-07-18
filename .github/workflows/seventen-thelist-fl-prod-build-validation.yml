@@ -24,6 +24,9 @@ jobs:
       S3_REGION: ${{ secrets.S3_REGION}}
       AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+    outputs:
+      order-id: ${{ steps.extract.outputs.orderID }}
+      split-order-id: ${{ steps.extract-split.outputs.splitOrderID }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v3
@@ -34,9 +37,67 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
+        id: smoke_test
         run: npm run smoke:test:prod:fl
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 3
+      - name: Read order_id.txt
+        if: always()
+        id: extract
+        run: |
+          if [[ -f order_id.txt ]]; then
+            ORDER_ID=$(<order_id.txt)
+            echo "✅ Found Order ID: $ORDER_ID"
+            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  order_id.txt not found; setting empty orderID"
+            # still emit the output key, just blank
+            echo "orderID=" >> $GITHUB_OUTPUT
+          fi
+      - name: Read split_order_id.txt
+        if: always()
+        id: extract-split
+        run: |
+          if [[ -f split_order_id.txt ]]; then
+            SPLIT_ORDER_ID=$(<split_order_id.txt)
+            echo "✅ Found Split Order ID: $SPLIT_ORDER_ID"
+            echo "splitOrderID=$SPLIT_ORDER_ID" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  split_order_id.txt not found; setting empty splitOrderID"
+            # still emit the output key, just blank
+            echo "splitOrderID=" >> $GITHUB_OUTPUT
+          fi
+  cleanup:
+    name: Cleanup Cancel Test Order
+    needs: smoke-test-prod-fl
+    runs-on: ubuntu-latest
+    # always run this job, even if `smoke` failed
+    if: always()
+    env:
+      WC_CONSUMER_KEY: ${{ secrets.WOO_FL_PROD_KEY }}
+      WC_CONSUMER_SECRET: ${{ secrets.WOO_FL_PROD_SECRET }}
+      BASE_URL: ${{ secrets.BASE_URL_PROD_FL }}
+
+    steps:
+      - name: Cancel test order via WooCommerce API
+        # only call if we actually got an ID
+        if: ${{ needs.smoke-test-prod-fl.outputs.order-id != '' }}
+        run: |
+          echo "🛠 Cancelling order ${{ needs.smoke-test-prod-fl.outputs.order-id }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke-test-prod-fl.outputs.order-id }}" \
+            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"cancelled"}'
+      - name: Cancel split order via WooCommerce API
+        # only call if we actually got an ID
+        if: ${{ needs.smoke-test-prod-fl.outputs.split-order-id != '' }}
+        run: |
+          echo "🛠 Cancelling split order ${{ needs.smoke-test-prod-fl.outputs.split-order-id }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke-test-prod-fl.outputs.split-order-id }}" \
+            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"cancelled"}'
