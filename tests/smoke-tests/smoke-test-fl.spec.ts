@@ -37,7 +37,10 @@ test.describe('Medical Customer Checkout Florida', () => {
 		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
 		const zipCode = zipcodes[index]
 		const address = '3275 NW 24th Street Rd'
-		const email = `test+${uuidv4()}@710labs-test.com`
+		var fakeFirstName = faker.name.firstName() + '_Test'
+		var fakeLastName = faker.name.lastName() + '_Test'
+		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -51,7 +54,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
-			await ageGatePage.passAgeGate('FL')
+			await ageGatePage.passAgeGate()
 		})
 
 		await test.step('Enter List Password', async () => {
@@ -59,7 +62,17 @@ test.describe('Medical Customer Checkout Florida', () => {
 		})
 
 		await test.step('Create Account', async () => {
-			await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
+			await createAccountPage.create(
+				fakeFirstName,
+				fakeLastName,
+				fakeEmail,
+				'test1234',
+				zipCode,
+				1,
+				false,
+				address,
+				'FL',
+			)
 		})
 
 		await test.step('Add Products to Cart', async () => {
