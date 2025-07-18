@@ -16,7 +16,7 @@ import { fictionalAreacodes } from '../../utils/data-generator'
 
 test.describe('Basic Acceptance Tests NJ', () => {
 	const zipCode = '07901'
-	const orderQuanity = 3
+	const orderQuanity = 2
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any
