@@ -99,11 +99,14 @@ test.describe('Smoke Test CA Cleanup', () => {
 		await test.step('Login Admin', async () => {
 			await adminLoginPage.login()
 		})
-		// await test.step('Admin Split Order', async () => {
-		// 	splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
-		// })
+		await test.step('Admin Split Order', async () => {
+			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
+			await expect(splitOrderNumber, 'Failed to split order').not.toBeNull()
+			writeFileSync('split_order_id.txt', String(splitOrderNumber), { encoding: 'utf-8' })
+			console.log(`✅ Wrote split_order_id.txt → ${splitOrderNumber}`)
+		})
 		await test.step('Cancel Order', async () => {
-			await editOrderPage.cancelOrder(orderNumber)
+			// await editOrderPage.cancelOrder(orderNumber)
 			// await editOrderPage.cancelOrder(splitOrderNumber)
 		})
 	})

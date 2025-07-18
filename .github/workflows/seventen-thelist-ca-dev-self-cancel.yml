@@ -62,6 +62,14 @@ jobs:
             # still emit the output key, just blank
             echo "orderID=" >> $GITHUB_OUTPUT
           fi
+      - name: Read split_order_id.txt
+        id: extract-split
+        run: |
+          if [[ -f split_order_id.txt ]]; then
+            echo "splitOrderID=$(<split_order_id.txt)" >> $GITHUB_OUTPUT
+          else
+            echo "splitOrderID=" >> $GITHUB_OUTPUT
+          fi
   cleanup:
     name: Cleanup Cancel Test Order
     needs: smoke
@@ -80,6 +88,14 @@ jobs:
         run: |
           echo "🛠 Cancelling order ${{ needs.smoke.outputs.order-id }}…"
           curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke.outputs.order-id }}" \
+            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"cancelled"}'
+      - name: Cancel split order via WooCommerce API
+        if: ${{ needs.smoke.outputs.split_order_id != '' }}
+        run: |
+          echo "🛠 Cancelling split order ${{ needs.smoke.outputs.split_order_id }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke.outputs.split_order_id }}" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
