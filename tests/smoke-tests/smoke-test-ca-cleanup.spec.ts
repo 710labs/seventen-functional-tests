@@ -106,8 +106,8 @@ test.describe('Smoke Test CA Cleanup', () => {
 			console.log(`✅ Wrote split_order_id.txt → ${splitOrderNumber}`)
 		})
 		await test.step('Cancel Order', async () => {
-			// await editOrderPage.cancelOrder(orderNumber)
-			// await editOrderPage.cancelOrder(splitOrderNumber)
+			await editOrderPage.cancelOrder(orderNumber)
+			await editOrderPage.cancelOrder(splitOrderNumber)
 		})
 	})
 })
