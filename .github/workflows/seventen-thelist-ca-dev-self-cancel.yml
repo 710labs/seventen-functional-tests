@@ -23,9 +23,10 @@ jobs:
       S3_SECRET: ${{ secrets.S3_SECRET }}
       S3_REGION: ${{ secrets.S3_REGION }}
 
-    # expose the order-id out to downstream jobs
+    # expose the order-id and split-order-id out to downstream jobs
     outputs:
       order-id: ${{ steps.extract.outputs.orderID }}
+      split-order-id: ${{ steps.extract-split.outputs.splitOrderID }}
 
     steps:
       - uses: actions/checkout@v2
@@ -66,8 +67,12 @@ jobs:
         id: extract-split
         run: |
           if [[ -f split_order_id.txt ]]; then
-            echo "splitOrderID=$(<split_order_id.txt)" >> $GITHUB_OUTPUT
+            SPLIT_ORDER_ID=$(<split_order_id.txt)
+            echo "✅ Found Split Order ID: $SPLIT_ORDER_ID"
+            echo "splitOrderID=$SPLIT_ORDER_ID" >> $GITHUB_OUTPUT
           else
+            echo "⚠️  split_order_id.txt not found; setting empty splitOrderID"
+            # still emit the output key, just blank
             echo "splitOrderID=" >> $GITHUB_OUTPUT
           fi
   cleanup:
@@ -92,10 +97,11 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
       - name: Cancel split order via WooCommerce API
-        if: ${{ needs.smoke.outputs.split_order_id != '' }}
+        # only call if we actually got an ID
+        if: ${{ needs.smoke.outputs.split-order-id != '' }}
         run: |
-          echo "🛠 Cancelling split order ${{ needs.smoke.outputs.split_order_id }}…"
-          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke.outputs.split_order_id }}" \
+          echo "🛠 Cancelling split order ${{ needs.smoke.outputs.split-order-id }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke.outputs.split-order-id }}" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
