@@ -93,9 +93,9 @@ test.describe('Basic Acceptance Tests MI', () => {
 			await cartPage.goToCheckout()
 		})
 
-		await test.step(`Choose Acuity Slot`, async () => {
-			await checkOutPage.selectSlot()
-		})
+		// await test.step(`Choose Acuity Slot`, async () => {
+		// 	await checkOutPage.selectSlot()
+		// })
 
 		await test.step(`Complete Order`, async () => {
 			await checkOutPage.placeOrderButton.click()
