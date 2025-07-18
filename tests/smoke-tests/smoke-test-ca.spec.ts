@@ -12,6 +12,7 @@ import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 import { faker } from '@faker-js/faker'
 import { fictionalAreacodes } from '../../utils/data-generator'
+import { writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
@@ -88,6 +89,9 @@ test.describe('Basic Acceptance Tests CA', () => {
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.getOrderNumber()
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
+			//write order number to file to use for cancel order via API
+			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
+			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
 		})
 		await test.step('Logout Consumer', async () => {
 			await myAccountPage.logout()
@@ -98,6 +102,9 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 		await test.step('Admin Split Order', async () => {
 			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
+			//write split order number to file to use for cancel order via API
+			writeFileSync('split_order_id.txt', String(splitOrderNumber), { encoding: 'utf-8' })
+			console.log(`✅ Wrote split_order_id.txt → ${splitOrderNumber}`)
 		})
 		await test.step('Cancel Order', async () => {
 			await editOrderPage.cancelOrder(orderNumber)
