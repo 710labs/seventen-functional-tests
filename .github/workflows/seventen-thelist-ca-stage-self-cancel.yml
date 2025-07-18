@@ -23,9 +23,10 @@ jobs:
       S3_SECRET: ${{ secrets.S3_SECRET }}
       S3_REGION: ${{ secrets.S3_REGION }}
 
-    # expose the order-id out to downstream jobs
+    # expose the order-id and split-order-id out to downstream jobs
     outputs:
       order-id: ${{ steps.extract.outputs.orderID }}
+      split-order-id: ${{ steps.extract-split.outputs.splitOrderID }}
 
     steps:
       - uses: actions/checkout@v2
@@ -74,7 +75,6 @@ jobs:
             # still emit the output key, just blank
             echo "splitOrderID=" >> $GITHUB_OUTPUT
           fi
-
   cleanup:
     name: Cleanup Cancel Test Order
     needs: smoke
