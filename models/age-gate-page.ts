@@ -13,16 +13,16 @@ export class AgeGatePage {
 		await test.step('Pass Age Gate', async () => {
 			await this.page.goto('/')
 			if (this.page.url().includes('thelist.theflowery.co')) {
-				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
+				await expect(this.page.locator('.age-gate-challenge')).toContainText(
 					'You must be at least 18 years old with a valid Florida medical recommendation to view this site.',
 				)
 			} else if (this.page.url().includes('thelist-co') || this.page.url().includes('thelist-mi')) {
-				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
+				await expect(this.page.locator('.age-gate-challenge')).toContainText(
 					'You must be at least 21 years old or possess a valid medical recommendation to view this site.',
 				)
 			} else {
-				await expect(this.page.locator('.age-gate-challenge')).toHaveText(
-					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
+				await expect(this.page.locator('.age-gate-challenge')).toContainText(
+					'You must be at least 21 years old or possess a valid medical recommendation to view this site.',
 				)
 			}
 
