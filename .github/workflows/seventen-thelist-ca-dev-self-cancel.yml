@@ -52,6 +52,7 @@ jobs:
           path: playwright-report/
           retention-days: 3
       - name: Read order_id.txt
+        if: always()
         id: extract
         run: |
           if [[ -f order_id.txt ]]; then
@@ -64,6 +65,7 @@ jobs:
             echo "orderID=" >> $GITHUB_OUTPUT
           fi
       - name: Read split_order_id.txt
+        if: always()
         id: extract-split
         run: |
           if [[ -f split_order_id.txt ]]; then
