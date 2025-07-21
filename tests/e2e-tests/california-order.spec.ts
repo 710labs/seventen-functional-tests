@@ -134,7 +134,23 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword('qatester')
-			await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 0)
+			// await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 0)
+			const address = '123 Rodeo Dr Beverly Hills'
+			var fakeFirstName = faker.name.firstName() + '_Test'
+			var fakeLastName = faker.name.lastName() + '_Test'
+			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
+			await createAccountPage.create(
+				fakeFirstName,
+				fakeLastName,
+				fakeEmail,
+				'test1234',
+				zipCode,
+				1,
+				false,
+				address,
+				'CA',
+			)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}

@@ -191,22 +191,25 @@ export class CheckoutPage {
 		}
 
 		await test.step(`Select Acuity Slot for ${zipcode} `, async () => {
+			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
+				timeout: 45 * 1000,
+			})
+
 			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+			await expect(
+				daySlot,
+				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await daySlot.click()
 
-			// Check if day slot is visible, if so, interact with it
-			if (await daySlot.isVisible()) {
-				console.log('Acuity day slots found, proceeding with slot selection')
-				await daySlot.click()
+			await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
 
-				var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-				await expect(
-					timeSlot,
-					'Could not find Acuity Time Slot Selector after day slot selection.',
-				).toBeVisible()
-				await timeSlot.click()
-			} else {
-				console.log('Acuity day slots not visible, continuing without slot selection')
-			}
+			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+			await expect(
+				timeSlot,
+				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+			).toBeVisible()
+			await timeSlot.click()
 		})
 
 		await test.step('Submit New Customer Order', async () => {
