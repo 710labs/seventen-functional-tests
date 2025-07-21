@@ -25,7 +25,7 @@
 		"prod-employee:smoke:always-on": "npx playwright test tests/always-on-tests/prod-employee.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
 		"concierge:ci:tests": "npx playwright test tests/always-on-tests/concierge.spec.ts --config=configs/liveandconcierge.config.ts --workers=4",
 		"smoke:test:prod:ca": "npx playwright test smoke-test-ca --config=configs/prod-ca.config.ts --workers=1",
-		"smoke:test:dev:ca": "npx playwright test smoke-test-ca-cleanup --config=configs/prod-ca.config.ts --workers=1",
+		"smoke:test:dev:ca": "npx playwright test smoke-test-ca --config=configs/prod-ca.config.ts --workers=1",
 		"smoke:test:prod:co": "npx playwright test smoke-test-co --config=configs/prod-co.config.ts --workers=1",
 		"smoke:test:prod:fl": "npx playwright test smoke-test-fl --config=configs/prod-fl.config.ts --workers=1",
 		"smoke:test:prod:mi": "npx playwright test smoke-test-mi --config=configs/prod-mi.config.ts --workers=1",
