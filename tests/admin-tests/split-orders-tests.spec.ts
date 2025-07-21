@@ -10,6 +10,7 @@ import { AdminLogin } from '../../models/admin/admin-login-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
+import { faker } from '@faker-js/faker'
 
 const zipCode = '90210'
 const orderQuanity = 6
@@ -24,7 +25,7 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName 
 			'x-api-key': `${process.env.API_KEY}`,
 		},
 	})
-	const address = '9779 Oak Pass Rd'
+	//const address = '9779 Oak Pass Rd'
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
 	const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -36,13 +37,29 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName 
 
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword('qatester')
+	// await createAccountPage.create(
+	// 	`test+${uuidv4()}@710labs-test.com`,
+	// 	'test1234!',
+	// 	zipCode,
+	// 	1,
+	// 	false,
+	// 	address,
+	// )
+	const address = '933 Alpine Ave, Boulder, CO, 80304'
+	var fakeFirstName = faker.name.firstName() + '_Test'
+	var fakeLastName = faker.name.lastName() + '_Test'
+	var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
 	await createAccountPage.create(
-		`test+${uuidv4()}@710labs-test.com`,
-		'test1234!',
+		fakeFirstName,
+		fakeLastName,
+		fakeEmail,
+		'test1234',
 		zipCode,
 		1,
 		false,
 		address,
+		'CA',
 	)
 	if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 		await myAccountPage.addAddress()
@@ -78,7 +95,7 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }
 			'x-api-key': `${process.env.API_KEY}`,
 		},
 	})
-	const address = '9779 Oak Pass Rd'
+	//const address = '9779 Oak Pass Rd'
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
 	const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -90,13 +107,21 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }
 
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword('qatester')
+	const address = '933 Alpine Ave, Boulder, CO, 80304'
+	var fakeFirstName = faker.name.firstName() + '_Test'
+	var fakeLastName = faker.name.lastName() + '_Test'
+	var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
 	await createAccountPage.create(
-		`test+${uuidv4()}@710labs-test.com`,
-		'test1234!',
+		fakeFirstName,
+		fakeLastName,
+		fakeEmail,
+		'test1234',
 		zipCode,
 		1,
 		false,
 		address,
+		'CA',
 	)
 	if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 		await myAccountPage.addAddress()
@@ -128,13 +153,13 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }
 test.skip(`Auto Assign Fulfilment - New Customer - No Previous Orders - Defaults to Pickup`, async ({
 	page,
 	browserName,
-}, workerInfo) => { })
+}, workerInfo) => {})
 test.skip(`Auto Assign Fulfilment - Existing Customer - Previou Order Pickup - Defaults to Pickup`, async ({
 	page,
 	browserName,
-}, workerInfo) => { })
+}, workerInfo) => {})
 
 test.skip(`Auto Assign Fulfilment - Existing Customer - Previou Order Delevery - Defaults to Delivery`, async ({
 	page,
 	browserName,
-}, workerInfo) => { })
+}, workerInfo) => {})

@@ -8,6 +8,7 @@ import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
 import zipcodes from '../../utils/zipcodes-fl.json'
+import { faker } from '@faker-js/faker'
 
 test(
 	`Basic Order - New Customer - Medical`,
@@ -34,7 +35,23 @@ test(
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword('qatester')
-		await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
+		// await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
+		//const address = '123 Rodeo Dr Beverly Hills'
+		var fakeFirstName = faker.name.firstName() + '_Test'
+		var fakeLastName = faker.name.lastName() + '_Test'
+		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
+		await createAccountPage.create(
+			fakeFirstName,
+			fakeLastName,
+			fakeEmail,
+			'test1234',
+			zipCode,
+			1,
+			false,
+			address,
+			'CA',
+		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress(address, 'Miami', 'FL', zipCode)
 		}

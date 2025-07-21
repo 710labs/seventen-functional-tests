@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
+import { faker } from '@faker-js/faker'
 
 test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 	test.describe.configure({ mode: 'parallel' })
@@ -56,7 +57,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 		`Basic Order - New Customer - Medical`,
 		{ tag: ['@medical'] },
 		async ({ page, browserName }, workerInfo) => {
-			const address = '13 Huntley Rd'
+			const address = '13 Huntley Rd Summit City'
 			const city = 'Summit City'
 			const state = 'NJ'
 			const zipcode = '07901'
@@ -72,7 +73,22 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword('qatester')
-			await createAccountPage.create(email, 'test1234', zipcode, 1, false, address, state)
+			//await createAccountPage.create(email, 'test1234', zipcode, 1, false, address, state)
+			var fakeFirstName = faker.name.firstName() + '_Test'
+			var fakeLastName = faker.name.lastName() + '_Test'
+			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
+			await createAccountPage.create(
+				fakeFirstName,
+				fakeLastName,
+				fakeEmail,
+				'test1234',
+				zipcode,
+				1,
+				false,
+				address,
+				'NJ',
+			)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress(address, city, state, zipcode)
 			}
@@ -115,7 +131,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 		`Basic Order - New Customer - Recreational`,
 		{ tag: ['@recreational'] },
 		async ({ page: page, browserName }, workerInfo) => {
-			const address = '13 Huntley Rd'
+			const address = '13 Huntley Rd Summit City'
 			const city = 'Summit City'
 			const state = 'NJ'
 			const zipcode = '07901'
@@ -130,14 +146,29 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword('qatester')
+			// await createAccountPage.create(
+			// 	`test+${uuidv4()}@710labs-test.com`,
+			// 	'test1234!',
+			// 	zipcode,
+			// 	0,
+			// 	false,
+			// 	address,
+			// 	state,
+			// )
+			var fakeFirstName = faker.name.firstName() + '_Test'
+			var fakeLastName = faker.name.lastName() + '_Test'
+			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
+
 			await createAccountPage.create(
-				`test+${uuidv4()}@710labs-test.com`,
-				'test1234!',
+				fakeFirstName,
+				fakeLastName,
+				fakeEmail,
+				'test1234',
 				zipcode,
-				0,
+				1,
 				false,
 				address,
-				state,
+				'NJ',
 			)
 			await shopPage.addProductsToCart(6, mobile, 'Pickup', 'Recreational')
 			var cartTotals = await cartPage.verifyCart(zipcode)
