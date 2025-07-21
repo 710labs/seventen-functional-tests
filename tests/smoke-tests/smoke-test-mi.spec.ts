@@ -93,9 +93,9 @@ test.describe('Basic Acceptance Tests MI', () => {
 			await cartPage.goToCheckout()
 		})
 
-		// await test.step(`Choose Acuity Slot`, async () => {
-		// 	await checkOutPage.selectSlot()
-		// })
+		await test.step(`Choose Acuity Slot`, async () => {
+			await checkOutPage.selectSlot()
+		})
 		await test.step(`Select Acuity Slot `, async () => {
 			var daySlot = await page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
 
@@ -116,7 +116,9 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Complete Order`, async () => {
+			await checkOutPage.placeOrderButton.waitFor({ state: 'visible' })
 			await checkOutPage.placeOrderButton.click()
+			await orderReceived.orderNumber.waitFor({ state: 'visible' })
 		})
 
 		await test.step('Comfirm Order Details on /order-received', async () => {
