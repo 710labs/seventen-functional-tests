@@ -96,24 +96,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 		await test.step(`Choose Acuity Slot`, async () => {
 			await checkOutPage.selectSlot()
 		})
-		// await test.step(`Select Acuity Slot `, async () => {
-		// 	var daySlot = await page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-
-		// 	// Check if day slot is visible, if so, interact with it
-		// 	if (await daySlot.isVisible()) {
-		// 		console.log('Acuity day slots found, proceeding with slot selection')
-		// 		await daySlot.click()
-
-		// 		var timeSlot = await page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-		// 		await expect(
-		// 			timeSlot,
-		// 			'Could not find Acuity Time Slot Selector after day slot selection.',
-		// 		).toBeVisible()
-		// 		await timeSlot.click()
-		// 	} else {
-		// 		console.log('Acuity day slots not visible, continuing without slot selection')
-		// 	}
-		// })
 
 		await test.step(`Complete Order`, async () => {
 			await checkOutPage.placeOrderButton.waitFor({ state: 'visible' })
