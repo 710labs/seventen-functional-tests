@@ -20,6 +20,7 @@ export class EditOrderPage {
 			await (await this.page.$('.qty-split')).click()
 			await (await this.page.$('.qty-split')).fill('1')
 			await this.page.locator('text=Complete split').click()
+			await this.page.waitForTimeout(4000)
 		})
 		await test.step('Confirm Split', async () => {
 			await this.page.waitForSelector('text=Order split into')
