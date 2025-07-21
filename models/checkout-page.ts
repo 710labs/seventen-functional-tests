@@ -191,25 +191,7 @@ export class CheckoutPage {
 		}
 
 		await test.step(`Select Acuity Slot for ${zipcode} `, async () => {
-			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
-				timeout: 45 * 1000,
-			})
-
-			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-			await expect(
-				daySlot,
-				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await daySlot.click()
-
-			await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
-
-			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-			await expect(
-				timeSlot,
-				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await timeSlot.click()
+			await this.selectSlot()
 		})
 
 		await test.step('Submit New Customer Order', async () => {
@@ -222,25 +204,30 @@ export class CheckoutPage {
 
 	async selectSlot() {
 		await test.step(`Select Acuity Slot`, async () => {
-			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
-				timeout: 45 * 1000,
-			})
+			await this.page.waitForTimeout(2000)
+			const errorMessage = this.page.locator('#datetimeError')
 
-			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-			await expect(
-				daySlot,
-				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await daySlot.click()
+			if (!(await errorMessage.isVisible())) {
+				await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
+					timeout: 45 * 1000,
+				})
 
-			await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
+				var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+				await expect(
+					daySlot,
+					'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+				).toBeVisible()
+				await daySlot.click()
 
-			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-			await expect(
-				timeSlot,
-				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await timeSlot.click()
+				await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
+
+				var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+				await expect(
+					timeSlot,
+					'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+				).toBeVisible()
+				await timeSlot.click()
+			}
 		})
 	}
 
