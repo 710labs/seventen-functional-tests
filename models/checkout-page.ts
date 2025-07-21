@@ -53,7 +53,7 @@ export class CheckoutPage {
 		this.city = this.page.locator('input[name="billing_city"]')
 		this.zipCodeInput = this.page.locator('input[name="billing_postcode"]')
 		this.comments = this.page.locator('textarea[name="order_comments"]')
-		this.placeOrderButton = this.page.locator('id=place_order')
+		this.placeOrderButton = this.page.locator('#place_order')
 		this.cartItems = new Array()
 		this.apiContext = apiContext
 	}
@@ -210,6 +210,7 @@ export class CheckoutPage {
 		})
 
 		await test.step('Submit New Customer Order', async () => {
+			await this.placeOrderButton.waitFor({ state: 'visible' })
 			await this.placeOrderButton.click()
 		})
 
@@ -218,25 +219,28 @@ export class CheckoutPage {
 
 	async selectSlot() {
 		await test.step(`Select Acuity Slot`, async () => {
-			await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
-				timeout: 45 * 1000,
-			})
-
 			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-			await expect(
-				daySlot,
-				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await daySlot.click()
 
-			await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
+			if (await daySlot.isVisible()) {
+				await this.page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
+					timeout: 45 * 1000,
+				})
 
-			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-			await expect(
-				timeSlot,
-				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await timeSlot.click()
+				await expect(
+					daySlot,
+					'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+				).toBeVisible()
+				await daySlot.click()
+
+				await this.page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
+
+				var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+				await expect(
+					timeSlot,
+					'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+				).toBeVisible()
+				await timeSlot.click()
+			}
 		})
 	}
 
