@@ -15,7 +15,7 @@ class ReportToS3 implements Reporter {
 				rootKey: `generator-report-${uuidv4()}`,
 			})
 			console.log(
-				`Artifacts Uploaded to https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/generator-report-${uuidv4()}`,
+				`Artifacts Uploaded to https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/generator-report-${uuidv4()}`,
 			)
 		} catch (error) {
 			console.log(error)

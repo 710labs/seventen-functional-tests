@@ -13,7 +13,7 @@ class ReportToS3 implements Reporter {
 				},
 				rootKey: `${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`,
 			})
-			console.log(`Artifacts Uploaded to https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`)
+			console.log(`Artifacts Uploaded to https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`)
 		} catch (error) {
 			console.log(error)
 		}

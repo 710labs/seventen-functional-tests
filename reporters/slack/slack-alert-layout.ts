@@ -116,7 +116,7 @@ export async function generateCustomLayoutAsync(
 					},
 					style: 'primary',
 					value: 'click_me',
-					url: `https://tech-savagery-test-artifacts.s3.us-west-1.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}/index.html`,
+					url: `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}/index.html`,
 				},
 				{
 					type: 'button',
