@@ -83,7 +83,7 @@ jobs:
     env:
       ENV: dev-fl thelist-710labs.com
       ENV_ID: dev-fl
-      EXECUTION_TYPE: Scheduled Run
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
@@ -127,7 +127,7 @@ jobs:
     env:
       ENV: dev-mi thelist-710labs.com
       ENV_ID: dev-mi
-      EXECUTION_TYPE: Scheduled Run
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
@@ -167,14 +167,13 @@ jobs:
     needs: [mi-tests-dev]
     if: |
       always() &&
-      (needs.mi-tests-dev.result == 'success' || needs.mi-tests-dev.result == 'skipped') &&
       (github.event_name == 'schedule' || github.event.inputs.co == 'true')
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       ENV: dev-co thelist-710labs.com
       ENV_ID: dev-co
-      EXECUTION_TYPE: Scheduled Run
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
@@ -204,7 +203,7 @@ jobs:
       - name: Set Domain to CO
         uses: JamesIves/fetch-api-data-action@v2.1.0
         with:
-          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
+          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=co
           configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
       - name: Install Playwright
         run: npx playwright install --with-deps
@@ -220,7 +219,7 @@ jobs:
     env:
       ENV: dev-nj thelist-710labs.com
       ENV_ID: dev-nj
-      EXECUTION_TYPE: Scheduled Run
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
