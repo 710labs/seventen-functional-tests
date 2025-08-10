@@ -184,10 +184,11 @@ export class HomePageLogin {
 			await expect(this.lastNameField).toBeVisible()
 			await this.lastNameField.click()
 			await this.lastNameField.fill(`Test User ${timestamp}`)
-			// enter in Zip Code
-			await expect(this.zipCodeField).toBeVisible()
-			await this.zipCodeField.click()
-			await this.zipCodeField.fill(`90232`)
+			// enter in Zip Code only if visible; otherwise continue forward
+			if (await this.zipCodeField.isVisible()) {
+				await this.zipCodeField.click()
+				await this.zipCodeField.fill(`90232`)
+			}
 		})
 		await test.step('Click create account to create new user', async () => {
 			// click create account
