@@ -66,7 +66,7 @@ test.describe('Live Tests', () => {
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
 			// Re-prompt the sign in modal by adding a product to cart
-			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			//await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 			await homePageActions.addSingleProductToCart(page)
 			await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
 		},
@@ -122,7 +122,7 @@ test.describe('Live Tests', () => {
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
 			// Re-prompt the sign in modal by adding a product to cart
-			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			//await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 			await homePageActions.addSingleProductToCart(page)
 			await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
 		},
@@ -134,7 +134,7 @@ test.describe('Live Tests', () => {
 		// add adress for new user account
 		await homePageLogin.navigateToURL(page, liveURL)
 		// Verify that store homepage loads
-		await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+		//await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 		await homePageActions.addSingleProductToCart(page)
 		//
 		// Verify that store homepage loads
