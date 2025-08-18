@@ -7,11 +7,25 @@ const path = require('path')
 export class OrderConfirmationPage {
 	readonly page: Page
 	readonly orderConfirmationTitle: Locator
+	readonly orderNumberElement: Locator
+	readonly orderNumber: Locator
 	constructor(page: Page) {
 		this.page = page
 		this.orderConfirmationTitle = page.locator(
 			`//h2[@style='font-size:30px;margin-bottom:24px;' and text()='Your order is confirmed']`,
 		)
+		// Full element that contains the label and link
+		this.orderNumberElement = page.locator('p.thankyou-number')
+		// Element that contains only the order number digits
+		this.orderNumber = this.orderNumberElement.locator('a')
+	}
+
+	async getOrderNumber(): Promise<string> {
+		await this.orderNumber.waitFor({ state: 'visible' })
+		const textContent = await this.orderNumber.textContent()
+		const rawText = (textContent ?? '').trim()
+		const match = rawText.match(/\d+/)
+		return match ? match[0] : rawText
 	}
 	async verifyOrderConfirmationPageLoads(page) {
 		await test.step('Verify the Checkout titleloads correctly', async () => {
