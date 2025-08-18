@@ -17,7 +17,7 @@ export class OrderConfirmationPage {
 		// Full element that contains the label and link
 		this.orderNumberElement = page.locator('p.thankyou-number')
 		// Element that contains only the order number digits
-		this.orderNumber = this.orderNumberElement.locator('a')
+		this.orderNumber = page.locator('p.thankyou-number a')
 	}
 
 	async getOrderNumber(): Promise<string> {
