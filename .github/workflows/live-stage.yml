@@ -7,6 +7,8 @@ jobs:
   live-stage-tests:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    outputs:
+      order_ids_json: ${{ steps.collect.outputs.order_ids_json }} #
     env:
       ENV: live-stage live-stage.710labs.com
       ENV_ID: live-stage
@@ -45,6 +47,8 @@ jobs:
         run: npm ci
       - name: Install Playwright
         run: npx playwright install --with-deps
+      - name: Cleanup previous order IDs
+        run: rm -f order_ids.txt
       - name: Run Playwright tests
         run: npm run live:ci:always-on
       - name: Upload Playwright Report
@@ -54,3 +58,126 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 3
+      - name: Collect order IDs (appendFileSync mode)
+        if: always()
+        id: collect
+        run: |
+          set -euo pipefail
+          if [[ ! -f order_ids.txt ]]; then
+            echo "⚠️  order_ids.txt not found; emitting empty list"
+            echo "order_ids_json=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Normalize CRLF, drop blanks, dedupe
+          tr -d '\r' < order_ids.txt | sed '/^\s*$/d' | sort -u > /tmp/order_ids_flat.txt
+
+          count=$(wc -l < /tmp/order_ids_flat.txt | tr -d ' ')
+          echo "🧮 Found ${count} unique order IDs:"
+          cat /tmp/order_ids_flat.txt
+
+          # Convert to JSON array using Node (already available)
+          JSON=$(node -e "const fs=require('fs'); const ids=fs.readFileSync('/tmp/order_ids_flat.txt','utf8').split(/\r?\n/).filter(Boolean); process.stdout.write(JSON.stringify(ids));")
+          echo "order_ids_json=${JSON}" >> "$GITHUB_OUTPUT"
+
+          # Nice summary in the job view
+          {
+            echo "### Order IDs found (${count})"
+            echo
+            echo "\`${JSON}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+  verifyInstance:
+    name: Verify POS Instance sync
+    needs: live-stage-tests
+    runs-on: ubuntu-latest
+    # Skip the whole job if no IDs; still marked as “skipped” rather than erroring on empty matrix.
+    if: ${{ always() && needs.live-stage-tests.outputs.order_ids_json != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        order_id: ${{ fromJson(needs.live-stage-tests.outputs.order_ids_json) }}
+    env:
+      ALWAYS_ON_URL_STAGE: ${{ secrets.ALWAYS_ON_URL_STAGE }} # e.g., https://live-dev.710labs.com
+      LIVE_STAGE_QA_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }} # e.g., xxyz
+
+    steps:
+      - name: Verify POS Instance sync – ${{ matrix.order_id }}
+        env:
+          ORDER_ID: ${{ matrix.order_id }}
+        run: |
+          set -euo pipefail
+
+          # Ensure jq is present
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+          fi
+
+          BASE="${ALWAYS_ON_URL_STAGE%/}"
+          AUTH="${LIVE_STAGE_QA_AUTH}"
+          URL_REAL="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=${AUTH}&id=${ORDER_ID}"
+          URL_SAFE="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=***&id=${ORDER_ID}"
+
+          echo "🔍 Verify POS Instance sync for order ${ORDER_ID}"
+          echo "➡️  GET ${URL_SAFE}"
+          echo "🔑 Auth length: ${#AUTH} (masked)"
+          if [[ -z "${AUTH}" ]]; then
+            echo "❌ LIVE_STAGE_QA_AUTH is empty. Check your repo/org secret."
+            exit 1
+          fi
+
+          attempts=6
+          delay=10
+          for i in $(seq 1 $attempts); do
+            http_code=$(curl -sS -L -w "%{http_code}" -o /tmp/resp.json "$URL_REAL" || true)
+            echo "↩️  HTTP $http_code (try $i/$attempts)"
+
+            # Show outcome/message if JSON-ish
+            if jq -e . >/dev/null 2>&1 </tmp/resp.json; then
+              echo "🧩 Outcome snapshot:"
+              jq -r '{outcome, message}' /tmp/resp.json
+            fi
+
+            if [[ "$http_code" != "200" ]]; then
+              sleep "$delay"; continue
+            fi
+
+            # Must be valid JSON
+            if ! jq . >/dev/null 2>&1 </tmp/resp.json; then
+              echo "❌ Response is not valid JSON:"
+              sed -n '1,200p' /tmp/resp.json
+              sleep "$delay"; continue
+            fi
+
+            outcome=$(jq -r '.outcome // empty' /tmp/resp.json)
+            if [[ "$outcome" != "success" ]]; then
+              echo "⏳ Outcome is '$outcome' — message: $(jq -r '.message // ""' /tmp/resp.json)"
+              sleep "$delay"; continue
+            fi
+
+            # Use correct keys; accept either casing to be safe
+            instanceId=$(jq -r '.instanceId // .instanceID // empty' /tmp/resp.json)
+            instanceName=$(jq -r '.instanceName // empty' /tmp/resp.json)
+            instanceType=$(jq -r '.instanceType // empty' /tmp/resp.json)
+            externalId=$(jq -r '.externalId // .externalID // empty' /tmp/resp.json)
+
+            missing=()
+            [[ -z "$instanceId"   ]] && missing+=("instanceId")
+            [[ -z "$instanceName" ]] && missing+=("instanceName")
+            [[ -z "$instanceType" ]] && missing+=("instanceType")
+            [[ -z "$externalId"   ]] && missing+=("externalId")
+
+            if (( ${#missing[@]} == 0 )); then
+              echo "✅ All required fields present for order ${ORDER_ID}:"
+              jq -r '{instanceId, instanceName, instanceType, externalId}' /tmp/resp.json
+              exit 0
+            else
+              echo "⏳ Missing fields for order ${ORDER_ID}: ${missing[*]} — retrying in ${delay}s…"
+              sleep "$delay"
+            fi
+          done
+
+          echo "❌ Verification failed for order ${ORDER_ID} after ${attempts} attempts."
+          echo "🧾 Last response body:"
+          sed -n '1,200p' /tmp/resp.json
+          exit 1
