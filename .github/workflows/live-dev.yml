@@ -8,7 +8,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     outputs:
-      order_ids_json: ${{ steps.extract.outputs.order_ids_json }} # <— expose array to other jobs
+      order_ids_json: ${{ steps.collect.outputs.order_ids_json }} # expose array to other jobs
     env:
       ENV: live-dev live-dev.710labs.com
       ENV_ID: live-dev
@@ -47,6 +47,8 @@ jobs:
         run: npm ci
       - name: Install Playwright
         run: npx playwright install --with-deps
+      - name: Cleanup previous order IDs
+        run: rm -f order_ids.txt
       - name: Run Playwright tests
         run: npm run live:ci:always-on
       - name: Upload Playwright Report
@@ -56,20 +58,34 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 3
-      - name: Read order_id.txt
+      - name: Collect order IDs (appendFileSync mode)
         if: always()
-        id: extract
+        id: collect
         run: |
-          if [[ -f order_id.txt ]]; then
-            echo "✅ Found order_id.txt contents:"
-            cat order_id.txt
-            # Turn newline-separated IDs into a JSON array using Node (already installed)
-            JSON=$(node -e "const fs=require('fs'); const ids=fs.readFileSync('order_id.txt','utf8').split(/\r?\n/).map(s=>s.trim()).filter(Boolean); process.stdout.write(JSON.stringify(ids));")
-            echo "order_ids_json=$JSON" >> "$GITHUB_OUTPUT"
-          else
-            echo "⚠️  order_id.txt not found; emitting empty list"
+          set -euo pipefail
+          if [[ ! -f order_ids.txt ]]; then
+            echo "⚠️  order_ids.txt not found; emitting empty list"
             echo "order_ids_json=[]" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # Normalize CRLF, drop blanks, dedupe
+          tr -d '\r' < order_ids.txt | sed '/^\s*$/d' | sort -u > /tmp/order_ids_flat.txt
+
+          count=$(wc -l < /tmp/order_ids_flat.txt | tr -d ' ')
+          echo "🧮 Found ${count} unique order IDs:"
+          cat /tmp/order_ids_flat.txt
+
+          # Convert to JSON array using Node (already available)
+          JSON=$(node -e "const fs=require('fs'); const ids=fs.readFileSync('/tmp/order_ids_flat.txt','utf8').split(/\r?\n/).filter(Boolean); process.stdout.write(JSON.stringify(ids));")
+          echo "order_ids_json=${JSON}" >> "$GITHUB_OUTPUT"
+
+          # Nice summary in the job view
+          {
+            echo "### Order IDs found (${count})"
+            echo
+            echo "\`${JSON}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
   verifyInstance:
     name: Verify POS Instance sync
     needs: live-dev-tests
@@ -85,7 +101,7 @@ jobs:
       LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }} # e.g., xxyz
 
     steps:
-      - name: Call Persy QA endpoint and validate fields
+      - name: Verify POS Instance sync – ${{ matrix.order_id }}
         env:
           ORDER_ID: ${{ matrix.order_id }}
         run: |

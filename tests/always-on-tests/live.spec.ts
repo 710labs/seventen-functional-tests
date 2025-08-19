@@ -5,7 +5,7 @@ import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
 import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 require('dotenv').config('.env')
-import { writeFileSync } from 'fs'
+import { appendFileSync, writeFileSync } from 'fs'
 
 test.describe('Live Tests', () => {
 	test.setTimeout(400000) // Set the timeout for all tests in this file
@@ -59,8 +59,8 @@ test.describe('Live Tests', () => {
 			orderNumber = await orderConfirmation.getOrderNumber()
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
 			//write order number to file to use for cancel order via API
-			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
-			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
+			appendFileSync('order_ids.txt', `${orderNumber}\n`, { encoding: 'utf-8' })
+			console.log(`✅ Appended order_ids.txt → ${orderNumber}`)
 			// go to account page
 			await accountPage.goToAccountPage()
 			// verify that account page elements, buttons, and popup actions all work
@@ -122,8 +122,8 @@ test.describe('Live Tests', () => {
 			orderNumber = await orderConfirmation.getOrderNumber()
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
 			//write order number to file to use for cancel order via API
-			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
-			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
+			appendFileSync('order_ids.txt', `${orderNumber}\n`, { encoding: 'utf-8' })
+			console.log(`✅ Appended order_ids.txt → ${orderNumber}`)
 			// go to account page
 			await accountPage.goToAccountPage()
 			// verify that account page elements, buttons, and popup actions all work
