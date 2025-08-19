@@ -20,9 +20,9 @@ export class OrderConfirmationPage {
 		this.orderNumber = page.locator('p.thankyou-number a')
 	}
 
-	async getOrderNumber(): Promise<string> {
-		await this.orderNumber.waitFor({ state: 'visible' })
-		const textContent = await this.orderNumber.textContent()
+	async getOrderNumber() {
+		//await this.orderNumberElement.waitFor({ timeout: 5000 })
+		const textContent = await this.orderNumberElement.textContent()
 		const rawText = (textContent ?? '').trim()
 		const match = rawText.match(/\d+/)
 		return match ? match[0] : rawText
