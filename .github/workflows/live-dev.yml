@@ -7,6 +7,8 @@ jobs:
   live-dev-tests:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    outputs:
+      order_ids_json: ${{ steps.extract.outputs.order_ids_json }} # <— expose array to other jobs
     env:
       ENV: live-dev live-dev.710labs.com
       ENV_ID: live-dev
@@ -54,3 +56,89 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 3
+      - name: Read order_id.txt
+        if: always()
+        id: extract
+        run: |
+          if [[ -f order_id.txt ]]; then
+            echo "✅ Found order_id.txt contents:"
+            cat order_id.txt
+            # Turn newline-separated IDs into a JSON array using Node (already installed)
+            JSON=$(node -e "const fs=require('fs'); const ids=fs.readFileSync('order_id.txt','utf8').split(/\r?\n/).map(s=>s.trim()).filter(Boolean); process.stdout.write(JSON.stringify(ids));")
+            echo "order_ids_json=$JSON" >> "$GITHUB_OUTPUT"
+          else
+            echo "⚠️  order_id.txt not found; emitting empty list"
+            echo "order_ids_json=[]" >> "$GITHUB_OUTPUT"
+          fi
+  verifyInstance:
+    name: Verify POS Instance sync
+    needs: live-dev-tests
+    runs-on: ubuntu-latest
+    # Skip the whole job if no IDs; still marked as “skipped” rather than erroring on empty matrix.
+    if: ${{ always() && needs.live-dev-tests.outputs.order_ids_json != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        order_id: ${{ fromJson(needs.live-dev-tests.outputs.order_ids_json) }}
+    env:
+      ALWAYS_ON_URL_DEV: ${{ secrets.ALWAYS_ON_URL_DEV }} # e.g., https://live-dev.710labs.com
+      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }} # e.g., xxyz
+
+    steps:
+      - name: Call Persy QA endpoint and validate fields
+        env:
+          ORDER_ID: ${{ matrix.order_id }}
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+          BASE="${ALWAYS_ON_URL_DEV%/}"
+          URL_REAL="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=${LIVE_DEV_QA_AUTH}&id=${ORDER_ID}"
+          URL_SAFE="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=***&id=${ORDER_ID}"
+
+          echo "🔍 Verify POS Instance sync for order ${ORDER_ID}"
+          echo "➡️  GET ${URL_SAFE}"
+
+          attempts=6
+          delay=10
+          for i in $(seq 1 $attempts); do
+            http_code=$(curl -sS -L -w "%{http_code}" -o /tmp/resp.json "$URL_REAL" || true)
+            echo "↩️  HTTP $http_code (try $i/$attempts)"
+            if [[ "$http_code" != "200" ]]; then
+              sleep "$delay"
+              continue
+            fi
+
+            if ! jq . >/dev/null 2>&1 </tmp/resp.json; then
+              echo "❌ Response is not valid JSON:"
+              sed -n '1,200p' /tmp/resp.json
+              exit 1
+            fi
+
+            instanceID=$(jq -r '.instanceID // empty' /tmp/resp.json)
+            instanceName=$(jq -r '.instanceName // empty' /tmp/resp.json)
+            instanceType=$(jq -r '.instanceType // empty' /tmp/resp.json)
+            externalID=$(jq -r '.externalID // empty' /tmp/resp.json)
+
+            missing=()
+            [[ -z "$instanceID"   ]] && missing+=("instanceID")
+            [[ -z "$instanceName" ]] && missing+=("instanceName")
+            [[ -z "$instanceType" ]] && missing+=("instanceType")
+            [[ -z "$externalID"   ]] && missing+=("externalID")
+
+            if (( ${#missing[@]} == 0 )); then
+              echo "✅ All required fields present for order ${ORDER_ID}:"
+              jq -r '{instanceID, instanceName, instanceType, externalID}' /tmp/resp.json
+              exit 0
+            else
+              echo "⏳ Missing fields for order ${ORDER_ID}: ${missing[*]} — retrying in ${delay}s…"
+              sleep "$delay"
+            fi
+          done
+
+          echo "❌ Required fields not present for order ${ORDER_ID} after ${attempts} attempts."
+          echo "🧾 Last response body:"
+          sed -n '1,200p' /tmp/resp.json
+          exit 1
