@@ -1,6 +1,7 @@
 require('dotenv').config('.env')
 import test, { expect, Locator, Page } from '@playwright/test'
 const glob = require('glob')
+const { faker } = require('@faker-js/faker')
 const fs = require('fs')
 const path = require('path')
 const { PNG } = require('pngjs')
@@ -275,8 +276,8 @@ export class AccountPage {
 		await this.firstNameInput.waitFor({ state: 'visible' })
 		await expect(this.firstNameInput).toBeVisible()
 		// Edit input fields
-		const newFirstName = 'Edited First Name'
-		const newLastName = 'Edited Last Name'
+		const newFirstName = faker.name.firstName?.() || faker.person.firstName()
+		const newLastName = faker.name.lastName?.() || faker.person.lastName()
 		await this.firstNameInput.fill(newFirstName)
 		await this.lastNameInput.fill(newLastName)
 		const now = new Date()

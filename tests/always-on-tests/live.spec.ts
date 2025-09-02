@@ -15,6 +15,15 @@ test.describe('Live Tests', () => {
 	const alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
 	const alwaysOnPassword = process.env.ALWAYS_ON_PASSWORD || ''
 	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
+	const VISUAL = process.env.VISUAL === '1'
+
+	test.beforeEach(async ({ page }) => {
+		if (!VISUAL) return
+		await page.addStyleTag({
+			content:
+				'*, *::before, *::after { animation: none !important; transition: none !important; } input, textarea { caret-color: transparent !important; }',
+		})
+	})
 
 	console.log(`------- \n URL being tested: ${liveURL} -------- \n `)
 	test(
@@ -32,7 +41,18 @@ test.describe('Live Tests', () => {
 
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			if (VISUAL) {
+				await expect(homePageLogin.shopByCategoryTitle).toHaveScreenshot(
+					'home-shop-by-category.png',
+				)
+			}
 			await homePageActions.addSingleProductToCart(page)
+			if (VISUAL) {
+				await expect(homePageLogin.userPopUpContainer).toBeVisible()
+				await expect(homePageLogin.userPopUpContainer).toHaveScreenshot('auth-gateway-rec.png', {
+					mask: [homePageLogin.passwordFieldPopUp],
+				})
+			}
 			// register new user
 			await homePageLogin.registerNewUser(page, 'rec')
 			// go to main store page
@@ -41,19 +61,45 @@ test.describe('Live Tests', () => {
 			//await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
+			if (VISUAL) {
+				await expect(homePageLogin.shopByStoreTitle).toBeVisible()
+				await expect(homePageLogin.shopByStoreTitle).toHaveScreenshot('home-post-login-title.png')
+			}
 			// add products to cart
 			await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
+			if (VISUAL) {
+				await expect(checkoutPage.yourInfoSection).toHaveScreenshot('checkout-your-info-rec.png')
+			}
 			// enter in user info on checkoutpage
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			await checkoutPage.recEnterInfoForCheckoutAndEdit(page, address, newAddress)
+			if (VISUAL) {
+				const timeMask = page.locator('#render_appt_summary p').nth(1)
+				await expect(checkoutPage.displayedAppointment).toHaveScreenshot(
+					'checkout-appointment-summary-rec.png',
+					{ mask: [timeMask] },
+				)
+				await expect(checkoutPage.paymentSection).toHaveScreenshot('checkout-payment-cash-rec.png')
+			}
 			//place order
 			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+			if (VISUAL) {
+				await expect(orderConfirmation.orderConfirmationTitle).toHaveScreenshot(
+					'order-confirmed-title-rec.png',
+				)
+				await expect(orderConfirmation.orderNumberElement).toHaveScreenshot(
+					'order-number-rec.png',
+					{
+						mask: [orderConfirmation.orderNumber],
+					},
+				)
+			}
 			// get order number to confirm order was created
 			var orderNumber: any
 			orderNumber = await orderConfirmation.getOrderNumber()
@@ -63,6 +109,12 @@ test.describe('Live Tests', () => {
 			console.log(`✅ Appended order_ids.txt → ${orderNumber}`)
 			// go to account page
 			await accountPage.goToAccountPage()
+			if (VISUAL) {
+				const personalInfoCard = page
+					.locator('section#render_personal_component, .wpse-account-component')
+					.first()
+				await expect(personalInfoCard).toHaveScreenshot('account-personal-info-rec.png')
+			}
 			// verify that account page elements, buttons, and popup actions all work
 			const newEmail = await accountPage.verifyAccountPageElements(
 				'rec',
@@ -94,7 +146,18 @@ test.describe('Live Tests', () => {
 
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			if (VISUAL) {
+				await expect(homePageLogin.shopByCategoryTitle).toHaveScreenshot(
+					'home-shop-by-category-med.png',
+				)
+			}
 			await homePageActions.addSingleProductToCart(page)
+			if (VISUAL) {
+				await expect(homePageLogin.userPopUpContainer).toBeVisible()
+				await expect(homePageLogin.userPopUpContainer).toHaveScreenshot('auth-gateway-med.png', {
+					mask: [homePageLogin.passwordFieldPopUp],
+				})
+			}
 			// register new user
 			await homePageLogin.registerNewUser(page, 'med')
 			// go to main store page
@@ -105,18 +168,46 @@ test.describe('Live Tests', () => {
 			//await homePageActions.enterAddress(page, 'live', address)
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
+			if (VISUAL) {
+				await expect(homePageLogin.shopByStoreTitle).toBeVisible()
+				await expect(homePageLogin.shopByStoreTitle).toHaveScreenshot(
+					'home-post-login-title-med.png',
+				)
+			}
 			// add products to cart
 			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'dev/stage')
 			//await homePageActions.newLiveMedAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
+			if (VISUAL) {
+				await expect(checkoutPage.yourInfoSection).toHaveScreenshot('checkout-your-info-med.png')
+			}
 			// enter in user info on checkoutpage
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, liveURL, address, newAddress)
+			if (VISUAL) {
+				const timeMask = page.locator('#render_appt_summary p').nth(1)
+				await expect(checkoutPage.displayedAppointment).toHaveScreenshot(
+					'checkout-appointment-summary-med.png',
+					{ mask: [timeMask] },
+				)
+				await expect(checkoutPage.paymentSection).toHaveScreenshot('checkout-payment-cash-med.png')
+			}
 			//place order
 			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
+			if (VISUAL) {
+				await expect(orderConfirmation.orderConfirmationTitle).toHaveScreenshot(
+					'order-confirmed-title-med.png',
+				)
+				await expect(orderConfirmation.orderNumberElement).toHaveScreenshot(
+					'order-number-med.png',
+					{
+						mask: [orderConfirmation.orderNumber],
+					},
+				)
+			}
 			// get order number to confirm order was created
 			var orderNumber: any
 			orderNumber = await orderConfirmation.getOrderNumber()
@@ -126,6 +217,12 @@ test.describe('Live Tests', () => {
 			console.log(`✅ Appended order_ids.txt → ${orderNumber}`)
 			// go to account page
 			await accountPage.goToAccountPage()
+			if (VISUAL) {
+				const personalInfoCard = page
+					.locator('section#render_personal_component, .wpse-account-component')
+					.first()
+				await expect(personalInfoCard).toHaveScreenshot('account-personal-info-med.png')
+			}
 			// verify that account page elements, buttons, and popup actions all work
 			const newEmail = await accountPage.verifyAccountPageElements(
 				'med',
@@ -151,6 +248,12 @@ test.describe('Live Tests', () => {
 		// Verify that store homepage loads
 		//await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 		await homePageActions.addSingleProductToCart(page)
+		if (VISUAL) {
+			await expect(homePageLogin.userPopUpContainer).toBeVisible()
+			await expect(homePageLogin.userPopUpContainer).toHaveScreenshot('auth-gateway-existing.png', {
+				mask: [homePageLogin.passwordFieldPopUp],
+			})
+		}
 		//
 		// Verify that store homepage loads
 		// log in existing user
