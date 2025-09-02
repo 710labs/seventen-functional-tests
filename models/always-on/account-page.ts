@@ -277,12 +277,13 @@ export class AccountPage {
 		await this.firstNameInput.waitFor({ state: 'visible' })
 		await expect(this.firstNameInput).toBeVisible()
 		// Edit input fields
-		const newFirstName = faker.name.firstName?.() || faker.person.firstName()
-		const newLastName = faker.name.lastName?.() || faker.person.lastName()
-		// const newFirstName = 'Edited First Name'
-		// const newLastName = 'Edited Last Name'
-		await this.firstNameInput.fill(`Edited ${newFirstName}`)
-		await this.lastNameInput.fill(`Edited ${newLastName}`)
+		// Get current values from the input fields
+		const currentFirstName = await this.firstNameInput.inputValue()
+		const currentLastName = await this.lastNameInput.inputValue()
+
+		// Prepend "Edited" to the existing values
+		await this.firstNameInput.fill(`Edited ${currentFirstName}`)
+		await this.lastNameInput.fill(`Edited ${currentLastName}`)
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -350,7 +351,7 @@ export class AccountPage {
 			this.uploadIDInput.click({ force: true }),
 		])
 		//Enter Personal ID info (Med already exists from pre-cart step)
-		await driversLicenseChooser.setFiles('Medical-Card.png')
+		await driversLicenseChooser.setFiles('CA-DL.jpg')
 		// Add Exp date
 		await this.expirationInput.click({ force: true })
 		const newYear = new Date().getFullYear() + 1

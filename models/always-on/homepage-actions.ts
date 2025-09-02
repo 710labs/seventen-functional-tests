@@ -1127,7 +1127,7 @@ export class HomePageActions {
 				])
 				const issuingStateSelect = page.locator('select#medcard_state')
 				const expirationInput = page.locator('input#medcard_exp')
-				await driversLicenseChooser.setFiles('Medical-Card.png')
+				await driversLicenseChooser.setFiles('CA-DL.jpg')
 				await issuingStateSelect.selectOption('CA')
 				const newYear = new Date().getFullYear() + 1
 				await expirationInput.click()
