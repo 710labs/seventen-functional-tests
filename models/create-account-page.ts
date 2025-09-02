@@ -174,7 +174,7 @@ export class CreateAccountPage {
 				dlUploadButton.click(),
 			])
 			await this.page.waitForTimeout(5000)
-			await driversLicenseChooser.setFiles('Medical-Card.png')
+			await driversLicenseChooser.setFiles('CA-DL.jpg')
 			await this.page.waitForTimeout(5000)
 			await driversLicenseChooser.page()
 
@@ -662,7 +662,7 @@ export class CreateAccountPage {
 				dlUploadButton.click(),
 			])
 			await this.page.waitForTimeout(5000)
-			await driversLicenseChooser.setFiles('Medical-Card.png')
+			await driversLicenseChooser.setFiles('CA-DL.jpg')
 			await this.page.waitForTimeout(5000)
 			await driversLicenseChooser.page()
 
