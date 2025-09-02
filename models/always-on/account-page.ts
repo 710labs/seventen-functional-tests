@@ -4,6 +4,8 @@ const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
 const { PNG } = require('pngjs')
+import { faker } from '@faker-js/faker'
+
 export class AccountPage {
 	readonly alwaysOnUsername: string
 	readonly alwaysOnPassword: string
@@ -275,10 +277,12 @@ export class AccountPage {
 		await this.firstNameInput.waitFor({ state: 'visible' })
 		await expect(this.firstNameInput).toBeVisible()
 		// Edit input fields
-		const newFirstName = 'Edited First Name'
-		const newLastName = 'Edited Last Name'
-		await this.firstNameInput.fill(newFirstName)
-		await this.lastNameInput.fill(newLastName)
+		const newFirstName = faker.name.firstName?.() || faker.person.firstName()
+		const newLastName = faker.name.lastName?.() || faker.person.lastName()
+		// const newFirstName = 'Edited First Name'
+		// const newLastName = 'Edited Last Name'
+		await this.firstNameInput.fill(`Edited ${newFirstName}`)
+		await this.lastNameInput.fill(`Edited ${newLastName}`)
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
