@@ -280,10 +280,13 @@ export class AccountPage {
 		// Get current values from the input fields
 		const currentFirstName = await this.firstNameInput.inputValue()
 		const currentLastName = await this.lastNameInput.inputValue()
+		//
+		const newFirstName = `Edited ${currentFirstName}`
+		const newLastName = `Edited ${currentLastName}`
 
 		// Prepend "Edited" to the existing values
-		await this.firstNameInput.fill(`Edited ${currentFirstName}`)
-		await this.lastNameInput.fill(`Edited ${currentLastName}`)
+		await this.firstNameInput.fill(newFirstName)
+		await this.lastNameInput.fill(newLastName)
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
