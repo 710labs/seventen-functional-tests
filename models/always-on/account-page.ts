@@ -81,6 +81,13 @@ export class AccountPage {
 	readonly changePasswordButton: Locator
 	readonly currentPasswordError: Locator
 	readonly newPasswordError: Locator
+	// Section header containers (h3 + link/button inside header)
+	readonly orderHistoryHeaderContainer: Locator
+	readonly addressesHeaderContainer: Locator
+	readonly personalInfoHeaderContainer: Locator
+	readonly photoIdHeaderContainer: Locator
+	readonly medicalCardHeaderContainer: Locator
+	readonly passwordHeaderContainer: Locator
 
 	constructor(page: Page) {
 		this.page = page
@@ -95,6 +102,9 @@ export class AccountPage {
 		this.orderHistoryHeader = page.locator('h3:has-text("Order history")')
 		this.viewAllOrdersLink = page.locator('a:has-text("View all orders")')
 		this.orderSummariesRows = page.locator('.order-summary-row')
+		this.orderHistoryHeaderContainer = page.locator(
+			'div.wpse-account-component:has(> header h3:has-text("Order history")) > header',
+		)
 		// Addresses
 		this.addressesSection = page.locator('h3:has-text("Addresses")')
 		this.currentAddressDisplayed = page.locator('p.--reactive-long-origin')
@@ -103,6 +113,9 @@ export class AccountPage {
 		this.addNewAddressButton = page.locator('label:has-text("Add new address")')
 		this.addressField = page.locator('#fasd_address')
 		this.addressSubmitButton = page.locator('button.wpse-button-primary.fasd-form-submit')
+		this.addressesHeaderContainer = page.locator(
+			'div.wpse-account-component:has(> header h3:has-text("Addresses")) > header',
+		)
 		// Personal Info
 		this.personalInfoHeader = page.locator('h3:has-text("Personal info")')
 		this.editPersonalInfoLink = page.locator('a.specific-link[data-module="personal"]')
@@ -118,6 +131,9 @@ export class AccountPage {
 		this.displayedUserEmail = page.locator('p.--reactive-user-email')
 		this.displayedUserPhone = page.locator('p.--reactive-user-phone')
 		this.displayedUserDOB = page.locator('p.--reactive-user-dob')
+		this.personalInfoHeaderContainer = page.locator(
+			'div.wpse-account-component:has(> header h3:has-text("Personal info")) > header',
+		)
 		// Photo ID
 		this.photoIdSection = page.locator('h3:has-text("Photo ID")')
 		this.editPhotoIdLink = page.locator('a.specific-link[data-module="iddoc"]')
@@ -135,6 +151,9 @@ export class AccountPage {
 			'div.wpse-account-component:has(header:has-text("Photo ID")) img',
 		)
 		this.dispalyedPhotoIDExp = page.locator('.wpse-document-meta p').first()
+		this.photoIdHeaderContainer = page.locator(
+			'div.wpse-account-component:has(> header h3:has-text("Photo ID")) > header',
+		)
 		// Medical Card
 		this.medicalCardSection = page.locator('h3:has-text("Medical card")')
 		this.editMedicalCardLink = page.locator('a.specific-link[data-module="meddoc"]').first()
@@ -150,6 +169,9 @@ export class AccountPage {
 			'div.wpse-account-component:has(header:has-text("Medical card")) section#render_medcard_summary img',
 		)
 		this.dispalyedMedIDExp = page.locator('.wpse-document-meta p').nth(1)
+		this.medicalCardHeaderContainer = page.locator(
+			'div.wpse-account-component:has(> header h3:has-text("Medical card")) > header',
+		)
 		// Password
 		this.passwordSection = page.locator('h3:has-text("Sign on & security")')
 		this.editPasswordLink = page.locator('a.specific-link[data-module="password"]')
@@ -159,6 +181,9 @@ export class AccountPage {
 		this.changePasswordButton = page.locator('button.wpse-button-secondary.fasd-form-submit')
 		this.currentPasswordError = page.locator('#old_password_error')
 		this.newPasswordError = page.locator('#new_password_error')
+		this.passwordHeaderContainer = page.locator(
+			'div.wpse-account-component:has(> header h3:has-text("Sign on & security")) > header',
+		)
 	}
 	async goToAccountPage() {
 		// verify page title, logo, account and cart button are visible
@@ -462,6 +487,12 @@ export class AccountPage {
 			console.log('Image src is empty or not found.')
 			return false
 		}
+	}
+
+	getSectionHeaderByTitle(title: string): Locator {
+		return this.page.locator(
+			`div.wpse-account-component:has(> header h3:has-text("${title}")) > header`,
+		)
 	}
 }
 module.exports = { AccountPage }
