@@ -24,9 +24,20 @@ test.describe('PROD Live Tests', () => {
 			const homePageActions = new HomePageActions(page)
 			const checkoutPage = new CheckoutPage(page)
 			const accountPage = new AccountPage(page)
+			//
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 
 			// Verify that store homepage loads
 			await homePageLogin.verifyUserSignInModalAppears(page, prodLiveURL)
+
+			await homePageLogin.navigateToURL(page, prodLiveURL)
+
+			await homePageActions.enterAddress(page, 'live', address)
+
+			// Verify that store homepage loads
+			await homePageLogin.newTestverifyUserSignInModalAppears(page, prodLiveURL)
+			await homePageActions.addSingleProductToCart(page)
 			// Login Existing Prod User
 			await homePageLogin.loginExistingUser(
 				page,
@@ -34,13 +45,10 @@ test.describe('PROD Live Tests', () => {
 				prodLiveUsername,
 				prodLivePassword,
 			)
-
-			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
-			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
-			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
-			// add adress for new user account
-			await homePageActions.openAddressSection(page, 'live')
-			await homePageActions.selectAddressFromList(page, 'live', address)
+			// go to main store page
+			await homePageActions.goToMainStorePage(page)
+			// // add adress for new user account
+			//await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			//
