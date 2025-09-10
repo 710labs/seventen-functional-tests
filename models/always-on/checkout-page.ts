@@ -800,7 +800,7 @@ export class CheckoutPage {
 				dlUploadButton.click(),
 			])
 			//Enter Personal ID info (Med already exists from pre-cart step)
-			await driversLicenseChooser.setFiles('CA-DL.jpgg')
+			await driversLicenseChooser.setFiles('CA-DL.jpg')
 			await this.idExpirationInput.click()
 			const newYear = new Date().getFullYear() + 1
 			const initialPersonalExpDate = `04/10/${newYear}`
