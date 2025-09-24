@@ -113,8 +113,12 @@ test.describe('Live Tests', () => {
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			if (VISUAL) {
 				//await expect(page).toHaveScreenshot('order-confirmed.png')
-				await expect(page).toHaveScreenshot('confirmation-page-rec.png', {
-					mask: [orderConfirmation.orderNumber],
+				await expect(page).toHaveScreenshot('order-confirmation-rec.png', {
+					mask: [
+						orderConfirmation.orderNumber,
+						orderConfirmation.thankYouMessage,
+						orderConfirmation.yourInformationSection,
+					],
 					threshold: 0.2, // per-pixel color tolerance (0–1)
 					maxDiffPixels: 1000,
 				})
@@ -135,6 +139,7 @@ test.describe('Live Tests', () => {
 				await expect(page).toHaveScreenshot('account-page-rec.png', {
 					threshold: 0.2, // per-pixel color tolerance (0–1)
 					maxDiffPixels: 1000,
+					mask: [accountPage.pageTitleSelector],
 				})
 			}
 			// verify that account page elements, buttons, and popup actions all work
@@ -239,9 +244,10 @@ test.describe('Live Tests', () => {
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			if (VISUAL) {
-				await expect(page).toHaveScreenshot('order-confirmed-title-med.png', {
+				await expect(page).toHaveScreenshot('order-confirmation-med.png', {
 					threshold: 0.2, // per-pixel color tolerance (0–1)
 					maxDiffPixels: 1000,
+					mask: [orderConfirmation.thankYouMessage, orderConfirmation.yourInformationSection],
 				})
 				// await expect(orderConfirmation.orderNumberElement).toHaveScreenshot(
 				// 	'order-number-med.png',
@@ -266,6 +272,7 @@ test.describe('Live Tests', () => {
 				await expect(personalInfoHeader).toHaveScreenshot('account-personal-info-header-med.png', {
 					threshold: 0.2, // per-pixel color tolerance (0–1)
 					maxDiffPixels: 1000,
+					mask: [accountPage.pageTitleSelector],
 				})
 			}
 			// verify that account page elements, buttons, and popup actions all work

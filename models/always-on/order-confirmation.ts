@@ -9,6 +9,8 @@ export class OrderConfirmationPage {
 	readonly orderConfirmationTitle: Locator
 	readonly orderNumberElement: Locator
 	readonly orderNumber: Locator
+	readonly thankYouMessage: Locator
+	readonly yourInformationSection: Locator
 	constructor(page: Page) {
 		this.page = page
 		this.orderConfirmationTitle = page.locator(
@@ -18,6 +20,10 @@ export class OrderConfirmationPage {
 		this.orderNumberElement = page.locator('p.thankyou-number')
 		// Element that contains only the order number digits
 		this.orderNumber = page.locator('p.thankyou-number a')
+		this.thankYouMessage = page.locator('p.thankyou-msg')
+		this.yourInformationSection = page.locator(
+			'div.thankyou-meta:has(> h4:has-text("Your information"))',
+		)
 	}
 
 	async getOrderNumber() {
@@ -34,6 +40,8 @@ export class OrderConfirmationPage {
 			// verify that checkout page title loads
 			await this.orderConfirmationTitle.waitFor({ timeout: 30000 })
 			await expect(this.orderConfirmationTitle).toBeVisible()
+			await this.thankYouMessage.waitFor({ state: 'visible' })
+			await this.yourInformationSection.waitFor({ state: 'visible' })
 		})
 	}
 }

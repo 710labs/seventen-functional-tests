@@ -94,7 +94,7 @@ export class AccountPage {
 		this.alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
 		this.alwaysOnPassword = process.env.ALWAYS_ON_PASSWORD || ''
 		this.NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
-		this.pageTitleSelector = page.locator('span.site-header-group')
+		this.pageTitleSelector = page.locator('h2:has-text("Hello,")')
 		this.accountButtonNav = page.locator('svg.icon.icon-account')
 		this.signOutButton = page.locator('a:has-text("Sign out")')
 		// Order History
