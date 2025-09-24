@@ -174,7 +174,7 @@ export class AccountPage {
 		)
 		// Password
 		this.passwordSection = page.locator('h3:has-text("Sign on & security")')
-		this.editPasswordLink = page.locator('a.specific-link[data-module="password"]')
+		this.editPasswordLink = page.locator('a[data-module="password"]').first()
 		this.passwordDrawerHeader = page.locator('h2:has-text("Change password")')
 		this.currentPasswordInput = page.locator('#old_password')
 		this.newPasswordInput = page.locator('#new_password')
@@ -301,10 +301,14 @@ export class AccountPage {
 		await this.firstNameInput.waitFor({ state: 'visible' })
 		await expect(this.firstNameInput).toBeVisible()
 		// Edit input fields
-		const newFirstName = faker.name.firstName?.() || faker.person.firstName()
-		const newLastName = faker.name.lastName?.() || faker.person.lastName()
+		const fakeFirst = faker.name.firstName?.() || faker.person.firstName()
+		const fakeLast = faker.name.lastName?.() || faker.person.lastName()
+		const newFirstName = `${fakeFirst}_Edited`
+		const newLastName = `${fakeLast}_Edited`
 		await this.firstNameInput.fill(newFirstName)
 		await this.lastNameInput.fill(newLastName)
+		await this.page.waitForTimeout(1000)
+
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -449,7 +453,9 @@ export class AccountPage {
 		await expect(this.passwordSection).toBeVisible()
 		await expect(this.editPasswordLink).toBeVisible()
 		await this.passwordSection.scrollIntoViewIfNeeded()
+		await this.page.waitForTimeout(1500)
 		await this.editPasswordLink.click({ force: true })
+		await this.page.waitForTimeout(1500)
 		//wait for drawer header
 		await this.passwordDrawerHeader.waitFor({ state: 'visible' })
 		await expect(this.passwordDrawerHeader).toBeVisible()
@@ -463,7 +469,7 @@ export class AccountPage {
 		//click change password button
 		await expect(this.changePasswordButton).toBeVisible()
 		await this.changePasswordButton.click({ force: true })
-		await this.changePasswordButton.click({ force: true })
+		//await this.changePasswordButton.click({ force: true })
 		await this.page.waitForTimeout(1000)
 	}
 	async normalizePhoneNumber(phone) {

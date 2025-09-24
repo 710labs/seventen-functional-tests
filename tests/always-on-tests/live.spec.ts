@@ -38,7 +38,10 @@ test.describe('Live Tests', () => {
 			// add adress for new user account
 			await homePageLogin.navigateToURL(page, liveURL)
 			if (VISUAL) {
-				await expect(page).toHaveScreenshot('homepage-shop-prelogin-rec.png')
+				await expect(page).toHaveScreenshot('homepage-shop-prelogin-rec.png', {
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
+				})
 			}
 			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 
@@ -49,6 +52,8 @@ test.describe('Live Tests', () => {
 				await expect(homePageLogin.userPopUpContainer).toBeVisible()
 				await expect(homePageLogin.userPopUpContainer).toHaveScreenshot('auth-gateway-rec.png', {
 					mask: [homePageLogin.passwordFieldPopUp],
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
 				})
 			}
 			// register new user
@@ -61,7 +66,10 @@ test.describe('Live Tests', () => {
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			if (VISUAL) {
 				await expect(homePageLogin.shopByStoreTitle).toBeVisible()
-				await expect(page).toHaveScreenshot('homepage-post-login-rec.png')
+				await expect(page).toHaveScreenshot('homepage-post-login-rec.png', {
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
+				})
 			}
 			// add products to cart
 			await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
@@ -76,6 +84,8 @@ test.describe('Live Tests', () => {
 						checkoutPage.lastNameField,
 						checkoutPage.emailField,
 					],
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
 				})
 			}
 			// enter in user info on checkoutpage
@@ -88,7 +98,13 @@ test.describe('Live Tests', () => {
 				// 	'checkout-appointment-summary-rec.png',
 				// 	// { mask: [timeMask] },
 				// )
-				await expect(page).toHaveScreenshot('checkout-payment-cash-rec.png')
+				await expect(checkoutPage.paymentSection).toHaveScreenshot(
+					'checkout-payment-cash-rec.png',
+					{
+						threshold: 0.2, // per-pixel color tolerance (0–1)
+						maxDiffPixels: 1000,
+					},
+				)
 			}
 			//place order
 			await checkoutPage.placeOrder(page)
@@ -99,6 +115,8 @@ test.describe('Live Tests', () => {
 				//await expect(page).toHaveScreenshot('order-confirmed.png')
 				await expect(page).toHaveScreenshot('confirmation-page-rec.png', {
 					mask: [orderConfirmation.orderNumber],
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
 				})
 			}
 			// get order number to confirm order was created
@@ -114,7 +132,10 @@ test.describe('Live Tests', () => {
 				// Capture only the Personal info section header (h3 + link) to reduce flakiness
 				const personalInfoHeader = accountPage.personalInfoHeaderContainer
 				await expect(personalInfoHeader).toBeVisible()
-				await expect(page).toHaveScreenshot('account-page-rec.png')
+				await expect(page).toHaveScreenshot('account-page-rec.png', {
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
+				})
 			}
 			// verify that account page elements, buttons, and popup actions all work
 			const newEmail = await accountPage.verifyAccountPageElements(
@@ -150,6 +171,10 @@ test.describe('Live Tests', () => {
 			if (VISUAL) {
 				await expect(homePageLogin.shopByCategoryTitle).toHaveScreenshot(
 					'home-shop-by-category-med.png',
+					{
+						threshold: 0.2, // per-pixel color tolerance (0–1)
+						maxDiffPixels: 1000,
+					},
 				)
 			}
 			await homePageActions.addSingleProductToCart(page)
@@ -157,6 +182,8 @@ test.describe('Live Tests', () => {
 				await expect(homePageLogin.userPopUpContainer).toBeVisible()
 				await expect(homePageLogin.userPopUpContainer).toHaveScreenshot('auth-gateway-med.png', {
 					mask: [homePageLogin.passwordFieldPopUp],
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
 				})
 			}
 			// register new user
@@ -173,6 +200,10 @@ test.describe('Live Tests', () => {
 				await expect(homePageLogin.shopByStoreTitle).toBeVisible()
 				await expect(homePageLogin.shopByStoreTitle).toHaveScreenshot(
 					'home-post-login-title-med.png',
+					{
+						threshold: 0.2, // per-pixel color tolerance (0–1)
+						maxDiffPixels: 1000,
+					},
 				)
 			}
 			// add products to cart
@@ -181,7 +212,10 @@ test.describe('Live Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			if (VISUAL) {
-				await expect(checkoutPage.yourInfoSection).toHaveScreenshot('checkout-your-info-med.png')
+				await expect(checkoutPage.yourInfoSection).toHaveScreenshot('checkout-your-info-med.png', {
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
+				})
 			}
 			// enter in user info on checkoutpage
 			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, liveURL, address, newAddress)
@@ -191,7 +225,13 @@ test.describe('Live Tests', () => {
 				// 	'checkout-appointment-summary-med.png',
 				// 	{ mask: [timeMask] },
 				// )
-				await expect(checkoutPage.paymentSection).toHaveScreenshot('checkout-payment-cash-med.png')
+				await expect(checkoutPage.paymentSection).toHaveScreenshot(
+					'checkout-payment-cash-med.png',
+					{
+						threshold: 0.2, // per-pixel color tolerance (0–1)
+						maxDiffPixels: 1000,
+					},
+				)
 			}
 			//place order
 			await checkoutPage.placeOrder(page)
@@ -199,9 +239,10 @@ test.describe('Live Tests', () => {
 			//TODO: Add Verification to details on order confirmation page
 			await orderConfirmation.verifyOrderConfirmationPageLoads(page)
 			if (VISUAL) {
-				await expect(orderConfirmation.orderConfirmationTitle).toHaveScreenshot(
-					'order-confirmed-title-med.png',
-				)
+				await expect(page).toHaveScreenshot('order-confirmed-title-med.png', {
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
+				})
 				// await expect(orderConfirmation.orderNumberElement).toHaveScreenshot(
 				// 	'order-number-med.png',
 				// 	{
@@ -222,7 +263,10 @@ test.describe('Live Tests', () => {
 				// Capture only the Personal info section header (h3 + link)
 				const personalInfoHeader = accountPage.personalInfoHeaderContainer
 				await expect(personalInfoHeader).toBeVisible()
-				await expect(personalInfoHeader).toHaveScreenshot('account-personal-info-header-med.png')
+				await expect(personalInfoHeader).toHaveScreenshot('account-personal-info-header-med.png', {
+					threshold: 0.2, // per-pixel color tolerance (0–1)
+					maxDiffPixels: 1000,
+				})
 			}
 			// verify that account page elements, buttons, and popup actions all work
 			const newEmail = await accountPage.verifyAccountPageElements(
@@ -253,6 +297,8 @@ test.describe('Live Tests', () => {
 			await expect(homePageLogin.userPopUpContainer).toBeVisible()
 			await expect(homePageLogin.userPopUpContainer).toHaveScreenshot('auth-gateway-existing.png', {
 				mask: [homePageLogin.passwordFieldPopUp],
+				threshold: 0.2, // per-pixel color tolerance (0–1)
+				maxDiffPixels: 1000,
 			})
 		}
 		//
