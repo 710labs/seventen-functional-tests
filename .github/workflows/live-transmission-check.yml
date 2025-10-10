@@ -29,11 +29,11 @@ jobs:
           cat > check-orders.mjs <<'EOF'
           import fs from "node:fs/promises";
 
-          const baseRaw = process.env.ALWAYS_ON_URL_DEV || "";
+          const baseRaw = process.env.ALWAYS_ON_URL || "";
           const auth = process.env.LIVE_DEV_QA_AUTH || "";
 
           if (!baseRaw) {
-            console.error("❌ ALWAYS_ON_URL_DEV is not set.");
+            console.error("❌ ALWAYS_ON_URL is not set.");
             process.exit(1);
           }
           if (!auth) {
