@@ -16,7 +16,7 @@ jobs:
     env:
       #ALWAYS_ON_URL: ${{ secrets.PROD_LIVE_URL }}   # e.g., https://live-dev.710labs.com
       ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}   # e.g., https://live-dev.710labs.com
-      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_PROD_QA_AUTH }}     #
+      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }}     #
 
     steps:
       - name: Setup Node.js
