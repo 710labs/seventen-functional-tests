@@ -1,9 +1,9 @@
-name: Order Transmission Check (Dev)
+name: Live - POS Order Transmission Check
 
 on:
   workflow_dispatch: {}
-  schedule:
-    - cron: "0 * * * *"   # optional: hourly (UTC). Remove if not needed.
+  #schedule:
+    #- cron: "0 * * * *"   # optional: hourly (UTC). Remove if not needed.
 
 jobs:
   check-orders:
