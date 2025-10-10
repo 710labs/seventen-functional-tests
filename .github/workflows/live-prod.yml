@@ -93,9 +93,8 @@ jobs:
       matrix:
         order_id: ${{ fromJson(needs.live-prod-tests.outputs.order_ids_json) }}
     env:
-      #ALWAYS_ON_URL: ${{ secrets.PROD_LIVE_URL }} # e.g., https://live.710labs.com
-      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}
-      LIVE_PROD_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }} # e.g., xxyz
+      ALWAYS_ON_URL_PROD: ${{ secrets.PROD_LIVE_URL }} # e.g., https://live.710labs.com
+      LIVE_PROD_QA_AUTH: ${{ secrets.LIVE_PROD_QA_AUTH }} # e.g., xxyz
 
     steps:
       - name: Verify POS Instance sync – ${{ matrix.order_id }}
@@ -110,7 +109,7 @@ jobs:
             sudo apt-get install -y jq
           fi
 
-          BASE="${ALWAYS_ON_URL%/}"
+          BASE="${ALWAYS_ON_URL_PROD%/}"
           AUTH="${LIVE_PROD_QA_AUTH}"
           URL_REAL="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=${AUTH}&id=${ORDER_ID}"
           URL_SAFE="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=***&id=${ORDER_ID}"
