@@ -1,10 +1,9 @@
-name: Live - POS Order Transmission Check
+name: Live PROD - POS Order Transmission Check
 
 on:
   workflow_dispatch: {}
-  #schedule:
-    #- cron: "0 * * * *"   # optional: hourly (UTC). Remove if not needed.
-
+  schedule:
+    - cron: '0 10 * * *'
 jobs:
   check-orders:
     runs-on: ubuntu-latest
@@ -15,8 +14,8 @@ jobs:
     environment: live-dev
 
     env:
-      ALWAYS_ON_URL_DEV: ${{ secrets.ALWAYS_ON_URL_DEV }}   # e.g., https://live-dev.710labs.com
-      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }}     #
+      ALWAYS_ON_URL_DEV: ${{ secrets.ALWAYS_ON_URL_PROD }}   # e.g., https://live-dev.710labs.com
+      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_PROD_QA_AUTH }}     #
 
     steps:
       - name: Setup Node.js
