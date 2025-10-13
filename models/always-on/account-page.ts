@@ -89,7 +89,7 @@ export class AccountPage {
 		this.alwaysOnPassword = process.env.ALWAYS_ON_PASSWORD || ''
 		this.NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 		this.pageTitleSelector = page.locator('span.site-header-group')
-		this.accountButtonNav = page.locator('svg.icon.icon-account')
+		this.accountButtonNav = page.locator('.icon.icon-account').first()
 		this.signOutButton = page.locator('a:has-text("Sign out")')
 		// Order History
 		this.ordersSection = page.locator('#orders')

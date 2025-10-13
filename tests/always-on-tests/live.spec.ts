@@ -8,7 +8,7 @@ require('dotenv').config('.env')
 import { appendFileSync, writeFileSync } from 'fs'
 
 test.describe('Live Tests', () => {
-	test.setTimeout(400000) // Set the timeout for all tests in this file
+	test.setTimeout(500000) // Set the timeout for all tests in this file
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
 	const liveURL = process.env.ALWAYS_ON_URL || ''

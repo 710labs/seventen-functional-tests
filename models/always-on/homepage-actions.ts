@@ -61,7 +61,7 @@ export class HomePageActions {
 		this.closeCartButtonGeneric = page.locator(
 			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
 		)
-		this.minimumNotMetLabel = page.locator('div.wpse-snacktoast')
+		this.minimumNotMetLabel = page.locator('div.wpse-snacktoast').first()
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.productPageAddToCartButton = page.locator('button.wpse-button-primary.fasd_to_cart')
 		this.cartContinueShoppingButton = page.locator('a:has-text("Add more items")')
@@ -953,7 +953,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 3
+		let i = 0
 		let medicalProductExists = false
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
@@ -1409,55 +1409,57 @@ export class HomePageActions {
 	}
 
 	async addSingleProductToCart(page) {
-		// Get all the products on the page
-		const products = await page.locator(
-			'li.product.type-product.product-type-simple.status-publish',
-		)
+		// Get all the products on the page (no await needed - locator returns synchronously)
+		const products = page.locator('li.product.type-product.product-type-simple.status-publish')
 
-		let i = 0 // Start from index 3 like the original function
+		// Wait for products to load before counting them
+		await products.first().waitFor({ state: 'visible', timeout: 10000 })
 
-		// Check if there are enough products to add
-		if (i >= (await products.count())) {
-			throw new Error(
-				`Only ${await products.count()} products available on the page. Could not find a suitable product to add.`,
-			)
-		}
+		const productCount = await products.count()
+		console.log(`Found ${productCount} products on the page`)
 
-		// Get the current product
-		const product = products.nth(i)
+		let i = 3 // Start from index 3 like the original function
 
-		// Check if the product has the "Medical Only" badge
-		const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+		// Loop through products to find one without "Medical Only" tag
+		while (i < productCount) {
+			// Get the current product
+			const product = products.nth(i)
 
-		if (hasMedicalOnlyTag) {
+			// Check if the product has the "Medical Only" badge
+			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+
+			if (hasMedicalOnlyTag) {
+				const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+				console.log(`Skipping product "${productName}" (index ${i}) due to "Medical Only" tag.`)
+				i++
+				continue // Skip to next product
+			}
+
+			// Found a suitable product, proceed to add it
 			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-			console.log(`Skipping product "${productName}" due to "Medical Only" tag.`)
+			const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
+
+			console.log(`Adding product "${productName}" (index ${i}) to cart`)
+
+			await expect(productClickInto).toBeVisible()
+			await productClickInto.click()
+			await page.waitForTimeout(3000)
+
+			// grabs the first visible button whose name is "Add to cart"
+			const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
+			// wait for it to appear...
+			await expect(addToCart).toBeVisible()
+			// …and click it
+			await addToCart.click({ force: true })
+
+			console.log(`Product "${productName}" add to cart button clicked. Function complete.`)
+			return // Successfully added a product, exit function
 		}
 
-		// Found a suitable product, proceed to add it
-		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-		const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
-
-		console.log(`Adding product "${productName}" to cart`)
-		console.log('locator for productClickInto: ' + productClickInto)
-
-		await expect(productClickInto).toBeVisible()
-		await productClickInto.click()
-		await page.waitForTimeout(3000)
-
-		// Wait for and click 'Add to Cart' on the product page
-		// await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
-		// await this.productPageAddToCartButton.nth(0).click({ force: true })
-		// await page.waitForTimeout(5000)
-
-		// grabs the first visible button whose name is “Add to cart”
-		const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
-		// wait for it to appear...
-		await expect(addToCart).toBeVisible()
-		// …and click it
-		await addToCart.click({ force: true })
-
-		console.log(`Product "${productName}" add to cart button clicked. Function complete.`)
+		// If we've exhausted all products without finding a suitable one
+		throw new Error(
+			`Could not find a suitable non-medical product to add. Checked ${productCount} products starting from index 3.`,
+		)
 	}
 }
 module.exports = { HomePageActions }
