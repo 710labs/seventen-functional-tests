@@ -5,6 +5,8 @@ const { faker } = require('@faker-js/faker')
 const fs = require('fs')
 const path = require('path')
 const { PNG } = require('pngjs')
+import { faker } from '@faker-js/faker'
+
 export class AccountPage {
 	readonly alwaysOnUsername: string
 	readonly alwaysOnPassword: string
@@ -94,8 +96,8 @@ export class AccountPage {
 		this.alwaysOnUsername = process.env.ALWAYS_ON_USERNAME || ''
 		this.alwaysOnPassword = process.env.ALWAYS_ON_PASSWORD || ''
 		this.NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
-		this.pageTitleSelector = page.locator('h2:has-text("Hello,")')
-		this.accountButtonNav = page.locator('svg.icon.icon-account')
+		this.pageTitleSelector = page.locator('span.site-header-group')
+		this.accountButtonNav = page.locator('.icon.icon-account').first()
 		this.signOutButton = page.locator('a:has-text("Sign out")')
 		// Order History
 		this.ordersSection = page.locator('#orders')
@@ -301,10 +303,14 @@ export class AccountPage {
 		await this.firstNameInput.waitFor({ state: 'visible' })
 		await expect(this.firstNameInput).toBeVisible()
 		// Edit input fields
-		const fakeFirst = faker.name.firstName?.() || faker.person.firstName()
-		const fakeLast = faker.name.lastName?.() || faker.person.lastName()
-		const newFirstName = `${fakeFirst}_Edited`
-		const newLastName = `${fakeLast}_Edited`
+		// Get current values from the input fields
+		const currentFirstName = await this.firstNameInput.inputValue()
+		const currentLastName = await this.lastNameInput.inputValue()
+		//
+		const newFirstName = `Edited ${currentFirstName}`
+		const newLastName = `Edited ${currentLastName}`
+
+		// Prepend "Edited" to the existing values
 		await this.firstNameInput.fill(newFirstName)
 		await this.lastNameInput.fill(newLastName)
 		await this.page.waitForTimeout(1000)
@@ -376,7 +382,7 @@ export class AccountPage {
 			this.uploadIDInput.click({ force: true }),
 		])
 		//Enter Personal ID info (Med already exists from pre-cart step)
-		await driversLicenseChooser.setFiles('Medical-Card.png')
+		await driversLicenseChooser.setFiles('CA-DL.jpg')
 		// Add Exp date
 		await this.expirationInput.click({ force: true })
 		const newYear = new Date().getFullYear() + 1

@@ -40,7 +40,7 @@ export class HomePageLogin {
 		this.alwaysOnPassword = process.env.ALWAYS_ON_PASSWORD || ''
 		this.page = page
 		this.pageTitleSelector = page.locator('span.site-header-group')
-		this.accountButtonNav = page.locator('svg.icon.icon-account')
+		this.accountButtonNav = page.locator('svg.icon.icon-account').first()
 		this.cartButtonNav = page.locator('a.wpse-cart-openerize').first()
 		this.userPopUpContainer = page.locator('section.wpse-component #renderGateway')
 		this.userPopUpContainerText = page.locator('section.wpse-component #renderGateway header h2')
