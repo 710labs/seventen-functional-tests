@@ -1,7 +1,6 @@
 require('dotenv').config('.env')
 import test, { expect, Locator, Page } from '@playwright/test'
 const glob = require('glob')
-const { faker } = require('@faker-js/faker')
 const fs = require('fs')
 const path = require('path')
 const { PNG } = require('pngjs')
