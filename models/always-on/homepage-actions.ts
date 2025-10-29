@@ -1418,7 +1418,7 @@ export class HomePageActions {
 		const productCount = await products.count()
 		console.log(`Found ${productCount} products on the page`)
 
-		let i = 3 // Start from index 3 like the original function
+		let i = 1 // Start from index 3 like the original function
 
 		// Loop through products to find one without "Medical Only" tag
 		while (i < productCount) {
