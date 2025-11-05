@@ -277,9 +277,7 @@ export class CheckoutPage {
 
 		await test.step('Fill in Phone Number', async () => {
 			await this.phoneInput.click()
-			await this.phoneInput.fill(
-				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
-			)
+			await this.phoneInput.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
 		await test.step('Fill in Order Notes', async () => {
