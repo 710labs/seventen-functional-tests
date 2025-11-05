@@ -73,7 +73,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 				faker.datatype.number({ min: 1, max: 28 }),
 				faker.datatype.number({ min: 10, max: 12 }),
 				faker.datatype.number({ min: 1975, max: 2001 }),
-				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
+				faker.phone.phoneNumber('555-###-####'),
 				'recreational',
 				address,
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),

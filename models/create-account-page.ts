@@ -154,9 +154,7 @@ export class CreateAccountPage {
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
-			await this.phoneNumber.fill(
-				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
-			)
+			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
 		await test.step('Submit New Customer Form', async () => {
@@ -642,9 +640,7 @@ export class CreateAccountPage {
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
-			await this.phoneNumber.fill(
-				faker.phone.phoneNumber(`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`),
-			)
+			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
 		await test.step('Submit New Customer Form', async () => {

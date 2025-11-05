@@ -54,9 +54,8 @@ test.describe('POS Order Generator', () => {
 		var dob_day = faker.datatype.number({ min: 10, max: 25 })
 		var dob_month = faker.datatype.number({ min: 10, max: 12 })
 		var dob_year = faker.datatype.number({ min: 1955, max: 2001 })
-		var phone = faker.phone.phoneNumber(
-			`${faker.helpers.arrayElement(fictionalAreacodes)}-###-####`,
-		)
+		var phone = faker.phone.phoneNumber(`${faker.phone.phoneNumber('555-###-####')}`)
+
 		var customer_type =
 			process.env.POSSYNC_CUSTOMER_TYPE === 'Random'
 				? faker.helpers.arrayElement(['Recreational', 'Medical'])
