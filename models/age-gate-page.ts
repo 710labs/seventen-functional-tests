@@ -20,6 +20,10 @@ export class AgeGatePage {
 				await expect(this.page.locator('.age-gate-challenge')).toContainText(
 					'You must be at least 21 years old or possess a valid medical recommendation to view this site.',
 				)
+			} else if (this.page.url().includes('thelist-nj')) {
+				await expect(this.page.locator('.age-gate-challenge')).toContainText(
+					'You must be at least 21 years old or possess a valid medical recommendation to view this site.',
+				)
 			} else {
 				await expect(this.page.locator('.age-gate-challenge')).toContainText(
 					'You must be at least 21 years of age or possess a valid medical recommendation to view this site.',
