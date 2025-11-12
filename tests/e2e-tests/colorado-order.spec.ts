@@ -25,6 +25,9 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 		`Basic Order - Existing Customer - Medical`,
 		{ tag: ['@medical'] },
 		async ({ page, browserName }, workerInfo) => {
+			const address = '933 Alpine Ave'
+			const city = 'Boulder'
+			const state = 'CO'
 			const zipCode = '80304'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
@@ -41,7 +44,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			await listPassword.submitPassword('qatester')
 			await loginPage.login(user.email, user.password)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-				await myAccountPage.addAddress()
+				await myAccountPage.addAddress(address, city, state, zipCode)
 			}
 			await myAccountPage.addMedicalExp()
 			await shopPage.addProductsToCartPickup(6, mobile)
@@ -96,6 +99,9 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 		{ tag: ['@recreational'] },
 		async ({ page, browserName }, workerInfo) => {
 			const zipCode = '80304'
+			const address = '933 Alpine Ave'
+			const city = 'Boulder'
+			const state = 'CO'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
 			const createAccountPage = new CreateAccountPage(page, apiContext)
@@ -111,7 +117,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			await listPassword.submitPassword('qatester')
 			await loginPage.login(user.email, user.password)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-				await myAccountPage.addAddress()
+				await myAccountPage.addAddress(address, city, state, zipCode)
 			}
 
 			await shopPage.addProductsToCartPickup(6, mobile)
