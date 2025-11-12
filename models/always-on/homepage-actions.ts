@@ -953,7 +953,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 0
+		let i = 1
 		let medicalProductExists = false
 		let firstMedicalProductAdded = false // Track if the first product added is a medical product
 		let medicalCardProvided = false
