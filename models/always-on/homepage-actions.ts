@@ -1044,6 +1044,13 @@ export class HomePageActions {
 
 				console.log('Adding product from homepage: ' + productName)
 				await expect(addToCartButton).toBeVisible()
+
+				// Scroll the button to the center of the viewport to avoid it being obscured by category tabs
+				await addToCartButton.evaluate(element => {
+					element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+				})
+				await page.waitForTimeout(500) // Wait for smooth scroll to complete
+
 				await addToCartButton.click()
 				await page.waitForTimeout(10000)
 
