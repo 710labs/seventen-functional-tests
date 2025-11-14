@@ -99,8 +99,8 @@ test.describe('Live Tests', () => {
 			await homePageLogin.registerNewUser(page, 'med')
 			// go to main store page
 			await homePageActions.goToMainStorePage(page)
-			const address = '2919 S La Cienega Blvd, Culver City, CA 90232'
-			const newAddress = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+			const newAddress = '2919 S La Cienega Blvd, Culver City, CA 90232'
 			// add adress for new user account
 			//await homePageActions.enterAddress(page, 'live', address)
 			// verify that homepage loads again
