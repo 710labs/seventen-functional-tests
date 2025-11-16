@@ -178,10 +178,15 @@ jobs:
             FAILED_COUNT="N/A"
           fi
 
-          # Build failure details if any
-          FAILURE_DETAILS=""
+          # Build failure details if any (escape for JSON)
+          FAILURE_DETAILS="No details available"
           if [ -f check-results.json ] && [ "$FAILED_COUNT" != "0" ] && [ "$FAILED_COUNT" != "N/A" ]; then
-            FAILURE_DETAILS=$(jq -r '.failures | map("• Order #\(.woocommerceId): missing \(.missing | join(", "))") | join("\n")' check-results.json)
+            # Use \\n for JSON escaped newlines instead of actual newlines
+            FAILURE_DETAILS=$(jq -r '.failures | map("• Order #\(.woocommerceId): missing \(.missing | join(", "))") | join("\\n")' check-results.json)
+            # If still empty, set default
+            if [ -z "$FAILURE_DETAILS" ]; then
+              FAILURE_DETAILS="See workflow logs for details"
+            fi
           fi
 
           # Build Slack message using Block Kit
