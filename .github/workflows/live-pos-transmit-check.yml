@@ -1,4 +1,4 @@
-name: Live - Stage - POS Transmit Check
+name: Live - Stage - POS Transmit Check Last 10 Orders
 
 on:
   workflow_dispatch:
