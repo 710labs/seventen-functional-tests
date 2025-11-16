@@ -16,7 +16,7 @@ import { writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
-	const orderQuanity = 8
+	const orderQuanity = 5
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any
