@@ -5,17 +5,16 @@ on:
   schedule:
     - cron: "0 10 * * *"
 jobs:
-  check-orders:
+  fetch-orders:
+    name: Fetch Last 10 Orders
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
-    # If you're using *Environment* secrets, set this to your environment's name (e.g., "live-dev").
-    # If you're using repo-level secrets only, you can remove this block.
     environment: live-dev
-
-    env: # e.g., https://live-dev.710labs.com
-      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }} # e.g., https://live-dev.710labs.com
-      LIVE_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }} #
+    outputs:
+      order_ids_json: ${{ steps.collect.outputs.order_ids_json }}
+    env:
+      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}
+      LIVE_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }}
 
     steps:
       - name: Setup Node.js
@@ -23,12 +22,12 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Create and run check
-        id: check
-        continue-on-error: true
+      - name: Fetch orders and extract IDs
+        id: collect
         run: |
           set -euo pipefail
-          cat > check-orders.mjs <<'EOF'
+
+          cat > fetch-orders.mjs <<'EOF'
           import fs from "node:fs/promises";
 
           const baseRaw = process.env.ALWAYS_ON_URL || "";
@@ -46,8 +45,10 @@ jobs:
           const base = baseRaw.replace(/\/+$/, "");
           const ENDPOINT = `${base}/wp-content/plugins/persy/interface/qa/orders/?auth=${encodeURIComponent(auth)}`;
 
+          console.log(`🔍 Fetching last 10 orders from ${base}`);
+
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+          const timeout = setTimeout(() => controller.abort(), 20000);
 
           let res;
           try {
@@ -85,68 +86,31 @@ jobs:
             process.exit(1);
           }
 
-          // Normalize instanceId/instanceID and externalId/externalID
-          const norm = orders.map(o => ({
-            woocommerceId: o.woocommerceId ?? null,
-            instanceId: o.instanceId ?? o.instanceID ?? null,
-            instanceName: o.instanceName ?? null,
-            instanceType: o.instanceType ?? null,
-            externalId: o.externalId ?? o.externalID ?? null,
-          }));
+          // Extract just the WooCommerce IDs
+          const orderIds = orders.map(o => o.woocommerceId).filter(Boolean);
 
-          const isBlank = v => v === null || v === undefined || String(v).trim() === "";
+          console.log(`✅ Found ${orderIds.length} orders:`);
+          console.log(JSON.stringify(orderIds, null, 2));
 
-          const invalid = norm
-            .map(o => {
-              const missing = [];
-              if (isBlank(o.instanceId))   missing.push("instanceId");
-              if (isBlank(o.instanceName)) missing.push("instanceName");
-              if (isBlank(o.instanceType)) missing.push("instanceType");
-              if (isBlank(o.externalId))   missing.push("externalId");
-              return { ...o, missing };
-            })
-            .filter(o => o.missing.length > 0);
-
-          // Save results for Slack notification
-          const results = {
-            ordersChecked: orders.length,
-            failedCount: invalid.length,
-            failures: invalid.map(o => ({
-              woocommerceId: o.woocommerceId,
-              missing: o.missing
-            }))
-          };
-          await fs.writeFile("check-results.json", JSON.stringify(results, null, 2));
-
-          // Step summary (do not leak auth)
-          const summary = [];
-          summary.push(`# Order Transmission Check (Dev)`);
-          summary.push(`Base: \`${base}\``);
-          summary.push(`Path: \`/wp-content/plugins/persy/interface/qa/orders/?auth=***\``);
-          summary.push(`Checked last ${orders.length} orders.`);
-          if (invalid.length === 0) {
-            summary.push(`✅ **All orders have required fields populated.**`);
-          } else {
-            summary.push(`❌ **${invalid.length} order(s) missing required fields:**`);
-            for (const o of invalid) {
-              summary.push(`- WooCommerce ID \`${o.woocommerceId}\`: missing ${o.missing.join(", ")}`);
-            }
-          }
-          if (process.env.GITHUB_STEP_SUMMARY) {
-            await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary.join("\n") + "\n");
-          }
-
-          if (invalid.length > 0) {
-            console.error("❌ One or more orders are missing required fields. See summary above.");
-            process.exit(1);
-          } else {
-            console.log("✅ All required fields present for the last 10 orders.");
-          }
+          // Write to file for GitHub output
+          await fs.writeFile("order-ids.json", JSON.stringify(orderIds));
           EOF
 
-          node check-orders.mjs
+          node fetch-orders.mjs
 
-      - name: Upload API response (always)
+          # Set GitHub output
+          ORDER_IDS_JSON=$(cat order-ids.json)
+          echo "order_ids_json=${ORDER_IDS_JSON}" >> "$GITHUB_OUTPUT"
+
+          # Add to step summary
+          ORDER_COUNT=$(echo "$ORDER_IDS_JSON" | jq '. | length')
+          {
+            echo "### Orders to Verify: ${ORDER_COUNT}"
+            echo
+            echo "\`${ORDER_IDS_JSON}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload API response
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -154,190 +118,192 @@ jobs:
           path: |
             orders-response.json
             orders-response.txt
+            order-ids.json
           retention-days: 7
-      - name: Send Slack notification
-        if: always()
+
+  verify-orders:
+    name: Verify POS Fields
+    needs: fetch-orders
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.fetch-orders.outputs.order_ids_json != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        order_id: ${{ fromJson(needs.fetch-orders.outputs.order_ids_json) }}
+    env:
+      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}
+      LIVE_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }}
+
+    steps:
+      - name: Verify POS fields for order ${{ matrix.order_id }}
+        env:
+          ORDER_ID: ${{ matrix.order_id }}
         run: |
-          # Determine status
-          if [ "${{ steps.check.outcome }}" == "success" ]; then
+          set -euo pipefail
+
+          # Ensure jq is present
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+          fi
+
+          BASE="${ALWAYS_ON_URL%/}"
+          AUTH="${LIVE_QA_AUTH}"
+          URL_REAL="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=${AUTH}&id=${ORDER_ID}"
+          URL_SAFE="${BASE}/wp-content/plugins/persy/interface/qa/orders/?auth=***&id=${ORDER_ID}"
+
+          echo "🔍 Verifying POS fields for order ${ORDER_ID}"
+          echo "➡️  GET ${URL_SAFE}"
+
+          if [[ -z "${AUTH}" ]]; then
+            echo "❌ LIVE_QA_AUTH is empty. Check your repo/org secret."
+            exit 1
+          fi
+
+          attempts=6
+          delay=10
+          for i in $(seq 1 $attempts); do
+            http_code=$(curl -sS -L -w "%{http_code}" -o /tmp/resp.json "$URL_REAL" || true)
+            echo "↩️  HTTP $http_code (try $i/$attempts)"
+
+            # Show outcome/message if JSON-ish
+            if jq -e . >/dev/null 2>&1 </tmp/resp.json; then
+              echo "🧩 Outcome snapshot:"
+              jq -r '{outcome, message}' /tmp/resp.json
+            fi
+
+            if [[ "$http_code" != "200" ]]; then
+              sleep "$delay"; continue
+            fi
+
+            # Must be valid JSON
+            if ! jq . >/dev/null 2>&1 </tmp/resp.json; then
+              echo "❌ Response is not valid JSON:"
+              sed -n '1,200p' /tmp/resp.json
+              sleep "$delay"; continue
+            fi
+
+            outcome=$(jq -r '.outcome // empty' /tmp/resp.json)
+            if [[ "$outcome" != "success" ]]; then
+              echo "⏳ Outcome is '$outcome' — message: $(jq -r '.message // ""' /tmp/resp.json)"
+              sleep "$delay"; continue
+            fi
+
+            # Check for required POS transmission fields
+            instanceId=$(jq -r '.instanceId // .instanceID // empty' /tmp/resp.json)
+            instanceName=$(jq -r '.instanceName // empty' /tmp/resp.json)
+            instanceType=$(jq -r '.instanceType // empty' /tmp/resp.json)
+            externalId=$(jq -r '.externalId // .externalID // empty' /tmp/resp.json)
+
+            missing=()
+            [[ -z "$instanceId"   ]] && missing+=("instanceId")
+            [[ -z "$instanceName" ]] && missing+=("instanceName")
+            [[ -z "$instanceType" ]] && missing+=("instanceType")
+            [[ -z "$externalId"   ]] && missing+=("externalId")
+
+            if (( ${#missing[@]} == 0 )); then
+              echo "✅ All required POS fields present for order ${ORDER_ID}:"
+              jq -r '{instanceId, instanceName, instanceType, externalId}' /tmp/resp.json
+              exit 0
+            else
+              echo "⏳ Missing fields for order ${ORDER_ID}: ${missing[*]} — retrying in ${delay}s…"
+              sleep "$delay"
+            fi
+          done
+
+          echo "❌ Verification failed for order ${ORDER_ID} after ${attempts} attempts."
+          echo "🧾 Last response body:"
+          sed -n '1,200p' /tmp/resp.json
+          exit 1
+
+  notify-results:
+    name: Notify POS Verification Results
+    needs: [fetch-orders, verify-orders]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send Slack notification
+        run: |
+          # Get the total number of orders
+          ORDER_IDS='${{ needs.fetch-orders.outputs.order_ids_json }}'
+          TOTAL_ORDERS=$(echo "$ORDER_IDS" | jq '. | length')
+
+          # Determine the verification job status
+          VERIFY_RESULT="${{ needs.verify-orders.result }}"
+
+          # Determine status and color
+          if [ "$VERIFY_RESULT" == "success" ]; then
+            STATUS_EMOJI="✅"
             STATUS_TEXT="PASSED"
             COLOR="good"
-            STATUS_EMOJI="✅"
+            DETAILS="All $TOTAL_ORDERS orders have required POS transmission fields"
+          elif [ "$VERIFY_RESULT" == "skipped" ]; then
+            STATUS_EMOJI="⏭️"
+            STATUS_TEXT="SKIPPED"
+            COLOR="warning"
+            DETAILS="No orders to verify"
           else
+            STATUS_EMOJI="❌"
             STATUS_TEXT="FAILED"
             COLOR="danger"
-            STATUS_EMOJI="❌"
+            DETAILS="One or more orders missing required POS fields"
           fi
 
-          # Read check results if available
-          if [ -f check-results.json ]; then
-            ORDERS_CHECKED=$(jq -r '.ordersChecked' check-results.json)
-            FAILED_COUNT=$(jq -r '.failedCount' check-results.json)
-          else
-            ORDERS_CHECKED="N/A"
-            FAILED_COUNT="0"
-          fi
-
-          # Build the Slack message using jq (proper JSON construction)
-          if [ "${{ steps.check.outcome }}" == "success" ]; then
-            # Success message
-            jq -n \
-              --arg color "$COLOR" \
-              --arg status_emoji "$STATUS_EMOJI" \
-              --arg orders_checked "$ORDERS_CHECKED" \
-              --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-              --arg event_name "${{ github.event_name }}" \
-              '{
-                "attachments": [
-                  {
-                    "color": $color,
-                    "blocks": [
-                      {
-                        "type": "header",
-                        "text": {
-                          "type": "plain_text",
-                          "text": ($status_emoji + " Live - Dev - POS Transmission Check - PASSED")
-                        }
-                      },
-                      {
-                        "type": "section",
-                        "fields": [
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Test:*\nPOS Transmission Check - Last 10 orders"
-                          },
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Environment:*\nDev"
-                          },
-                          {
-                            "type": "mrkdwn",
-                            "text": ("*Orders Checked:*\n" + $orders_checked)
-                          },
-                          {
-                            "type": "mrkdwn",
-                            "text": "*Status:*\nAll orders have required POS fields populated"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "context",
-                        "elements": [
-                          {
-                            "type": "mrkdwn",
-                            "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
-                          }
-                        ]
+          # Build Slack message using jq
+          jq -n \
+            --arg color "$COLOR" \
+            --arg status_emoji "$STATUS_EMOJI" \
+            --arg status_text "$STATUS_TEXT" \
+            --arg total_orders "$TOTAL_ORDERS" \
+            --arg details "$DETAILS" \
+            --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg event_name "${{ github.event_name }}" \
+            '{
+              "attachments": [
+                {
+                  "color": $color,
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": ($status_emoji + " Live - Dev - POS Transmission Check - " + $status_text)
                       }
-                    ]
-                  }
-                ]
-              }' > /tmp/slack-payload.json
-          else
-            # Failure message - build failure details from check-results.json
-            if [ -f check-results.json ]; then
-              jq -n \
-                --arg color "$COLOR" \
-                --arg status_emoji "$STATUS_EMOJI" \
-                --arg orders_checked "$ORDERS_CHECKED" \
-                --arg failed_count "$FAILED_COUNT" \
-                --argjson failures "$(jq '.failures' check-results.json)" \
-                --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-                --arg event_name "${{ github.event_name }}" \
-                '{
-                  "attachments": [
+                    },
                     {
-                      "color": $color,
-                      "blocks": [
+                      "type": "section",
+                      "fields": [
                         {
-                          "type": "header",
-                          "text": {
-                            "type": "plain_text",
-                            "text": ($status_emoji + " Live - Dev - POS Transmission Check - FAILED")
-                          }
+                          "type": "mrkdwn",
+                          "text": "*Test:*\nPOS Transmission Field Verification"
                         },
                         {
-                          "type": "section",
-                          "fields": [
-                            {
-                              "type": "mrkdwn",
-                              "text": "*Test:*\nPOS Transmission Check - Last 10 orders"
-                            },
-                            {
-                              "type": "mrkdwn",
-                              "text": "*Environment:*\nDev"
-                            },
-                            {
-                              "type": "mrkdwn",
-                              "text": ("*Orders Checked:*\n" + $orders_checked)
-                            },
-                            {
-                              "type": "mrkdwn",
-                              "text": ("*Failed:*\n" + $failed_count + " orders missing required fields")
-                            }
-                          ]
+                          "type": "mrkdwn",
+                          "text": "*Environment:*\nDev"
                         },
                         {
-                          "type": "section",
-                          "text": {
-                            "type": "mrkdwn",
-                            "text": ("*Failed Orders:*\n" + ($failures | map("• Order #" + (.woocommerceId | tostring) + ": missing " + (.missing | join(", "))) | join("\n")))
-                          }
+                          "type": "mrkdwn",
+                          "text": ("*Orders Verified:*\n" + $total_orders)
                         },
                         {
-                          "type": "context",
-                          "elements": [
-                            {
-                              "type": "mrkdwn",
-                              "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
-                            }
-                          ]
+                          "type": "mrkdwn",
+                          "text": ("*Status:*\n" + $details)
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
                         }
                       ]
                     }
                   ]
-                }' > /tmp/slack-payload.json
-            else
-              # Fallback if check-results.json doesn't exist
-              jq -n \
-                --arg color "$COLOR" \
-                --arg status_emoji "$STATUS_EMOJI" \
-                --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-                --arg event_name "${{ github.event_name }}" \
-                '{
-                  "attachments": [
-                    {
-                      "color": $color,
-                      "blocks": [
-                        {
-                          "type": "header",
-                          "text": {
-                            "type": "plain_text",
-                            "text": ($status_emoji + " Live - Dev - POS Transmission Check - FAILED")
-                          }
-                        },
-                        {
-                          "type": "section",
-                          "text": {
-                            "type": "mrkdwn",
-                            "text": "*Test failed*\nSee workflow logs for details"
-                          }
-                        },
-                        {
-                          "type": "context",
-                          "elements": [
-                            {
-                              "type": "mrkdwn",
-                              "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }' > /tmp/slack-payload.json
-            fi
-          fi
+                }
+              ]
+            }' > /tmp/slack-payload.json
 
           # Send to Slack
           curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
