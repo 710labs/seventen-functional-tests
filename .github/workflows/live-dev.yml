@@ -1,7 +1,7 @@
 name: Live - Dev
 on:
   schedule:
-    - cron: '0 11 * * *'
+    - cron: "0 11 * * *"
   workflow_dispatch:
 jobs:
   live-dev-tests:
@@ -19,7 +19,7 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_DEV }}
-      RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
+      RESULTS_URL: "https://710labs.github.io/seventen-functional-tests/"
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v3
         with:
-          node-version: 'node'
+          node-version: "node"
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright
@@ -181,3 +181,91 @@ jobs:
           echo "🧾 Last response body:"
           sed -n '1,200p' /tmp/resp.json
           exit 1
+
+  notify-pos-verification:
+    name: Notify POS Verification Results
+    needs: [live-dev-tests, verifyInstance]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send Slack notification
+        run: |
+          # Get the total number of orders
+          ORDER_IDS='${{ needs.live-dev-tests.outputs.order_ids_json }}'
+          TOTAL_ORDERS=$(echo "$ORDER_IDS" | jq '. | length')
+
+          # Determine the verification job status
+          VERIFY_RESULT="${{ needs.verifyInstance.result }}"
+
+          # Determine status and color
+          if [ "$VERIFY_RESULT" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="PASSED"
+            COLOR="good"
+            DETAILS="All $TOTAL_ORDERS orders successfully transmitted to POS"
+          elif [ "$VERIFY_RESULT" == "skipped" ]; then
+            STATUS_EMOJI="⏭️"
+            STATUS_TEXT="SKIPPED"
+            COLOR="warning"
+            DETAILS="No orders to verify"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_TEXT="FAILED"
+            COLOR="danger"
+            DETAILS="One or more orders failed POS transmission verification"
+          fi
+
+          # Build Slack message using Block Kit
+          MESSAGE="{
+            \"attachments\": [
+              {
+                \"color\": \"$COLOR\",
+                \"blocks\": [
+                  {
+                    \"type\": \"header\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"$STATUS_EMOJI Live - Dev - POS Instance Verification - $STATUS_TEXT\"
+                    }
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"fields\": [
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Test:*\\nPOS Instance Sync Verification\"
+                      },
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Environment:*\\nDev\"
+                      },
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Orders Verified:*\\n$TOTAL_ORDERS\"
+                      },
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Status:*\\n$DETAILS\"
+                      }
+                    ]
+                  },
+                  {
+                    \"type\": \"context\",
+                    \"elements\": [
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run> • Triggered: ${{ github.event_name }}\"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }"
+
+          # Send to Slack
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$MESSAGE"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
