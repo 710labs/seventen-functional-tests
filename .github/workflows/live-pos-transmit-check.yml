@@ -15,7 +15,7 @@ jobs:
 
     env: # e.g., https://live-dev.710labs.com
       ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }} # e.g., https://live-dev.710labs.com
-      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }} #
+      LIVE_QA_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }} #
 
     steps:
       - name: Setup Node.js
@@ -24,20 +24,22 @@ jobs:
           node-version: "20"
 
       - name: Create and run check
+        id: check
+        continue-on-error: true
         run: |
           set -euo pipefail
           cat > check-orders.mjs <<'EOF'
           import fs from "node:fs/promises";
 
           const baseRaw = process.env.ALWAYS_ON_URL || "";
-          const auth = process.env.LIVE_DEV_QA_AUTH || "";
+          const auth = process.env.LIVE_QA_AUTH || "";
 
           if (!baseRaw) {
             console.error("❌ ALWAYS_ON_URL is not set.");
             process.exit(1);
           }
           if (!auth) {
-            console.error("❌ LIVE_DEV_QA_AUTH is not set.");
+            console.error("❌ LIVE_QA_AUTH is not set.");
             process.exit(1);
           }
 
@@ -105,9 +107,20 @@ jobs:
             })
             .filter(o => o.missing.length > 0);
 
+          // Save results for Slack notification
+          const results = {
+            ordersChecked: orders.length,
+            failedCount: invalid.length,
+            failures: invalid.map(o => ({
+              woocommerceId: o.woocommerceId,
+              missing: o.missing
+            }))
+          };
+          await fs.writeFile("check-results.json", JSON.stringify(results, null, 2));
+
           // Step summary (do not leak auth)
           const summary = [];
-          summary.push(`# Order Transmission Check (Dev)`);
+          summary.push(`# Order Transmission Check (Stage)`);
           summary.push(`Base: \`${base}\``);
           summary.push(`Path: \`/wp-content/plugins/persy/interface/qa/orders/?auth=***\``);
           summary.push(`Checked last ${orders.length} orders.`);
@@ -142,3 +155,142 @@ jobs:
             orders-response.json
             orders-response.txt
           retention-days: 7
+      - name: Send Slack notification
+        if: always()
+        run: |
+          # Determine status
+          if [ "${{ steps.check.outcome }}" == "success" ]; then
+            STATUS="✅ PASSED"
+            COLOR="good"
+            STATUS_EMOJI="✅"
+          else
+            STATUS="❌ FAILED"
+            COLOR="danger"
+            STATUS_EMOJI="❌"
+          fi
+
+          # Read check results if available
+          if [ -f check-results.json ]; then
+            ORDERS_CHECKED=$(jq -r '.ordersChecked' check-results.json)
+            FAILED_COUNT=$(jq -r '.failedCount' check-results.json)
+          else
+            ORDERS_CHECKED="N/A"
+            FAILED_COUNT="N/A"
+          fi
+
+          # Build failure details if any
+          FAILURE_DETAILS=""
+          if [ -f check-results.json ] && [ "$FAILED_COUNT" != "0" ] && [ "$FAILED_COUNT" != "N/A" ]; then
+            FAILURE_DETAILS=$(jq -r '.failures | map("• Order #\(.woocommerceId): missing \(.missing | join(", "))") | join("\n")' check-results.json)
+          fi
+
+          # Build Slack message using Block Kit
+          if [ "${{ steps.check.outcome }}" == "success" ]; then
+            MESSAGE="{
+              \"attachments\": [
+                {
+                  \"color\": \"$COLOR\",
+                  \"blocks\": [
+                    {
+                      \"type\": \"header\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"$STATUS_EMOJI POS Transmission Check - PASSED\"
+                      }
+                    },
+                    {
+                      \"type\": \"section\",
+                      \"fields\": [
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Test:*\\nPOS Transmission Field Check\"
+                        },
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Environment:*\\nSTAGE\"
+                        },
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Orders Checked:*\\n$ORDERS_CHECKED\"
+                        },
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Status:*\\nAll orders have required POS fields populated\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"context\",
+                      \"elements\": [
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run> • Triggered: ${{ github.event_name }}\"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }"
+          else
+            MESSAGE="{
+              \"attachments\": [
+                {
+                  \"color\": \"$COLOR\",
+                  \"blocks\": [
+                    {
+                      \"type\": \"header\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"$STATUS_EMOJI POS Transmission Check - FAILED\"
+                      }
+                    },
+                    {
+                      \"type\": \"section\",
+                      \"fields\": [
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Test:*\\nPOS Transmission Field Check\"
+                        },
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Environment:*\\nSTAGE\"
+                        },
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Orders Checked:*\\n$ORDERS_CHECKED\"
+                        },
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"*Failed:*\\n$FAILED_COUNT orders missing required fields\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"section\",
+                      \"text\": {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Failed Orders:*\\n$FAILURE_DETAILS\"
+                      }
+                    },
+                    {
+                      \"type\": \"context\",
+                      \"elements\": [
+                        {
+                          \"type\": \"mrkdwn\",
+                          \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run> • Triggered: ${{ github.event_name }}\"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }"
+          fi
+
+          # Send to Slack
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$MESSAGE"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
