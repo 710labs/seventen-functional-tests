@@ -160,11 +160,11 @@ jobs:
         run: |
           # Determine status
           if [ "${{ steps.check.outcome }}" == "success" ]; then
-            STATUS="✅ PASSED"
+            STATUS_TEXT="PASSED"
             COLOR="good"
             STATUS_EMOJI="✅"
           else
-            STATUS="❌ FAILED"
+            STATUS_TEXT="FAILED"
             COLOR="danger"
             STATUS_EMOJI="❌"
           fi
@@ -175,127 +175,173 @@ jobs:
             FAILED_COUNT=$(jq -r '.failedCount' check-results.json)
           else
             ORDERS_CHECKED="N/A"
-            FAILED_COUNT="N/A"
+            FAILED_COUNT="0"
           fi
 
-          # Build failure details if any (escape for JSON)
-          FAILURE_DETAILS="No details available"
-          if [ -f check-results.json ] && [ "$FAILED_COUNT" != "0" ] && [ "$FAILED_COUNT" != "N/A" ]; then
-            # Use \\n for JSON escaped newlines instead of actual newlines
-            FAILURE_DETAILS=$(jq -r '.failures | map("• Order #\(.woocommerceId): missing \(.missing | join(", "))") | join("\\n")' check-results.json)
-            # If still empty, set default
-            if [ -z "$FAILURE_DETAILS" ]; then
-              FAILURE_DETAILS="See workflow logs for details"
-            fi
-          fi
-
-          # Build Slack message using Block Kit
+          # Build the Slack message using jq (proper JSON construction)
           if [ "${{ steps.check.outcome }}" == "success" ]; then
-            MESSAGE="{
-              \"attachments\": [
-                {
-                  \"color\": \"$COLOR\",
-                  \"blocks\": [
-                    {
-                      \"type\": \"header\",
-                      \"text\": {
-                        \"type\": \"plain_text\",
-                        \"text\": \"$STATUS_EMOJI Live - Stage - POS Transmission Check - PASSED\"
+            # Success message
+            jq -n \
+              --arg color "$COLOR" \
+              --arg status_emoji "$STATUS_EMOJI" \
+              --arg orders_checked "$ORDERS_CHECKED" \
+              --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --arg event_name "${{ github.event_name }}" \
+              '{
+                "attachments": [
+                  {
+                    "color": $color,
+                    "blocks": [
+                      {
+                        "type": "header",
+                        "text": {
+                          "type": "plain_text",
+                          "text": ($status_emoji + " Live - Stage - POS Transmission Check - PASSED")
+                        }
+                      },
+                      {
+                        "type": "section",
+                        "fields": [
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Test:*\nPOS Transmission Check - Last 10 orders"
+                          },
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Environment:*\nStage"
+                          },
+                          {
+                            "type": "mrkdwn",
+                            "text": ("*Orders Checked:*\n" + $orders_checked)
+                          },
+                          {
+                            "type": "mrkdwn",
+                            "text": "*Status:*\nAll orders have required POS fields populated"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "context",
+                        "elements": [
+                          {
+                            "type": "mrkdwn",
+                            "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
+                          }
+                        ]
                       }
-                    },
-                    {
-                      \"type\": \"section\",
-                      \"fields\": [
-                        {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Test:*\\nPOS Transmission Check - Last 10 orders\"
-                        },
-                        {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Environment:*\\Stage\"
-                        },
-                        {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Orders Checked:*\\n$ORDERS_CHECKED\"
-                        },
-                        {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Status:*\\nAll orders have required POS fields populated\"
-                        }
-                      ]
-                    },
-                    {
-                      \"type\": \"context\",
-                      \"elements\": [
-                        {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run> • Triggered: ${{ github.event_name }}\"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }"
+                    ]
+                  }
+                ]
+              }' > /tmp/slack-payload.json
           else
-            MESSAGE="{
-              \"attachments\": [
-                {
-                  \"color\": \"$COLOR\",
-                  \"blocks\": [
+            # Failure message - build failure details from check-results.json
+            if [ -f check-results.json ]; then
+              jq -n \
+                --arg color "$COLOR" \
+                --arg status_emoji "$STATUS_EMOJI" \
+                --arg orders_checked "$ORDERS_CHECKED" \
+                --arg failed_count "$FAILED_COUNT" \
+                --argjson failures "$(jq '.failures' check-results.json)" \
+                --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                --arg event_name "${{ github.event_name }}" \
+                '{
+                  "attachments": [
                     {
-                      \"type\": \"header\",
-                      \"text\": {
-                        \"type\": \"plain_text\",
-                        \"text\": \"$STATUS_EMOJI Live - Stage - POS Transmission Check - FAILED\"
-                      }
-                    },
-                    {
-                      \"type\": \"section\",
-                      \"fields\": [
+                      "color": $color,
+                      "blocks": [
                         {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Test:*\\nPOS Transmission Check - Last 10 orders\"
+                          "type": "header",
+                          "text": {
+                            "type": "plain_text",
+                            "text": ($status_emoji + " Live - Stage - POS Transmission Check - FAILED")
+                          }
                         },
                         {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Environment:*\\Stage\"
+                          "type": "section",
+                          "fields": [
+                            {
+                              "type": "mrkdwn",
+                              "text": "*Test:*\nPOS Transmission Check - Last 10 orders"
+                            },
+                            {
+                              "type": "mrkdwn",
+                              "text": "*Environment:*\nStage"
+                            },
+                            {
+                              "type": "mrkdwn",
+                              "text": ("*Orders Checked:*\n" + $orders_checked)
+                            },
+                            {
+                              "type": "mrkdwn",
+                              "text": ("*Failed:*\n" + $failed_count + " orders missing required fields")
+                            }
+                          ]
                         },
                         {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Orders Checked:*\\n$ORDERS_CHECKED\"
+                          "type": "section",
+                          "text": {
+                            "type": "mrkdwn",
+                            "text": ("*Failed Orders:*\n" + ($failures | map("• Order #" + (.woocommerceId | tostring) + ": missing " + (.missing | join(", "))) | join("\n")))
+                          }
                         },
                         {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"*Failed:*\\n$FAILED_COUNT orders missing required fields\"
-                        }
-                      ]
-                    },
-                    {
-                      \"type\": \"section\",
-                      \"text\": {
-                        \"type\": \"mrkdwn\",
-                        \"text\": \"*Failed Orders:*\\n$FAILURE_DETAILS\"
-                      }
-                    },
-                    {
-                      \"type\": \"context\",
-                      \"elements\": [
-                        {
-                          \"type\": \"mrkdwn\",
-                          \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run> • Triggered: ${{ github.event_name }}\"
+                          "type": "context",
+                          "elements": [
+                            {
+                              "type": "mrkdwn",
+                              "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
+                            }
+                          ]
                         }
                       ]
                     }
                   ]
-                }
-              ]
-            }"
+                }' > /tmp/slack-payload.json
+            else
+              # Fallback if check-results.json doesn't exist
+              jq -n \
+                --arg color "$COLOR" \
+                --arg status_emoji "$STATUS_EMOJI" \
+                --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                --arg event_name "${{ github.event_name }}" \
+                '{
+                  "attachments": [
+                    {
+                      "color": $color,
+                      "blocks": [
+                        {
+                          "type": "header",
+                          "text": {
+                            "type": "plain_text",
+                            "text": ($status_emoji + " Live - Stage - POS Transmission Check - FAILED")
+                          }
+                        },
+                        {
+                          "type": "section",
+                          "text": {
+                            "type": "mrkdwn",
+                            "text": "*Test failed*\nSee workflow logs for details"
+                          }
+                        },
+                        {
+                          "type": "context",
+                          "elements": [
+                            {
+                              "type": "mrkdwn",
+                              "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }' > /tmp/slack-payload.json
+            fi
           fi
 
           # Send to Slack
           curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d "$MESSAGE"
+            -d @/tmp/slack-payload.json
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
