@@ -181,3 +181,99 @@ jobs:
           echo "🧾 Last response body:"
           sed -n '1,200p' /tmp/resp.json
           exit 1
+
+  notify-pos-verification:
+    name: Notify POS Verification Results
+    needs: [live-stage-tests, verifyInstance]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send Slack notification
+        run: |
+          # Get the total number of orders
+          ORDER_IDS='${{ needs.live-stage-tests.outputs.order_ids_json }}'
+          TOTAL_ORDERS=$(echo "$ORDER_IDS" | jq '. | length')
+
+          # Determine the verification job status
+          VERIFY_RESULT="${{ needs.verifyInstance.result }}"
+
+          # Determine status and color
+          if [ "$VERIFY_RESULT" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="PASSED"
+            COLOR="good"
+            DETAILS="All $TOTAL_ORDERS orders successfully transmitted to POS"
+          elif [ "$VERIFY_RESULT" == "skipped" ]; then
+            STATUS_EMOJI="⏭️"
+            STATUS_TEXT="SKIPPED"
+            COLOR="warning"
+            DETAILS="No orders to verify"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_TEXT="FAILED"
+            COLOR="danger"
+            DETAILS="One or more orders failed POS transmission verification"
+          fi
+
+          # Build Slack message using jq (proper JSON construction)
+          jq -n \
+            --arg color "$COLOR" \
+            --arg status_emoji "$STATUS_EMOJI" \
+            --arg status_text "$STATUS_TEXT" \
+            --arg total_orders "$TOTAL_ORDERS" \
+            --arg details "$DETAILS" \
+            --arg workflow_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg event_name "${{ github.event_name }}" \
+            '{
+              "attachments": [
+                {
+                  "color": $color,
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": ($status_emoji + " Live - Stage - POS Instance Verification - " + $status_text)
+                      }
+                    },
+                    {
+                      "type": "section",
+                      "fields": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Test:*\nPOS Instance Sync Verification"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": "*Environment:*\nStage"
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": ("*Orders Verified:*\n" + $total_orders)
+                        },
+                        {
+                          "type": "mrkdwn",
+                          "text": ("*Status:*\n" + $details)
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": ("<" + $workflow_url + "|View workflow run> • Triggered: " + $event_name)
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/slack-payload.json
+
+          # Send to Slack
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/slack-payload.json
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
