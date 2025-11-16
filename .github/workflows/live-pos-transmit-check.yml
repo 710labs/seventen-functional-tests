@@ -1,4 +1,4 @@
-name: Live - STAGE - POS Transmit Check
+name: Live - PROD - POS Transmit Check
 
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ jobs:
 
     # If you're using *Environment* secrets, set this to your environment's name (e.g., "live-dev").
     # If you're using repo-level secrets only, you can remove this block.
-    environment: live-stage
+    environment: live-prod
 
     env: # e.g., https://live-dev.710labs.com
-      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }} # e.g., https://live-dev.710labs.com
-      LIVE_QA_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }} #
+      ALWAYS_ON_URL: ${{ secrets.PROD_LIVE_URL }} # e.g., https://live-dev.710labs.com
+      LIVE_QA_AUTH: ${{ secrets.LIVE_PROD_QA_AUTH }} #
 
     steps:
       - name: Setup Node.js
@@ -120,7 +120,7 @@ jobs:
 
           // Step summary (do not leak auth)
           const summary = [];
-          summary.push(`# Order Transmission Check (Stage)`);
+          summary.push(`# Order Transmission Check (Prod)`);
           summary.push(`Base: \`${base}\``);
           summary.push(`Path: \`/wp-content/plugins/persy/interface/qa/orders/?auth=***\``);
           summary.push(`Checked last ${orders.length} orders.`);
@@ -195,7 +195,7 @@ jobs:
                       \"type\": \"header\",
                       \"text\": {
                         \"type\": \"plain_text\",
-                        \"text\": \"$STATUS_EMOJI POS Transmission Check - PASSED\"
+                        \"text\": \"$STATUS_EMOJI Live - Prod - POS Transmission Check - PASSED\"
                       }
                     },
                     {
@@ -203,11 +203,11 @@ jobs:
                       \"fields\": [
                         {
                           \"type\": \"mrkdwn\",
-                          \"text\": \"*Test:*\\nPOS Transmission Field Check\"
+                          \"text\": \"*Test:*\\nPOS Transmission Check - Last 10 orders\"
                         },
                         {
                           \"type\": \"mrkdwn\",
-                          \"text\": \"*Environment:*\\nSTAGE\"
+                          \"text\": \"*Environment:*\\PROD\"
                         },
                         {
                           \"type\": \"mrkdwn\",
@@ -242,7 +242,7 @@ jobs:
                       \"type\": \"header\",
                       \"text\": {
                         \"type\": \"plain_text\",
-                        \"text\": \"$STATUS_EMOJI POS Transmission Check - FAILED\"
+                        \"text\": \"$STATUS_EMOJI Live - Prod - POS Transmission Check - FAILED\"
                       }
                     },
                     {
@@ -250,11 +250,11 @@ jobs:
                       \"fields\": [
                         {
                           \"type\": \"mrkdwn\",
-                          \"text\": \"*Test:*\\nPOS Transmission Field Check\"
+                          \"text\": \"*Test:*\\nPOS Transmission Check - Last 10 orders\"
                         },
                         {
                           \"type\": \"mrkdwn\",
-                          \"text\": \"*Environment:*\\nSTAGE\"
+                          \"text\": \"*Environment:*\\PROD\"
                         },
                         {
                           \"type\": \"mrkdwn\",
