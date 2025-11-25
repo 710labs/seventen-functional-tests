@@ -35,23 +35,28 @@ test.describe('PROD CONCIERGE Tests', () => {
 				prodConciergePassword,
 			)
 			//verify that shop loads upon log in
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
 			await homePageActions.openConciergeAddress(page)
 			await homePageActions.selectAddressFromList(page, 'concierge', address)
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			//
 			// CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
 			// add products to cart
-			await homePageActions.conciergeRecAddProductsToCartUntilMinimumMet(page)
+			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page, 'prod')
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress)
+			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(
+				page,
+				prodConciergeURL,
+				address,
+				newAddress,
+			)
 
 			// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
 			await homePageActions.goToHomePage()
