@@ -2,8 +2,8 @@ name: Live - Dev - POS Transmit Check Last 10 Orders
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 10 * * *"
+  # schedule:
+  #   - cron: "0 10 * * *"
 jobs:
   fetch-orders:
     name: Fetch Last 10 Orders
