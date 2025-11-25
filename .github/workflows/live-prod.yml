@@ -1,7 +1,7 @@
 name: Live - PROD - Smoke check w/o checkout
 on:
   schedule:
-    - cron: "0 11 * * *"
+    - cron: "30 13 * * *"
   workflow_dispatch:
 jobs:
   live-prod-tests:

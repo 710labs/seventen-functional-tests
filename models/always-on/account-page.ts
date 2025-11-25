@@ -272,7 +272,7 @@ export class AccountPage {
 		await this.editPersonalInfoLink.click({ force: true })
 		await this.page.waitForTimeout(1000)
 		//expect Header to be visible in drawer
-		await this.personalInfoDrawerHeader.waitFor({ state: 'visible' })
+		//await this.personalInfoDrawerHeader.waitFor({ state: 'visible' })
 		await expect(this.personalInfoDrawerHeader).toBeVisible()
 		await this.firstNameInput.waitFor({ state: 'visible' })
 		await expect(this.firstNameInput).toBeVisible()
