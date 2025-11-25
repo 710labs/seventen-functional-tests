@@ -275,8 +275,8 @@ export class CheckoutPage {
 			await this.birthdayInputField.click()
 			await this.birthdayInputField.type(newDate)
 			// TODO: Edit First/Last name and Email
-			const newFirstName = faker.name.firstName?.() || faker.person.firstName()
-			const newLastName = faker.name.lastName?.() || faker.person.lastName()
+			const newFirstName = (faker.name.firstName?.() || faker.person.firstName()) + '_Test'
+			const newLastName = (faker.name.lastName?.() || faker.person.lastName()) + '_Test'
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits
@@ -491,8 +491,8 @@ export class CheckoutPage {
 			await this.birthdayInputField.click()
 			await this.birthdayInputField.type(newDate)
 			// TODO: Edit First/Last name and Email
-			const newFirstName = faker.name.firstName?.() || faker.person.firstName()
-			const newLastName = faker.name.lastName?.() || faker.person.lastName()
+			const newFirstName = (faker.name.firstName?.() || faker.person.firstName()) + '_Test'
+			const newLastName = (faker.name.lastName?.() || faker.person.lastName()) + '_Test'
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits
@@ -767,8 +767,8 @@ export class CheckoutPage {
 			await this.birthdayInputField.click()
 			await this.birthdayInputField.type(newDate)
 			// TODO: Edit First/Last name and Email
-			const newFirstName = faker.name.firstName?.() || faker.person.firstName()
-			const newLastName = faker.name.lastName?.() || faker.person.lastName()
+			const newFirstName = (faker.name.firstName?.() || faker.person.firstName()) + '_Test'
+			const newLastName = (faker.name.lastName?.() || faker.person.lastName()) + '_Test'
 			await this.firstNameField.fill(newFirstName)
 			await this.lastNameField.fill(newLastName)
 			// save edits

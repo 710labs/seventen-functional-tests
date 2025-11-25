@@ -804,6 +804,7 @@ export class HomePageActions {
 							this.page.waitForEvent('filechooser'),
 							medCardFileInput.click(),
 						])
+						// selectors
 						const issuingStateSelect = page.locator('select#medcard_state')
 						const expirationInput = page.locator('input#medcard_exp')
 						await driversLicenseChooser.setFiles('CA-DL.jpg')
@@ -817,6 +818,7 @@ export class HomePageActions {
 						const randomInteger = Math.floor(Math.random() * 10 ** length)
 						await medCardNumber.click()
 						await medCardNumber.type(`${randomInteger}`)
+						// med birthday
 						const firstDate = '01/01/1990'
 						const medBirthday = page.locator('#fasd_dob')
 						await medBirthday.click()
