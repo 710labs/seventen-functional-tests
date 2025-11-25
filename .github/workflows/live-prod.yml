@@ -1,4 +1,4 @@
-name: Live - PROD - Smoke check w/o checkout
+name: Live - PROD - No checkout
 on:
   schedule:
     - cron: "30 13 * * *"
