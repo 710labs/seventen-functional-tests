@@ -51,7 +51,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress)
+			await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress, 'prod-concierge')
 
 			// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
 			await homePageActions.goToHomePage()
@@ -94,7 +94,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 				// verify that checkout page loads
 				await checkoutPage.verifyCheckoutPageLoads(page)
 				// enter in user info on checkoutpage
-				await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress)
+				await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress, 'prod-concierge')
 
 				// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
 				await homePageActions.goToHomePage()
