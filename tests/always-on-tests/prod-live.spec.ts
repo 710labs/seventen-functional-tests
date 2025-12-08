@@ -69,5 +69,59 @@ test.describe('PROD Live Tests', () => {
 			// logout
 			await accountPage.logOut(page)
 		},
-	)
+	),
+		test(
+			'Prod Live check - EXISTING MED User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
+			{ tag: ['@medical'] },
+			async ({ page }) => {
+				const homePageLogin = new HomePageLogin(page)
+				const homePageActions = new HomePageActions(page)
+				const checkoutPage = new CheckoutPage(page)
+				const accountPage = new AccountPage(page)
+				//
+				const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+				const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
+
+				// Verify that store homepage loads
+				await homePageLogin.verifyUserSignInModalAppears(page, prodLiveURL)
+
+				await homePageLogin.navigateToURL(page, prodLiveURL)
+
+				await homePageActions.enterAddress(page, 'live', address)
+
+				// Verify that store homepage loads
+				await homePageLogin.newTestverifyUserSignInModalAppears(page, prodLiveURL)
+				await homePageActions.addSingleProductToCart(page)
+				// Login Existing Prod User
+				await homePageLogin.loginExistingUser(
+					page,
+					'wrongpassword',
+					prodLiveUsername,
+					prodLivePassword,
+				)
+				// go to main store page
+				await homePageActions.goToMainStorePage(page)
+				// // add adress for new user account
+				//await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
+				// verify that homepage loads again
+				await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
+				//
+				// CLEAR CART IF PRODUCTS EXIST
+				await homePageActions.clearProductsFromCart(page)
+				// add products to cart
+				await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'prod')
+				// verify that checkout page loads
+				await checkoutPage.verifyCheckoutPageLoads(page)
+				// enter in user info on checkoutpage
+				await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress)
+				//
+				// CANT HAVE PLACE ORDER // CLICK SUBMIT BUTTON SINCE THIS IS FOR PROD
+				//
+				// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
+				await homePageActions.goToHomePage()
+				await homePageActions.clearProductsFromCart(page)
+				// logout
+				await accountPage.logOut(page)
+			},
+		)
 })
