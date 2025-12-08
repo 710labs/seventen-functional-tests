@@ -35,14 +35,14 @@ test.describe('PROD EMPLOYEE-STORE Tests', () => {
 				prodConciergePassword,
 			)
 			//verify that shop loads upon log in
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
 			await homePageActions.openConciergeAddress(page)
 			await homePageActions.selectAddressFromList(page, 'concierge', address)
 			// verify that homepage loads again
-			await homePageLogin.verifyShopLoadsAfterSignIn(page)
+			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
 			//
 			// CLEAR CART IF PRODUCTS EXIST
 			await homePageActions.clearProductsFromCart(page)
