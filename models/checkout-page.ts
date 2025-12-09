@@ -349,19 +349,20 @@ export class CheckoutPage {
 		}
 
 		await test.step(`Select Acuity Slot for ${zipcodesCO} `, async () => {
-			var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-			await expect(
-				daySlot,
-				'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await daySlot.click()
+			await this.selectSlot()
+			// var daySlot = await this.page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+			// await expect(
+			// 	daySlot,
+			// 	'Could not find Acuity Day Slot Selector. Check Acuity Slots status.',
+			// ).toBeVisible()
+			// await daySlot.click()
 
-			var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-			await expect(
-				timeSlot,
-				'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
-			).toBeVisible()
-			await timeSlot.click()
+			// var timeSlot = await this.page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+			// await expect(
+			// 	timeSlot,
+			// 	'Could not find Acuity Time Slot Selector. Check Acuity Slots status.',
+			// ).toBeVisible()
+			// await timeSlot.click()
 		})
 
 		await test.step('Submit New Customer Order', async () => {
