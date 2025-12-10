@@ -29,7 +29,7 @@ export class ShopPage {
 		itemCount: number,
 		mobile = false,
 		fulfillment = 'Delivery',
-		type = 'rec',
+		type = 'Recreational',
 	) {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)

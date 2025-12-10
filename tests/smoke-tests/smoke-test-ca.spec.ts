@@ -110,7 +110,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 			await editOrderPage.cancelOrder(orderNumber)
 			await editOrderPage.cancelOrder(splitOrderNumber)
 		})
-	}),
+	})
 		test(`Basic Acceptance Test - REC @recreational @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const apiContext = await request.newContext({
