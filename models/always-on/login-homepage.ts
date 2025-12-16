@@ -23,6 +23,8 @@ export class HomePageLogin {
 	readonly createAccountButton: Locator
 	readonly addToCartButtonGeneral: Locator
 	readonly signInError: Locator
+	readonly dobField: Locator
+	readonly dobError: Locator
 	// “Shop by Store” heading
 	readonly shopByStoreTitle: Locator
 	// first store card and specific store link
@@ -54,6 +56,8 @@ export class HomePageLogin {
 		this.createAccountButton = page.locator('button:has-text("Create Account")')
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 		this.signInError = page.locator('.wpse-snacktoast-headline')
+		this.dobField = page.locator('input.fasd-form-value#reg_dob')
+		this.dobError = page.locator('p.fasd-input-error#reg_dob_error')
 		// Shop by Store
 		this.shopByStoreTitle = page.locator('h1.shop-category-head:has-text("Shop by Store")')
 		this.firstStoreCard = page.locator('li.wpse-detailed-radio').first()
@@ -189,6 +193,39 @@ export class HomePageLogin {
 				await this.zipCodeField.click()
 				await this.zipCodeField.fill(`90232`)
 			}
+		})
+		await test.step('Enter invalid DOB (under 21) and verify error', async () => {
+			// Calculate date for someone who is 18 years old (under 21)
+			const today = new Date()
+			const invalidDob = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate())
+			const invalidDobString = invalidDob.toISOString().split('T')[0] // YYYY-MM-DD format
+
+			await expect(this.dobField).toBeVisible()
+			await this.dobField.click()
+			await this.dobField.fill(invalidDobString)
+			console.log(`\n Entered invalid DOB (age 18): ${invalidDobString} \n`)
+
+			// Click Create Account to trigger validation error
+			await this.createAccountButton.click()
+
+			// Verify the age error message appears
+			await this.dobError.waitFor({ state: 'visible' })
+			await expect(this.dobError).toBeVisible()
+			await expect(this.dobError).toHaveText('You must be at least 21 years old')
+			console.log(`\n Age validation error confirmed \n`)
+		})
+		await test.step('Enter valid DOB (over 21)', async () => {
+			// Calculate random age between 22-50 years old
+			const randomAge = Math.floor(Math.random() * 29) + 22 // Random age 22-50
+			const today = new Date()
+			const validDob = new Date(today.getFullYear() - randomAge, today.getMonth(), today.getDate())
+			const validDobString = validDob.toISOString().split('T')[0] // YYYY-MM-DD format
+
+			// Modal reloads after error, so wait for DOB field to be visible again
+			await expect(this.dobField).toBeVisible()
+			await this.dobField.click()
+			await this.dobField.fill(validDobString)
+			console.log(`\n Entered valid DOB (age ${randomAge}): ${validDobString} \n`)
 		})
 		await test.step('Click create account to create new user', async () => {
 			// click create account
