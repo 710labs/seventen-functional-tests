@@ -1405,7 +1405,7 @@ export class HomePageActions {
 		await this.liveCartTitle.waitFor({ state: 'visible' })
 		await expect(this.liveCartTitle).toBeVisible()
 
-		if (envType === 'dev/stage' || 'prod') {
+		if (envType === 'dev/stage') {
 			const medicalOnlyBannerVisible = await page
 				.locator('.wpse-snacktoast.warn-toast')
 				.first()
