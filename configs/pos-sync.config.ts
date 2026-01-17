@@ -1,5 +1,4 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const config: PlaywrightTestConfig = {
@@ -15,25 +14,7 @@ const config: PlaywrightTestConfig = {
 	reporter: [
 		['list'],
 		['html'],
-		[
-			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
-			{
-				channels: ['tech-savagery-tests', '710labs-qatest-results'],
-				sendResults: 'always',
-				layoutAsync: generateCustomLayoutAsync,
-				maxNumberOfFailuresToShow: 20,
-				meta: [
-					{
-						key: 'EXECUTION TYPE',
-						value: 'POS ORDER SYNC',
-					},
-					{
-						key: 'Test Run ID',
-						value: process.env.UNIQUE_RUN_ID + '-' + process.env.RUN_ID,
-					},
-				],
-			},
-		],
+		['../reporters/slack/pw-slack-webhook-reporter.ts'],
 		['../reporters/s3/pw-report-s3-upload.ts'],
 		['@estruyf/github-actions-reporter'],
 	],

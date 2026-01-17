@@ -1,6 +1,5 @@
 import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
-import generateCustomLayoutAsync from '../reporters/slack/slack-alert-layout'
 import { TestOptions } from '../options'
 
 /* https://playwright.dev/docs/test-configuration */
@@ -16,29 +15,7 @@ export default defineConfig<TestOptions>({
 	reporter: [
 		['list'],
 		['html'],
-		[
-			'./../node_modules/playwright-slack-report/dist/src/SlackReporter.js',
-			{
-				channels: ['tech-savagery-tests', '710labs-qatest-results'],
-				sendResults: 'always', // "always" , "on-failure", "off"
-				layoutAsync: generateCustomLayoutAsync,
-				maxNumberOfFailuresToShow: 20,
-				meta: [
-					{
-						key: 'Environment',
-						value: process.env.ENV,
-					},
-					{
-						key: 'Execution Type',
-						value: process.env.EXECUTION_TYPE,
-					},
-					{
-						key: 'Test Run ID',
-						value: process.env.UNIQUE_RUN_ID + '-' + process.env.RUN_ID,
-					},
-				],
-			},
-		],
+		['../reporters/slack/pw-slack-webhook-reporter.ts'],
 		['../reporters/s3/pw-report-s3-upload.ts'],
 		['@estruyf/github-actions-reporter'],
 	],
