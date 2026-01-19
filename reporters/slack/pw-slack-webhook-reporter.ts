@@ -3,44 +3,41 @@ import { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/rep
 interface TestSummary {
 	passed: number
 	failed: number
+	flaky: number
 	skipped: number
-	tests: Array<{
-		name: string
-		status: string
-		projectName: string
-		reason?: string
-	}>
 }
 
 class SlackWebhookReporter implements Reporter {
 	private summary: TestSummary = {
 		passed: 0,
 		failed: 0,
+		flaky: 0,
 		skipped: 0,
-		tests: [],
 	}
 
+	// Store unique tests by ID to avoid counting retries multiple times
+	private testResults: Map<string, TestCase> = new Map()
+
 	onTestEnd(test: TestCase, result: TestResult) {
-		const status = result.status
-		const testInfo = {
-			name: test.title,
-			status: status,
-			projectName: test.parent.title,
-			reason: result.error?.message,
-		}
-
-		this.summary.tests.push(testInfo)
-
-		if (status === 'passed') {
-			this.summary.passed++
-		} else if (status === 'failed' || status === 'timedOut') {
-			this.summary.failed++
-		} else if (status === 'skipped') {
-			this.summary.skipped++
-		}
+		// Store the test reference (overwrites previous attempts from retries)
+		this.testResults.set(test.id, test)
 	}
 
 	async onEnd(result: FullResult) {
+		// Count final outcomes using test.outcome() which correctly identifies flaky tests
+		Array.from(this.testResults.values()).forEach(test => {
+			const outcome = test.outcome()
+			if (outcome === 'expected') {
+				this.summary.passed++
+			} else if (outcome === 'flaky') {
+				this.summary.flaky++
+			} else if (outcome === 'unexpected') {
+				this.summary.failed++
+			} else if (outcome === 'skipped') {
+				this.summary.skipped++
+			}
+		})
+
 		const webhookUrl = process.env.SLACK_WEBHOOK_URL
 
 		if (!webhookUrl) {
@@ -49,20 +46,37 @@ class SlackWebhookReporter implements Reporter {
 		}
 
 		try {
-			// Build failure summary
-			const failedTests = this.summary.tests
-				.filter(t => t.status === 'failed' || t.status === 'timedOut')
-				.map(t => `${t.name} [${t.projectName}]`)
+			// Build failure/flaky summary
+			const failedOrFlakyTests = Array.from(this.testResults.values())
+				.filter(t => t.outcome() === 'unexpected' || t.outcome() === 'flaky')
+				.map(t => `${t.title} [${t.parent.title}]`)
 				.slice(0, 20)
 				.join('\n')
 
-			const total = this.summary.passed + this.summary.failed + this.summary.skipped
-			const statusEmoji = this.summary.failed === 0 ? ':large_green_circle:' : ':red_circle:'
-			const statusText = this.summary.failed === 0 ? 'Passed' : 'Failed'
+			const total = this.summary.passed + this.summary.failed + this.summary.flaky + this.summary.skipped
+
+			// Determine status: red for failures, yellow for flaky-only, green for all passed
+			const statusEmoji =
+				this.summary.failed > 0
+					? ':red_circle:'
+					: this.summary.flaky > 0
+						? ':large_yellow_circle:'
+						: ':large_green_circle:'
+
+			const statusText =
+				this.summary.failed > 0 ? 'Failed' : this.summary.flaky > 0 ? 'Flaky' : 'Passed'
 
 			// Build S3 report URL
 			const s3Url = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}/index.html`
 			const githubUrl = `https://github.com/710labs/seventen-functional-tests/actions/runs/${process.env.UNIQUE_RUN_ID}`
+
+			// Build counts text
+			const countsText =
+				`${this.summary.passed} (Passed)\n` +
+				`${this.summary.failed} (Failed)\n` +
+				`${this.summary.flaky > 0 ? `${this.summary.flaky} (Flaky)\n` : ''}` +
+				`${this.summary.skipped > 0 ? `${this.summary.skipped} (Skipped)\n` : ''}` +
+				`${total} (Total)`
 
 			// Build Slack Block Kit message
 			const message = {
@@ -104,11 +118,9 @@ class SlackWebhookReporter implements Reporter {
 						text: {
 							type: 'mrkdwn',
 							text:
-								`\n\n ${statusEmoji} ${statusText}\n` +
-								`\n\n${this.summary.passed} (Passed) \n${this.summary.failed} (Failed) \n${
-									this.summary.skipped > 0 ? `${this.summary.skipped} (Skipped)` : ''
-								}\n${total} (Total)` +
-								`${failedTests.length > 0 ? `\n\n Failures or Flaky: \n ${failedTests}` : ''}`,
+								`\n\n ${statusEmoji} ${statusText}\n\n` +
+								countsText +
+								`${failedOrFlakyTests.length > 0 ? `\n\n Failures or Flaky: \n ${failedOrFlakyTests}` : ''}`,
 						},
 					},
 					{
