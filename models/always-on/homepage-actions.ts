@@ -252,80 +252,83 @@ export class HomePageActions {
 		await this.continueToCheckoutButton.click()
 	}
 	async openCart() {
+		// Only open the cart if it's not already visible
+		if (await this.cartDrawerContainer.isVisible()) {
+			console.log('Cart is already open.')
+			return
+		}
 		// View the cart
-		await this.cartButtonNav.waitFor({ state: 'visible' })
 		await this.cartButtonNav.click()
 		await this.page.waitForTimeout(2000)
 		await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
 	}
 	async closeCart() {
 		// Close the cart drawer and wait before adding product
-		await this.closeCartButtonGeneric.first().click()
+		await this.closeCartButtonGeneric.first().evaluate(el => (el as HTMLElement).click())
 		await this.page.waitForTimeout(2000)
 	}
 	async clearProductsFromCart(page) {
 		await this.page.waitForTimeout(2000)
 		// View the cart
 		await this.openCart()
+
 		// Define the locator for your element
 		const nothingInCartElement = page.locator('#radicalCartLayout.empty-radical-cart')
+		const emptyTextElement = this.cartDrawerContainer.getByText(/You have nothing in your bag/i)
+
 		// Check visibility of Nothing In Cart
-		const isCartEmpty = await nothingInCartElement.isVisible()
+		const isRadicalEmptyVisible = await nothingInCartElement.isVisible()
+		const isEmptyTextVisible = await emptyTextElement.isVisible()
+		console.log(
+			`Debug Cart Empty: RadicalElement=${isRadicalEmptyVisible}, TextElement=${isEmptyTextVisible}`,
+		)
+
+		let cartRows = page.locator('tr.woocommerce-cart-form__cart-item')
+		const rowCountInitial = await cartRows.count()
+
+		const isCartEmpty = isRadicalEmptyVisible || isEmptyTextVisible || rowCountInitial === 0
 
 		if (isCartEmpty) {
 			console.log('Cart is empty. Returning to store page to add products')
 			await this.closeCart()
 			return
-		} else if (!isCartEmpty) {
-			console.log('Cart is NOT empty. Deleting the items in the cart in order to start fresh')
-			// TODO: Handle the case where the cart layout is not visible
-			// Wait until at least one cart-item row is visible
-			await page.waitForSelector('tr.woocommerce-cart-form__cart-item')
-
-			// Get all product rows currently in the cart
-			const cartRows = page.locator('tr.woocommerce-cart-form__cart-item')
-			const rowCount = await cartRows.count()
-
-			for (let i = 0; i < rowCount; i++) {
-				// Re-locate cart-item rows in case the DOM changed after a removal
-				const currentRows = page.locator('tr.woocommerce-cart-form__cart-item')
-				const countNow = await currentRows.count()
-
-				// If no items found, break out (cart is empty)
-				if (countNow === 0) {
-					console.log('Cart is already empty!')
-					break
-				}
-
-				// Otherwise, remove the first row
-				// 1) Grab the first row
-				const firstRow = currentRows.first()
-
-				// 2) Click its remove link (the anchor with class .remove)
-				const removeLink = firstRow.locator('td.product-remove .remove')
-
-				// If it's hidden or not "visible," either use { force: true } or a direct DOM click:
-				// await removeLink.click({ force: true });
-				await removeLink.evaluate(el => el.click())
-
-				// 3) Wait for that row to vanish from the DOM
-				await firstRow.waitFor({ state: 'detached' })
-
-				console.log(`Removed product row #${i + 1} via X link`)
-				// reopene Cart after product is removed
-				await this.openCart()
-			}
-
-			const finalCount = await cartRows.count()
-			if (finalCount > 0) {
-				throw new Error(`Expected empty cart but found ${finalCount} item(s) still present.`)
-			} else if (await nothingInCartElement.isVisible()) {
-				console.log('Cart is now cleared and empty. Returning to store page to add products')
-				// Close the cart drawer and wait before adding product
-				await this.closeCart()
-				await page.waitForTimeout(3000) // Adjust this timeout based on your app's behavior
-			}
 		}
+
+		console.log('Cart is NOT empty. Deleting the items in the cart in order to start fresh')
+
+		// Wait until at least one cart-item row is visible
+		await page.waitForSelector('tr.woocommerce-cart-form__cart-item', { timeout: 5000 }).catch(() => {
+			console.log('No cart items found despite isCartEmpty being false.')
+		})
+
+		// Get all product rows currently in the cart
+		cartRows = page.locator('tr.woocommerce-cart-form__cart-item')
+		let rowCount = await cartRows.count()
+
+		while (rowCount > 0) {
+			console.log(`Remaining items in cart: ${rowCount}`)
+
+			// Grab the first row
+			const firstRow = cartRows.first()
+
+			// Click its remove link (the anchor with class .remove)
+			const removeLink = firstRow.locator('td.product-remove .remove')
+
+			// Use evaluate to click to avoid visibility issues during animation
+			await removeLink.evaluate(el => (el as HTMLElement).click())
+
+			// Wait for that row to vanish from the DOM
+			await firstRow.waitFor({ state: 'detached' })
+
+			// re-check count
+			rowCount = await cartRows.count()
+			await this.page.waitForTimeout(500) // Small pause for update
+		}
+
+		console.log('Cart is now cleared and empty. Returning to store page to add products')
+		// Close the cart drawer and wait before adding product
+		await this.closeCart()
+		await page.waitForTimeout(2000)
 	}
 	async addProductsToCart(page, numberOfItems) {
 		// Get all the products on the page
