@@ -421,6 +421,27 @@ export class HomePageActions {
 			await addBtn.click()
 			debugLog(`  Clicked "Add to Cart" for "${name}"`)
 
+			// Check for "Start a new cart" modal
+			try {
+				const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
+				// Short timeout for modal appearance
+				await conflictModal.waitFor({ state: 'visible', timeout: 5000 })
+				
+				if (await conflictModal.isVisible()) {
+					debugLog('Cart conflict modal detected in addUntilMinimumMet. Attempting to start a new cart.')
+					const startNewCartBtn = conflictModal.locator('button:has-text("Start a new cart")') 
+					
+					await expect(startNewCartBtn).toBeVisible()
+					await startNewCartBtn.click()
+					debugLog('Clicked "Start a new cart".')
+					
+					// Wait for modal to disappear
+					await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+				}
+			} catch (e) {
+				// Ignore timeout if modal doesn't appear
+			}
+
 			// Wait for the drawer, then verify item is in cart
 			await page.waitForTimeout(3000)
 			await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
@@ -1159,6 +1180,21 @@ export class HomePageActions {
 				await expect(addToCart).toBeVisible()
 				// …and click it
 				await addToCart.click()
+
+				// Check for "Start a new cart" modal
+				try {
+					const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
+					await conflictModal.waitFor({ state: 'visible', timeout: 5000 })
+					
+					if (await conflictModal.isVisible()) {
+						console.log('Cart conflict modal detected in liveRecAddProductsToCartUntilMinimumMet (First Product). start new cart.')
+						const startNewCartBtn = conflictModal.locator('button:has-text("Start a new cart")') 
+						await expect(startNewCartBtn).toBeVisible()
+						await startNewCartBtn.click()
+						await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+					}
+				} catch (e) {}
+
 				await page.waitForTimeout(8000)
 				await page.waitForLoadState('networkidle')
 
@@ -1201,6 +1237,21 @@ export class HomePageActions {
 				console.log('locator for addToCartButton: ' + addToCartButton)
 				await expect(addToCartButton).toBeVisible()
 				await addToCartButton.click()
+
+				// Check for "Start a new cart" modal
+				try {
+					const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
+					await conflictModal.waitFor({ state: 'visible', timeout: 5000 })
+					
+					if (await conflictModal.isVisible()) {
+						console.log('Cart conflict modal detected in liveRecAddProductsToCartUntilMinimumMet (Subsequent Product). start new cart.')
+						const startNewCartBtn = conflictModal.locator('button:has-text("Start a new cart")') 
+						await expect(startNewCartBtn).toBeVisible()
+						await startNewCartBtn.click()
+						await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+					}
+				} catch (e) {}
+
 				await page.waitForTimeout(4000)
 
 				// Wait for the cart drawer to become visible
@@ -1768,7 +1819,34 @@ export class HomePageActions {
 			// …and click it
 			await addToCart.click({ force: true })
 
-			console.log(`Product "${productName}" add to cart button clicked. Function complete.`)
+			console.log(`Product "${productName}" add to cart button clicked. Checking for potential 'Start a new cart' modal...`)
+
+			// Check for "Start a new cart" modal
+			try {
+				const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
+				// Short timeout because if it's going to appear, it should be relatively quick.
+				// We don't want to wait too long if it doesn't appear.
+				await conflictModal.waitFor({ state: 'visible', timeout: 5000 })
+				
+				if (await conflictModal.isVisible()) {
+					console.log('Cart conflict modal detected. Attempting to start a new cart.')
+					const startNewCartBtn = conflictModal.locator('button:has-text("Start a new cart")') 
+					// Fallback selector or more specific if needed: #conflictOverride button
+					
+					await expect(startNewCartBtn).toBeVisible()
+					await startNewCartBtn.click()
+					console.log('Clicked "Start a new cart".')
+					
+					// Wait for modal to disappear to ensure action was processed
+					await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+				} else {
+					console.log('Cart conflict modal not visible after wait.')
+				}
+			} catch (e) {
+				console.log('Cart conflict modal did not appear (timeout or other). Continuing...')
+			}
+
+			console.log(`Product "${productName}" add to cart process finished. Function complete.`)
 			return // Successfully added a product, exit function
 		}
 
