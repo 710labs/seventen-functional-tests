@@ -37,6 +37,7 @@ test.describe('PROD Live Tests', () => {
 
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, prodLiveURL)
+			await homePageActions.clearProductsFromCart(page)
 			await homePageActions.addSingleProductToCart(page)
 			// Login Existing Prod User
 			await homePageLogin.loginExistingUser(
