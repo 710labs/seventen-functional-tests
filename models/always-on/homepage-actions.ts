@@ -89,7 +89,9 @@ export class HomePageActions {
 		this.liveChangeAddressButton = page.locator('span.fasd-nested-unrollable')
 		this.liveCartTitle = page.locator('h6:has-text("Your cart from")')
 		this.medCartCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
-		this.viewCartButtonSimple = page.locator('a:has-text("View Cart")')
+		this.viewCartButtonSimple = page.locator(
+			'a.button.wpse-button-primary.wpse-cart-openerize[data-shape="drawer"][data-module="cart"][href="/cart"]',
+		)
 		this.medicalOnlyBanner = page.locator('.wpse-snacktoast.warn-toast.med-issue')
 		this.issuingStateSelect = page.locator('#medcard_state')
 		this.expirationInput = page.locator('input#medcard_exp')
