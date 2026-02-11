@@ -49,7 +49,8 @@ test.describe('PROD Live Tests', () => {
 			// go to main store page
 			await homePageActions.goToMainStorePage(page)
 			// // add adress for new user account
-			//await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
+			await homePageActions.openAddressSection(page, 'live')
+			await homePageActions.selectAddressFromList(page, 'live', address)
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			//
