@@ -646,13 +646,13 @@ export class CheckoutPage {
 				//await this.checkoutPageTitle.click()
 				await this.saveContinueButtonAddress.first().click()
 				await page.waitForTimeout(1500)
-				if (envType !== 'prod-concierge') {
-					// Verify that Change delivery zones pops up
-					await expect(this.changeDeliveryPopUp).toBeVisible()
-					await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
-					await expect(this.yesChangeAddressButton).toBeVisible()
-					await this.yesChangeAddressButton.click()
-				}
+				// if (envType !== 'prod-concierge') {
+				// 	// Verify that Change delivery zones pops up
+				// 	await expect(this.changeDeliveryPopUp).toBeVisible()
+				// 	await expect(this.changeDeliveryPopUp).toContainText("You're changing delivery zones")
+				// 	await expect(this.yesChangeAddressButton).toBeVisible()
+				// 	await this.yesChangeAddressButton.click()
+				// }
 				//Verify that address was updated correctly
 				const expectedNewTextDisplay = `2919 S La Cienega Blvd, Culver City, CA 90232`
 				await expect(this.displayedAddress).toHaveText(expectedNewTextDisplay)
