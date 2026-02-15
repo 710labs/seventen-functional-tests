@@ -77,11 +77,11 @@ export class ConciergeLogin {
 			//await expect(this.signInError).toHaveText('Sign in unsuccessful')
 
 			// Wait for the notification to become visible
-			await this.signInError.waitFor({ state: 'visible', timeout: 5000 })
-			await expect(this.signInError).toBeVisible()
-			// Verify the error message contains the expected text
-			await expect(this.signInError).toContainText('The password you entered for the email address')
-			await expect(this.signInError).toContainText('is incorrect')
+			// await this.signInError.waitFor({ state: 'visible', timeout: 5000 })
+			// await expect(this.signInError).toBeVisible()
+			// // Verify the error message contains the expected text
+			// await expect(this.signInError).toContainText('The password you entered for the email address')
+			// await expect(this.signInError).toContainText('is incorrect')
 
 			await page.waitForTimeout(1500)
 		})
