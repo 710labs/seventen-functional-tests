@@ -37,7 +37,6 @@ test.describe('PROD Live Tests', () => {
 
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, prodLiveURL)
-			await homePageActions.clearProductsFromCart(page)
 			await homePageActions.addSingleProductToCart(page)
 			// Login Existing Prod User
 			await homePageLogin.loginExistingUser(
@@ -48,6 +47,8 @@ test.describe('PROD Live Tests', () => {
 			)
 			// go to main store page
 			await homePageActions.goToMainStorePage(page)
+			// clear items from user cart
+			await homePageActions.clearProductsFromCart(page)
 			// // add adress for new user account
 			await homePageActions.openAddressSection(page, 'live')
 			await homePageActions.selectAddressFromList(page, 'live', address)
