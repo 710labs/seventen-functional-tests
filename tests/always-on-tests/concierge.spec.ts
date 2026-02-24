@@ -57,9 +57,9 @@ test.describe('Concierge Tests', () => {
 				'0',
 			)}-${String(now.getMilliseconds()).padStart(3, '0')}`
 			// set device type for name
-			const viewportSize = await page.viewportSize()
+			const viewportSize = page.viewportSize()
 			let deviceType
-			if (viewportSize.width <= 768) {
+			if (viewportSize && viewportSize.width <= 768) {
 				deviceType = 'mobile'
 			} else {
 				deviceType = 'desktop'
@@ -142,9 +142,9 @@ test.describe('Concierge Tests', () => {
 				'0',
 			)}-${String(now.getMilliseconds()).padStart(3, '0')}`
 			// set device type for name
-			const viewportSize = await page.viewportSize()
+			const viewportSize = page.viewportSize()
 			let deviceType
-			if (viewportSize.width <= 768) {
+			if (viewportSize && viewportSize.width <= 768) {
 				deviceType = 'mobile'
 			} else {
 				deviceType = 'desktop'
