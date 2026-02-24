@@ -67,12 +67,12 @@ export class HomePageLogin {
 		this.flowerCard = page.locator('li.wpse-category-button:has-text("Flower")')
 	}
 
-	async navigateToURL(page, URLparam) {
+	async navigateToURL(page: Page, URLparam: string) {
 		await page.goto(URLparam)
 		await page.waitForTimeout(5000)
 		await this.pageTitleSelector.waitFor({ state: 'visible' })
 	}
-	async verifyUserSignInModalAppears(page, URLparam) {
+	async verifyUserSignInModalAppears(page: Page, URLparam: string) {
 		await test.step('Verify the Homepage loads correctly', async () => {
 			//go to page
 			await page.goto(URLparam)
@@ -88,7 +88,7 @@ export class HomePageLogin {
 		})
 	}
 	// new test for user not need to sign in
-	async newTestverifyUserSignInModalAppears(page, URLparam) {
+	async newTestverifyUserSignInModalAppears(page: Page, URLparam: string) {
 		await test.step('Verify the Homepage loads correctly', async () => {
 			//verif that main store page loads
 			// // verify page title, logo, account and cart button are visible
@@ -119,7 +119,7 @@ export class HomePageLogin {
 			// await expect(this.continueButtonPopUp).toBeVisible()
 		})
 	}
-	async loginExistingUser(page, falsePassword, userName, password) {
+	async loginExistingUser(page: Page, falsePassword: string, userName: string, password: string) {
 		await test.step('Enter user email', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click({ force: true })
@@ -152,7 +152,7 @@ export class HomePageLogin {
 			await this.signInButton.click()
 		})
 	}
-	async registerNewUser(page, userType) {
+	async registerNewUser(page: Page, userType: string) {
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -236,7 +236,7 @@ export class HomePageLogin {
 		})
 	}
 
-	async conciergeVerifyShopLoadsAfterSignIn(page) {
+	async conciergeVerifyShopLoadsAfterSignIn(page: Page) {
 		await test.step('Verify User Modal disspears and that shop page loads', async () => {
 			await this.userPopUpContainer.waitFor({ state: 'hidden' })
 
@@ -247,7 +247,7 @@ export class HomePageLogin {
 			await expect(this.cartButtonNav).toBeVisible()
 		})
 	}
-	async liveVerifyShopLoadsAfterSignIn(page) {
+	async liveVerifyShopLoadsAfterSignIn(page: Page) {
 		await test.step('Verify User Modal disspears and that shop page loads', async () => {
 			//await this.userPopUpContainer.waitFor({ state: 'hidden' })
 

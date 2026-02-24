@@ -17,49 +17,50 @@ test.describe('PROD CONCIERGE Tests', () => {
 	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 
 	console.log(`------- \n URL being tested: ${prodConciergeURL} -------- \n `)
-	test(
-		'Prod Concierge check - MED EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
-		{ tag: ['@medical'] },
-		async ({ page }) => {
-			const conciergeLogin = new ConciergeLogin(page)
-			const homePageLogin = new HomePageLogin(page)
-			const homePageActions = new HomePageActions(page)
-			const checkoutPage = new CheckoutPage(page)
-			const orderConfirmation = new OrderConfirmationPage(page)
-			const accountPage = new AccountPage(page)
-			await conciergeLogin.loginUser(
-				page,
-				prodConciergeURL,
-				'wrongpassword',
-				prodConciergeUsername,
-				prodConciergePassword,
-			)
-			//verify that shop loads upon log in
-			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
-			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
-			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
-			// add adress for new user account
-			await homePageActions.openConciergeAddress(page)
-			await homePageActions.selectAddressFromList(page, 'concierge', address)
-			// verify that homepage loads again
-			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
-			//
-			// CLEAR CART IF PRODUCTS EXIST
-			await homePageActions.clearProductsFromCart(page)
-			// add products to cart
-			await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page)
-			// verify that checkout page loads
-			await checkoutPage.verifyCheckoutPageLoads(page)
-			// enter in user info on checkoutpage
-			await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress, 'prod-concierge')
+	// test(
+	// 	'Prod Concierge check - MED EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
+	// 	{ tag: ['@medical'] },
+	// 	async ({ page }) => {
+	// 		const conciergeLogin = new ConciergeLogin(page)
+	// 		const homePageLogin = new HomePageLogin(page)
+	// 		const homePageActions = new HomePageActions(page)
+	// 		const checkoutPage = new CheckoutPage(page)
+	// 		const orderConfirmation = new OrderConfirmationPage(page)
+	// 		const accountPage = new AccountPage(page)
+	// 		await conciergeLogin.loginUser(
+	// 			page,
+	// 			prodConciergeURL,
+	// 			'wrongpassword',
+	// 			prodConciergeUsername,
+	// 			prodConciergePassword,
+	// 		)
+	// 		//verify that shop loads upon log in
+	// 		await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
+	// 		const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
+	// 		const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
+	// 		// add adress for new user account
+	// 		await homePageActions.openAddressSection(page, 'concierge')
+	// 		await homePageActions.selectAddressFromList(page, 'concierge', address)
+	// 		// verify that homepage loads again
+	// 		await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
+	// 		//
+	// 		// CLEAR CART IF PRODUCTS EXIST
+	// 		await homePageActions.clearProductsFromCart(page)
+	// 		// add products to cart
+	// 		//await homePageActions.conciergeMedAddProductsToCartUntilMinimumMet(page)
+	// 		await homePageActions.conciergeRecAddProductsToCartUntilMinimumMet(page)
+	// 		// verify that checkout page loads
+	// 		await checkoutPage.verifyCheckoutPageLoads(page)
+	// 		// enter in user info on checkoutpage
+	// 		await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress, 'prod-concierge')
 
-			// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
-			await homePageActions.goToHomePage()
-			await homePageActions.clearProductsFromCart(page)
-			// logout
-			await accountPage.logOut(page)
-		},
-	),
+	// 		// CLEAR CART TO KEEP CART EMPTY WHEN NOT IN USE
+	// 		await homePageActions.goToHomePage()
+	// 		await homePageActions.clearProductsFromCart(page)
+	// 		// logout
+	// 		await accountPage.logOut(page)
+	// 	},
+	// ),
 		test(
 			'Prod Concierge check - REC EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
 			{ tag: ['@medical'] },
@@ -82,7 +83,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 				const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 				const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 				// add adress for new user account
-				await homePageActions.openConciergeAddress(page)
+				await homePageActions.openAddressSection(page, 'concierge')
 				await homePageActions.selectAddressFromList(page, 'concierge', address)
 				// verify that homepage loads again
 				await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)

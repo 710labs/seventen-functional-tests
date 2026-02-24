@@ -175,7 +175,7 @@ export class AccountPage {
 		// Verify Sign Out link is visible and clickable
 		await expect(this.signOutButton).toBeVisible()
 	}
-	async verifyAccountPageElements(userType, noOrders, currentPassword, newPassword) {
+	async verifyAccountPageElements(userType: string, noOrders: boolean, currentPassword: string, newPassword: string) {
 		await this.page.waitForTimeout(2000)
 		// verify & edit Address Info
 		await this.enterAddressInfo(noOrders)
@@ -195,7 +195,7 @@ export class AccountPage {
 		//return email to login with updated password
 		return newEmail
 	}
-	async logOut(page) {
+	async logOut(page: Page) {
 		await test.step('Log out User', async () => {
 			await this.goToAccountPage()
 			// verify that sign out button appears
@@ -218,7 +218,7 @@ export class AccountPage {
 		await this.page.goBack() // Navigate back to account page
 	}
 	// if being used when account has NO orders, pass true, if account already has orders, pass false
-	async enterAddressInfo(noOrders) {
+	async enterAddressInfo(noOrders: boolean) {
 		// Verify Address section & link appear
 		await this.page.waitForTimeout(2000)
 		await expect(this.addressesSection).toBeVisible()
@@ -261,7 +261,7 @@ export class AccountPage {
 		//verify that account page now shows the updated address
 		expect(this.currentAddressDisplayed).toHaveText(newAddress)
 	}
-	async editPersonalInfo(userType) {
+	async editPersonalInfo(userType: string) {
 		// Verify Personal Info section
 		await expect(this.personalInfoHeader).toBeVisible()
 		await expect(this.editPersonalInfoLink).toBeVisible()
@@ -300,6 +300,7 @@ export class AccountPage {
 		// enter a unique test email for test user
 		const newEmail = `edited_user_${userType}_${timestamp}@test.com`
 		console.log(`\n New user email ---> ${newEmail} \n`)
+		await this.emailInput.scrollIntoViewIfNeeded()
 		await this.emailInput.click({ force: true })
 		await this.page.waitForTimeout(1000)
 		await this.emailInput.fill(newEmail)
@@ -426,7 +427,7 @@ export class AccountPage {
 		// expect(isImagePopulated).toBe(true)
 	}
 
-	async editPassword(currentPassword, newPassword) {
+	async editPassword(currentPassword: string, newPassword: string) {
 		// Verify Password section
 		await expect(this.passwordSection).toBeVisible()
 		await expect(this.editPasswordLink).toBeVisible()
@@ -448,7 +449,7 @@ export class AccountPage {
 		await this.changePasswordButton.click({ force: true })
 		await this.page.waitForTimeout(1000)
 	}
-	async normalizePhoneNumber(phone) {
+	async normalizePhoneNumber(phone: string) {
 		// Remove all non-numeric characters first
 		const digitsOnly = phone.replace(/\D/g, '')
 		// Reformat to XXX-XXX-XXXX
