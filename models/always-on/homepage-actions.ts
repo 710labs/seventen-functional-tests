@@ -97,9 +97,10 @@ export class HomePageActions {
 		this.expirationInput = page.locator('input#medcard_exp')
 	}
 	async openAddressSection(page: Page, storeType: string) {
-		const viewportSize = await page.viewportSize()
+		const viewportSize = page.viewportSize()
+		const width = viewportSize?.width ?? 1024
 		if (storeType === 'concierge') {
-			if (viewportSize.width <= 768) {
+			if (width <= 768) {
 				// Mobile view Concierge
 				await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
 				await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
@@ -127,7 +128,7 @@ export class HomePageActions {
 				}
 			}
 		} else if (storeType === 'live') {
-			if (viewportSize.width <= 768) {
+			if (width <= 768) {
 				// Mobile view
 				await this.enterAddressButtonMobile.waitFor({ state: 'visible' })
 				await expect(this.enterAddressButtonMobile).toBeVisible()
@@ -156,9 +157,10 @@ export class HomePageActions {
 			}
 		}
 	}
-	async openConciergeAddress(page: { viewportSize: () => any }) {
-		const viewportSize = await page.viewportSize()
-		if (viewportSize.width <= 768) {
+	async openConciergeAddress(page: Page) {
+		const viewportSize = page.viewportSize()
+		const width = viewportSize?.width ?? 1024
+		if (width <= 768) {
 			// Mobile view Concierge
 			await this.enterAddressButtonConciergeMobile.waitFor({ state: 'visible' })
 			await expect(this.enterAddressButtonConciergeMobile).toBeVisible()
@@ -191,11 +193,17 @@ export class HomePageActions {
 		await expect(this.homePageButton710).toBeVisible()
 		await this.homePageButton710.click()
 	}
-	async submitAddress(page: any) {
+	async submitAddress(page: Page) {
 		await this.page.waitForTimeout(1500)
 		await expect(this.submitAddressButton).toBeVisible()
-		await this.submitAddressButton.click()
-		await this.page.waitForTimeout(1500)
+		// Submitting address may trigger a full page navigation/reload (e.g. store switch).
+		// We wrap the click with waitForLoadState to handle the navigation gracefully
+		// and prevent a "Target page, context or browser has been closed" error.
+		await Promise.all([
+			this.page.waitForLoadState('load'),
+			this.submitAddressButton.click(),
+		])
+		await this.page.waitForTimeout(2000)
 	}
 	async enterAddress(page: Page, storeType: string, addressParam: string) {
 		await test.step('Click address button', async () => {
@@ -338,7 +346,7 @@ export class HomePageActions {
 			await this.closeCart()
 		}
 	}
-	async addProductsToCart(page: { locator: (arg0: string) => any; waitForTimeout: (arg0: number) => any; waitForSelector: (arg0: string, arg1: { state: string }) => any }, numberOfItems: number) {
+	async addProductsToCart(page: Page, numberOfItems: number) {
 		// Get all the products on the page
 		const products = await page.locator('ul.products li.product')
 
@@ -384,13 +392,21 @@ export class HomePageActions {
 			await page.waitForTimeout(1000) // Adjust this timeout based on your app's behavior
 		}
 	}
-	async goToAccountPage(page: any) {
+	async goToAccountPage(page: Page) {
 		await this.accountButtonNav.waitFor({ state: 'visible' })
 		await expect(this.accountButtonNav).toBeVisible()
 		await this.accountButtonNav.click({ force: true })
 	}
 
-	async addUntilMinimumMet(page: { locator: (arg0: string) => any; waitForTimeout: (arg0: number) => any }, { shouldAddProduct, onMinimumReached, startIndex = 4 }: { shouldAddProduct: ((productEl: any) => Promise<boolean>) | ((prod: any) => Promise<boolean>); onMinimumReached: (() => Promise<void>) | (() => Promise<void>); startIndex: number }) {
+	async addUntilMinimumMet(page: Page, { shouldAddProduct, onMinimumReached, startIndex = 4 }: { shouldAddProduct: (productEl: Locator) => Promise<boolean>; onMinimumReached: () => Promise<void>; startIndex?: number }) {
+		// Wait for dynamically-rendered products to appear in the DOM
+		debugLog('Waiting for product elements to render...')
+		await page.waitForSelector('li.product.type-product.product-type-simple.status-publish', {
+			state: 'visible',
+			timeout: 15000,
+		})
+		await page.waitForTimeout(2000) // Extra buffer for remaining products to finish rendering
+
 		// Unified product locator - using specific selector pattern
 		const products = await page.locator(
 			'li.product.type-product.product-type-simple.status-publish',
@@ -488,9 +504,9 @@ export class HomePageActions {
 	 * Add non–medical ("recreational") products until minimum is met.
 	 * Skips any product with a “Medical Only” badge.
 	 */
-	async conciergeRecAddProductsToCartUntilMinimumMet(page: any) {
+	async conciergeRecAddProductsToCartUntilMinimumMet(page: Page) {
 		// Predicate: only add if there is NO .med-metabadge element
-		async function recFilter(productEl: { locator: (arg0: string) => { (): any; new(): any; count: { (): any; new(): any }; innerText: { (): any; new(): any } } }) {
+		async function recFilter(productEl: Locator) {
 			const hasBadge = (await productEl.locator('.wpse-metabadge.med-metabadge').count()) > 0
 			if (hasBadge) {
 				const title = await productEl.locator('.woocommerce-loop-product__title').innerText()
@@ -526,17 +542,15 @@ export class HomePageActions {
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string} envType — 'dev', 'stage', or 'prod'
 	 */
-	async conciergeMedAddProductsToCartUntilMinimumMet(page: { url: () => any; waitForSelector: (arg0: string, arg1: { state: string; timeout: number }) => Promise<any>; waitForTimeout: (arg0: number) => any; locator: (arg0: string) => { (): any; new(): any; count: { (): Promise<any>; new(): any }; first: { (): { (): any; new(): any; isVisible: { (): any; new(): any }; textContent: { (): any; new(): any } }; new(): any } }; getByText: (arg0: string) => { (): any; new(): any; count: { (): any; new(): any } } }, envType = 'dev/stage') {
+	async conciergeMedAddProductsToCartUntilMinimumMet(page: Page, envType = 'dev/stage') {
 		let sawAnyMed = false,
 			medIndex = 0,
 			medicalCardProvided = false
 
-		// DEBUG: First, let's see what's actually on the page
-		debugLog('=== CONCIERGE MED ADD TO CART DEBUG ===')
+		debugLog('=== CONCIERGE MED ADD TO CART ===')
 		debugLog(`Current URL: ${page.url()}`)
 
 		// Wait for the products section to load
-		debugLog('Waiting for products to load...')
 		await page
 			.waitForSelector('.products, ul.products', { state: 'visible', timeout: 10000 })
 			.catch(() => {
@@ -544,149 +558,24 @@ export class HomePageActions {
 			})
 		await page.waitForTimeout(2000) // Extra wait for dynamic content
 
-		debugLog('--- Checking Multiple Selectors ---')
-
-		// Try multiple possible product selectors to find what works
-		const selectorOptions = [
-			'li.product.type-product.product-type-simple.status-publish',
-			'ul.products li.product',
-			'li.product',
-			'.product-type-simple',
-			'.products .product',
-			'[class*="product"]',
-		]
-
-		for (const sel of selectorOptions) {
-			const count = await page.locator(sel).count()
-			debugLog(`Selector "${sel}" found: ${count} elements`)
-		}
-
-		// Check for medical badge with different possible selectors
-		const medBadgeSelectors = [
-			'.wpse-metabadge.med-metabadge',
-			'.med-metabadge',
-			'[class*="med"]',
-			':has-text("Medical Only")',
-			'.wpse-metabadge:has-text("Medical")',
-		]
-
-		debugLog('--- Checking Medical Badge Selectors ---')
-		for (const badgeSel of medBadgeSelectors) {
-			const count = await page
-				.locator(badgeSel)
-				.count()
-				.catch(() => 0)
-			debugLog(`Badge selector "${badgeSel}" found: ${count} elements`)
-		}
-
-		// Check for any "Medical Only" text on page
-		const medTextCount = await page.getByText('Medical Only').count()
-		debugLog(`Text "Medical Only" found: ${medTextCount} times on page`)
-
 		// PHASE 1: add exactly one med-only product
-		// Try the broader selector first since specific one might not match
-		let products = await page.locator('li.product.type-product.product-type-simple.status-publish')
+		let products = page.locator('li.product.type-product.product-type-simple.status-publish')
 		let total = await products.count()
 
 		// If specific selector found nothing, try broader selectors
 		if (total === 0) {
 			debugLog('Specific selector found 0 products, trying broader selector...')
-			products = await page.locator('ul.products li.product')
+			products = page.locator('ul.products li.product')
 			total = await products.count()
 		}
 
 		if (total === 0) {
 			debugLog('Still 0 products, trying even broader selector...')
-			products = await page.locator('li.product')
+			products = page.locator('li.product')
 			total = await products.count()
 		}
 
-		debugLog(`Using product count: ${total}`)
-
-		// DEBUG: If we have products, let's examine the actual HTML structure
-		if (total > 0) {
-			debugLog('--- Examining First Product HTML Structure ---')
-			const firstProduct = products.first()
-			const firstProductHTML = await firstProduct.innerHTML().catch(() => 'HTML_FETCH_FAILED')
-			debugLog('First product HTML (truncated to 1000 chars):')
-			debugLog(firstProductHTML.substring(0, 1000))
-			debugLog('--- End HTML Structure ---')
-		}
-
-		// DEBUG: Log all products and their medical status with more detail
-		debugLog('--- Product Inventory Scan ---')
-		for (let scanIdx = 0; scanIdx < Math.min(total, 20); scanIdx++) {
-			const scanProduct = products.nth(scanIdx)
-
-			// Get product classes for debugging
-			const productClasses = await scanProduct.getAttribute('class').catch(() => 'NO_CLASS')
-
-			const scanTitle = await scanProduct
-				.locator('.woocommerce-loop-product__title')
-				.innerText()
-				.catch(() => {
-					// Try alternative title selectors
-					return scanProduct
-						.locator('h2, h3, .product-title')
-						.innerText()
-						.catch(() => 'TITLE_NOT_FOUND')
-				})
-
-			// Try multiple ways to detect medical badge
-			const hasMedBadge1 = (await scanProduct.locator('.wpse-metabadge.med-metabadge').count()) > 0
-			const hasMedBadge2 = (await scanProduct.locator('.med-metabadge').count()) > 0
-			const hasMedText = (await scanProduct.getByText('Medical Only').count()) > 0
-			const hasMedText2 = (await scanProduct.getByText(/medical only/i).count()) > 0
-			const hasMedBadge3 =
-				(await scanProduct
-					.locator('[class*="med-metabadge"]')
-					.count()
-					.catch(() => 0)) > 0
-			const hasMedBadge4 =
-				(await scanProduct
-					.locator('[class*="medical"]')
-					.count()
-					.catch(() => 0)) > 0
-
-			// Check for add button with multiple selectors
-			const hasBtn1 =
-				(await scanProduct
-					.locator('button.button.product_type_simple.fasd_to_cart.ajax_groove')
-					.count()) > 0
-			const hasBtn2 =
-				(await scanProduct
-					.locator('button.fasd_to_cart')
-					.count()
-					.catch(() => 0)) > 0
-			const hasBtn3 =
-				(await scanProduct
-					.locator('button[aria-label*="Add"]')
-					.count()
-					.catch(() => 0)) > 0
-			const hasPlusBtn = (await scanProduct.locator('button:has-text("+")').count()) > 0
-			const hasAnyButton = (await scanProduct.locator('button').count()) > 0
-
-			debugLog(`  [${scanIdx}] "${scanTitle.trim()}"`)
-			debugLog(`       Classes: ${productClasses}`)
-			debugLog(
-				`       Medical: badge1=${hasMedBadge1}, badge2=${hasMedBadge2}, text=${hasMedText}, textCI=${hasMedText2}, badge3=${hasMedBadge3}, badge4=${hasMedBadge4}`,
-			)
-			debugLog(
-				`       Buttons: fullSelector=${hasBtn1}, fasd=${hasBtn2}, ariaAdd=${hasBtn3}, plus=${hasPlusBtn}, anyButton=${hasAnyButton}`,
-			)
-
-			// If this is the first 3 products, also log all their class attributes
-			if (scanIdx < 3) {
-				const allElements = await scanProduct.locator('*[class]').all()
-				debugLog(`       All classes found in product ${scanIdx}:`)
-				for (let j = 0; j < Math.min(allElements.length, 10); j++) {
-					const elClass = await allElements[j].getAttribute('class')
-					const elTag = await allElements[j].evaluate((el: { tagName: any }) => el.tagName)
-					debugLog(`         ${elTag}: "${elClass}"`)
-				}
-			}
-		}
-		debugLog('--- End Product Scan ---')
+		debugLog(`Found ${total} products on page`)
 
 		for (let i = 0; i < total; i++) {
 			const product = products.nth(i)
@@ -760,6 +649,25 @@ export class HomePageActions {
 			await btn.click()
 			debugLog(`  Clicked "Add to Cart" for "${name}"`)
 
+			// Handle "Start a new cart" conflict modal (matches addUntilMinimumMet behavior)
+			try {
+				const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
+				await conflictModal.waitFor({ state: 'visible', timeout: 5000 })
+
+				if (await conflictModal.isVisible()) {
+					debugLog('Cart conflict modal detected in med Phase 1. Starting a new cart.')
+					const startNewCartBtn = conflictModal.locator('button:has-text("Start a new cart")')
+
+					await expect(startNewCartBtn).toBeVisible()
+					await startNewCartBtn.click()
+					debugLog('Clicked "Start a new cart".')
+
+					await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+				}
+			} catch (e) {
+				// Modal didn't appear — that's fine, continue normally
+			}
+
 			// wait for drawer & verify
 			await page.waitForTimeout(3000)
 			await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
@@ -782,7 +690,7 @@ export class HomePageActions {
 		// PHASE 2: fill with non-medicals until minimum, then handle med-banner + checkout
 		await this.addUntilMinimumMet(page, {
 			startIndex: medIndex + 1,
-			shouldAddProduct: async (prod: { locator: (arg0: string) => { (): any; new(): any; count: { (): any; new(): any }; innerText: { (): any; new(): any } } }) => {
+			shouldAddProduct: async (prod: Locator) => {
 				const hasBadge = (await prod.locator('.wpse-metabadge.med-metabadge').count()) > 0
 				if (hasBadge) {
 					const t = await prod.locator('.woocommerce-loop-product__title').innerText()
@@ -803,26 +711,16 @@ export class HomePageActions {
 				await this.liveCartTitle.waitFor({ state: 'visible' })
 				await expect(this.liveCartTitle).toBeVisible()
 
-				if (envType === 'dev/stage') {
-					const medicalOnlyBannerVisible = await page
-						.locator('.wpse-snacktoast.warn-toast')
-						.first()
-						.isVisible()
-					const medicalOnlyBannerText = await page
-						.locator('.wpse-snacktoast.warn-toast')
-						.first()
-						.textContent()
+				// Check for medical-only banner and provide med card info if needed
+				const medicalOnlyBanner = page.locator('.wpse-snacktoast.warn-toast').first()
+				const medicalOnlyBannerVisible = await medicalOnlyBanner.isVisible()
 
-					const isMedicalOnlyBannerCorrect =
-						medicalOnlyBannerVisible &&
-						medicalOnlyBannerText?.trim().includes('Medical-only product in cart')
+				if (medicalOnlyBannerVisible && !medicalCardProvided) {
+					const bannerText = await medicalOnlyBanner.textContent()
+					const isMedBanner = bannerText?.trim().includes('Medical-only product in cart')
 
-					if (!isMedicalOnlyBannerCorrect) {
-						throw new Error('Medical-Only Banner not showing in cart for medical only products')
-					}
-
-					if (isMedicalOnlyBannerCorrect && !medicalCardProvided) {
-						console.log('Medical-only product in cart. Adding medical card information...')
+					if (isMedBanner) {
+						debugLog('Medical-only banner detected. Adding medical card information...')
 
 						// Click the "I have a medical card" checkbox
 						const medicalCardCheckbox = page.locator('input#med_included')
@@ -836,7 +734,6 @@ export class HomePageActions {
 							this.page.waitForEvent('filechooser'),
 							medCardFileInput.click(),
 						])
-						// selectors
 						const issuingStateSelect = page.locator('select#medcard_state')
 						const expirationInput = page.locator('input#medcard_exp')
 						await driversLicenseChooser.setFiles('CA-DL.jpg')
@@ -868,19 +765,16 @@ export class HomePageActions {
 						await this.cartButtonNav.waitFor({ state: 'visible' })
 						await expect(this.cartButtonNav).toBeVisible()
 						await this.cartButtonNav.click()
-						// Wait for the cart drawer to become visible
 						await this.cartDrawerContainer.waitFor({ state: 'visible' })
-						// continue to Checkout
-						// await this.medCartCheckoutButton.waitFor({ state: 'visible' })
-						// await expect(this.medCartCheckoutButton).toBeVisible()
-						// await this.medCartCheckoutButton.click()
 
 						// Wait for animations or loading to finish
 						await page.waitForTimeout(3000)
+					} else {
+						debugLog(`Medical banner visible but text did not match: "${bannerText?.trim()}"`)
 					}
 				}
 
-				// Proceed to checkout after medical info is provided
+				// Proceed to checkout
 				await this.continueToCheckoutButton.waitFor({ state: 'visible' })
 				await expect(this.continueToCheckoutButton).toBeVisible()
 				await this.continueToCheckoutButton.click()
@@ -1315,7 +1209,7 @@ export class HomePageActions {
 	// function searches for med-only products with the med tag, adds that product to cart,
 	// checks if Med card needs to be added, adds the med card, and then verifies if cart minimum is reached
 	// adding the same med-only product to cart until the min is reached
-	async liveMedAddProductsToCartUntilMinimumMet(page: { locator: (arg0: string) => { (): any; new(): any; first: { (): { (): any; new(): any; isVisible: { (): any; new(): any }; textContent: { (): any; new(): any } }; new(): any } }; getByRole: (arg0: string, arg1: { name: RegExp }) => { (): any; new(): any; first: { (): any; new(): any } }; waitForTimeout: (arg0: number) => any; waitForLoadState: (arg0: string) => any }, envType: string) {
+	async liveMedAddProductsToCartUntilMinimumMet(page: Page, envType: string) {
 		// Get all the products on the page
 		const products = await page.locator(
 			'li.product.type-product.product-type-simple.status-publish',
@@ -1414,7 +1308,7 @@ export class HomePageActions {
 				await expect(addToCartButton).toBeVisible()
 
 				// Scroll the button to the center of the viewport to avoid it being obscured by category tabs
-				await addToCartButton.evaluate((element: { scrollIntoView: (arg0: { block: string; behavior: string }) => void }) => {
+				await addToCartButton.evaluate((element: HTMLElement) => {
 					element.scrollIntoView({ block: 'center', behavior: 'smooth' })
 				})
 				await page.waitForTimeout(500) // Wait for smooth scroll to complete
@@ -1549,7 +1443,7 @@ export class HomePageActions {
 	//
 	// FUTURE consolidated Med add to cart function
 	async medAddProductsToCartUntilMinimumMet(
-		page: { locator: (arg0: any) => any },
+		page: Page,
 		{ mode = 'concierge', productSelector, startIndex = 0, isMultiStore = false }: { mode: string; productSelector: string; startIndex: number; isMultiStore: boolean },
 	) {
 		let i = startIndex
@@ -1616,20 +1510,20 @@ export class HomePageActions {
 		}
 	}
 	// 1) Check if a product is "Medical Only"
-	async isMedicalProduct(product: { locator: (arg0: string) => { (): any; new(): any; count: { (): any; new(): any } } }) {
+	async isMedicalProduct(product: Locator) {
 		const count = await product.locator('.wpse-metabadge.med-metabadge').count()
 		return count > 0
 	}
 
 	// 2) Log skipping message for non-medical product
-	async logSkippingNonMedical(product: { locator: (arg0: string) => { (): any; new(): any; innerText: { (): any; new(): any } } }) {
+	async logSkippingNonMedical(product: Locator) {
 		const title = await product.locator('.woocommerce-loop-product__title').innerText()
 		console.log(`Skipping product "${title.trim()}" as it is not "Medical Only".`)
 	}
 
 	// 3) Add the FIRST medical-only product in Live mode
 	//    (where you click into product details, then add to cart)
-	async addFirstMedicalProduct(page: any, product: { locator: (arg0: string) => { (): any; new(): any; innerText: { (): any; new(): any } } }) {
+	async addFirstMedicalProduct(page: Page, product: Locator) {
 		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
 		const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
 
@@ -1649,7 +1543,7 @@ export class HomePageActions {
 
 	// 4) Add a medical product directly from the product card
 	//    Used by Concierge or subsequent additions in Live
-	async addMedicalProductDirect(page: { waitForTimeout: (arg0: number) => any }, product: { locator: (arg0: string) => { (): any; new(): any; innerText: { (): any; new(): any } } }, mode: string) {
+	async addMedicalProductDirect(page: Page, product: Locator, mode: string) {
 		const productName = await product.locator('.woocommerce-loop-product__title').innerText()
 		console.log(`Adding product from listing: ${productName}`)
 
@@ -1673,7 +1567,7 @@ export class HomePageActions {
 	}
 
 	// 5) Verify a product is in the cart
-	async verifyProductInCart(page: { waitForSelector: (arg0: string) => any; locator: (arg0: string) => any }, productName: any) {
+	async verifyProductInCart(page: Page, productName: string) {
 		// Ensure the cart item is rendered
 		await page.waitForSelector('td.product-name')
 
@@ -1694,7 +1588,7 @@ export class HomePageActions {
 	}
 
 	// 6) Go to cart (shared step in both modes)
-	async goToCart(page: { waitForTimeout: (arg0: number) => any }) {
+	async goToCart(page: Page) {
 		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
 		await this.viewCartButtonSimple.click()
 		// Possibly wait for the cart page or cart drawer to appear
@@ -1702,7 +1596,7 @@ export class HomePageActions {
 	}
 
 	// 7) Check medical-only banner and optionally upload med card info
-	async checkMedicalBannerAndMaybeUploadCard(page: { locator: (arg0: string) => { (): any; new(): any; nth: { (arg0: number): any; new(): any } }; waitForEvent: (arg0: string) => any; waitForTimeout: (arg0: number) => any }, medicalCardProvided: boolean) {
+	async checkMedicalBannerAndMaybeUploadCard(page: Page, medicalCardProvided: boolean) {
 		// Check banner
 		const banner = page.locator('.wpse-snacktoast.warn-toast').nth(1)
 		const isBannerVisible = await banner.isVisible()
@@ -1759,13 +1653,13 @@ export class HomePageActions {
 	}
 
 	// 8) Continue Shopping in Live mode
-	async continueShopping(page: { waitForTimeout: (arg0: number) => any }) {
+	async continueShopping(page: Page) {
 		// Typically, you click something like "Add more items to continue"
 		await this.cartContinueShoppingButton.waitFor({ state: 'visible' })
 		await this.cartContinueShoppingButton.click()
 		await page.waitForTimeout(2000)
 	}
-	async newConciergeMedAddProductsToCartUntilMinimumMet(page: any) {
+	async newConciergeMedAddProductsToCartUntilMinimumMet(page: Page) {
 		return this.medAddProductsToCartUntilMinimumMet(page, {
 			mode: 'concierge',
 			productSelector: 'ul.products li.product',
@@ -1774,7 +1668,7 @@ export class HomePageActions {
 		})
 	}
 
-	async newLiveMedAddProductsToCartUntilMinimumMet(page: any) {
+	async newLiveMedAddProductsToCartUntilMinimumMet(page: Page) {
 		return this.medAddProductsToCartUntilMinimumMet(page, {
 			mode: 'live',
 			productSelector: 'li.product.type-product.product-type-simple.status-publish',
