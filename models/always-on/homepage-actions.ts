@@ -67,7 +67,7 @@ export class HomePageActions {
 		this.addToCartButtonGeneral = page.locator('button[aria-label="Add product to cart"]')
 		this.enterAddressButtonDesktop = page.locator('a.wpse-button-storenav.wpse-openerize').first()
 		this.enterAddressButtonMobile = page.locator('a.wpse-button-storenav.wpse-openerize').nth(1)
-		this.enterAddressButtonConciergeDesktop = page.locator('.wpse-button-storenav.wpse-openerize').first()
+		this.enterAddressButtonConciergeDesktop = page.locator('a[data-module="fulfillment"]').first()
 		this.enterAddressButtonConciergeMobile = page
 			.locator('.wpse-button-storenav.wpse-openerize')
 			.nth(1)
