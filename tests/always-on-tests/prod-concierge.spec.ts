@@ -39,7 +39,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 			// add adress for new user account
-			await homePageActions.openConciergeAddress(page)
+			await homePageActions.openAddressSection(page, 'concierge')
 			await homePageActions.selectAddressFromList(page, 'concierge', address)
 			// verify that homepage loads again
 			await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
@@ -82,7 +82,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 				const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 				const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
 				// add adress for new user account
-				await homePageActions.openConciergeAddress(page)
+				await homePageActions.openAddressSection(page, 'concierge')
 				await homePageActions.selectAddressFromList(page, 'concierge', address)
 				// verify that homepage loads again
 				await homePageLogin.conciergeVerifyShopLoadsAfterSignIn(page)
