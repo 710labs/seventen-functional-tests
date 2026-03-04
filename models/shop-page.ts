@@ -117,6 +117,58 @@ export class ShopPage {
 		}
 		await this.page.waitForTimeout(5000)
 	}
+
+	async addBundlesToCart(bundleNames: string[], mobile = false, fulfillment = 'Delivery') {
+		await test.step('Navigate to Shop page', async () => {
+			await this.page.waitForTimeout(3000)
+			await this.page.goto('/')
+			await this.page.waitForTimeout(3000)
+		})
+		await test.step('Select Fulfillment Method', async () => {
+			if (process.env.NEXT_VERSION === 'true') {
+				await this.page.waitForSelector(`label:has-text("${fulfillment}")`)
+				await this.page.locator(`label:has-text("${fulfillment}") >> nth=0`).click()
+				await this.page.locator('#fulfillerSubmit').click()
+				await this.page.waitForTimeout(2000)
+				await this.page.reload()
+			}
+		})
+		await test.step('Add Bundles to Cart', async () => {
+			await this.page.waitForSelector('.add_to_cart_button')
+
+			for (let i = 0; i < bundleNames.length; i++) {
+				await test.step(`Add Bundle: ${bundleNames[i]}`, async () => {
+					var bundleProduct = this.page.locator(`li.product:has(h2.woocommerce-loop-product__title:has-text("${bundleNames[i]}"))`).first()
+					await expect(bundleProduct).toBeVisible()
+					var addToCartButton = bundleProduct.locator('a.add_to_cart_button')
+					await addToCartButton.click({ force: true })
+					await this.page.waitForTimeout(1500)
+				})
+			}
+
+			await this.page.keyboard.press('PageUp')
+			await this.page.waitForTimeout(2000)
+			if (this.workerInfo.project.name === 'Mobile Chrome') {
+				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
+			} else {
+				if (
+					process.env.BASE_URL === 'https://thelist.theflowery.co/' ||
+					process.env.BASE_URL === 'https://thelist-co.710labs.com/' ||
+					process.env.BASE_URL === 'https://thelist-mi.710labs.com/'
+				) {
+					await this.page
+						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
+						.first()
+						.click({ force: true })
+				} else {
+					await this.page
+						.locator(`[href="${process.env.BASE_URL}cart/"]`)
+						.first()
+						.click({ force: true })
+				}
+			}
+		})
+	}
 	async goToCart() {
 		if (this.workerInfo.project.name === 'Mobile Chrome') {
 			await this.page.locator(`.footer-cart-contents`).first().click({ force: true })

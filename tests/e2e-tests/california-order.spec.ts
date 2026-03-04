@@ -159,4 +159,31 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 0)
 		},
 	)
+	test(
+		`Bundles - Rec user - Basic`,
+		{ tag: ['@recreational'] },
+		async ({ page, browserName }, workerInfo) => {
+			const ageGatePage = new AgeGatePage(page)
+			const listPassword = new ListPasswordPage(page)
+			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const myAccountPage = new MyAccountPage(page)
+			const loginPage = new LoginPage(page)
+			const shopPage = new ShopPage(page, browserName, workerInfo)
+			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 0)
+			const checkOutPage = new CheckoutPage(page, apiContext)
+			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
+
+			await ageGatePage.passAgeGate()
+			var user = await createAccountPage.createApi('recreational', 'current')
+			await listPassword.submitPassword('REDACTED')
+			await loginPage.login(user.email, user.password)
+			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
+				await myAccountPage.addAddress()
+			}
+
+			await shopPage.addBundlesToCart(['Bundle #1 – OnlyCanna', 'Bundle #2'], mobile, 'Delivery')
+			var cartTotals = await cartPage.verifyCart(`94020`)
+			await checkOutPage.confirmCheckout('94020', cartTotals, 0)
+		},
+	)
 })
