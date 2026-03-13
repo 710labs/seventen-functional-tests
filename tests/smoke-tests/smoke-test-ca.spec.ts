@@ -21,7 +21,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 	var splitOrderNumber: string
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context }, workerInfo) => {
+	test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserName, context }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const apiContext = await request.newContext({
 			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
@@ -78,7 +78,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, 'Delivery', 'Medical')
+			await shopPage.addProductsToCart(orderQuanity, mobile, 'Delivery', 'Recreational')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
