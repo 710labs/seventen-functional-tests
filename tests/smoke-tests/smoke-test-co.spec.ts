@@ -16,7 +16,7 @@ import { fictionalAreacodes } from '../../utils/data-generator'
 import { writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests CO', () => {
-	const orderQuanity = 8
+	const orderQuanity = 2
 	var orderNumber: any
 	var splitOrderNumber: string
 	var cartTotals: any
