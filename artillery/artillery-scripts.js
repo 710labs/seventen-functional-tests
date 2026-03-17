@@ -143,9 +143,7 @@ async function CA(page, vuContext, events, test) {
 	}
 
 	function getCartCount() {
-		const randomDecimal = Math.random()
-		const randomNumber = Math.floor(randomDecimal * 7) + 7
-		return randomNumber
+		return 3
 	}
 
 	const { step } = test
