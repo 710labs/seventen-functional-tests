@@ -1,56 +1,56 @@
 async function CA(page, vuContext, events, test) {
 	function randomFirstName() {
 		const firstNames = [
-			'James',
-			'John',
-			'Robert',
-			'Michael',
-			'William',
-			'David',
-			'Richard',
-			'Joseph',
-			'Charles',
-			'Thomas',
-			'Christopher',
-			'Daniel',
-			'Matthew',
-			'Anthony',
-			'Donald',
-			'Mark',
-			'Paul',
-			'Steven',
-			'Andrew',
-			'Kenneth',
-			'Joshua',
-			'Kevin',
-			'Brian',
-			'George',
-			'Edward',
-			'Ronald',
-			'Timothy',
-			'Jason',
-			'Jeffrey',
-			'Ryan',
-			'Lisa',
-			'Mary',
-			'Karen',
-			'Patricia',
-			'Sandra',
-			'Kimberly',
-			'Donna',
-			'Michelle',
-			'Elizabeth',
-			'Susan',
-			'Jessica',
-			'Sarah',
-			'Nancy',
-			'Jennifer',
-			'Maria',
-			'Melissa',
-			'Emily',
-			'Amanda',
-			'Hannah',
-			'Ashley',
+			'LoadTest_James',
+			'LoadTest_John',
+			'LoadTest_Robert',
+			'LoadTest_Michael',
+			'LoadTest_William',
+			'LoadTest_David',
+			'LoadTest_Richard',
+			'LoadTest_Joseph',
+			'LoadTest_Charles',
+			'LoadTest_Thomas',
+			'LoadTest_Christopher',
+			'LoadTest_Daniel',
+			'LoadTest_Matthew',
+			'LoadTest_Anthony',
+			'LoadTest_Donald',
+			'LoadTest_Mark',
+			'LoadTest_Paul',
+			'LoadTest_Steven',
+			'LoadTest_Andrew',
+			'LoadTest_Kenneth',
+			'LoadTest_Joshua',
+			'LoadTest_Kevin',
+			'LoadTest_Brian',
+			'LoadTest_George',
+			'LoadTest_Edward',
+			'LoadTest_Ronald',
+			'LoadTest_Timothy',
+			'LoadTest_Jason',
+			'LoadTest_Jeffrey',
+			'LoadTest_Ryan',
+			'LoadTest_Lisa',
+			'LoadTest_Mary',
+			'LoadTest_Karen',
+			'LoadTest_Patricia',
+			'LoadTest_Sandra',
+			'LoadTest_Kimberly',
+			'LoadTest_Donna',
+			'LoadTest_Michelle',
+			'LoadTest_Elizabeth',
+			'LoadTest_Susan',
+			'LoadTest_Jessica',
+			'LoadTest_Sarah',
+			'LoadTest_Nancy',
+			'LoadTest_Jennifer',
+			'LoadTest_Maria',
+			'LoadTest_Melissa',
+			'LoadTest_Emily',
+			'LoadTest_Amanda',
+			'LoadTest_Hannah',
+			'LoadTest_Ashley',
 		]
 
 		const randomIndex = Math.floor(Math.random() * firstNames.length)
@@ -59,56 +59,56 @@ async function CA(page, vuContext, events, test) {
 
 	function randomLastName() {
 		const lastNames = [
-			'Smith',
-			'Johnson',
-			'Williams',
-			'Brown',
-			'Jones',
-			'Garcia',
-			'Miller',
-			'Davis',
-			'Rodriguez',
-			'Martinez',
-			'Hernandez',
-			'Lopez',
-			'Gonzalez',
-			'Wilson',
-			'Anderson',
-			'Thomas',
-			'Taylor',
-			'Moore',
-			'Jackson',
-			'Martin',
-			'Lee',
-			'Perez',
-			'Thompson',
-			'White',
-			'Harris',
-			'Sanchez',
-			'Clark',
-			'Ramirez',
-			'Lewis',
-			'Robinson',
-			'Walker',
-			'Young',
-			'Allen',
-			'King',
-			'Wright',
-			'Scott',
-			'Torres',
-			'Nguyen',
-			'Hill',
-			'Flores',
-			'Green',
-			'Adams',
-			'Nelson',
-			'Baker',
-			'Hall',
-			'Rivera',
-			'Campbell',
-			'Mitchell',
-			'Carter',
-			'Roberts',
+			'LoadTest_Smith',
+			'LoadTest_Johnson',
+			'LoadTest_Williams',
+			'LoadTest_Brown',
+			'LoadTest_Jones',
+			'LoadTest_Garcia',
+			'LoadTest_Miller',
+			'LoadTest_Davis',
+			'LoadTest_Rodriguez',
+			'LoadTest_Martinez',
+			'LoadTest_Hernandez',
+			'LoadTest_Lopez',
+			'LoadTest_Gonzalez',
+			'LoadTest_Wilson',
+			'LoadTest_Anderson',
+			'LoadTest_Thomas',
+			'LoadTest_Taylor',
+			'LoadTest_Moore',
+			'LoadTest_Jackson',
+			'LoadTest_Martin',
+			'LoadTest_Lee',
+			'LoadTest_Perez',
+			'LoadTest_Thompson',
+			'LoadTest_White',
+			'LoadTest_Harris',
+			'LoadTest_Sanchez',
+			'LoadTest_Clark',
+			'LoadTest_Ramirez',
+			'LoadTest_Lewis',
+			'LoadTest_Robinson',
+			'LoadTest_Walker',
+			'LoadTest_Young',
+			'LoadTest_Allen',
+			'LoadTest_King',
+			'LoadTest_Wright',
+			'LoadTest_Scott',
+			'LoadTest_Torres',
+			'LoadTest_Nguyen',
+			'LoadTest_Hill',
+			'LoadTest_Flores',
+			'LoadTest_Green',
+			'LoadTest_Adams',
+			'LoadTest_Nelson',
+			'LoadTest_Baker',
+			'LoadTest_Hall',
+			'LoadTest_Rivera',
+			'LoadTest_Campbell',
+			'LoadTest_Mitchell',
+			'LoadTest_Carter',
+			'LoadTest_Roberts',
 		]
 
 		const randomIndex = Math.floor(Math.random() * lastNames.length)
@@ -153,23 +153,33 @@ async function CA(page, vuContext, events, test) {
 	const recordid = vuContext.vars.recordid
 	const userFirstName = randomFirstName()
 	const userLastName = randomLastName()
-	const userEmail = `${userFirstName.toLowerCase()}.${userLastName.toLowerCase()}.${randomNumber()}@mail7.io`
+	const userEmail = `loadtest-${userFirstName.toLowerCase()}.${userLastName.toLowerCase()}.${randomNumber()}@loadtest.com`
 	const userAddress = '3377 S La Cienega Blvd, Los Angeles, CA 90016'
 	const usageType = getRandomUsageType()
 	const fulfillmentType = getRandomFulfillmentType()
 	const itemCount = getCartCount()
+	const target = vuContext.vars.target || 'https://thelist-dev.710labs.com'
+
+	// Inject VIP cookie before navigation
+	await page.context().addCookies([
+		{
+			name: 'vipChecker',
+			value: '3',
+			domain: new URL(target).hostname,
+			path: '/',
+		},
+	])
 
 	await step('Pass Age Gate', async () => {
 		await step('Load 710 Labs ', async () => {
-			const targetUrl = vuContext.vars.target || 'https://thelist-dev.710labs.com'
-			await page.goto(targetUrl)
+			await page.goto(target)
 		})
 
-		// await step('Click Age Gate Acceptance', async () => {
-		// 	await page
-		// 		.getByRole('button', { name: "I'm over 21 or a qualified" })
-		// 		.click({ timeout: 60000 })
-		// })
+		await step('Click Age Gate Acceptance', async () => {
+			await page
+				.getByRole('button', { name: "I'm over 21 or a qualified patient" })
+				.click({ timeout: 60000 })
+		})
 	})
 
 	await step('Enter List Password', async () => {
@@ -187,18 +197,6 @@ async function CA(page, vuContext, events, test) {
 				await page.click('text=create an account')
 			})
 
-			await step('Enter Username', async () => {
-				const userNameField = await page.locator('input[name="email"]')
-				await userNameField.click()
-				await userNameField.fill(userEmail)
-			})
-
-			await step('Enter Passowrd', async () => {
-				const passwordField = page.locator('input[name="password"]')
-				await passwordField.click()
-				await passwordField.fill(userEmail)
-			})
-
 			await step('Enter First Name', async () => {
 				const firstName = page.locator('input[name="svntn_core_registration_firstname"]')
 				await firstName.click()
@@ -209,6 +207,18 @@ async function CA(page, vuContext, events, test) {
 				const lastName = page.locator('input[name="svntn_core_registration_lastname"]')
 				await lastName.click()
 				await lastName.fill(userLastName)
+			})
+
+			await step('Enter Email', async () => {
+				const emailField = await page.locator('input[name="email"]')
+				await emailField.click()
+				await emailField.fill(userEmail)
+			})
+
+			await step('Enter Password', async () => {
+				const passwordField = page.locator('input[name="password"]')
+				await passwordField.click()
+				await passwordField.fill(userEmail)
 			})
 
 			await step('Enter Birthdate', async () => {
