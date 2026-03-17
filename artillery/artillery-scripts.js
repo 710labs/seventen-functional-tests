@@ -161,7 +161,8 @@ async function CA(page, vuContext, events, test) {
 
 	await step('Pass Age Gate', async () => {
 		await step('Load 710 Labs ', async () => {
-			await page.goto('https://thelist-stage.710labs.com')
+			const targetUrl = vuContext.vars.target || 'https://thelist-dev.710labs.com'
+			await page.goto(targetUrl)
 		})
 
 		// await step('Click Age Gate Acceptance', async () => {
@@ -408,38 +409,38 @@ async function CA(page, vuContext, events, test) {
 		})
 	})
 
-	await step('Checkout Cart', async () => {
-		await step('Enter Fulfillment Info', async () => {
-			await step('Select Slot Day', async () => {
-				const daySlots = page.locator('#svntnAcuityDayChoices label.acuityChoice')
+	// await step('Checkout Cart', async () => {
+	// 	await step('Enter Fulfillment Info', async () => {
+	// 		await step('Select Slot Day', async () => {
+	// 			const daySlots = page.locator('#svntnAcuityDayChoices label.acuityChoice')
 
-				const daySlotCount = await daySlots.count()
+	// 			const daySlotCount = await daySlots.count()
 
-				const randomIndex = Math.floor(Math.random() * daySlotCount)
+	// 			const randomIndex = Math.floor(Math.random() * daySlotCount)
 
-				const daySlot = await daySlots.nth(randomIndex)
+	// 			const daySlot = await daySlots.nth(randomIndex)
 
-				await daySlot.click()
+	// 			await daySlot.click()
 
-				await page.waitForTimeout(5000)
-			})
-			await step('Select Slot Time', async () => {
-				const timeSlots = page.locator('#svntnAcuityTimeChoices label.acuityChoice')
+	// 			await page.waitForTimeout(5000)
+	// 		})
+	// 		await step('Select Slot Time', async () => {
+	// 			const timeSlots = page.locator('#svntnAcuityTimeChoices label.acuityChoice')
 
-				const timeSlotCount = await timeSlots.count()
+	// 			const timeSlotCount = await timeSlots.count()
 
-				const randomIndex = Math.floor(Math.random() * timeSlotCount)
+	// 			const randomIndex = Math.floor(Math.random() * timeSlotCount)
 
-				const timeSlot = await timeSlots.nth(randomIndex)
+	// 			const timeSlot = await timeSlots.nth(randomIndex)
 
-				await timeSlot.click()
-			})
-		})
+	// 			await timeSlot.click()
+	// 		})
+	// 	})
 
-		await step('Complete Order', async () => {
-			await page.getByRole('button', { name: 'Place your order' }).click()
-		})
-	})
+	// 	await step('Complete Order', async () => {
+	// 		await page.getByRole('button', { name: 'Place your order' }).click()
+	// 	})
+	// })
 }
 
 async function CO(page) {}
