@@ -399,15 +399,15 @@ async function CA(page, vuContext, events, test) {
 		// 	})
 		// })
 
-		await step('Review Cart', async () => {
-			await step('Navigate To Cart', async () => {
-				await page.locator('a.cart-contents').click()
-			})
-			await step('Navigate To Checkout', async () => {
-				await page.getByRole('link', { name: 'Continue to checkout ' }).click()
-			})
-		})
-	})
+	// 	await step('Review Cart', async () => {
+	// 		await step('Navigate To Cart', async () => {
+	// 			await page.locator('a.cart-contents').click()
+	// 		})
+	// 		await step('Navigate To Checkout', async () => {
+	// 			await page.getByRole('link', { name: 'Continue to checkout ' }).click()
+	// 		})
+	// 	})
+	// })
 
 	// await step('Checkout Cart', async () => {
 	// 	await step('Enter Fulfillment Info', async () => {
