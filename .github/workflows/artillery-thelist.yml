@@ -29,13 +29,17 @@ on:
           - co
           - mi
       virtual_users:
-        description: 'Virtual Users'
+        description: 'Max Concurrent Users (maxVusers)'
+        required: false
+        default: '1'
+      arrival_rate:
+        description: 'New users per second (arrivalRate)'
         required: false
         default: '1'
       duration:
         description: 'Duration (seconds)'
         required: true
-        default: '300'
+        default: '60'
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -70,6 +74,7 @@ jobs:
       - name: Update Artillery Config with Inputs
         run: |
           sed -i "s/duration: 900/duration: ${{ github.event.inputs.duration }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
+          sed -i "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
           sed -i "s/maxVusers: 10/maxVusers: ${{ github.event.inputs.virtual_users }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
           sed -i "s|target:.*|target: ${{ github.event.inputs.target }}|g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
 
