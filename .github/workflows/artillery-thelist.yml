@@ -71,6 +71,7 @@ jobs:
         run: |
           sed -i "s/duration: 900/duration: ${{ github.event.inputs.duration }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
           sed -i "s/maxVusers: 10/maxVusers: ${{ github.event.inputs.virtual_users }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
+          sed -i "s|target:.*|target: ${{ github.event.inputs.target }}|g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
 
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
