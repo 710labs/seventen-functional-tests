@@ -414,41 +414,37 @@ async function CA(page, vuContext, events, test) {
 				await page.locator('a.cart-contents').click()
 			})
 			await step('Navigate To Checkout', async () => {
-				await page.getByRole('link', { name: 'Continue to checkout ' }).click()
+				await page.locator('.checkout-button').click()
 			})
 		})
 	})
 
 	await step('Checkout Cart', async () => {
 		await step('Enter Fulfillment Info', async () => {
-			await step('Select Slot Day', async () => {
-				const daySlots = page.locator('#svntnAcuityDayChoices label.acuityChoice')
+			await step('Select Acuity Slot', async () => {
+				await page.waitForTimeout(2000)
+				const errorMessage = page.locator('#datetimeError')
 
-				const daySlotCount = await daySlots.count()
+				if (!(await errorMessage.isVisible())) {
+					await page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
+						timeout: 45 * 1000,
+					})
 
-				const randomIndex = Math.floor(Math.random() * daySlotCount)
+					const daySlot = page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
+					await daySlot.click()
 
-				const daySlot = await daySlots.nth(randomIndex)
+					await page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
 
-				await daySlot.click()
-
-				await page.waitForTimeout(5000)
-			})
-			await step('Select Slot Time', async () => {
-				const timeSlots = page.locator('#svntnAcuityTimeChoices label.acuityChoice')
-
-				const timeSlotCount = await timeSlots.count()
-
-				const randomIndex = Math.floor(Math.random() * timeSlotCount)
-
-				const timeSlot = await timeSlots.nth(randomIndex)
-
-				await timeSlot.click()
+					const timeSlot = page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
+					await timeSlot.click()
+				}
 			})
 		})
 
 		await step('Complete Order', async () => {
-			await page.getByRole('button', { name: 'Place your order' }).click()
+			const placeOrderButton = page.locator('id=place_order')
+			await placeOrderButton.waitFor({ state: 'visible' })
+			await placeOrderButton.click()
 		})
 	})
 }
