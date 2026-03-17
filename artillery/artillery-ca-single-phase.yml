@@ -1,5 +1,5 @@
 config:
-  target: 'https://thelist-stage.710labs.com'
+  target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
   includeFiles:
     - CA-DL.jpg
     - Medical-Card.png
