@@ -169,8 +169,10 @@ async function CA(page, vuContext, events, test) {
 	])
 
 	await step('Pass Age Gate', async () => {
+		console.log(`[DEBUG] Starting Age Gate. URL: ${page.url()}, Title: ${await page.title()}`)
 		await step('Load 710 Labs ', async () => {
 			await page.goto(target)
+			console.log(`[DEBUG] Page Loaded. URL: ${page.url()}, Title: ${await page.title()}`)
 		})
 
 		await step('Click Age Gate Acceptance', async () => {
@@ -181,18 +183,22 @@ async function CA(page, vuContext, events, test) {
 	})
 
 	await step('Enter List Password', async () => {
+		console.log(`[DEBUG] Entering List Password. URL: ${page.url()}`)
 		await step('Type and Submit List Password', async () => {
 			const passwordField = await page.locator('input[name="post_password"]')
 			await passwordField.click()
 			await passwordField.fill('REDACTED')
 			await page.click('text=enter site')
+			console.log(`[DEBUG] Password Submitted. URL: ${page.url()}`)
 		})
 	})
 
 	await step('Create Account ', async () => {
+		console.log(`[DEBUG] Starting Account Creation. URL: ${page.url()}`)
 		await step('Enter Account Info', async () => {
 			await step('Click Register Link', async () => {
 				await page.click('text=create an account')
+				console.log(`[DEBUG] On Registration Page. URL: ${page.url()}`)
 			})
 
 			await step('Enter First Name', async () => {
@@ -408,16 +414,20 @@ async function CA(page, vuContext, events, test) {
 		// })
 
 		await step('Review Cart', async () => {
+			console.log(`[DEBUG] Reviewing Cart. URL: ${page.url()}`)
 			await step('Navigate To Cart', async () => {
 				await page.locator('a.cart-contents').click()
+				console.log(`[DEBUG] In Cart. URL: ${page.url()}`)
 			})
 			await step('Navigate To Checkout', async () => {
 				await page.locator('.checkout-button').click()
+				console.log(`[DEBUG] At Checkout. URL: ${page.url()}`)
 			})
 		})
 	})
 
 	await step('Checkout Cart', async () => {
+		console.log(`[DEBUG] Starting Checkout. URL: ${page.url()}`)
 		await step('Enter Fulfillment Info', async () => {
 			await step('Select Acuity Slot', async () => {
 				await page.waitForTimeout(2000)
