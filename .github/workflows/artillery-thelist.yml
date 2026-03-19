@@ -73,15 +73,15 @@ jobs:
 
       - name: Update Artillery Config with Inputs
         run: |
-          sed -i "s/duration: 900/duration: ${{ github.event.inputs.duration }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
-          sed -i "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
-          sed -i "s/maxVusers: 10/maxVusers: ${{ github.event.inputs.virtual_users }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
-          sed -i "s|target:.*|target: ${{ github.event.inputs.target }}|g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
+          sed -i "s/duration: 900/duration: ${{ github.event.inputs.duration }}/g" artillery/artillery-${{ github.event.inputs.mode }}-list.yml
+          sed -i "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/g" artillery/artillery-${{ github.event.inputs.mode }}-list.yml
+          sed -i "s/maxVusers: 10/maxVusers: ${{ github.event.inputs.virtual_users }}/g" artillery/artillery-${{ github.event.inputs.mode }}-list.yml
+          sed -i "s|target:.*|target: ${{ github.event.inputs.target }}|g" artillery/artillery-${{ github.event.inputs.mode }}-list.yml
 
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 artillery/artillery-${{ github.event.inputs.mode }}-list.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
