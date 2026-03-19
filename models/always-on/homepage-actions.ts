@@ -89,9 +89,7 @@ export class HomePageActions {
 		this.liveChangeAddressButton = page.locator('span.fasd-nested-unrollable')
 		this.liveCartTitle = page.locator('h6:has-text("Your cart from")')
 		this.medCartCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
-		this.viewCartButtonSimple = page.locator(
-			'a.button.wpse-button-primary.wpse-cart-openerize[data-shape="drawer"][data-module="cart"][href="/cart"]',
-		)
+		this.viewCartButtonSimple = page.getByRole('link', { name: 'View Cart', exact: true })
 		this.medicalOnlyBanner = page.locator('.wpse-snacktoast.warn-toast.med-issue')
 		this.issuingStateSelect = page.locator('#medcard_state')
 		this.expirationInput = page.locator('input#medcard_exp')
@@ -1193,6 +1191,7 @@ export class HomePageActions {
 		// await expect(this.liveViewCartCheckout).toBeVisible()
 		// await this.liveViewCartCheckout.click()
 		//click View Cart to go to Cart
+		await page.waitForTimeout(2000)
 		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
 		await expect(this.viewCartButtonSimple).toBeVisible()
 		await this.viewCartButtonSimple.click()
@@ -1678,8 +1677,9 @@ export class HomePageActions {
 	}
 
 	async addSingleProductToCart(page: Page) {
-		// Get all the products on the page (no await needed - locator returns synchronously)
-		const products = page.locator('li.product.type-product.product-type-simple.status-publish')
+		// Get all the products on the page — use broad selector to catch all product types
+		// (simple, variable, bundle, etc.) not just product-type-simple
+		const products = page.locator('li.product.type-product')
 
 		// Wait for products to load before counting them
 		await products.first().waitFor({ state: 'visible', timeout: 10000 })
