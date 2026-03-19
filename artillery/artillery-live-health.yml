@@ -1,0 +1,20 @@
+config:
+  target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+  phases:
+    - duration: 300
+      arrivalRate: 1
+      maxVusers: 5
+  engines:
+    playwright:
+      trace: false
+      launchOptions:
+        headless: true
+      contextOptions:
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        viewport:
+          width: 1280
+          height: 720
+  processor: './artillery-live-health.js'
+scenarios:
+  - engine: playwright
+    testFunction: 'smoke'
