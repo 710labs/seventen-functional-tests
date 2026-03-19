@@ -221,6 +221,32 @@ This endpoint will automate the process of enabling/disabling acuity webhooks in
 ### Test Tool Security 
 Endpoints will require a `x-api-key` header. You can set this apiKey [here](https://thelist-dev.710labs.com/wp-admin/tools.php?page=svntn-qa).
 
+## Artillery Live Dev Smoke/Load
+
+The repo now includes a dedicated Artillery scenario for the live site on `https://live-dev.710labs.com`.
+
+This flow is intentionally scoped to:
+
+- recreational registration on live-dev
+- unique user creation per virtual user
+- cart minimum and checkout verification
+- stopping before `Place order`
+
+Local command:
+
+```bash
+npm run load:live
+```
+
+Local environment requirements:
+
+- `ALWAYS_ON_PASSWORD` in `.env`, or
+- `ARTILLERY_REGISTRATION_PASSWORD` exported in the shell
+
+The workflow version is manual-only and runs through GitHub Actions:
+
+- [Load Tests - Live Dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-live-dev.yml)
+
 
 ## Test Run Schedule
 - [ci:test:dev:ca](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-dev-functional-tests.yml):Daily 7AM PST
@@ -233,4 +259,3 @@ Use the following GH Actions API requests to view workflows and create dispatch 
 
 
 [710Labs Github Actions API Triggers](https://documenter.getpostman.com/view/11482169/UVeDuTqj#c3365b2e-43d5-4c4f-adc6-5fd463c523e6)
-

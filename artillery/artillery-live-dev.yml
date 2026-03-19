@@ -1,0 +1,21 @@
+config:
+  target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+  includeFiles:
+    - CA-DL.jpg
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      maxVusers: 1
+  engines:
+    playwright:
+      launchOptions:
+        headless: true
+      contextOptions:
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        viewport:
+          width: 1280
+          height: 720
+  processor: './artillery-live-dev-scripts.js'
+scenarios:
+  - engine: playwright
+    testFunction: 'liveDevRecSmoke'

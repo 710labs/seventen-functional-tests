@@ -147,6 +147,16 @@ These workflows can be triggered manually via `workflow_dispatch` but do not hav
 - **Employee Prod**: `employee-prod.yml` - Production employee store smoke test
 - **Purpose**: Production system verification (no orders placed)
 
+### Artillery Live Dev Load Test
+- **Workflow**: `artillery-live-dev.yml`
+- **Purpose**: Manual Artillery smoke/load verification for `live-dev.710labs.com`
+- **Behavior**:
+  - Registers a unique recreational user per virtual user
+  - Adds products until checkout can be reached
+  - Completes pre-order checkout sections
+  - Stops before placing the order
+- **Status**: Manual only, no cron schedule
+
 ### Staging Tests
 - **Live Stage**: `live-stage.yml` - Staging live tests (cron commented out)
 - **Concierge Stage**: `concierge-stage.yml` - Staging concierge tests (cron commented out)
@@ -335,4 +345,3 @@ All scheduled workflows send notifications to:
 - [TEST_CASES.MD](TEST_CASES.MD) - Detailed test case breakdown
 - [LIVE_COVERAGE.MD](LIVE_COVERAGE.MD) - Always-on test coverage details
 - [LIST_COVERAGE.MD](LIST_COVERAGE.MD) - "The list" test coverage details
-
