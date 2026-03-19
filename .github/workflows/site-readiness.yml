@@ -1,0 +1,1035 @@
+name: Site Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Site to validate
+        required: true
+        type: choice
+        options:
+          - Live-Dev
+          - Live-Stage
+          - Live-Prod
+          - List-Dev
+          - List-Stage
+          - List-Prod
+      run_load_test:
+        description: Run load testing
+        required: false
+        default: true
+        type: boolean
+      run_security:
+        description: Run security scans
+        required: false
+        default: true
+        type: boolean
+      notify_slack:
+        description: Send Slack summary
+        required: false
+        default: true
+        type: boolean
+      fail_on_security:
+        description: Fail workflow on blocking security findings
+        required: false
+        default: false
+        type: boolean
+      virtual_users:
+        description: Max virtual users for Artillery
+        required: false
+        default: '5'
+        type: string
+      arrival_rate:
+        description: New users per second for Artillery
+        required: false
+        default: '1'
+        type: string
+      duration:
+        description: Load test duration in seconds
+        required: false
+        default: '300'
+        type: string
+      lighthouse_threshold:
+        description: Optional minimum Lighthouse score (0-100)
+        required: false
+        default: ''
+        type: string
+      pr_number:
+        description: Optional PR number to comment on
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  resolve-preflight:
+    name: Resolve Site And Preflight
+    runs-on: ubuntu-latest
+    outputs:
+      site_slug: ${{ steps.resolve.outputs.site_slug }}
+      site_family: ${{ steps.resolve.outputs.site_family }}
+      tier: ${{ steps.resolve.outputs.tier }}
+      target_url: ${{ steps.resolve.outputs.target_url }}
+      playwright_command: ${{ steps.resolve.outputs.playwright_command }}
+      needs_domain_switch: ${{ steps.resolve.outputs.needs_domain_switch }}
+      domain_endpoint: ${{ steps.resolve.outputs.domain_endpoint }}
+      needs_pos_verification: ${{ steps.resolve.outputs.needs_pos_verification }}
+      pos_order_source: ${{ steps.resolve.outputs.pos_order_source }}
+      pos_require_orders: ${{ steps.resolve.outputs.pos_require_orders }}
+      pos_base_url: ${{ steps.resolve.outputs.pos_base_url }}
+      pos_auth: ${{ steps.resolve.outputs.pos_auth }}
+      artillery_config_template: ${{ steps.resolve.outputs.artillery_config_template }}
+      lh_perf_min: ${{ steps.resolve.outputs.lh_perf_min }}
+      lh_a11y_min: ${{ steps.resolve.outputs.lh_a11y_min }}
+      lh_bp_min: ${{ steps.resolve.outputs.lh_bp_min }}
+      lh_seo_min: ${{ steps.resolve.outputs.lh_seo_min }}
+      lh_fcp_max: ${{ steps.resolve.outputs.lh_fcp_max }}
+      lh_lcp_max: ${{ steps.resolve.outputs.lh_lcp_max }}
+      lh_tbt_max: ${{ steps.resolve.outputs.lh_tbt_max }}
+      lh_cls_max: ${{ steps.resolve.outputs.lh_cls_max }}
+    env:
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      PW_TESTS_SLACKBOT_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD }}
+      BASE_URL_DEV: ${{ secrets.BASE_URL_DEV }}
+      BASE_URL_STAGE: ${{ secrets.BASE_URL_STAGE }}
+      BASE_URL_PROD_CA: ${{ secrets.BASE_URL_PROD_CA }}
+      ALWAYS_ON_URL_DEV: ${{ secrets.ALWAYS_ON_URL_DEV }}
+      ALWAYS_ON_URL_STAGE: ${{ secrets.ALWAYS_ON_URL_STAGE }}
+      ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME }}
+      ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+      LIVE_DEV_QA_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }}
+      LIVE_STAGE_QA_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }}
+      LIVE_PROD_QA_AUTH: ${{ secrets.LIVE_PROD_QA_AUTH }}
+      PROD_LIVE_URL: ${{ secrets.PROD_LIVE_URL }}
+      PROD_LIVE_REC_USERNAME: ${{ secrets.PROD_LIVE_REC_USERNAME }}
+      PROD_LIVE_REC_PASSWORD: ${{ secrets.PROD_LIVE_REC_PASSWORD }}
+    steps:
+      - id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          site="${{ inputs.site }}"
+          threshold_input="${{ inputs.lighthouse_threshold }}"
+
+          write_output() {
+            {
+              echo "$1<<EOF"
+              echo "$2"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          require_secret() {
+            local name="$1"
+            local value="$2"
+            if [[ -z "$value" ]]; then
+              missing+=("$name")
+            fi
+          }
+
+          missing=()
+          common_required=(
+            ADMIN_USER
+            ADMIN_PW
+            API_KEY
+            QA_ENDPOINT
+            SLACK_WEBHOOK_URL
+            PW_TESTS_SLACKBOT_TOKEN
+            S3_BUCKET
+            S3_ACCESS_KEY
+            S3_SECRET
+            S3_REGION
+            CHECKOUT_PASSWORD
+            NEW_ALWAYS_ON_PASSWORD
+          )
+
+          for secret_name in "${common_required[@]}"; do
+            require_secret "$secret_name" "${!secret_name:-}"
+          done
+
+          domain_endpoint=""
+          needs_domain_switch="false"
+          needs_pos_verification="false"
+          pos_order_source="file"
+          pos_require_orders="false"
+          pos_auth=""
+
+          case "$site" in
+            Live-Dev)
+              site_slug="live-dev"
+              site_family="live"
+              tier="dev"
+              target_url="${ALWAYS_ON_URL_DEV}"
+              playwright_command="npm run live:ci:always-on"
+              needs_pos_verification="true"
+              pos_order_source="file"
+              pos_base_url="${ALWAYS_ON_URL_DEV}"
+              pos_auth="${LIVE_DEV_QA_AUTH}"
+              artillery_config_template="artillery/artillery-live-health.yml"
+              require_secret "ALWAYS_ON_URL_DEV" "${ALWAYS_ON_URL_DEV}"
+              require_secret "ALWAYS_ON_USERNAME" "${ALWAYS_ON_USERNAME}"
+              require_secret "ALWAYS_ON_PASSWORD" "${ALWAYS_ON_PASSWORD}"
+              require_secret "LIVE_DEV_QA_AUTH" "${LIVE_DEV_QA_AUTH}"
+              ;;
+            Live-Stage)
+              site_slug="live-stage"
+              site_family="live"
+              tier="stage"
+              target_url="${ALWAYS_ON_URL_STAGE}"
+              playwright_command="npm run live:ci:always-on"
+              needs_pos_verification="true"
+              pos_order_source="file"
+              pos_base_url="${ALWAYS_ON_URL_STAGE}"
+              pos_auth="${LIVE_STAGE_QA_AUTH}"
+              artillery_config_template="artillery/artillery-live-health.yml"
+              require_secret "ALWAYS_ON_URL_STAGE" "${ALWAYS_ON_URL_STAGE}"
+              require_secret "ALWAYS_ON_USERNAME" "${ALWAYS_ON_USERNAME}"
+              require_secret "ALWAYS_ON_PASSWORD" "${ALWAYS_ON_PASSWORD}"
+              require_secret "LIVE_STAGE_QA_AUTH" "${LIVE_STAGE_QA_AUTH}"
+              ;;
+            Live-Prod)
+              site_slug="live-prod"
+              site_family="live"
+              tier="prod"
+              target_url="${PROD_LIVE_URL}"
+              playwright_command="npm run prod-live:smoke:always-on"
+              needs_pos_verification="true"
+              pos_order_source="endpoint"
+              pos_require_orders="true"
+              pos_base_url="${PROD_LIVE_URL}"
+              pos_auth="${LIVE_PROD_QA_AUTH}"
+              artillery_config_template="artillery/artillery-live-health.yml"
+              require_secret "PROD_LIVE_URL" "${PROD_LIVE_URL}"
+              require_secret "PROD_LIVE_REC_USERNAME" "${PROD_LIVE_REC_USERNAME}"
+              require_secret "PROD_LIVE_REC_PASSWORD" "${PROD_LIVE_REC_PASSWORD}"
+              require_secret "LIVE_PROD_QA_AUTH" "${LIVE_PROD_QA_AUTH}"
+              ;;
+            List-Dev)
+              site_slug="list-dev"
+              site_family="list"
+              tier="dev"
+              target_url="${BASE_URL_DEV}"
+              playwright_command="npm run ci:test:dev:ca"
+              needs_domain_switch="true"
+              domain_endpoint="${BASE_URL_DEV%/}${QA_ENDPOINT}domains/update/?state=ca"
+              pos_base_url=""
+              artillery_config_template="artillery/artillery-ca-single-phase.yml"
+              require_secret "BASE_URL_DEV" "${BASE_URL_DEV}"
+              ;;
+            List-Stage)
+              site_slug="list-stage"
+              site_family="list"
+              tier="stage"
+              target_url="${BASE_URL_STAGE}"
+              playwright_command="npm run ci:test:staging:ca"
+              needs_domain_switch="true"
+              domain_endpoint="${BASE_URL_STAGE%/}${QA_ENDPOINT}domains/update/?state=ca"
+              pos_base_url=""
+              artillery_config_template="artillery/artillery-ca-single-phase.yml"
+              require_secret "BASE_URL_STAGE" "${BASE_URL_STAGE}"
+              ;;
+            List-Prod)
+              site_slug="list-prod"
+              site_family="list"
+              tier="prod"
+              target_url="${BASE_URL_PROD_CA}"
+              playwright_command="npm run smoke:test:prod:ca"
+              pos_base_url=""
+              artillery_config_template="artillery/artillery-ca-single-phase.yml"
+              require_secret "BASE_URL_PROD_CA" "${BASE_URL_PROD_CA}"
+              ;;
+            *)
+              echo "Unsupported site: ${site}" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ ! -f "${artillery_config_template}" ]]; then
+            echo "Configured Artillery template does not exist: ${artillery_config_template}" >&2
+            exit 1
+          fi
+
+          if [[ "$tier" == "prod" ]]; then
+            perf_default=80
+            seo_default=85
+            fcp_max=2500
+            lcp_max=3000
+            tbt_max=400
+          else
+            perf_default=75
+            seo_default=80
+            fcp_max=3000
+            lcp_max=4000
+            tbt_max=600
+          fi
+
+          if [[ -n "${threshold_input}" ]]; then
+            if [[ "$tier" == "prod" && "${threshold_input}" -lt "${perf_default}" ]]; then
+              perf_threshold="${perf_default}"
+            else
+              perf_threshold="${threshold_input}"
+            fi
+          else
+            perf_threshold="${perf_default}"
+          fi
+
+          a11y_threshold="${perf_threshold}"
+          bp_threshold="${perf_threshold}"
+          cls_max="0.1"
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            printf 'Missing required secrets for %s:\n' "$site" >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+          score_to_decimal() {
+            node -e "const value = Number(process.argv[1]); process.stdout.write((value / 100).toFixed(2))" "$1"
+          }
+
+          write_output "site_slug" "${site_slug}"
+          write_output "site_family" "${site_family}"
+          write_output "tier" "${tier}"
+          write_output "target_url" "${target_url}"
+          write_output "playwright_command" "${playwright_command}"
+          write_output "needs_domain_switch" "${needs_domain_switch}"
+          write_output "domain_endpoint" "${domain_endpoint}"
+          write_output "needs_pos_verification" "${needs_pos_verification}"
+          write_output "pos_order_source" "${pos_order_source}"
+          write_output "pos_require_orders" "${pos_require_orders}"
+          write_output "pos_base_url" "${pos_base_url}"
+          write_output "pos_auth" "${pos_auth}"
+          write_output "artillery_config_template" "${artillery_config_template}"
+          write_output "lh_perf_min" "$(score_to_decimal "${perf_threshold}")"
+          write_output "lh_a11y_min" "$(score_to_decimal "${a11y_threshold}")"
+          write_output "lh_bp_min" "$(score_to_decimal "${bp_threshold}")"
+          write_output "lh_seo_min" "$(score_to_decimal "${seo_default}")"
+          write_output "lh_fcp_max" "${fcp_max}"
+          write_output "lh_lcp_max" "${lcp_max}"
+          write_output "lh_tbt_max" "${tbt_max}"
+          write_output "lh_cls_max" "${cls_max}"
+
+  functional-gate:
+    name: Functional Gate
+    runs-on: ubuntu-latest
+    needs: [resolve-preflight]
+    env:
+      CI: true
+      ENV: ${{ needs.resolve-preflight.outputs.site_slug }}
+      ENV_ID: ${{ needs.resolve-preflight.outputs.site_slug }}
+      EXECUTION_TYPE: Manual Run
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ needs.resolve-preflight.outputs.target_url }}
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME }}
+      ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+      ALWAYS_ON_URL: ${{ needs.resolve-preflight.outputs.target_url }}
+      PROD_LIVE_URL: ${{ secrets.PROD_LIVE_URL }}
+      PROD_LIVE_REC_USERNAME: ${{ secrets.PROD_LIVE_REC_USERNAME }}
+      PROD_LIVE_REC_PASSWORD: ${{ secrets.PROD_LIVE_REC_PASSWORD }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD }}
+      PLAYWRIGHT_COMMAND: ${{ needs.resolve-preflight.outputs.playwright_command }}
+      POS_BASE_URL: ${{ needs.resolve-preflight.outputs.pos_base_url }}
+      POS_QA_AUTH: ${{ needs.resolve-preflight.outputs.pos_auth }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Set List domain to CA
+        if: needs.resolve-preflight.outputs.needs_domain_switch == 'true'
+        run: |
+          curl -fsS \
+            -H "x-api-key: ${API_KEY}" \
+            "${{ needs.resolve-preflight.outputs.domain_endpoint }}"
+
+      - name: Cleanup previous order IDs
+        run: rm -f order_ids.txt
+
+      - id: playwright
+        name: Run Playwright command
+        continue-on-error: true
+        run: bash -lc "$PLAYWRIGHT_COMMAND"
+
+      - id: collect_pos_ids
+        name: Collect POS order IDs
+        if: always() && needs.resolve-preflight.outputs.needs_pos_verification == 'true' && steps.playwright.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/pos/fetch-order-ids.mjs
+        env:
+          POS_ORDER_SOURCE: ${{ needs.resolve-preflight.outputs.pos_order_source }}
+          POS_REQUIRE_ORDERS: ${{ needs.resolve-preflight.outputs.pos_require_orders }}
+          POS_RESULTS_DIR: pos-results
+          POS_BASE_URL: ${{ needs.resolve-preflight.outputs.pos_base_url }}
+          POS_QA_AUTH: ${{ needs.resolve-preflight.outputs.pos_auth }}
+
+      - id: verify_pos
+        name: Verify POS transmission fields
+        if: always() && needs.resolve-preflight.outputs.needs_pos_verification == 'true' && steps.playwright.outcome == 'success' && steps.collect_pos_ids.outcome == 'success'
+        continue-on-error: true
+        run: bash scripts/pos/verify-pos-fields.sh
+        env:
+          POS_RESULTS_DIR: pos-results
+          POS_BASE_URL: ${{ needs.resolve-preflight.outputs.pos_base_url }}
+          POS_QA_AUTH: ${{ needs.resolve-preflight.outputs.pos_auth }}
+
+      - name: Summarize functional gate
+        if: always()
+        run: |
+          mkdir -p functional-results
+          node - <<'NODE'
+          const fs = require('node:fs')
+
+          const safeReadJson = filePath => {
+            try {
+              return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+            } catch {
+              return null
+            }
+          }
+
+          const playwrightSummary = safeReadJson('test-results/.last-run.json')
+          const posSource = safeReadJson('pos-results/order-id-source.json')
+          const posVerification = safeReadJson('pos-results/verification-summary.json')
+          const needsPos = process.env.NEEDS_POS === 'true'
+          const playwrightStatus = process.env.PLAYWRIGHT_OUTCOME === 'success' ? 'pass' : 'fail'
+
+          let posStatus = 'not_applicable'
+          let orderCount = posSource?.orderCount ?? 0
+
+          if (needsPos) {
+            if (playwrightStatus !== 'pass') {
+              posStatus = 'skipped'
+            } else if (posVerification?.status) {
+              posStatus = posVerification.status
+            } else if (posSource?.status === 'skipped') {
+              posStatus = 'skipped'
+            } else if (process.env.COLLECT_POS_OUTCOME && process.env.COLLECT_POS_OUTCOME !== 'success') {
+              posStatus = 'fail'
+            } else {
+              posStatus = 'skipped'
+            }
+          }
+
+          const overallStatus =
+            playwrightStatus !== 'pass' || (needsPos && posStatus === 'fail') ? 'fail' : 'pass'
+
+          const summary = {
+            overallStatus,
+            playwrightStatus,
+            playwrightRunStatus: playwrightSummary?.status ?? process.env.PLAYWRIGHT_OUTCOME,
+            failedTests: playwrightSummary?.failedTests ?? [],
+            posStatus,
+            orderCount,
+            posSummary: posVerification,
+          }
+
+          fs.writeFileSync('functional-results/functional-summary.json', `${JSON.stringify(summary, null, 2)}\n`)
+          NODE
+        env:
+          NEEDS_POS: ${{ needs.resolve-preflight.outputs.needs_pos_verification }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+          COLLECT_POS_OUTCOME: ${{ steps.collect_pos_ids.outcome }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: functional-results
+          path: |
+            functional-results/
+            playwright-report/
+            test-results/
+            pos-results/
+          if-no-files-found: ignore
+
+      - name: Enforce functional gate
+        if: always()
+        run: |
+          node -e "const fs=require('node:fs'); const summary=JSON.parse(fs.readFileSync('functional-results/functional-summary.json','utf8')); if (summary.overallStatus === 'fail') process.exit(1)"
+
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    needs: [resolve-preflight, functional-gate]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - id: lighthouse
+        name: Run Lighthouse CI
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./.lighthouserc.js
+          uploadArtifacts: true
+          temporaryPublicStorage: false
+        env:
+          LHCI_TARGET_URL: ${{ needs.resolve-preflight.outputs.target_url }}
+          LH_PERF_MIN: ${{ needs.resolve-preflight.outputs.lh_perf_min }}
+          LH_A11Y_MIN: ${{ needs.resolve-preflight.outputs.lh_a11y_min }}
+          LH_BP_MIN: ${{ needs.resolve-preflight.outputs.lh_bp_min }}
+          LH_SEO_MIN: ${{ needs.resolve-preflight.outputs.lh_seo_min }}
+          LH_FCP_MAX: ${{ needs.resolve-preflight.outputs.lh_fcp_max }}
+          LH_LCP_MAX: ${{ needs.resolve-preflight.outputs.lh_lcp_max }}
+          LH_TBT_MAX: ${{ needs.resolve-preflight.outputs.lh_tbt_max }}
+          LH_CLS_MAX: ${{ needs.resolve-preflight.outputs.lh_cls_max }}
+
+      - name: Summarize Lighthouse
+        if: always()
+        run: |
+          mkdir -p lighthouse-results
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const manifestPath = '.lighthouseci/manifest.json'
+          const summaryPath = 'lighthouse-results/lighthouse-summary.json'
+          const outcome = process.env.LIGHTHOUSE_OUTCOME
+
+          const fail = message => {
+            fs.writeFileSync(summaryPath, `${JSON.stringify({ status: 'fail', message }, null, 2)}\n`)
+            process.exit(0)
+          }
+
+          if (!fs.existsSync(manifestPath)) {
+            fail(`Lighthouse manifest was not generated (step outcome: ${outcome}).`)
+          }
+
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+          const entries = Array.isArray(manifest) ? manifest : []
+
+          if (entries.length === 0) {
+            fail('Lighthouse manifest did not contain any runs.')
+          }
+
+          const reports = entries
+            .map(entry => entry.jsonPath)
+            .filter(Boolean)
+            .map(jsonPath => JSON.parse(fs.readFileSync(path.resolve('.lighthouseci', jsonPath), 'utf8')))
+
+          const average = values =>
+            Math.round((values.reduce((total, value) => total + value, 0) / values.length) * 100) / 100
+
+          const metrics = {
+            performance: average(reports.map(report => Math.round((report.categories.performance.score || 0) * 100))),
+            accessibility: average(reports.map(report => Math.round((report.categories.accessibility.score || 0) * 100))),
+            bestPractices: average(reports.map(report => Math.round((report.categories['best-practices'].score || 0) * 100))),
+            seo: average(reports.map(report => Math.round((report.categories.seo.score || 0) * 100))),
+            fcp: average(reports.map(report => report.audits['first-contentful-paint'].numericValue || 0)),
+            lcp: average(reports.map(report => report.audits['largest-contentful-paint'].numericValue || 0)),
+            cls: average(reports.map(report => report.audits['cumulative-layout-shift'].numericValue || 0)),
+            tbt: average(reports.map(report => report.audits['total-blocking-time'].numericValue || 0)),
+          }
+
+          const perfMin = Number.parseFloat(process.env.LH_PERF_MIN) * 100
+          const a11yMin = Number.parseFloat(process.env.LH_A11Y_MIN) * 100
+          const bpMin = Number.parseFloat(process.env.LH_BP_MIN) * 100
+          const seoMin = Number.parseFloat(process.env.LH_SEO_MIN) * 100
+          const fcpMax = Number.parseFloat(process.env.LH_FCP_MAX)
+          const lcpMax = Number.parseFloat(process.env.LH_LCP_MAX)
+          const clsMax = Number.parseFloat(process.env.LH_CLS_MAX)
+          const tbtMax = Number.parseFloat(process.env.LH_TBT_MAX)
+
+          const checks = [
+            { name: 'performance', level: 'fail', ok: metrics.performance >= perfMin },
+            { name: 'accessibility', level: 'warn', ok: metrics.accessibility >= a11yMin },
+            { name: 'bestPractices', level: 'warn', ok: metrics.bestPractices >= bpMin },
+            { name: 'seo', level: 'warn', ok: metrics.seo >= seoMin },
+            { name: 'fcp', level: 'warn', ok: metrics.fcp <= fcpMax },
+            { name: 'lcp', level: 'fail', ok: metrics.lcp <= lcpMax },
+            { name: 'cls', level: 'fail', ok: metrics.cls <= clsMax },
+            { name: 'tbt', level: 'warn', ok: metrics.tbt <= tbtMax },
+          ]
+
+          const hasFail = checks.some(check => !check.ok && check.level === 'fail')
+          const hasWarn = checks.some(check => !check.ok && check.level === 'warn')
+
+          const summary = {
+            status: hasFail ? 'fail' : hasWarn ? 'warn' : 'pass',
+            message: hasFail
+              ? 'Lighthouse error thresholds were breached.'
+              : hasWarn
+                ? 'Lighthouse completed with warning-level regressions.'
+                : 'Lighthouse thresholds passed.',
+            averages: metrics,
+            checks,
+          }
+
+          fs.writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`)
+          NODE
+        env:
+          LIGHTHOUSE_OUTCOME: ${{ steps.lighthouse.outcome }}
+          LH_PERF_MIN: ${{ needs.resolve-preflight.outputs.lh_perf_min }}
+          LH_A11Y_MIN: ${{ needs.resolve-preflight.outputs.lh_a11y_min }}
+          LH_BP_MIN: ${{ needs.resolve-preflight.outputs.lh_bp_min }}
+          LH_SEO_MIN: ${{ needs.resolve-preflight.outputs.lh_seo_min }}
+          LH_FCP_MAX: ${{ needs.resolve-preflight.outputs.lh_fcp_max }}
+          LH_LCP_MAX: ${{ needs.resolve-preflight.outputs.lh_lcp_max }}
+          LH_TBT_MAX: ${{ needs.resolve-preflight.outputs.lh_tbt_max }}
+          LH_CLS_MAX: ${{ needs.resolve-preflight.outputs.lh_cls_max }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-results
+          path: |
+            .lighthouseci/
+            lighthouse-results/
+          if-no-files-found: ignore
+
+      - name: Enforce Lighthouse failures
+        if: always()
+        run: |
+          node -e "const fs=require('node:fs'); const summary=JSON.parse(fs.readFileSync('lighthouse-results/lighthouse-summary.json','utf8')); if (summary.status === 'fail') process.exit(1)"
+
+  load-test:
+    name: Load Test
+    runs-on: ubuntu-latest
+    needs: [resolve-preflight, functional-gate]
+    if: inputs.run_load_test == true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers for Artillery
+        run: npx playwright install --with-deps chromium
+
+      - id: loadtest
+        name: Run Artillery wrapper
+        continue-on-error: true
+        run: bash scripts/load-test-wrapper.sh
+        env:
+          ARTILLERY_TARGET: ${{ needs.resolve-preflight.outputs.target_url }}
+          ARTILLERY_CONFIG_TEMPLATE: ${{ needs.resolve-preflight.outputs.artillery_config_template }}
+          ARTILLERY_DURATION: ${{ inputs.duration }}
+          ARTILLERY_ARRIVAL_RATE: ${{ inputs.arrival_rate }}
+          ARTILLERY_MAX_VUS: ${{ inputs.virtual_users }}
+
+      - name: Backfill load summary on wrapper failure
+        if: always()
+        run: |
+          mkdir -p load-test-results
+          if [[ ! -f load-test-results/load-test-summary.json ]]; then
+            node - <<'NODE'
+            const fs = require('node:fs')
+            fs.writeFileSync(
+              'load-test-results/load-test-summary.json',
+              `${JSON.stringify(
+                {
+                  status: 'fail',
+                  message: `Load test wrapper exited with outcome: ${process.env.LOADTEST_OUTCOME}`,
+                  target: process.env.TARGET_URL,
+                  durationSeconds: Number.parseInt(process.env.DURATION, 10),
+                  arrivalRate: Number.parseInt(process.env.ARRIVAL_RATE, 10),
+                  maxVusers: Number.parseInt(process.env.MAX_VUS, 10),
+                },
+                null,
+                2,
+              )}\n`,
+            )
+            NODE
+          fi
+        env:
+          LOADTEST_OUTCOME: ${{ steps.loadtest.outcome }}
+          TARGET_URL: ${{ needs.resolve-preflight.outputs.target_url }}
+          DURATION: ${{ inputs.duration }}
+          ARRIVAL_RATE: ${{ inputs.arrival_rate }}
+          MAX_VUS: ${{ inputs.virtual_users }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-results
+          path: load-test-results/
+          if-no-files-found: ignore
+
+      - name: Enforce load test failures
+        if: always()
+        run: |
+          node -e "const fs=require('node:fs'); const summary=JSON.parse(fs.readFileSync('load-test-results/load-test-summary.json','utf8')); if (summary.status === 'fail') process.exit(1)"
+
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    needs: [resolve-preflight, functional-gate]
+    if: inputs.run_security == true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare security results directory
+        run: mkdir -p security-results
+
+      - id: zap
+        name: OWASP ZAP baseline
+        continue-on-error: true
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ needs.resolve-preflight.outputs.target_url }}
+          cmd_options: '-I'
+
+      - name: Collect ZAP reports
+        if: always()
+        run: |
+          find . -maxdepth 2 -type f \
+            \( -name 'zap_report*.json' -o -name 'zap_report*.html' -o -name 'report_json.json' -o -name 'report_html.html' -o -name 'report_md.md' \) \
+            -exec cp {} security-results/ \; || true
+
+      - id: observatory
+        name: Mozilla Observatory
+        continue-on-error: true
+        run: bash scripts/security/observatory-check.sh
+        env:
+          TARGET_URL: ${{ needs.resolve-preflight.outputs.target_url }}
+          RESULTS_DIR: security-results
+
+      - id: trivy
+        name: Trivy filesystem scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.33.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: json
+          output: security-results/trivy.json
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - id: trufflehog
+        name: TruffleHog scan
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" \
+            trufflesecurity/trufflehog:latest \
+            git "file:///repo" \
+            --results=verified,unknown \
+            --json > security-results/trufflehog.json
+
+      - name: Summarize security results
+        if: always()
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const readJson = filePath => {
+            try {
+              return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+            } catch {
+              return null
+            }
+          }
+
+          const readLines = filePath => {
+            try {
+              return fs
+                .readFileSync(filePath, 'utf8')
+                .split(/\r?\n/)
+                .filter(Boolean)
+                .map(line => JSON.parse(line))
+            } catch {
+              return null
+            }
+          }
+
+          const zapCandidates = [
+            'security-results/zap_report.json',
+            'security-results/report_json.json',
+          ]
+
+          const zapPath = zapCandidates.find(candidate => fs.existsSync(candidate))
+          const observatory = readJson('security-results/observatory-summary.json')
+          const trivy = readJson('security-results/trivy.json')
+          const trufflehog = readLines('security-results/trufflehog.json')
+
+          const zapSummary = (() => {
+            if (!zapPath) {
+              return {
+                status: 'error',
+                counts: { high: 0, medium: 0, low: 0, informational: 0 },
+                message: zapPath ? 'Parsed ZAP report.' : 'ZAP report was not found.',
+              }
+            }
+
+            const report = readJson(zapPath)
+            const alerts = Array.isArray(report?.site)
+              ? report.site.flatMap(site => site.alerts || [])
+              : Array.isArray(report?.alerts)
+                ? report.alerts
+                : []
+
+            const counts = { critical: 0, high: 0, medium: 0, low: 0, informational: 0 }
+
+            for (const alert of alerts) {
+              const riskCode = String(alert.riskcode ?? '').toLowerCase()
+              const riskDesc = String(alert.riskdesc ?? '').toLowerCase()
+
+              if (riskDesc.includes('critical')) counts.critical += 1
+              else if (riskCode === '3' || riskDesc.includes('high')) counts.high += 1
+              else if (riskCode === '2' || riskDesc.includes('medium')) counts.medium += 1
+              else if (riskCode === '1' || riskDesc.includes('low')) counts.low += 1
+              else counts.informational += 1
+            }
+
+            const status =
+              counts.critical > 0 || counts.high > 0
+                ? 'fail'
+                : counts.medium > 0
+                  ? 'warn'
+                  : 'pass'
+
+            return {
+              status,
+              counts,
+              message: 'Parsed ZAP report.',
+            }
+          })()
+
+          const observatorySummary =
+            observatory || {
+              status: 'error',
+              message: 'Observatory summary was not generated.',
+            }
+
+          const trivySummary = (() => {
+            if (!trivy) {
+              return {
+                status: 'error',
+                counts: { critical: 0, high: 0 },
+                message: 'Trivy output was not generated.',
+              }
+            }
+
+            const vulnerabilities = (trivy.Results || []).flatMap(result => result.Vulnerabilities || [])
+            const counts = vulnerabilities.reduce(
+              (accumulator, vuln) => {
+                const severity = String(vuln.Severity || '').toUpperCase()
+                if (severity === 'CRITICAL') accumulator.critical += 1
+                if (severity === 'HIGH') accumulator.high += 1
+                return accumulator
+              },
+              { critical: 0, high: 0 },
+            )
+
+            return {
+              status: counts.critical > 0 ? 'fail' : counts.high > 0 ? 'warn' : 'pass',
+              counts,
+              message: 'Parsed Trivy results.',
+            }
+          })()
+
+          const trufflehogSummary = (() => {
+            if (!trufflehog) {
+              return {
+                status: 'error',
+                counts: { verified: 0, unknown: 0 },
+                message: 'TruffleHog output was not generated.',
+              }
+            }
+
+            const counts = trufflehog.reduce(
+              (accumulator, finding) => {
+                if (finding.Verified === true) accumulator.verified += 1
+                else accumulator.unknown += 1
+                return accumulator
+              },
+              { verified: 0, unknown: 0 },
+            )
+
+            return {
+              status: counts.verified > 0 ? 'fail' : counts.unknown > 0 ? 'warn' : 'pass',
+              counts,
+              message: 'Parsed TruffleHog results.',
+            }
+          })()
+
+          const executionError = [zapSummary, observatorySummary, trivySummary, trufflehogSummary].some(
+            tool => tool.status === 'error',
+          )
+          const blockingFindings = [zapSummary, observatorySummary, trivySummary, trufflehogSummary].some(
+            tool => tool.status === 'fail',
+          )
+          const warningFindings = [zapSummary, observatorySummary, trivySummary, trufflehogSummary].some(
+            tool => tool.status === 'warn',
+          )
+
+          let overallStatus = 'pass'
+          if (executionError || (process.env.FAIL_ON_SECURITY === 'true' && blockingFindings)) {
+            overallStatus = 'fail'
+          } else if (blockingFindings || warningFindings) {
+            overallStatus = 'warn'
+          }
+
+          const summary = {
+            overallStatus,
+            executionError,
+            blockingFindings,
+            warningFindings,
+            tools: {
+              zap: zapSummary,
+              observatory: observatorySummary,
+              trivy: trivySummary,
+              trufflehog: trufflehogSummary,
+            },
+          }
+
+          fs.writeFileSync('security-results/security-summary.json', `${JSON.stringify(summary, null, 2)}\n`)
+          NODE
+        env:
+          ZAP_OUTCOME: ${{ steps.zap.outcome }}
+          OBS_OUTCOME: ${{ steps.observatory.outcome }}
+          TRIVY_OUTCOME: ${{ steps.trivy.outcome }}
+          TRUFFLEHOG_OUTCOME: ${{ steps.trufflehog.outcome }}
+          FAIL_ON_SECURITY: ${{ inputs.fail_on_security }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-results
+          path: security-results/
+          if-no-files-found: ignore
+
+      - name: Enforce blocking security failures
+        if: always()
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const summary = JSON.parse(fs.readFileSync('security-results/security-summary.json', 'utf8'))
+
+          if (summary.executionError) {
+            process.exit(1)
+          }
+
+          if (process.env.FAIL_ON_SECURITY === 'true' && summary.blockingFindings) {
+            process.exit(1)
+          }
+          NODE
+        env:
+          FAIL_ON_SECURITY: ${{ inputs.fail_on_security }}
+
+  report-and-notify:
+    name: Report And Notify
+    runs-on: ubuntu-latest
+    needs: [resolve-preflight, functional-gate, lighthouse, load-test, security]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Generate aggregated report
+        run: node scripts/generate-site-readiness-report.js
+        env:
+          ARTIFACTS_ROOT: artifacts
+          REPORT_TEMPLATE_PATH: .github/site-readiness-report-template.md
+          SITE: ${{ inputs.site }}
+          TARGET_URL: ${{ needs.resolve-preflight.outputs.target_url }}
+          TRIGGERED_BY: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FUNCTIONAL_RESULT: ${{ needs.functional-gate.result }}
+          LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
+          LOAD_RESULT: ${{ needs.load-test.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+          RUN_LOAD_TEST: ${{ inputs.run_load_test }}
+          RUN_SECURITY: ${{ inputs.run_security }}
+
+      - name: Publish run summary
+        run: cat site-readiness-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-readiness-report
+          path: |
+            site-readiness-report.md
+            site-readiness-report.json
+            slack-payload.json
+
+      - name: Post PR comment
+        if: inputs.pr_number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const body = fs.readFileSync('site-readiness-report.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.PR_NUMBER),
+              body,
+            });
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+
+      - name: Send Slack summary
+        if: inputs.notify_slack == true && secrets.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -fsS -X POST \
+            -H 'Content-Type: application/json' \
+            --data @slack-payload.json \
+            "${SLACK_WEBHOOK_URL}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Enforce overall workflow status
+        run: |
+          node -e "const fs=require('node:fs'); const report=JSON.parse(fs.readFileSync('site-readiness-report.json','utf8')); if (report.status === 'FAIL') process.exit(1)"
