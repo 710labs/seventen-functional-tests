@@ -89,7 +89,9 @@ export class HomePageActions {
 		this.liveChangeAddressButton = page.locator('span.fasd-nested-unrollable')
 		this.liveCartTitle = page.locator('h6:has-text("Your cart from")')
 		this.medCartCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
-		this.viewCartButtonSimple = page.getByRole('link', { name: 'View Cart', exact: true })
+		// Use structural attributes instead of visible text — avoids casing mismatches between environments
+		// ("View Cart" vs "View cart") that caused prod timeouts with exact: true
+		this.viewCartButtonSimple = page.locator('a.wpse-button-primary.wpse-cart-openerize[href="/cart"][data-module="cart"]')
 		this.medicalOnlyBanner = page.locator('.wpse-snacktoast.warn-toast.med-issue')
 		this.issuingStateSelect = page.locator('#medcard_state')
 		this.expirationInput = page.locator('input#medcard_exp')
@@ -1683,6 +1685,9 @@ export class HomePageActions {
 
 		// Wait for products to load before counting them
 		await products.first().waitFor({ state: 'visible', timeout: 10000 })
+		// Also wait for network to settle — CI is slower and counting too early
+		// causes low product counts when the full grid hasn't finished rendering
+		await page.waitForLoadState('networkidle')
 
 		const productCount = await products.count()
 		console.log(`Found ${productCount} products on the page`)

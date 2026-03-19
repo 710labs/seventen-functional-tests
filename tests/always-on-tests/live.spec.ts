@@ -74,7 +74,11 @@ test.describe('Live Tests', () => {
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
 			// Re-prompt the sign in modal by adding a product to cart
-			//await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			// After logout, navigate back to store and re-enter address.
+			// In CI there is no session persistence so the page state is
+			// undefined post-logout — without this, addSingleProductToCart finds almost no products.
+			await homePageLogin.navigateToURL(page, liveURL)
+			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			await homePageActions.addSingleProductToCart(page)
 			await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
 		},
@@ -137,7 +141,11 @@ test.describe('Live Tests', () => {
 			await accountPage.logOut(page)
 			// sign in with NEW password that was just updated
 			// Re-prompt the sign in modal by adding a product to cart
-			//await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
+			// After logout, navigate back to store and re-enter address.
+			// In CI there is no session persistence so page state is undefined post-logout.
+			// Without this, addSingleProductToCart finds almost no products.
+			await homePageLogin.navigateToURL(page, liveURL)
+			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
 			await homePageActions.addSingleProductToCart(page)
 			await homePageLogin.loginExistingUser(page, alwaysOnPassword, newEmail, NEWalwaysOnPassword)
 		},
