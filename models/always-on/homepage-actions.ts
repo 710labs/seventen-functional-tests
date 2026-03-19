@@ -89,9 +89,9 @@ export class HomePageActions {
 		this.liveChangeAddressButton = page.locator('span.fasd-nested-unrollable')
 		this.liveCartTitle = page.locator('h6:has-text("Your cart from")')
 		this.medCartCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
-		// Use structural attributes instead of visible text — avoids casing mismatches between environments
-		// ("View Cart" vs "View cart") that caused prod timeouts with exact: true
-		this.viewCartButtonSimple = page.locator('a.wpse-button-primary.wpse-cart-openerize[href="/cart"][data-module="cart"]')
+		// Use structural attributes and the "button" class to distinguish from the nav icon
+		// The nav icon does not have the "button" class.
+		this.viewCartButtonSimple = page.locator('a.button.wpse-cart-openerize[href="/cart"][data-module="cart"]')
 		this.medicalOnlyBanner = page.locator('.wpse-snacktoast.warn-toast.med-issue')
 		this.issuingStateSelect = page.locator('#medcard_state')
 		this.expirationInput = page.locator('input#medcard_exp')
@@ -1064,7 +1064,8 @@ export class HomePageActions {
 
 			// Flow for the first product (click into the product page)
 			if (!firstProductAdded) {
-				const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
+				// Broaden selector to any image in the product tile, not just placeholders
+				const productClickInto = product.locator('.woocommerce-loop-product__link, img.wp-post-image, img').first()
 
 				console.log('locator for productClickInto: ' + productClickInto)
 				await expect(productClickInto).toBeVisible()
@@ -1097,11 +1098,8 @@ export class HomePageActions {
 					}
 				} catch (e) {}
 
-				await page.waitForTimeout(8000)
-				await page.waitForLoadState('networkidle')
-
-				// Wait for the cart drawer to become visible
-				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+				// Replace arbitrary 8s timeout with explicit wait for cart drawer
+				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 15000 })
 
 				// Check if the product was added to the cart
 				const cartItem = await page.locator(`td.product-name a:has-text("${productName}")`)
@@ -1246,7 +1244,8 @@ export class HomePageActions {
 			if (!firstMedicalProductAdded && hasMedicalOnlyTag) {
 				// Add the first Medical-Only product to the cart
 				const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-				const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
+				// Broaden selector to any image or link in the product tile
+				const productClickInto = product.locator('.woocommerce-loop-product__link, img.wp-post-image, img').first()
 
 				console.log('Adding first medical-only product: ' + productName)
 				await expect(productClickInto).toBeVisible()
@@ -1263,20 +1262,17 @@ export class HomePageActions {
 				await expect(addToCart).toBeVisible()
 				// …and click it
 				await addToCart.click()
-				await page.waitForTimeout(8000)
-				await page.waitForLoadState('networkidle') // Wait for all network requests to finish
+				// Explicitly wait for cart drawer instead of arbitrary timeout
+				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 15000 })
 
-				// Wait for the cart drawer to become visible
-				await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
-
-				// Verify the product is added
-				const cartItem = await page.locator(`td.product-name a:has-text("${productName}")`)
-				const isProductInCart = (await cartItem.count()) > 0
-
-				if (!isProductInCart) {
-					throw new Error(
-						`Medical-only product "${productName}" was not found in the cart after being added.`,
-					)
+				// Redundant wait removed, using the one from line 1266
+				
+				// Wait for the specific product to appear in the cart
+				const cartItem = page.locator(`td.product-name a:has-text("${productName}")`)
+				try {
+					await cartItem.waitFor({ state: 'visible', timeout: 10000 })
+				} catch (e) {
+					throw new Error(`Medical-only product "${productName}" was not found in the cart after being added.`)
 				}
 
 				console.log(
@@ -1354,6 +1350,8 @@ export class HomePageActions {
 		// await expect(this.liveViewCartCheckout).toBeVisible()
 		// await this.liveViewCartCheckout.click()
 		//click View Cart to go to Cart
+		// Added 2s wait matching REC flow to allow cart drawer to stabilize
+		await page.waitForTimeout(2000)
 		await this.viewCartButtonSimple.waitFor({ state: 'visible' })
 		await expect(this.viewCartButtonSimple).toBeVisible()
 		await this.viewCartButtonSimple.click()
@@ -1711,22 +1709,35 @@ export class HomePageActions {
 
 			// Found a suitable product, proceed to add it
 			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-			const productClickInto = product.locator('img.woocommerce-placeholder.wp-post-image')
+			// Broaden selector to any image or link in the product tile
+			const productClickInto = product.locator('.woocommerce-loop-product__link, img.wp-post-image, img').first()
 
 			console.log(`Adding product "${productName}" (index ${i}) to cart`)
 
 			await expect(productClickInto).toBeVisible()
 			await productClickInto.click()
+			// Short wait for product page to load (3s is fine here as it's a click-into)
 			await page.waitForTimeout(3000)
 
-			// grabs the first visible button whose name is "Add to cart"
-			const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
+			// grabs the first visible button whose name is "Add to cart" (case-insensitive)
+			const addToCart = page.getByRole('button', { name: /add to cart/i }).first()
 			// wait for it to appear...
 			await expect(addToCart).toBeVisible()
 			// …and click it
 			await addToCart.click({ force: true })
 
-			console.log(`Product "${productName}" add to cart button clicked. Checking for potential 'Start a new cart' modal...`)
+			console.log(`Product "${productName}" add to cart button clicked. Waiting for cart drawer or conflict modal...`)
+
+			// Explicitly wait for cart drawer to appear
+			// If a conflict modal appears instead, this will catch it in the try/catch below
+			try {
+				await Promise.race([
+					this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 }),
+					page.locator('.wpse-drawer[data-module="cart-conflict"]').waitFor({ state: 'visible', timeout: 10000 })
+				])
+			} catch (e) {
+				console.log('Neither cart drawer nor conflict modal appeared after 10s. Continuing to check manually...')
+			}
 
 			// Check for "Start a new cart" modal
 			try {
