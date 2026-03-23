@@ -34,18 +34,18 @@ on:
         default: '1'
       pacing_mode:
         type: choice
-        description: 'Pacing mode'
+        description: 'Pacing mode (rate=new users per second, even_spacing=users spread evenly over duration)'
         required: true
         default: 'rate'
         options:
           - rate
           - even_spacing
       arrival_rate:
-        description: 'New users per second (arrivalRate)'
+        description: 'New users per second (arrivalRate) = Rate pace'
         required: false
         default: '1'
       arrival_count:
-        description: 'Users across the whole duration (arrivalCount)'
+        description: 'Users across the whole duration (arrivalCount) = Even Spacing pace'
         required: false
         default: '1'
       duration:
