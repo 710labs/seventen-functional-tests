@@ -33,7 +33,9 @@
 		"helper:acuityslots:dev": "npx playwright test -g \"Acuity Helpers\" --config=configs/automation.config.ts --project=Desktop Chrome --workers=10",
 		"helper:acuityslots": "npx playwright test -g \"Acuity Automation\" --config=configs/automation.config.ts --project=\"Desktop Chrome\" --workers=3",
 		"helper:possync_orders": "npx playwright test -g \"POS Order Generator\" --config=configs/pos-sync.config.ts --workers=10",
-		"load:ca:dev": "npx artillery run artillery/artillery-ca-single-phase.yml"
+		"load:ca:dev": "npx artillery run artillery/artillery-ca-single-phase.yml",
+		"load:thelist:image-uploads": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-image-uploads.yml",
+		"load:thelist:url-hit": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-url-hit.yml"
 	},
 	"repository": {
 		"type": "git",
