@@ -32,8 +32,20 @@ on:
         description: 'Max Concurrent Users (maxVusers)'
         required: false
         default: '1'
+      pacing_mode:
+        type: choice
+        description: 'Pacing mode'
+        required: true
+        default: 'rate'
+        options:
+          - rate
+          - even_spacing
       arrival_rate:
         description: 'New users per second (arrivalRate)'
+        required: false
+        default: '1'
+      arrival_count:
+        description: 'Users across the whole duration (arrivalCount)'
         required: false
         default: '1'
       duration:
@@ -58,6 +70,9 @@ jobs:
           echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
           echo "ARTILLERY_ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
           echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_PACING_MODE=${{ github.event.inputs.pacing_mode || 'rate' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_RATE=${{ github.event.inputs.arrival_rate || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_COUNT=${{ github.event.inputs.arrival_count || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
           echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY }}" >> $GITHUB_ENV
           echo "ARTILLERY_710_MODE=${{ github.event.inputs.mode }}" >> $GITHUB_ENV
@@ -66,27 +81,48 @@ jobs:
         run: |
           ARTILLERY_TARGET=$(echo $ARTILLERY_TARGET | sed 's/"//g')
           ARTILLERY_VIRTUAL_USERS=$(echo $ARTILLERY_VIRTUAL_USERS | sed 's/"//g')
+          ARTILLERY_ARRIVAL_RATE=$(echo $ARTILLERY_ARRIVAL_RATE | sed 's/"//g')
+          ARTILLERY_ARRIVAL_COUNT=$(echo $ARTILLERY_ARRIVAL_COUNT | sed 's/"//g')
           ARTILLERY_DURATION=$(echo $ARTILLERY_DURATION | sed 's/"//g')
           echo "ARTILLERY_TARGET=$ARTILLERY_TARGET" >> $GITHUB_ENV
           echo "ARTILLERY_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_COUNT=$ARTILLERY_ARRIVAL_COUNT" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=$ARTILLERY_DURATION" >> $GITHUB_ENV
 
-      - name: Update Artillery Config with Inputs
+      - name: Prepare Artillery Config Copy
         run: |
-          sed -i "s/duration: 900/duration: ${{ github.event.inputs.duration }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
-          sed -i "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
-          sed -i "s/maxVusers: 10/maxVusers: ${{ github.event.inputs.virtual_users }}/g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
-          sed -i "s|target:.*|target: ${{ github.event.inputs.target }}|g" artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml
+          TMP_CONFIG=$(mktemp /tmp/artillery-thelist-${{ github.event.inputs.mode }}.XXXXXX.yml)
+          cp artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml "$TMP_CONFIG"
+          sed -i "s/duration: 900/duration: $ARTILLERY_DURATION/g" "$TMP_CONFIG"
+          sed -i "s/maxVusers: 10/maxVusers: $ARTILLERY_VIRTUAL_USERS/g" "$TMP_CONFIG"
+          sed -i "s|target:.*|target: $ARTILLERY_TARGET|g" "$TMP_CONFIG"
+
+          if [ "$ARTILLERY_PACING_MODE" = "even_spacing" ]; then
+            sed -i '/arrivalCount:/d' "$TMP_CONFIG"
+            sed -i "s/arrivalRate: 1/arrivalCount: $ARTILLERY_ARRIVAL_COUNT/g" "$TMP_CONFIG"
+          else
+            sed -i '/arrivalCount:/d' "$TMP_CONFIG"
+            sed -i "s/arrivalRate: 1/arrivalRate: $ARTILLERY_ARRIVAL_RATE/g" "$TMP_CONFIG"
+          fi
+
+          echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> $GITHUB_ENV
+
+      - name: Show generated Artillery phase
+        run: |
+          sed -n '1,20p' "$ARTILLERY_CONFIG"
 
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.pacing_mode }}/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           ARTILLERY_TARGET: ${{ github.event.inputs.target }}
           ARTILLERY_VIRTUAL_USERS: ${{ github.event.inputs.virtual_users }}
+          ARTILLERY_ARRIVAL_RATE: ${{ github.event.inputs.arrival_rate }}
+          ARTILLERY_ARRIVAL_COUNT: ${{ github.event.inputs.arrival_count }}
           ARTILLERY_DURATION: ${{ github.event.inputs.duration }}
           ARTILLERY_710_MODE: ${{ github.event.inputs.mode }}
 
