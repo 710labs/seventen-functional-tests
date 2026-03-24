@@ -76,9 +76,13 @@ async function TheListImageUploads(page, vuContext, events, test) {
 	})
 
 	await step('Enter List Password', async () => {
+		const listPassword = process.env.ARTILLERY_LIST_PASSWORD
+		if (!listPassword) {
+			throw new Error('ARTILLERY_LIST_PASSWORD environment variable is not set')
+		}
 		const passwordField = page.locator('input[name="post_password"]')
 		await passwordField.click()
-		await passwordField.fill('qatester')
+		await passwordField.fill(listPassword)
 		await page.click('text=enter site')
 	})
 
