@@ -16,7 +16,6 @@ on:
         options:
           - dev
           - stage
-          - prod
       virtual_users:
         description: 'Max Concurrent Users (maxVusers)'
         required: false
@@ -32,7 +31,7 @@ on:
 jobs:
   artillery:
     runs-on: ubuntu-latest
-    environment: 'gdfsgfd'
+    environment: ${{ github.event.inputs.env }}
 
     permissions:
       contents: read
@@ -83,7 +82,7 @@ jobs:
 
       - name: Slack notifications
         if: always()
-        uses: 8398a7/action-slack@v3
+        uses: 8398a7/action-slack@v3.15.1
         with:
           status: custom
           fields: workflow,job,commit,repo,ref,author,took
