@@ -92,7 +92,10 @@ jobs:
 
       - name: Prepare Artillery Config Copy
         run: |
-          TMP_CONFIG=$(mktemp /tmp/artillery-thelist-${{ github.event.inputs.mode }}.XXXXXX.yml)
+          TMP_DIR=.artillery-tmp
+          TMP_CONFIG="$TMP_DIR/artillery-thelist-${{ github.event.inputs.mode }}.generated.yml"
+
+          mkdir -p "$TMP_DIR"
           cp artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml "$TMP_CONFIG"
           sed -i "s/duration: 900/duration: $ARTILLERY_DURATION/g" "$TMP_CONFIG"
           sed -i "s/maxVusers: 10/maxVusers: $ARTILLERY_VIRTUAL_USERS/g" "$TMP_CONFIG"
@@ -110,6 +113,8 @@ jobs:
 
       - name: Show generated Artillery phase
         run: |
+          pwd
+          ls -la .artillery-tmp
           sed -n '1,20p' "$ARTILLERY_CONFIG"
 
       - name: Execute load tests on AWS
