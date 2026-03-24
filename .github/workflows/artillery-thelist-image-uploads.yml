@@ -1,0 +1,98 @@
+name: Load Tests - TheList Image Uploads
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        description: 'Url'
+        required: true
+        options:
+          - https://thelist-dev.710labs.com
+          - https://thelist-stage.710labs.com
+      env:
+        type: choice
+        description: 'Environment'
+        required: true
+        options:
+          - dev
+          - stage
+      virtual_users:
+        description: 'Max Concurrent Users (maxVusers)'
+        required: false
+        default: '1'
+      arrival_rate:
+        description: 'New users per second (arrivalRate)'
+        required: false
+        default: '1'
+      duration:
+        description: 'Duration (seconds)'
+        required: true
+        default: '60'
+jobs:
+  artillery:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      ARTILLERY_TARGET: ${{ github.event.inputs.target }}
+      ARTILLERY_ENV: ${{ github.event.inputs.env }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Artillery config copy
+        run: |
+          TMP_CONFIG=$(mktemp /tmp/artillery-thelist-image-uploads.XXXXXX.yml)
+          cp artillery/artillery-thelist-image-uploads.yml "$TMP_CONFIG"
+          sed -i.bak "s/duration: 60/duration: ${{ github.event.inputs.duration }}/" "$TMP_CONFIG"
+          sed -i.bak "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/" "$TMP_CONFIG"
+          sed -i.bak "s/maxVusers: 1/maxVusers: ${{ github.event.inputs.virtual_users }}/" "$TMP_CONFIG"
+          rm -f "$TMP_CONFIG.bak"
+          echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> "$GITHUB_ENV"
+
+      - name: Execute load tests on AWS
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-image-uploads/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artillery-thelist-image-uploads-report
+          path: artillery-reports
+          if-no-files-found: ignore
+
+      - name: Notify about failures
+        if: failure()
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,eventName,job,took,pullRequest
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack notifications
+        if: always()
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                text: `${process.env.AS_WORKFLOW}\n${process.env.AS_JOB} (${process.env.AS_COMMIT}) of ${process.env.AS_REPO}@${process.env.AS_REF} by ${process.env.AS_AUTHOR} ${{ job.status }} in ${process.env.AS_TOOK}`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
