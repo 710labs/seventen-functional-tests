@@ -13,7 +13,7 @@ config:
       maxVusers: 1
   engines:
     playwright:
-      trace: true
+      trace: false
       launchOptions:
         headless: true
       contextOptions:
