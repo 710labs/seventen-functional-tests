@@ -187,7 +187,7 @@ async function CA(page, vuContext, events, test) {
 		await step('Type and Submit List Password', async () => {
 			const passwordField = await page.locator('input[name="post_password"]')
 			await passwordField.click()
-			await passwordField.fill('qatester')
+			await passwordField.fill(process.env.ARTILLERY_LIST_PASSWORD)
 			await page.click('text=enter site')
 			console.log(`[DEBUG] Password Submitted. URL: ${page.url()}`)
 		})
