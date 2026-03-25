@@ -1,4 +1,4 @@
-name: Load Tests - TheList URL Hit
+name: Load Tests - The List URL Hit
 on:
   workflow_dispatch:
     inputs:
