@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 const personalDocImages = ['CA-DL.jpg', 'CA-DL.png', 'CA-DL.heic']
 const medicalCardImages = ['Medical-Card.jpeg', 'Medical-Card.png', 'Medical-Card.heic']
 
@@ -24,13 +27,23 @@ function randomFulfillmentType() {
 	return Math.random() < 0.5 ? 'Pickup' : 'Delivery'
 }
 
+function resolveAssetPath(fileName) {
+	return path.resolve(__dirname, fileName)
+}
+
 async function uploadSequence(step, page, inputSelector, files, label) {
 	const input = page.locator(inputSelector)
 	await input.waitFor({ state: 'attached', timeout: 30000 })
 
 	for (const file of files) {
 		await step(`${label}: ${file}`, async () => {
-			await input.setInputFiles(file)
+			const resolvedPath = resolveAssetPath(file)
+			if (!fs.existsSync(resolvedPath)) {
+				throw new Error(
+					`Upload asset not found for ${file}. Expected file at ${resolvedPath}.`,
+				)
+			}
+			await input.setInputFiles(resolvedPath)
 			await page.waitForTimeout(1500)
 		})
 	}
