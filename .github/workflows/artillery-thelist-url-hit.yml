@@ -47,13 +47,24 @@ jobs:
 
       - name: Prepare Artillery config copy
         run: |
-          TMP_CONFIG=$(mktemp /tmp/artillery-thelist-url-hit.XXXXXX.yml)
+          TMP_CONFIG=artillery/artillery-thelist-url-hit.generated.yml
           cp artillery/artillery-thelist-url-hit.yml "$TMP_CONFIG"
           sed -i.bak "s/duration: 60/duration: ${{ github.event.inputs.duration }}/" "$TMP_CONFIG"
           sed -i.bak "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/" "$TMP_CONFIG"
           sed -i.bak "s/maxVusers: 1/maxVusers: ${{ github.event.inputs.virtual_users }}/" "$TMP_CONFIG"
           rm -f "$TMP_CONFIG.bak"
           echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> "$GITHUB_ENV"
+
+      - name: Show generated Artillery config
+        run: |
+          pwd
+          ls -la artillery
+          sed -n '1,20p' "$ARTILLERY_CONFIG"
+
+      - name: Verify Artillery dependencies
+        run: |
+          test -f "$ARTILLERY_CONFIG"
+          test -f artillery/artillery-thelist-url-hit-scripts.js
 
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
