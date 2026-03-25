@@ -1,4 +1,4 @@
-name: Load Tests - TheList Image Uploads
+name: Load Tests - The List Image Uploads
 on:
   workflow_dispatch:
     inputs:
