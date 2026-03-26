@@ -55,7 +55,7 @@ on:
 jobs:
   artillery:
     runs-on: ubuntu-latest
-    environment: 'gdfsgfd'
+    environment: ${{ github.event.inputs.env }}
 
     permissions:
       contents: read # needed so that checkout of repository can happen
@@ -123,6 +123,15 @@ jobs:
           test -f artillery/CA-DL.jpg
           test -f artillery/Medical-Card.png
 
+      - name: Verify required secrets
+        env:
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+        run: |
+          if [ -z "$ARTILLERY_LIST_PASSWORD" ]; then
+            echo "Missing required secret: ARTILLERY_LIST_PASSWORD for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
@@ -136,6 +145,7 @@ jobs:
           ARTILLERY_ARRIVAL_COUNT: ${{ github.event.inputs.arrival_count }}
           ARTILLERY_DURATION: ${{ github.event.inputs.duration }}
           ARTILLERY_710_MODE: ${{ github.event.inputs.mode }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
 
       - name: Set current date as env variable
         run: echo "NOW=$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
