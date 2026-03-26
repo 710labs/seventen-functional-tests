@@ -132,10 +132,23 @@ jobs:
             exit 1
           fi
 
+      - name: Create Fargate worker dotenv
+        env:
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+        run: |
+          cat > artillery/artillery.fargate.env <<EOF
+          ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          EOF
+
+      - name: Verify Fargate worker dotenv
+        run: |
+          test -f artillery/artillery.fargate.env
+
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.pacing_mode }}/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --dotenv artillery/artillery.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.pacing_mode }}/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
