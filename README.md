@@ -197,15 +197,15 @@ These will run in headless mode and will execute in a variety of browsers and vi
 ## Load Testing
 Use the manual [Load Tests - The List](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist.yml) workflow for browser load tests on AWS Fargate.
 
-Recommended preset for 100 concurrent browser VUs:
+Recommended preset for a 100 concurrent CA burst:
 
 - target: `https://thelist-dev.710labs.com`
 - env: `dev`
 - mode: `ca`
 - virtual_users: `100`
 - pacing_mode: `rate`
-- arrival_rate: `5`
-- duration: `180`
+- arrival_rate: `50`
+- duration: `2`
 - fargate_workers: `5`
 - fargate_cpu: `4`
 - fargate_memory: `8`
@@ -213,9 +213,11 @@ Recommended preset for 100 concurrent browser VUs:
 
 Notes:
 
-- `virtual_users` is the total concurrency across all workers. With `100` VUs and `5` workers, Artillery distributes that as `20` max VUs per worker.
+- In `rate` mode, `virtual_users` and `arrival_rate` are cluster totals. With `100` VUs and `50` users/sec across `5` workers, the workflow derives `20` max VUs and `10` users/sec per worker.
+- The totals must divide evenly across `fargate_workers` for multi-worker `rate` runs. The workflow will fail fast instead of rounding.
 - Use `pacing_mode=rate` for multi-worker runs. Artillery executes `even_spacing` (`arrivalCount`) on only one worker.
-- Keep smaller smoke runs in normal CI. Use the 100-VU preset for manual or scheduled performance testing.
+- A 2-second burst is enough to overlap all 100 sessions because each CA flow runs much longer than 2 seconds.
+- Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
 
 
 ## Test Tools
