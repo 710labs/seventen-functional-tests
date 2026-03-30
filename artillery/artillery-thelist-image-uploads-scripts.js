@@ -1,3 +1,8 @@
+const path = require('path')
+
+const DL_FILES = ['CA-DL.heic', 'CA-DL.jpg', 'CA-DL.png']
+const MED_CARD_FILES = ['Medical-Card.heic', 'Medical-Card.jpeg', 'Medical-Card.png']
+
 async function TheListImageUploads(page, vuContext, events, test) {
 	function randomFirstName() {
 		const firstNames = [
@@ -130,32 +135,35 @@ async function TheListImageUploads(page, vuContext, events, test) {
 		return `${areaCode}-${middlePart}-${lastPart}`
 	}
 
-	function getRandomUsageType() {
-		const randomNumber = Math.random()
+	async function uploadFilesSequentially(inputSelector, filenames, stepLabelPrefix) {
+		const fileInput = page.locator(inputSelector)
+		await fileInput.waitFor({ state: 'attached' })
 
-		return randomNumber < 0.5 ? 'Medical' : 'Recreational'
-	}
+		for (const filename of filenames) {
+			await step(`${stepLabelPrefix}: ${filename}`, async () => {
+				const resolvedFilePath = path.resolve(__dirname, filename)
+				await fileInput.setInputFiles(resolvedFilePath)
+				await page.waitForFunction(
+					({ selector, expectedFilename }) => {
+						const input = document.querySelector(selector)
+						if (!(input instanceof HTMLInputElement) || !input.files?.length) {
+							return false
+						}
 
-	function getRandomFulfillmentType() {
-		const randomNumber = Math.random()
-
-		return randomNumber < 0.5 ? 'Pickup' : 'Delivery'
-	}
-
-	function getCartCount() {
-		return 3
+						return Array.from(input.files).some((file) => file.name === expectedFilename)
+					},
+					{ selector: inputSelector, expectedFilename: filename },
+				)
+				await page.waitForTimeout(1000)
+			})
+		}
 	}
 
 	const { step } = test
-	const userid = vuContext.vars.userid
-	const recordid = vuContext.vars.recordid
 	const userFirstName = randomFirstName()
 	const userLastName = randomLastName()
 	const userEmail = `loadtest-${userFirstName.toLowerCase()}.${userLastName.toLowerCase()}.${randomNumber()}@loadtest.com`
 	const userAddress = '3377 S La Cienega Blvd, Los Angeles, CA 90016'
-	const usageType = getRandomUsageType()
-	const fulfillmentType = getRandomFulfillmentType()
-	const itemCount = getCartCount()
 	const target = vuContext.vars.target || 'https://thelist-dev.710labs.com'
 
 	// Inject VIP cookie before navigation
@@ -258,15 +266,12 @@ async function TheListImageUploads(page, vuContext, events, test) {
 
 		await step('Enter Validation Info', async () => {
 			await step('Submit Drivers License', async () => {
-				await step('Upload DL File', async () => {
-					const dlUploadButton = await page.waitForSelector('input[name="svntn_core_personal_doc"]')
-					const [driversLicenseChooser] = await Promise.all([
-						page.waitForEvent('filechooser'),
-						dlUploadButton.click(),
-					])
-					await page.waitForTimeout(5000)
-					await driversLicenseChooser.setFiles('CA-DL.jpg')
-					await page.waitForTimeout(5000)
+				await step('Upload DL Files', async () => {
+					await uploadFilesSequentially(
+						'input[name="svntn_core_personal_doc"]',
+						DL_FILES,
+						'Upload DL File',
+					)
 				})
 				await step('Enter DL Exp', async () => {
 					const driversLicenseExpMonth = await page.waitForSelector(
@@ -284,180 +289,43 @@ async function TheListImageUploads(page, vuContext, events, test) {
 					await driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 				})
 			})
-			if (usageType === 'Medical') {
-				await step('Submit Med Card', async () => {
-					await step('Select Usage Type Medical', async () => {
-						await page.getByLabel('Medical', { exact: true }).check()
-					})
-					await step('Upload Med Card File', async () => {
-						const medCardUploadButton = await page.waitForSelector(
-							'input[name="svntn_core_medical_doc"]',
-						)
-						const [medicalCardChooser] = await Promise.all([
-							page.waitForEvent('filechooser'),
-							medCardUploadButton.click(),
-						])
-						await page.waitForTimeout(5000)
-						await medicalCardChooser.setFiles('Medical-Card.png')
-						await page.waitForTimeout(5000)
-					})
-					await step('Enter Medical Card Exp', async () => {
-						const medicalCardExpMonth = await page.waitForSelector(
-							'select[name="svntn_core_mxp_month"]',
-						)
-						const medicalCardExpDay = await page.waitForSelector(
-							'select[name="svntn_core_mxp_day"]',
-						)
-						const medicalCardExpYear = await page.waitForSelector(
-							'select[name="svntn_core_mxp_year"]',
-						)
-
-						await medicalCardExpMonth.selectOption('12')
-						await medicalCardExpDay.selectOption('16')
-						await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-					})
-					await step('Add Medical Card Number', async () => {
-						const medicalCardNumber = page.locator('input[name="svntn_mno"]')
-						await medicalCardNumber.click()
-						await medicalCardNumber.fill('123456789')
-					})
+			await step('Submit Med Card', async () => {
+				await step('Select Usage Type Medical', async () => {
+					await page.getByLabel('Medical', { exact: true }).check()
 				})
-			}
+				await step('Upload Med Card Files', async () => {
+					await uploadFilesSequentially(
+						'input[name="svntn_core_medical_doc"]',
+						MED_CARD_FILES,
+						'Upload Med Card File',
+					)
+				})
+				await step('Enter Medical Card Exp', async () => {
+					const medicalCardExpMonth = await page.waitForSelector(
+						'select[name="svntn_core_mxp_month"]',
+					)
+					const medicalCardExpDay = await page.waitForSelector(
+						'select[name="svntn_core_mxp_day"]',
+					)
+					const medicalCardExpYear = await page.waitForSelector(
+						'select[name="svntn_core_mxp_year"]',
+					)
+
+					await medicalCardExpMonth.selectOption('12')
+					await medicalCardExpDay.selectOption('16')
+					await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+				})
+				await step('Add Medical Card Number', async () => {
+					const medicalCardNumber = page.locator('input[name="svntn_mno"]')
+					await medicalCardNumber.click()
+					await medicalCardNumber.fill('123456789')
+				})
+			})
 
 			await step('Submit Validation Info', async () => {
 				await page.getByRole('button', { name: 'Register' }).click()
 				await page.waitForTimeout(5000)
 			})
-		})
-		await step('Select Fulfillment Type', async () => {
-			await step(`Select ${fulfillmentType}`, async () => {
-				await page
-					.locator('#fulfillmentElement')
-					.getByText(fulfillmentType, { exact: true })
-					.click()
-			})
-			await step(`Submit ${fulfillmentType} Fulfillment`, async () => {
-				await page.getByRole('button', { name: 'Submit' }).click()
-			})
-		})
-	})
-
-	await step('Create Cart', async () => {
-		await step('Add Items To Cart', async () => {
-			await page.waitForTimeout(5000)
-			var addToCartButtons
-			if (usageType === 'Recreational') {
-				await page.waitForSelector(
-					'//li[contains(@class, "product") and not(contains(@class, "product_cat-woo-import-test")) and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-				)
-				await page.waitForTimeout(5000)
-				addToCartButtons = await page.locator(
-					'//li[contains(@class, "product") and not(contains(@class, "product_cat-woo-import-test")) and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-				)
-			} else {
-				await page.waitForSelector(
-					'//li[contains(@class, "product") and not(contains(@class, "product_cat-woo-import-test"))]//a[contains(@aria-label, "Add to cart:")]',
-				)
-				await page.waitForTimeout(5000)
-				addToCartButtons = await page.locator(
-					'//li[contains(@class, "product") and not(contains(@class, "product_cat-woo-import-test"))]//a[contains(@aria-label, "Add to cart:")]',
-				)
-			}
-
-			const indices = Array.from({ length: itemCount }, (_, index) => index)
-
-			for (let i = indices.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1))
-				;[indices[i], indices[j]] = [indices[j], indices[i]]
-			}
-
-			for (const index of indices) {
-				await addToCartButtons.nth(index).click({ force: true })
-				await page.waitForTimeout(2000)
-			}
-		})
-		// await step('Add Promo Item To Cart', async () => {
-		// 	await page.waitForTimeout(5000)
-		// 	var addToCartButtons
-
-		// 	if (usageType === 'Recreational') {
-		// 		await page.waitForSelector(
-		// 			'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 		await page.waitForTimeout(5000)
-		// 		addToCartButtons = await page.locator(
-		// 			'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 	} else {
-		// 		await page.waitForSelector(
-		// 			'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 		await page.waitForTimeout(5000)
-		// 		addToCartButtons = await page.locator(
-		// 			'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 	}
-
-		// 	const indices = Array.from({ length: 2 }, (_, index) => index)
-
-		// 	for (let i = indices.length - 1; i > 0; i--) {
-		// 		const j = Math.floor(Math.random() * (i + 1))
-		// 		;[indices[i], indices[j]] = [indices[j], indices[i]]
-		// 	}
-
-		// 	await step('Choose Promo Item', async () => {
-		// 		await addToCartButtons.nth(0).click({ force: true })
-		// 		await page.waitForTimeout(2000)
-		// 	})
-
-		// 	await step('Validate Promo Restrictions ', async () => {
-		// 		await addToCartButtons.nth(1).click({ force: true })
-		// 		await page.waitForTimeout(2000)
-		// 		await page.waitForSelector('.notyf__dismiss-btn')
-		// 		await page.locator('.notyf__dismiss-btn').click()
-		// 	})
-		// })
-
-		await step('Review Cart', async () => {
-			console.log(`[DEBUG] Reviewing Cart. URL: ${page.url()}`)
-			await step('Navigate To Cart', async () => {
-				await page.locator('a.cart-contents').click()
-				console.log(`[DEBUG] In Cart. URL: ${page.url()}`)
-			})
-			await step('Navigate To Checkout', async () => {
-				await page.locator('.checkout-button').click()
-				console.log(`[DEBUG] At Checkout. URL: ${page.url()}`)
-			})
-		})
-	})
-
-	await step('Checkout Cart', async () => {
-		console.log(`[DEBUG] Starting Checkout. URL: ${page.url()}`)
-		await step('Enter Fulfillment Info', async () => {
-			await step('Select Acuity Slot', async () => {
-				await page.waitForTimeout(2000)
-				const errorMessage = page.locator('#datetimeError')
-
-				if (!(await errorMessage.isVisible())) {
-					await page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
-						timeout: 45 * 1000,
-					})
-
-					const daySlot = page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-					await daySlot.click()
-
-					await page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
-
-					const timeSlot = page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-					await timeSlot.click()
-				}
-			})
-		})
-
-		await step('Complete Order', async () => {
-			const placeOrderButton = page.locator('id=place_order')
-			await placeOrderButton.waitFor({ state: 'visible' })
-			await placeOrderButton.click()
 		})
 	})
 }
