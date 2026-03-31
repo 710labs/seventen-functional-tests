@@ -284,7 +284,6 @@ async function CA(page, vuContext, events, test) {
 					await driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 				})
 			})
-			if (usageType === 'Medical') {
 				await step('Submit Med Card', async () => {
 					await step('Select Usage Type Medical', async () => {
 						await page.getByLabel('Medical', { exact: true }).check()
@@ -317,7 +316,6 @@ async function CA(page, vuContext, events, test) {
 						await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 					})
 				})
-			}
 
 			await step('Submit Validation Info', async () => {
 				await page.getByRole('button', { name: 'Register' }).click()
