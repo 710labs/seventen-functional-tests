@@ -316,11 +316,6 @@ async function CA(page, vuContext, events, test) {
 						await medicalCardExpDay.selectOption('16')
 						await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 					})
-					await step('Add Medical Card Number', async () => {
-						const medicalCardNumber = page.locator('input[name="svntn_mno"]')
-						await medicalCardNumber.click()
-						await medicalCardNumber.fill('123456789')
-					})
 				})
 			}
 
