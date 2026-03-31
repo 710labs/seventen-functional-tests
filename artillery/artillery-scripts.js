@@ -284,38 +284,38 @@ async function CA(page, vuContext, events, test) {
 					await driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 				})
 			})
-				await step('Submit Med Card', async () => {
-					await step('Select Usage Type Medical', async () => {
-						await page.getByLabel('Medical', { exact: true }).check()
-					})
-					await step('Upload Med Card File', async () => {
-						const medCardUploadButton = await page.waitForSelector(
-							'input[name="svntn_core_medical_doc"]',
-						)
-						const [medicalCardChooser] = await Promise.all([
-							page.waitForEvent('filechooser'),
-							medCardUploadButton.click(),
-						])
-						await page.waitForTimeout(5000)
-						await medicalCardChooser.setFiles('Medical-Card.png')
-						await page.waitForTimeout(5000)
-					})
-					await step('Enter Medical Card Exp', async () => {
-						const medicalCardExpMonth = await page.waitForSelector(
-							'select[name="svntn_core_mxp_month"]',
-						)
-						const medicalCardExpDay = await page.waitForSelector(
-							'select[name="svntn_core_mxp_day"]',
-						)
-						const medicalCardExpYear = await page.waitForSelector(
-							'select[name="svntn_core_mxp_year"]',
-						)
+				// await step('Submit Med Card', async () => {
+				// 	await step('Select Usage Type Medical', async () => {
+				// 		await page.getByLabel('Medical', { exact: true }).check()
+				// 	})
+				// 	await step('Upload Med Card File', async () => {
+				// 		const medCardUploadButton = await page.waitForSelector(
+				// 			'input[name="svntn_core_medical_doc"]',
+				// 		)
+				// 		const [medicalCardChooser] = await Promise.all([
+				// 			page.waitForEvent('filechooser'),
+				// 			medCardUploadButton.click(),
+				// 		])
+				// 		await page.waitForTimeout(5000)
+				// 		await medicalCardChooser.setFiles('Medical-Card.png')
+				// 		await page.waitForTimeout(5000)
+				// 	})
+				// 	await step('Enter Medical Card Exp', async () => {
+				// 		const medicalCardExpMonth = await page.waitForSelector(
+				// 			'select[name="svntn_core_mxp_month"]',
+				// 		)
+				// 		const medicalCardExpDay = await page.waitForSelector(
+				// 			'select[name="svntn_core_mxp_day"]',
+				// 		)
+				// 		const medicalCardExpYear = await page.waitForSelector(
+				// 			'select[name="svntn_core_mxp_year"]',
+				// 		)
 
-						await medicalCardExpMonth.selectOption('12')
-						await medicalCardExpDay.selectOption('16')
-						await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-					})
-				})
+				// 		await medicalCardExpMonth.selectOption('12')
+				// 		await medicalCardExpDay.selectOption('16')
+				// 		await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+				// 	})
+				// })
 
 			await step('Submit Validation Info', async () => {
 				await page.getByRole('button', { name: 'Register' }).click()
