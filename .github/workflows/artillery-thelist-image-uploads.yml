@@ -17,17 +17,49 @@ on:
           - dev
           - stage
       virtual_users:
-        description: 'Max Concurrent Users (maxVusers)'
+        description: 'Cluster total max concurrent users (maxVusers across all workers)'
         required: false
         default: '1'
+      pacing_mode:
+        type: choice
+        description: 'Pacing mode (rate=new users per second, even_spacing=users spread evenly over duration)'
+        required: true
+        default: 'rate'
+        options:
+          - rate
+          - even_spacing
       arrival_rate:
-        description: 'New users per second (arrivalRate)'
+        description: 'Cluster total new users per second (arrivalRate across all workers) = Rate pace'
+        required: false
+        default: '1'
+      arrival_count:
+        description: 'Users across the whole duration (arrivalCount) = Even Spacing pace'
         required: false
         default: '1'
       duration:
         description: 'Duration (seconds)'
         required: true
         default: '60'
+      fargate_workers:
+        description: 'Fargate workers (workflow divides rate-mode cluster totals across run-fargate --count workers)'
+        required: false
+        default: '1'
+      fargate_cpu:
+        description: 'vCPU per Fargate worker (run-fargate --cpu)'
+        required: false
+        default: '4'
+      fargate_memory:
+        description: 'Memory in GB per Fargate worker (run-fargate --memory)'
+        required: false
+        default: '8'
+      fargate_capacity:
+        type: choice
+        description: 'Fargate capacity'
+        required: true
+        default: 'on_demand'
+        options:
+          - on_demand
+          - spot
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -37,23 +69,126 @@ jobs:
       contents: read
       id-token: write
 
-    env:
-      ARTILLERY_TARGET: ${{ github.event.inputs.target }}
-      ARTILLERY_ENV: ${{ github.event.inputs.env }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare Artillery config copy
+      - name: Set environment variables based on inputs
+        run: |
+          echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
+          echo "ARTILLERY_ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
+          echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_PACING_MODE=${{ github.event.inputs.pacing_mode || 'rate' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_RATE=${{ github.event.inputs.arrival_rate || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_COUNT=${{ github.event.inputs.arrival_count || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '60' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_WORKERS=${{ github.event.inputs.fargate_workers || '1' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_CPU=${{ github.event.inputs.fargate_cpu || '4' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_MEMORY=${{ github.event.inputs.fargate_memory || '8' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_CAPACITY=${{ github.event.inputs.fargate_capacity || 'on_demand' }}" >> $GITHUB_ENV
+
+      - name: Strip quotes from environment variables
+        run: |
+          ARTILLERY_TARGET=$(echo $ARTILLERY_TARGET | sed 's/"//g')
+          ARTILLERY_VIRTUAL_USERS=$(echo $ARTILLERY_VIRTUAL_USERS | sed 's/"//g')
+          ARTILLERY_ARRIVAL_RATE=$(echo $ARTILLERY_ARRIVAL_RATE | sed 's/"//g')
+          ARTILLERY_ARRIVAL_COUNT=$(echo $ARTILLERY_ARRIVAL_COUNT | sed 's/"//g')
+          ARTILLERY_DURATION=$(echo $ARTILLERY_DURATION | sed 's/"//g')
+          ARTILLERY_FARGATE_WORKERS=$(echo $ARTILLERY_FARGATE_WORKERS | sed 's/"//g')
+          ARTILLERY_FARGATE_CPU=$(echo $ARTILLERY_FARGATE_CPU | sed 's/"//g')
+          ARTILLERY_FARGATE_MEMORY=$(echo $ARTILLERY_FARGATE_MEMORY | sed 's/"//g')
+          ARTILLERY_FARGATE_CAPACITY=$(echo $ARTILLERY_FARGATE_CAPACITY | sed 's/"//g')
+          echo "ARTILLERY_TARGET=$ARTILLERY_TARGET" >> $GITHUB_ENV
+          echo "ARTILLERY_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE" >> $GITHUB_ENV
+          echo "ARTILLERY_ARRIVAL_COUNT=$ARTILLERY_ARRIVAL_COUNT" >> $GITHUB_ENV
+          echo "ARTILLERY_DURATION=$ARTILLERY_DURATION" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_WORKERS=$ARTILLERY_FARGATE_WORKERS" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_CPU=$ARTILLERY_FARGATE_CPU" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY" >> $GITHUB_ENV
+          echo "ARTILLERY_FARGATE_CAPACITY=$ARTILLERY_FARGATE_CAPACITY" >> $GITHUB_ENV
+
+      - name: Validate and derive load test topology
+        run: |
+          ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS
+          ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE
+
+          if [ "$ARTILLERY_FARGATE_WORKERS" -gt 1 ] && [ "$ARTILLERY_PACING_MODE" = "even_spacing" ]; then
+            echo "pacing_mode=even_spacing is not supported with multiple Fargate workers. Use pacing_mode=rate so load is distributed across workers." >&2
+            exit 1
+          fi
+
+          if [ "$ARTILLERY_FARGATE_WORKERS" -gt 1 ] && [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
+            if [ $((ARTILLERY_VIRTUAL_USERS % ARTILLERY_FARGATE_WORKERS)) -ne 0 ]; then
+              echo "virtual_users ($ARTILLERY_VIRTUAL_USERS) must divide evenly by fargate_workers ($ARTILLERY_FARGATE_WORKERS) so the workflow can derive exact per-worker concurrency." >&2
+              exit 1
+            fi
+
+            if [ $((ARTILLERY_ARRIVAL_RATE % ARTILLERY_FARGATE_WORKERS)) -ne 0 ]; then
+              echo "arrival_rate ($ARTILLERY_ARRIVAL_RATE) must divide evenly by fargate_workers ($ARTILLERY_FARGATE_WORKERS) so the workflow can derive exact per-worker arrival rates." >&2
+              exit 1
+            fi
+
+            ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$((ARTILLERY_VIRTUAL_USERS / ARTILLERY_FARGATE_WORKERS))
+            ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$((ARTILLERY_ARRIVAL_RATE / ARTILLERY_FARGATE_WORKERS))
+          fi
+
+          if [ "$ARTILLERY_EFFECTIVE_VIRTUAL_USERS" -lt 1 ]; then
+            echo "Derived per-worker maxVusers must be at least 1. Current value: $ARTILLERY_EFFECTIVE_VIRTUAL_USERS" >&2
+            exit 1
+          fi
+
+          if [ "$ARTILLERY_PACING_MODE" = "rate" ] && [ "$ARTILLERY_EFFECTIVE_ARRIVAL_RATE" -lt 1 ]; then
+            echo "Derived per-worker arrival_rate must be at least 1. Current value: $ARTILLERY_EFFECTIVE_ARRIVAL_RATE" >&2
+            exit 1
+          fi
+
+          if [ "$ARTILLERY_FARGATE_CAPACITY" = "spot" ]; then
+            echo "ARTILLERY_FARGATE_SPOT_FLAG=--spot" >> $GITHUB_ENV
+          else
+            echo "ARTILLERY_FARGATE_SPOT_FLAG=" >> $GITHUB_ENV
+          fi
+
+          if [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
+            echo "ARTILLERY_TOTAL_TOPOLOGY_TAG=total-${ARTILLERY_VIRTUAL_USERS}vu-${ARTILLERY_ARRIVAL_RATE}rps" >> $GITHUB_ENV
+            echo "ARTILLERY_PER_WORKER_TOPOLOGY_TAG=per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu-${ARTILLERY_EFFECTIVE_ARRIVAL_RATE}rps" >> $GITHUB_ENV
+          else
+            echo "ARTILLERY_TOTAL_TOPOLOGY_TAG=total-${ARTILLERY_VIRTUAL_USERS}vu-${ARTILLERY_ARRIVAL_COUNT}count" >> $GITHUB_ENV
+            echo "ARTILLERY_PER_WORKER_TOPOLOGY_TAG=per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu" >> $GITHUB_ENV
+          fi
+
+          echo "ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS" >> $GITHUB_ENV
+          echo "ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE" >> $GITHUB_ENV
+
+      - name: Show derived load topology
+        run: |
+          echo "Cluster totals: maxVusers=$ARTILLERY_VIRTUAL_USERS workers=$ARTILLERY_FARGATE_WORKERS pacing_mode=$ARTILLERY_PACING_MODE duration=$ARTILLERY_DURATION"
+          if [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
+            echo "Cluster arrival rate: $ARTILLERY_ARRIVAL_RATE users/sec"
+            echo "Per-worker topology: maxVusers=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS arrivalRate=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE"
+          else
+            echo "Cluster arrival count: $ARTILLERY_ARRIVAL_COUNT users across duration"
+            echo "Per-worker topology: maxVusers=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS"
+          fi
+
+      - name: Prepare Artillery Config Copy
         run: |
           TMP_CONFIG=artillery/artillery-thelist-image-uploads.generated.yml
+
           cp artillery/artillery-thelist-image-uploads.yml "$TMP_CONFIG"
-          sed -i.bak "s/duration: 60/duration: ${{ github.event.inputs.duration }}/" "$TMP_CONFIG"
-          sed -i.bak "s/arrivalRate: 1/arrivalRate: ${{ github.event.inputs.arrival_rate }}/" "$TMP_CONFIG"
-          sed -i.bak "s/maxVusers: 1/maxVusers: ${{ github.event.inputs.virtual_users }}/" "$TMP_CONFIG"
-          rm -f "$TMP_CONFIG.bak"
-          echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> "$GITHUB_ENV"
+          sed -i "s/duration: 60/duration: $ARTILLERY_DURATION/g" "$TMP_CONFIG"
+          sed -i "s/maxVusers: 1/maxVusers: $ARTILLERY_EFFECTIVE_VIRTUAL_USERS/g" "$TMP_CONFIG"
+          sed -i "s|target:.*|  target: $ARTILLERY_TARGET|g" "$TMP_CONFIG"
+
+          if [ "$ARTILLERY_PACING_MODE" = "even_spacing" ]; then
+            sed -i '/arrivalCount:/d' "$TMP_CONFIG"
+            sed -i "s/arrivalRate: 1/arrivalCount: $ARTILLERY_ARRIVAL_COUNT/g" "$TMP_CONFIG"
+          else
+            sed -i '/arrivalCount:/d' "$TMP_CONFIG"
+            sed -i "s/arrivalRate: 1/arrivalRate: $ARTILLERY_EFFECTIVE_ARRIVAL_RATE/g" "$TMP_CONFIG"
+          fi
+
+          echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> $GITHUB_ENV
 
       - name: Show generated Artillery config
         run: |
@@ -93,7 +228,7 @@ jobs:
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --dotenv artillery/artillery-thelist-image-uploads.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-image-uploads/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ env.ARTILLERY_FARGATE_WORKERS }} --cpu ${{ env.ARTILLERY_FARGATE_CPU }} --memory ${{ env.ARTILLERY_FARGATE_MEMORY }} ${{ env.ARTILLERY_FARGATE_SPOT_FLAG }} --dotenv artillery/artillery-thelist-image-uploads.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-image-uploads/${{ github.event.inputs.pacing_mode }}/${{ env.ARTILLERY_TOTAL_TOPOLOGY_TAG }}/${{ env.ARTILLERY_PER_WORKER_TOPOLOGY_TAG }}/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.fargate_workers || '1' }}workers/${{ github.event.inputs.fargate_cpu || '4' }}cpu-${{ github.event.inputs.fargate_memory || '8' }}gb/${{ github.event.inputs.fargate_capacity || 'on_demand' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
