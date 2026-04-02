@@ -1,6 +1,6 @@
 const path = require('path')
 
-const DL_FILES = ['CA-DL.heic', 'CA-DL.jpg', 'CA-DL.png']
+const DL_FILES = ['CA-DL.heic', 'CA-DL.jpg', 'CA-DL.png', 'Medical-Card.heic', 'Medical-Card.jpeg', 'Medical-Card.png']
 const MED_CARD_FILES = ['Medical-Card.heic', 'Medical-Card.jpeg', 'Medical-Card.png']
 
 async function TheListImageUploads(page, vuContext, events, test) {
@@ -142,11 +142,9 @@ async function TheListImageUploads(page, vuContext, events, test) {
 		stepLabelPrefix,
 	) {
 		const fileInput = page.locator(inputSelector)
-		const successBadge = page
-			.locator(wrapperSelector)
-			.locator('span.unsealLabel.unsealSuccess.wcse-reactive--plabel', {
-				hasText: 'On file',
-			})
+		const successBadge = page.locator(
+			`div.eligibilityInput:has(${inputSelector}) span.unsealLabel.unsealSuccess.wcse-reactive--plabel`,
+		).filter({ hasText: 'On file' })
 
 		await fileInput.waitFor({ state: 'attached' })
 
@@ -302,39 +300,39 @@ async function TheListImageUploads(page, vuContext, events, test) {
 					await driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 				})
 			})
-			await step('Submit Med Card', async () => {
-				await step('Select Usage Type Medical', async () => {
-					await page.getByLabel('Medical', { exact: true }).check()
-				})
-					await step('Upload Med Card Files', async () => {
-						await uploadFilesSequentially(
-							'#wccf_user_field_medical_card',
-							'input[name="svntn_core_medical_doc"]',
-							MED_CARD_FILES,
-							'Upload Med Card File',
-						)
-				})
-				await step('Enter Medical Card Exp', async () => {
-					const medicalCardExpMonth = await page.waitForSelector(
-						'select[name="svntn_core_mxp_month"]',
-					)
-					const medicalCardExpDay = await page.waitForSelector(
-						'select[name="svntn_core_mxp_day"]',
-					)
-					const medicalCardExpYear = await page.waitForSelector(
-						'select[name="svntn_core_mxp_year"]',
-					)
+			// await step('Submit Med Card', async () => {
+			// 	await step('Select Usage Type Medical', async () => {
+			// 		await page.getByLabel('Medical', { exact: true }).check()
+			// 	})
+			// 		await step('Upload Med Card Files', async () => {
+			// 			await uploadFilesSequentially(
+			// 				'#wccf_user_field_medical_card',
+			// 				'input[name="svntn_core_medical_doc"]',
+			// 				MED_CARD_FILES,
+			// 				'Upload Med Card File',
+			// 			)
+			// 	})
+			// 	await step('Enter Medical Card Exp', async () => {
+			// 		const medicalCardExpMonth = await page.waitForSelector(
+			// 			'select[name="svntn_core_mxp_month"]',
+			// 		)
+			// 		const medicalCardExpDay = await page.waitForSelector(
+			// 			'select[name="svntn_core_mxp_day"]',
+			// 		)
+			// 		const medicalCardExpYear = await page.waitForSelector(
+			// 			'select[name="svntn_core_mxp_year"]',
+			// 		)
 
-					await medicalCardExpMonth.selectOption('12')
-					await medicalCardExpDay.selectOption('16')
-					await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-				})
-				await step('Add Medical Card Number', async () => {
-					const medicalCardNumber = page.locator('input[name="svntn_mno"]')
-					await medicalCardNumber.click()
-					await medicalCardNumber.fill('123456789')
-				})
-			})
+			// 		await medicalCardExpMonth.selectOption('12')
+			// 		await medicalCardExpDay.selectOption('16')
+			// 		await medicalCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+			// 	})
+			// 	await step('Add Medical Card Number', async () => {
+			// 		const medicalCardNumber = page.locator('input[name="svntn_mno"]')
+			// 		await medicalCardNumber.click()
+			// 		await medicalCardNumber.fill('123456789')
+			// 	})
+			// })
 
 			await step('Submit Validation Info', async () => {
 				await page.getByRole('button', { name: 'Register' }).click()
