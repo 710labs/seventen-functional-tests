@@ -135,8 +135,19 @@ async function TheListImageUploads(page, vuContext, events, test) {
 		return `${areaCode}-${middlePart}-${lastPart}`
 	}
 
-	async function uploadFilesSequentially(inputSelector, filenames, stepLabelPrefix) {
+	async function uploadFilesSequentially(
+		wrapperSelector,
+		inputSelector,
+		filenames,
+		stepLabelPrefix,
+	) {
 		const fileInput = page.locator(inputSelector)
+		const successBadge = page
+			.locator(wrapperSelector)
+			.locator('span.unsealLabel.unsealSuccess.wcse-reactive--plabel', {
+				hasText: 'On file',
+			})
+
 		await fileInput.waitFor({ state: 'attached' })
 
 		for (const filename of filenames) {
@@ -154,6 +165,7 @@ async function TheListImageUploads(page, vuContext, events, test) {
 					},
 					{ selector: inputSelector, expectedFilename: filename },
 				)
+				await successBadge.waitFor({ state: 'visible', timeout: 15000 })
 				await page.waitForTimeout(1000)
 			})
 		}
@@ -268,6 +280,7 @@ async function TheListImageUploads(page, vuContext, events, test) {
 			await step('Submit Drivers License', async () => {
 				await step('Upload DL Files', async () => {
 					await uploadFilesSequentially(
+						'#wccf_user_field_drivers_license',
 						'input[name="svntn_core_personal_doc"]',
 						DL_FILES,
 						'Upload DL File',
@@ -293,12 +306,13 @@ async function TheListImageUploads(page, vuContext, events, test) {
 				await step('Select Usage Type Medical', async () => {
 					await page.getByLabel('Medical', { exact: true }).check()
 				})
-				await step('Upload Med Card Files', async () => {
-					await uploadFilesSequentially(
-						'input[name="svntn_core_medical_doc"]',
-						MED_CARD_FILES,
-						'Upload Med Card File',
-					)
+					await step('Upload Med Card Files', async () => {
+						await uploadFilesSequentially(
+							'#wccf_user_field_medical_card',
+							'input[name="svntn_core_medical_doc"]',
+							MED_CARD_FILES,
+							'Upload Med Card File',
+						)
 				})
 				await step('Enter Medical Card Exp', async () => {
 					const medicalCardExpMonth = await page.waitForSelector(
