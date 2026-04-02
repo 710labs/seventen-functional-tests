@@ -178,7 +178,7 @@ jobs:
           cp artillery/artillery-thelist-image-uploads.yml "$TMP_CONFIG"
           sed -i "s/duration: 60/duration: $ARTILLERY_DURATION/g" "$TMP_CONFIG"
           sed -i "s/maxVusers: 1/maxVusers: $ARTILLERY_EFFECTIVE_VIRTUAL_USERS/g" "$TMP_CONFIG"
-          sed -i "s|target:.*|  target: $ARTILLERY_TARGET|g" "$TMP_CONFIG"
+          sed -i "s|target:.*|target: $ARTILLERY_TARGET|g" "$TMP_CONFIG"
 
           if [ "$ARTILLERY_PACING_MODE" = "even_spacing" ]; then
             sed -i '/arrivalCount:/d' "$TMP_CONFIG"
