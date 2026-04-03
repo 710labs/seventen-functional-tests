@@ -9,6 +9,10 @@ on:
         options:
           - https://thelist-dev.710labs.com
           - https://thelist-stage.710labs.com
+          - https://thelist.710labs.com
+          - https://thelist-mi.710labs.com
+          - https://thelist-co.710labs.com
+          - https://thelist-nj.710labs.com
       env:
         type: choice
         description: 'Environment'
@@ -16,6 +20,7 @@ on:
         options:
           - dev
           - stage
+          - prod
       virtual_users:
         description: 'Cluster total max concurrent users (maxVusers across all workers)'
         required: false
