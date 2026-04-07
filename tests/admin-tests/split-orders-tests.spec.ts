@@ -36,7 +36,7 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName 
 	const myAccountPage = new MyAccountPage(page)
 
 	await ageGatePage.passAgeGate()
-	await listPassword.submitPassword('REDACTED')
+	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 	// await createAccountPage.create(
 	// 	`test+${uuidv4()}@710labs-test.com`,
 	// 	'test1234!',
@@ -106,7 +106,7 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }
 	const myAccountPage = new MyAccountPage(page)
 
 	await ageGatePage.passAgeGate()
-	await listPassword.submitPassword('REDACTED')
+	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 	const address = '933 Alpine Ave, Boulder, CO, 80304'
 	var fakeFirstName = faker.name.firstName() + '_Test'
 	var fakeLastName = faker.name.lastName() + '_Test'

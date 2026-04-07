@@ -28,7 +28,7 @@ test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName }, work
 	var user = await createAccountPage.createApi('recreational', 'current')
 
 	await ageGatePage.passAgeGate()
-	await listPassword.submitPassword('REDACTED')
+	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 	var user = await createAccountPage.createApi('recreational', 'current')
 	await loginPage.login(user.email, user.password)
 

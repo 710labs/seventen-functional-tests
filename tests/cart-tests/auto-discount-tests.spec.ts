@@ -36,7 +36,7 @@ test.skip('Customer Has Credit - Discount Applied @CA', async ({
 	await adminLoginPage.login()
 
 	await ageGatePage.passAgeGate()
-	await listPassword.submitPassword('REDACTED')
+	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 	var user = await createAccountPage.createApi('recreational', 'current')
 	await loginPage.login(user.email, user.password)
 
@@ -66,7 +66,7 @@ test.skip('Customer Has Credit - Order Total Equals Rec Limit - Discount Applied
 
 	//Arrange
 	await ageGatePage.passAgeGate()
-	await listPassword.submitPassword('REDACTED')
+	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 	await loginPage.login('account-credit-300@mail7.io', 'test1234!')
 
 	//Act

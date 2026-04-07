@@ -60,7 +60,7 @@ test.describe('Basic Acceptance Tests CO', () => {
 		})
 
 		await test.step('Enter List Password', async () => {
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 		})
 
 		await test.step('Create Account', async () => {

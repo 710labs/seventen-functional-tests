@@ -7,7 +7,7 @@ test('Enter List Password - Valid @CA @FL @CO @NJ', async ({ page }) => {
 	const listPasswordPage = new ListPasswordPage(page)
 
 	await ageGatePage.passAgeGate()
-	await listPasswordPage.submitPassword('REDACTED')
+	await listPasswordPage.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 
 	await expect(page).toHaveURL('/my-account/')
 })

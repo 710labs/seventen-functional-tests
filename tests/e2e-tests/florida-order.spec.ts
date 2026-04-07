@@ -34,7 +34,7 @@ test(
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
-		await listPassword.submitPassword('REDACTED')
+		await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 		// await createAccountPage.create(email, 'test1234', zipCode, 1, false, address, 'FL')
 		//const address = '123 Rodeo Dr Beverly Hills'
 		var fakeFirstName = faker.name.firstName() + '_Test'

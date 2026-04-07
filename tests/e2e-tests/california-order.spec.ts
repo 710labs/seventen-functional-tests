@@ -37,7 +37,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('medical', 'current')
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			await loginPage.login(user.email, user.password)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
@@ -65,7 +65,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			//await createAccountPage.create(email, 'test1234', zipCode, 1)
 			const address = '123 Rodeo Dr Beverly Hills'
 			var fakeFirstName = faker.name.firstName() + '_Test'
@@ -107,7 +107,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('recreational', 'current')
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			await loginPage.login(user.email, user.password)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
@@ -133,7 +133,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			const zipCode = '90210'
 
 			await ageGatePage.passAgeGate()
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			// await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 0)
 			const address = '123 Rodeo Dr Beverly Hills'
 			var fakeFirstName = faker.name.firstName() + '_Test'

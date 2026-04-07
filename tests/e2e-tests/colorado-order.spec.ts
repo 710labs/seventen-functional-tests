@@ -41,7 +41,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('medical', 'current')
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			await loginPage.login(user.email, user.password)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress(address, city, state, zipCode)
@@ -68,7 +68,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			// await createAccountPage.createColoradoCustomer(email, 'test1234', zipCode, 1)
 			const address = '933 Alpine Ave, Boulder, CO, 80304'
 			var fakeFirstName = faker.name.firstName() + '_Test'
@@ -114,7 +114,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('recreational', 'current')
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			await loginPage.login(user.email, user.password)
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress(address, city, state, zipCode)
@@ -140,7 +140,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
-			await listPassword.submitPassword('REDACTED')
+			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			const address = '933 Alpine Ave, Boulder, CO, 80304'
 			var fakeFirstName = faker.name.firstName() + '_Test'
 			var fakeLastName = faker.name.lastName() + '_Test'
