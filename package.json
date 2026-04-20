@@ -90,7 +90,6 @@
 		"pixelmatch": "^6.0.0",
 		"playwright-tesults-reporter": "^1.1.0",
 		"pngjs": "^7.0.0",
-		"s3-lambo": "^1.1.1",
 		"save-dev": "^0.0.1-security"
 	}
 }
