@@ -1,0 +1,67 @@
+name: Admin Drop Smoke - Phase 1
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - stage
+      grep:
+        description: Optional Playwright grep filter
+        required: false
+        type: string
+jobs:
+  admin-drop-smoke:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      ENV: ${{ github.event.inputs.target_env == 'stage' && 'stage-ca thelist-stage.710labs.com' || 'dev-ca thelist-dev.710labs.com' }}
+      ENV_ID: ${{ github.event.inputs.target_env == 'stage' && 'stage-ca' || 'dev-ca' }}
+      EXECUTION_TYPE: Manual Run
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      BASE_URL: ${{ github.event.inputs.target_env == 'stage' && secrets.BASE_URL_STAGE || secrets.BASE_URL_DEV }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      PRIVATE_STORE_TEST_PASSWORD: ${{ secrets.PRIVATE_STORE_TEST_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 'node'
+      - name: Install dependencies
+        run: npm ci
+      - name: Set Domain to CA
+        uses: JamesIves/fetch-api-data-action@v2.1.0
+        with:
+          endpoint: ${{ env.BASE_URL }}${{ env.QA_ENDPOINT }}domains/update/?state=ca
+          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ env.API_KEY }}"} }'
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run admin-drop smoke tests
+        run: |
+          if [ -n "${{ github.event.inputs.grep }}" ]; then
+            npm run admin:smoke -- --grep "${{ github.event.inputs.grep }}"
+          else
+            npm run admin:smoke
+          fi
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 3
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 3
