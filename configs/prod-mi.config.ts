@@ -5,6 +5,7 @@ import { TestOptions } from '../options'
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
 	testDir: './../tests',
+	testIgnore: ['**/admin-drop-tests/**'],
 	timeout: 10 * 60000,
 	expect: {
 		timeout: 10 * 1000,
