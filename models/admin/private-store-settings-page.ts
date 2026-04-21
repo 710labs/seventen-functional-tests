@@ -31,7 +31,7 @@ export class PrivateStoreSettingsPage {
 	}
 
 	async addPassword(password: string) {
-		await test.step(`Add private-store password ${password}`, async () => {
+		await test.step('Add private-store password', async () => {
 			const initialCount = await this.passwordInputs.count()
 			await this.page.locator('.multi-field-input').nth(initialCount - 1).locator('.multi-field-add').click()
 			await expect(this.passwordInputs).toHaveCount(initialCount + 1)
@@ -55,7 +55,7 @@ export class PrivateStoreSettingsPage {
 	}
 
 	async removePassword(password: string) {
-		return await test.step(`Remove private-store password ${password}`, async () => {
+		return await test.step('Remove private-store password', async () => {
 			const rows = this.page.locator('.multi-field-input')
 			const rowCount = await rows.count()
 

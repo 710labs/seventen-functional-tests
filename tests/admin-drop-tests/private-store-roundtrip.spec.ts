@@ -21,7 +21,7 @@ test('Private Store round trip', async ({ page, browser }) => {
 		const existingPasswords = await privateStoreSettingsPage.getPasswordValues()
 		expect(
 			existingPasswords.includes(generatedPassword),
-			`Generated private-store password "${generatedPassword}" already exists before the test starts`,
+			'Generated private-store password already exists before the test starts',
 		).toBeFalsy()
 
 		await privateStoreSettingsPage.addPassword(generatedPassword)

@@ -39,10 +39,6 @@ test('Order Export download and validation', async ({ page }, testInfo) => {
 	const downloadPath = testInfo.outputPath(suggestedFileName)
 
 	await download.saveAs(downloadPath)
-	await testInfo.attach('order-export-file', {
-		path: downloadPath,
-		contentType: 'text/plain',
-	})
 
 	const downloadStat = await fs.stat(downloadPath)
 	expect(downloadStat.size).toBeGreaterThan(0)

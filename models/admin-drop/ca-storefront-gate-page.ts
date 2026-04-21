@@ -1,4 +1,4 @@
-import test, { Locator, Page } from '@playwright/test'
+import test, { expect, Locator, Page } from '@playwright/test'
 
 export class CAStorefrontGatePage {
 	readonly page: Page
@@ -25,7 +25,10 @@ export class CAStorefrontGatePage {
 			}
 
 			await this.passButton.click()
-			await this.ageGateChallenge.first().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+			await expect(
+				this.ageGateChallenge.first(),
+				'Expected CA age gate challenge to dismiss after passing age gate',
+			).toBeHidden({ timeout: 10000 })
 		})
 	}
 }
