@@ -49,14 +49,26 @@ test('Private Store round trip', async ({ page, browser }) => {
 		await expect(storefrontPage).not.toHaveTitle(/Password/i)
 		await expect
 			.poll(
-				async () =>
-					storefrontPage.url().includes('#usage') ||
-					(await storefrontPage
-						.getByRole('heading', { name: /complete your account/i })
-						.isVisible()
-						.catch(() => false)) ||
-					(await storefrontPage.locator('input[name="svntn_last_usage_type"]').first().isVisible().catch(() => false)) ||
-					/\/my-account\/?$/.test(new URL(storefrontPage.url()).pathname),
+				async () => {
+					const currentUrl = storefrontPage.url()
+
+					return (
+						currentUrl.includes('#usage') ||
+						(await storefrontPage
+							.getByRole('heading', { name: /complete your account/i })
+							.isVisible()
+							.catch(() => false)) ||
+						(await storefrontPage
+							.locator('input[name="svntn_last_usage_type"]')
+							.first()
+							.isVisible()
+							.catch(() => false)) ||
+						/\/my-account\/?$/.test(new URL(currentUrl).pathname) ||
+						(await storefrontPage.getByText('MY ACCOUNT', { exact: true }).isVisible().catch(() => false)) ||
+						(await storefrontPage.getByText(/MY BAG/i).isVisible().catch(() => false)) ||
+						(await storefrontPage.getByText('Close Friends', { exact: true }).isVisible().catch(() => false))
+					)
+				},
 				{
 					message:
 						'Expected storefront to show a valid post-unlock page after submitting the correct private-store password',
@@ -65,6 +77,8 @@ test('Private Store round trip', async ({ page, browser }) => {
 			.toBe(true)
 
 		await storefrontPage.goto('/shop/')
+		await expect(storefrontPage.locator('input[name="post_password"]')).toBeHidden()
+		await expect(storefrontPage).not.toHaveTitle(/Password/i)
 		await expect(storefrontPage.locator('ul.products li.product').first()).toBeVisible()
 	} catch (error) {
 		mainError = error
