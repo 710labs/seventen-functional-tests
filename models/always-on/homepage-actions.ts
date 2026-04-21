@@ -1136,6 +1136,8 @@ export class HomePageActions {
 				)
 				console.log('locator for addToCartButton: ' + addToCartButton)
 				await expect(addToCartButton).toBeVisible()
+				await addToCartButton.scrollIntoViewIfNeeded()
+				await page.waitForTimeout(500)
 				await addToCartButton.click()
 
 				// Check for "Start a new cart" modal
