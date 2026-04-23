@@ -226,7 +226,7 @@ Menu upload fixtures:
 - committed under `tests/admin-drop-tests/fixtures/menu-upload/`
 - selected by `MENU_UPLOAD_FIXTURE`
 - default fixture key: `smoke-default`
-- additional fixture keys: `ca-menu-4-7-25`, `co-menu-4-7-25`
+- additional fixture keys: `smoke-alt`, `ca-menu-4-7-25`, `co-menu-4-7-25`
 
 The menu-upload smoke verifies WooCommerce product import success, then checks the environment-matched `/iframe/` page for every product name from the selected CSV fixture.
 

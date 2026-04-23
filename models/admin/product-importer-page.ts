@@ -224,18 +224,18 @@ export class ProductImporterPage {
 			return 0
 		}
 
-		const displayingNumText = await this.topDisplayingNum.textContent()
-		const displayingNumCount = this.parseCount(displayingNumText)
-
-		if (displayingNumCount !== null) {
-			return displayingNumCount
-		}
-
 		const publishedTabCountText = await this.publishedTabCount.textContent()
 		const publishedTabCount = this.parseCount(publishedTabCountText)
 
 		if (publishedTabCount !== null) {
 			return publishedTabCount
+		}
+
+		const displayingNumText = await this.topDisplayingNum.textContent()
+		const displayingNumCount = this.parseCount(displayingNumText)
+
+		if (displayingNumCount !== null) {
+			return displayingNumCount
 		}
 
 		return this.publishedProductRows.count()
@@ -246,12 +246,17 @@ export class ProductImporterPage {
 			return null
 		}
 
-		const match = text.match(/\d[\d,]*/)
+		const ofMatch = text.match(/\bof\s+([\d,]+)/)
+		if (ofMatch) {
+			return Number.parseInt(ofMatch[1].replace(/,/g, ''), 10)
+		}
 
-		if (!match) {
+		const matches = text.match(/\d[\d,]*/g)
+
+		if (!matches) {
 			return null
 		}
 
-		return Number.parseInt(match[0].replace(/,/g, ''), 10)
+		return Number.parseInt(matches[matches.length - 1].replace(/,/g, ''), 10)
 	}
 }
