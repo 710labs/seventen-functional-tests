@@ -23,10 +23,15 @@ on:
           - 'no'
           - 'yes'
       menu_fixture:
-        description: Optional menu-upload fixture key
+        description: Menu-upload fixture
         required: false
         default: smoke-default
-        type: string
+        type: choice
+        options:
+          - smoke-default
+          - smoke-alt
+          - ca-menu-4-7-25
+          - co-menu-4-7-25
 jobs:
   admin-drop-smoke:
     timeout-minutes: 60

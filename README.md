@@ -220,13 +220,14 @@ GitHub Actions:
 - to run menu upload in GitHub Actions, set:
 - `grep`: `Menu upload`
 - `include_menu_upload`: `yes`
+- `menu_fixture`: choose one dropdown option
 
 Menu upload fixtures:
 
 - committed under `tests/admin-drop-tests/fixtures/menu-upload/`
 - selected by `MENU_UPLOAD_FIXTURE`
 - default fixture key: `smoke-default`
-- additional fixture keys: `smoke-alt`, `ca-menu-4-7-25`, `co-menu-4-7-25`
+- workflow dropdown options: `smoke-default`, `smoke-alt`, `ca-menu-4-7-25`, `co-menu-4-7-25`
 
 The menu-upload smoke verifies WooCommerce product import success, then checks the environment-matched `/iframe/` page for every product name from the selected CSV fixture.
 
