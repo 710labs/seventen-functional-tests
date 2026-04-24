@@ -1,4 +1,4 @@
-name: Admin Drop Smoke - Phase 1
+name: Admin Drop Smoke
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +13,19 @@ on:
       grep:
         description: Optional Playwright grep filter
         required: false
+        type: string
+      include_menu_upload:
+        description: Allow destructive menu-upload smoke
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+      menu_fixture:
+        description: Optional menu-upload fixture key
+        required: false
+        default: smoke-default
         type: string
 jobs:
   admin-drop-smoke:
@@ -30,6 +43,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       PRIVATE_STORE_TEST_PASSWORD: ${{ secrets.PRIVATE_STORE_TEST_PASSWORD }}
+      MENU_UPLOAD_FIXTURE: ${{ github.event.inputs.menu_fixture }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v3
@@ -46,10 +60,24 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run admin-drop smoke tests
         run: |
-          if [ -n "${{ github.event.inputs.grep }}" ]; then
-            npm run admin:smoke -- --grep "${{ github.event.inputs.grep }}"
-          else
+          GREP_INPUT='${{ github.event.inputs.grep }}'
+          INCLUDE_MENU_UPLOAD='${{ github.event.inputs.include_menu_upload }}'
+
+          if [ "$INCLUDE_MENU_UPLOAD" != "yes" ] && echo "$GREP_INPUT" | grep -Eqi 'menu[[:space:]]*upload'; then
+            echo "The destructive menu-upload smoke requires include_menu_upload=yes."
+            exit 1
+          fi
+
+          if [ -n "$GREP_INPUT" ]; then
+            if [ "$INCLUDE_MENU_UPLOAD" = "yes" ]; then
+              npm run admin:smoke -- --grep "$GREP_INPUT"
+            else
+              npm run admin:smoke -- --grep "$GREP_INPUT" --grep-invert "Menu upload"
+            fi
+          elif [ "$INCLUDE_MENU_UPLOAD" = "yes" ]; then
             npm run admin:smoke
+          else
+            npm run admin:smoke -- --grep-invert "Menu upload"
           fi
       - name: Upload Playwright Report
         if: always()

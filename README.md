@@ -194,6 +194,50 @@ These will run in headless mode and will execute in a variety of browsers and vi
 - npm run [smoke:test:prod:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml)
 - npm run [helper:acuityslots:dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-dev-acuity-slot-helper.yml)
 
+## Admin Drop Smoke
+
+The admin-drop smoke suite runs small wp-admin Operations checks from the dedicated admin-drop workflow and Playwright config.
+
+Current coverage includes:
+
+- private-store password smoke
+- order export smoke
+- menu upload smoke
+
+Local:
+
+```bash
+npm run admin:smoke
+MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke -- --grep "Menu upload"
+```
+
+GitHub Actions:
+
+- manual workflow: `.github/workflows/admin-drop-smoke-phase1.yml`
+- required inputs: `target_env`
+- optional inputs: `grep`, `menu_fixture`, `include_menu_upload`
+- default workflow runs exclude `Menu upload`
+- to run menu upload in GitHub Actions, set:
+- `grep`: `Menu upload`
+- `include_menu_upload`: `yes`
+
+Menu upload fixtures:
+
+- committed under `tests/admin-drop-tests/fixtures/menu-upload/`
+- selected by `MENU_UPLOAD_FIXTURE`
+- default fixture key: `smoke-default`
+- additional fixture keys: `smoke-alt`, `ca-menu-4-7-25`, `co-menu-4-7-25`
+
+The menu-upload smoke verifies WooCommerce product import success, then checks the environment-matched `/iframe/` page for every product name from the selected CSV fixture.
+
+Important behavior:
+
+- the menu-upload smoke is destructive
+- before import, it trashes all currently published products
+- cleanup scope is published products only
+- it does not empty the Trash view
+- if the import fails after cleanup, the environment may temporarily have no published products until the next successful import
+
 ## Load Testing
 Use the manual [Load Tests - The List](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist.yml) workflow for browser load tests on AWS Fargate.
 
