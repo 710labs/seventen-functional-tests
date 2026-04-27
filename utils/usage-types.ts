@@ -1,7 +1,10 @@
 export type TestUsageType = 'medical' | 'recreational'
 
 export function normalizeUsageType(usage: string): TestUsageType {
-	return usage.toLowerCase() === 'medical' ? 'medical' : 'recreational'
+	const normalized = usage.trim().toLowerCase()
+	if (normalized === 'medical') return 'medical'
+	if (normalized === 'recreational') return 'recreational'
+	throw new Error(`Unknown usage type "${usage}". Expected 'medical' or 'recreational'.`)
 }
 
 export function isMedicalUsage(usage: TestUsageType | string): boolean {

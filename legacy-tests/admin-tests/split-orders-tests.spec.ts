@@ -24,7 +24,7 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName,
 	const listPassword = new ListPasswordPage(page)
 	const createAccountPage = new CreateAccountPage(page, qaClient)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 	const orderReceived = new OrderReceivedPage(page)
 	const checkOutPage = new CheckoutPage(page, qaClient)
 	const myAccountPage = new MyAccountPage(page)
@@ -35,7 +35,7 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName,
 	// 	`test+${uuidv4()}@710labs-test.com`,
 	// 	'test1234!',
 	// 	zipCode,
-	// 	1,
+	// 	'recreational',
 	// 	false,
 	// 	address,
 	// )
@@ -50,7 +50,7 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName,
 		fakeEmail,
 		'test1234',
 		zipCode,
-		1,
+		'recreational',
 		false,
 		address,
 		'CA',
@@ -61,7 +61,7 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName,
 	await shopPage.addProductsToCart(6)
 	var cartTotals = await cartPage.verifyCart(zipCode)
 	await test.step('Verify Checkout Page Totals + Taxes', async () => {
-		orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
+		orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 'recreational', true)
 	})
 
 	await test.step('Comfirm Order Details on /order-received', async () => {
@@ -88,7 +88,7 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName, 
 	const listPassword = new ListPasswordPage(page)
 	const createAccountPage = new CreateAccountPage(page, qaClient)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 	const orderReceived = new OrderReceivedPage(page)
 	const checkOutPage = new CheckoutPage(page, qaClient)
 	const myAccountPage = new MyAccountPage(page)
@@ -106,7 +106,7 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName, 
 		fakeEmail,
 		'test1234',
 		zipCode,
-		1,
+		'recreational',
 		false,
 		address,
 		'CA',
@@ -117,7 +117,7 @@ test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName, 
 	await shopPage.addProductsToCart(6)
 	var cartTotals = await cartPage.verifyCart(zipCode)
 	await test.step('Verify Checkout Page Totals + Taxes', async () => {
-		orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true)
+		orderTotals = await checkOutPage.confirmCheckout(zipCode, cartTotals, 'recreational', true)
 	})
 
 	await test.step('Comfirm Order Details on /order-received', async () => {

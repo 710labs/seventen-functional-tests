@@ -55,7 +55,6 @@ export class CheckoutPage {
 	readonly cartTotalAmount: Locator
 	readonly placeOrderButton: Locator
 	cartItems: any
-	usageType: TestUsageType
 	cartTotal: {
 		cartSubTotal: string
 		grossTaxAmount: string

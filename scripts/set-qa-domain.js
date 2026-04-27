@@ -2,6 +2,14 @@ const DEFAULT_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
 const VALID_STATES = new Set(['ca', 'fl', 'mi', 'co', 'nj'])
 
+const fetchFn =
+	typeof globalThis.fetch === 'function'
+		? globalThis.fetch.bind(globalThis)
+		: async (...args) => {
+				const { default: nodeFetch } = await import('node-fetch')
+				return nodeFetch(...args)
+			}
+
 function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
@@ -51,7 +59,7 @@ async function main() {
 	}
 
 	const endpoint = new URL('domains', qaApiBaseUrl).toString()
-	const response = await fetch(endpoint, {
+	const response = await fetchFn(endpoint, {
 		method: 'POST',
 		headers: {
 			'x-api-key': apiKey,
@@ -61,8 +69,8 @@ async function main() {
 	})
 	const body = await readBody(response)
 
-	if (!response.ok()) {
-		console.error(`[qa] Failed to set domain state to ${state}. HTTP ${response.status()}`)
+	if (!response.ok) {
+		console.error(`[qa] Failed to set domain state to ${state}. HTTP ${response.status}`)
 		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
 		process.exit(1)
 	}
