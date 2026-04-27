@@ -18,7 +18,7 @@ test.describe('PROD Live Tests', () => {
 	console.log(`------- \n URL being tested: ${prodLiveURL} -------- \n `)
 	test(
 		'Prod Live check - EXISTING REC User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
-		{ tag: ['@medical'] },
+		{ tag: ['@recreational'] },
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
 			const homePageActions = new HomePageActions(page)

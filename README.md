@@ -159,7 +159,7 @@ ADMIN_USER: Use your login for wp-instance
 ADMIN_PW:Use your login for wp-instance
 BYPASS_TAX_CALC:This will run tests without verifying tax totals for orders.
 ADD_ADDRESS_BEFORE_CHECKOUT= Changes workflow so user adds address information before checking out. 
-QA_ENDPOINT=/wp-content/plugins/seventen-qa/api/ (this will not change from env to env)
+QA_ENDPOINT=/wp-json/seventen-qa/v1/ (this will not change from env to env)
 ACUITY_USER:Used to automate creating acuity schedule slots. 
 ACUITY_PASSWORD:Used to automate creating acuity schedule slots. 
 ```
@@ -269,21 +269,21 @@ Notes:
 ### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)
 Postman collection with examples of endpoints used for grabbing data used in test assertions.
 
-### [GET Tax Rates By Zip](https://documenter.getpostman.com/view/11482169/UVeDuTqj#1db7646b-22e5-43f8-ad03-8f268a708b39)
-This API endpoint will return all tax rates (standard/medical, gross, excise, and sales) by zipcode query param. Could also use this [Playwright Script](https://gist.github.com/onlyunusedname/c75e8fa21e4516c687202c26c3cfdd76) to grab info from WordPress directly (more accurate)
+### `GET /rates`
+This QA API endpoint returns tax rates by `post_code`. Example: `GET /rates?post_code=90210`. Could also use this [Playwright Script](https://gist.github.com/onlyunusedname/c75e8fa21e4516c687202c26c3cfdd76) to grab info from WordPress directly (more accurate)
 
-### [GET Product Info](https://documenter.getpostman.com/view/11482169/UVeDuTqj#69c89906-d358-4f42-87a9-9476bcbf2905)
-Returns product info based on the following query params. These params are used in the following hierarchy if all are supplied. Only one query param is used per search.
+### `GET /products`
+Returns product info based on one of the following snake_case query params. Only one query param is used per search.
 
-- productId
-- productSku
-- productName
+- product_id
+- product_sku
+- product_name
 
-### [POST Customer](https://documenter.getpostman.com/view/11482169/UVeDuTqj#e201c50d-f5bd-4d9b-800a-27ddf8b869a5)
-This endpoint will automate the process of creating new and legacy users that can be used in tests. Users created via this endpoint will be cleaned up every 48 hours automatically. 
+### `POST /users`
+This QA API endpoint creates test users for automation with form fields `user_role`, `user_vintage`, and `user_usage`. Users created via this endpoint are still cleaned up every 48 hours automatically.
 
-### [POST Domain](https://documenter.getpostman.com/view/11482169/UVeDuTqj#d066d956-ab34-4134-9ad4-35338c018539)
-This endpoint will automate the process of switching from CA to FL settings in dev + stg. 
+### `POST /domains`
+This QA API endpoint switches the QA domain state in dev and stage. Send the desired `state` as form data.
 
 ### [POST Acuity Webhooks](https://documenter.getpostman.com/view/11482169/UVeDuTqj#d066d956-ab34-4134-9ad4-35338c018539)
 This endpoint will automate the process of enabling/disabling acuity webhooks in all environments + stg. 

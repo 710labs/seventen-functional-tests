@@ -1,4 +1,4 @@
-import { test, request } from '@playwright/test'
+import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { ShopPage } from '../../models/shop-page'
 import { AgeGatePage } from '../../models/age-gate-page'
@@ -9,6 +9,7 @@ import { faker } from '@faker-js/faker'
 import { URL } from 'url'
 import posOrders from '../generators/pos-orders.json'
 import { fictionalAreacodes } from '../data-generator'
+import { normalizeUsageType } from '../usage-types'
 
 test.describe('POS Order Generator', () => {
 	var orders = posOrders.filter(
@@ -56,10 +57,11 @@ test.describe('POS Order Generator', () => {
 		var dob_year = faker.datatype.number({ min: 1955, max: 2001 })
 		var phone = faker.phone.phoneNumber(`${faker.phone.phoneNumber('555-###-####')}`)
 
-		var customer_type =
+		var customer_type = normalizeUsageType(
 			process.env.POSSYNC_CUSTOMER_TYPE === 'Random'
 				? faker.helpers.arrayElement(['Recreational', 'Medical'])
-				: process.env.POSSYNC_CUSTOMER_TYPE
+				: process.env.POSSYNC_CUSTOMER_TYPE || 'recreational',
+		)
 		var address = process.env.POSSYNC_ADDRESS
 		var med_card_number = faker.random.numeric(8)
 		var drivers_license_number = faker.random.numeric(8)
@@ -71,19 +73,19 @@ test.describe('POS Order Generator', () => {
 
 		test(`${process.env.POSSYNC_ENVIRONMENT?.toUpperCase()} - ${cart_type} - POS Sync Add Order: ${
 			index + 1
-		}`, async ({ page, browserName }, workerInfo) => {
-			const apiContext = await request.newContext({
-				baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-				extraHTTPHeaders: {
-					'x-api-key': `${process.env.API_KEY}`,
-				},
-			})
+		}`, async ({ page, browserName, qaClient }, workerInfo) => {
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
-			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const createAccountPage = new CreateAccountPage(page, qaClient)
 			const shopPage = new ShopPage(page, browserName, workerInfo)
-			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-			const checkOutPage = new CheckoutPage(page, apiContext)
+			const cartPage = new CartPage(
+				page,
+				qaClient,
+				browserName,
+				workerInfo,
+				customer_type,
+			)
+			const checkOutPage = new CheckoutPage(page, qaClient)
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 			var cart_type =
@@ -135,7 +137,7 @@ test.describe('POS Order Generator', () => {
 			})
 
 			await test.step(`Add Products`, async () => {
-				if (customer_type === 'Medical') {
+				if (customer_type === 'medical') {
 					if (cart_type?.includes('Over')) {
 						await test.step(`Load Cart - Over MMU`, async () => {
 							await shopPage.addProductListToCart(
@@ -173,7 +175,7 @@ test.describe('POS Order Generator', () => {
 								})
 						})
 					}
-				} else if (customer_type === 'Recreational') {
+				} else if (customer_type === 'recreational') {
 					if (cart_type?.includes('Over')) {
 						await test.step(`Load Cart - Over MMU`, async () => {
 							await shopPage.addProductListToCart(

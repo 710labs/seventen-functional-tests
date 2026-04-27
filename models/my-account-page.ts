@@ -1,4 +1,5 @@
 import test, { expect, Locator, Page } from '@playwright/test'
+import { assertFooterLinks } from '../utils/footer-links'
 
 export class MyAccountPage {
 	readonly page: Page
@@ -34,11 +35,7 @@ export class MyAccountPage {
 
 	async logout() {
 		await test.step('Verify Layout', async () => {
-			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
-				'href',
-				'/terms-of-use',
-			)
-			await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
+			await assertFooterLinks(this.page)
 		})
 		await test.step('Logout User', async () => {
 			await this.page.goto('/my-account/')

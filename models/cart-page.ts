@@ -1,5 +1,7 @@
-import test, { Page, TestInfo, Locator, expect, request, APIRequestContext } from '@playwright/test'
+import test, { Page, TestInfo, Locator, expect } from '@playwright/test'
 import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
+import { QAClient } from '../support/qa/client'
+import { type TestUsageType } from '../utils/usage-types'
 
 export class CartPage {
 	page: Page
@@ -8,16 +10,16 @@ export class CartPage {
 	checkoutButton: Locator
 	cartItems: any[]
 	cartTotal: any
-	usageType: any
-	apiContext: APIRequestContext
+	usageType: TestUsageType
+	qaClient: QAClient
 	cartCounter:Locator
 
 	constructor(
 		page: Page,
-		apiContext: APIRequestContext,
+		qaClient: QAClient,
 		browserName: any,
 		workerInfo: TestInfo,
-		usageType,
+		usageType: TestUsageType,
 	) {
 		this.page = page
 		this.browserName = browserName
@@ -25,7 +27,7 @@ export class CartPage {
 		this.checkoutButton = this.page.locator('.checkout-button')
 		this.cartItems = new Array()
 		this.usageType = usageType
-		this.apiContext = apiContext
+		this.qaClient = qaClient
 		this.cartCounter = this.page.locator('.rsp-countdown-content')
 	}
 
@@ -47,10 +49,7 @@ export class CartPage {
 			//Get Tax Rates
 			var taxRates: any
 
-			const taxRateResponse = await this.apiContext.get(`rates?postCode=${zipcode}`)
-			const taxRateResponseBody: any = await taxRateResponse.json()
-
-			taxRates = taxRateResponseBody
+			taxRates = await this.qaClient.getRates({ post_code: zipcode })
 
 			//Get ProductItem Info
 			await this.page.waitForSelector('.cart_item')
@@ -76,12 +75,11 @@ export class CartPage {
 
 				var productId = await idElement.getAttribute('data-product_id')
 
-				const productInfoResponse = await this.apiContext.get(`products/?productId=${productId}`)
-				const productInfoResponseBody: any = await productInfoResponse.json()
+				const product = await this.qaClient.getProduct({ product_id: productId || undefined })
 
-				var id = productInfoResponseBody.product.id
-				var sku = productInfoResponseBody.product.sku
-				var taxClass = productInfoResponseBody.product.taxClass
+				var id = product.id
+				var sku = product.sku
+				var taxClass = product.tax_class
 				this.cartItems.push({
 					id,
 					name,

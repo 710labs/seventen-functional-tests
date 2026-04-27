@@ -1,4 +1,4 @@
-import { test, expect, request } from '@playwright/test'
+import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
@@ -21,14 +21,8 @@ test.describe('Basic Acceptance Tests MI', () => {
 	var splitOrderNumber: string
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context }, workerInfo) => {
+	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
-		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
 		await context.addCookies([
 			{
 				name: 'vipChecker',
@@ -45,11 +39,11 @@ test.describe('Basic Acceptance Tests MI', () => {
 
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page, apiContext)
+		const createAccountPage = new CreateAccountPage(page, qaClient)
 		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page, apiContext)
+		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+		const checkOutPage = new CheckoutPage(page, qaClient)
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
@@ -74,7 +68,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 				faker.datatype.number({ min: 10, max: 12 }),
 				faker.datatype.number({ min: 1975, max: 2001 }),
 				faker.phone.phoneNumber('555-###-####'),
-				'recreational',
+				'medical',
 				address,
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
@@ -82,7 +76,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Load Shopping Cart`, async () => {
-			await shopPage.addProductsToCart(4, false, 'Pickup', 'Medical')
+			await shopPage.addProductsToCart(4, false, 'Pickup', 'medical')
 		})
 
 		await test.step(`Navigate to Cart`, async () => {

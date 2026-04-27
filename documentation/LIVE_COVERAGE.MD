@@ -425,10 +425,10 @@ await page.addStyleTag({
 ## Integration Points
 
 ### API Endpoints
-- **QA Endpoint**: `/wp-content/plugins/seventen-qa/api/`
-- **User Creation**: `POST /customer` endpoint
+- **QA Endpoint**: `/wp-json/seventen-qa/v1/`
+- **User Creation**: `POST /users` with `user_role`, `user_vintage`, `user_usage`
 - **Order Cancellation**: Via admin API
-- **Tax Rate Lookup**: `GET /tax-rates` by ZIP code
+- **Tax Rate Lookup**: `GET /rates` by `post_code`
 
 ### External Services
 - **Acuity Scheduling**: Used for pickup slot selection (Michigan)
@@ -464,4 +464,3 @@ await page.addStyleTag({
 - [TEST_CASES.MD](TEST_CASES.MD) - Detailed breakdown of all test cases
 - [SUMMARY.MD](SUMMARY.MD) - High-level test suite overview
 - [visual_regression_analysis_5bb31c76.plan.md](visual_regression_analysis_5bb31c76.plan.md) - Visual regression analysis and recommendations
-

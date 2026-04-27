@@ -1,4 +1,4 @@
-import { test, expect, request } from '@playwright/test'
+import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
@@ -17,22 +17,16 @@ const orderQuanity = 6
 var orderTotals: any
 var orderNumber: any
 
-test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName }, workerInfo) => {
+test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName, qaClient }, workerInfo) => {
 	test.skip(workerInfo.project.name === 'Mobile Chrome')
-	const apiContext = await request.newContext({
-		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-		extraHTTPHeaders: {
-			'x-api-key': `${process.env.API_KEY}`,
-		},
-	})
 	//const address = '9779 Oak Pass Rd'
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
-	const createAccountPage = new CreateAccountPage(page, apiContext)
+	const createAccountPage = new CreateAccountPage(page, qaClient)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 1)
 	const orderReceived = new OrderReceivedPage(page)
-	const checkOutPage = new CheckoutPage(page, apiContext)
+	const checkOutPage = new CheckoutPage(page, qaClient)
 	const myAccountPage = new MyAccountPage(page)
 
 	await ageGatePage.passAgeGate()
@@ -87,22 +81,16 @@ test(`Admin Can Split Order - Legacy Split @CA @CO`, async ({ page, browserName 
 		await editOrderPage.splitOrder(orderNumber, orderQuanity)
 	})
 })
-test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName }, workerInfo) => {
+test.skip(`Admin Can Split Order - Auto Split @CA`, async ({ page, browserName, qaClient }, workerInfo) => {
 	test.skip(workerInfo.project.name === 'Mobile Chrome')
-	const apiContext = await request.newContext({
-		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-		extraHTTPHeaders: {
-			'x-api-key': `${process.env.API_KEY}`,
-		},
-	})
 	//const address = '9779 Oak Pass Rd'
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
-	const createAccountPage = new CreateAccountPage(page, apiContext)
+	const createAccountPage = new CreateAccountPage(page, qaClient)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 1)
 	const orderReceived = new OrderReceivedPage(page)
-	const checkOutPage = new CheckoutPage(page, apiContext)
+	const checkOutPage = new CheckoutPage(page, qaClient)
 	const myAccountPage = new MyAccountPage(page)
 
 	await ageGatePage.passAgeGate()

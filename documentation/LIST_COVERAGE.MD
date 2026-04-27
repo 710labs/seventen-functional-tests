@@ -336,11 +336,11 @@ Tests covering administrative functionality:
 ## Integration Points
 
 ### QA API Endpoints
-- **Base Path**: `/wp-content/plugins/seventen-qa/api/`
-- **User Creation**: `POST /customer`
-- **Tax Rates**: `GET /tax-rates?zipcode={zip}`
-- **Product Info**: `GET /product-info`
-- **Domain Switching**: `POST /domain` (dev/staging)
+- **Base Path**: `/wp-json/seventen-qa/v1/`
+- **User Creation**: `POST /users` with `user_role`, `user_vintage`, `user_usage`
+- **Tax Rates**: `GET /rates?post_code={zip}`
+- **Product Info**: `GET /products` with `product_id`, `product_sku`, or `product_name`
+- **Domain Switching**: `POST /domains` with form `state` (dev/staging)
 
 ### External Services
 - **Acuity Scheduling**: Pickup slot selection (Michigan)
@@ -424,4 +424,3 @@ Tests covering administrative functionality:
 - [SUMMARY.MD](SUMMARY.MD) - High-level test suite overview
 - [LIVE_COVERAGE.MD](LIVE_COVERAGE.MD) - Always-on test coverage
 - [CRON_SCHEDULES.MD](CRON_SCHEDULES.MD) - Automated test execution schedules
-

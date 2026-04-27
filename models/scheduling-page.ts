@@ -1,4 +1,5 @@
-import test, { expect, Locator, Page } from '@playwright/test'
+import test, { Locator, Page } from '@playwright/test'
+import { assertFooterLinks } from '../utils/footer-links'
 
 export class SchedulingPage {
 	readonly page: Page
@@ -15,12 +16,7 @@ export class SchedulingPage {
 
 	async scheduleDelivery(): Promise<any> {
 		await test.step('Validate Scheduling Page', async () => {
-
-			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
-				'href',
-				'/terms-of-use',
-			)
-			await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
+			await assertFooterLinks(this.page)
 		})
 		await test.step('Schedule Delivery Slot', async () => {
 			await this.deliveryDay.evaluate((node: HTMLElement) => {

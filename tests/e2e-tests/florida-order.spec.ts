@@ -1,4 +1,4 @@
-import { test, expect, devices, request } from '@playwright/test'
+import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
@@ -13,24 +13,18 @@ import { faker } from '@faker-js/faker'
 test(
 	`Basic Order - New Customer - Medical`,
 	{ tag: ['@medical', '@FL'] },
-	async ({ page, browserName }, workerInfo) => {
-		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
+	async ({ page, browserName, qaClient }, workerInfo) => {
 		const address = '3275 NW 24th Street Rd'
 		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
 		const zipCode = zipcodes[index]
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page, apiContext)
+		const createAccountPage = new CreateAccountPage(page, qaClient)
 		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page, apiContext)
+		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+		const checkOutPage = new CheckoutPage(page, qaClient)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
@@ -47,16 +41,16 @@ test(
 			fakeEmail,
 			'test1234',
 			zipCode,
-			1,
+			'medical',
 			false,
 			address,
-			'CA',
+			'FL',
 		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress(address, 'Miami', 'FL', zipCode)
 		}
-		await shopPage.addProductsToCart(6, mobile)
+		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'medical')
 		var cartTotals = await cartPage.verifyCart(zipCode)
-		await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
+		await checkOutPage.confirmCheckout(zipCode, cartTotals, 'medical', true, address)
 	},
 )

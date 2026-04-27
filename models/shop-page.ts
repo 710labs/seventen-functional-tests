@@ -1,5 +1,6 @@
 import test, { Browser, expect, Locator, Page, TestInfo } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
+import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
 export class ShopPage {
 	readonly baseUrl: string
@@ -29,7 +30,7 @@ export class ShopPage {
 		itemCount: number,
 		mobile = false,
 		fulfillment = 'Delivery',
-		type = 'Recreational',
+		usage: TestUsageType = 'recreational',
 	) {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
@@ -51,7 +52,7 @@ export class ShopPage {
 			await this.page.waitForSelector('.add_to_cart_button')
 			products = await this.page.locator('li.product').filter({ hasNotText: 'Sold Out' })
 
-			if (type === 'Recreational') {
+			if (!isMedicalUsage(usage)) {
 				products = products.filter({ hasNot: this.page.locator('span.medOnly') })
 			}
 
@@ -172,7 +173,7 @@ export class ShopPage {
 		itemCount: number,
 		mobile = false,
 		fulfillment = 'Pickup',
-		type = 'Recreational',
+		usage: TestUsageType = 'recreational',
 	) {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
@@ -194,7 +195,7 @@ export class ShopPage {
 			await this.page.waitForSelector('.add_to_cart_button')
 			products = await this.page.locator('li.product').filter({ hasNotText: 'Sold Out' })
 
-			if (type === 'Recreational') {
+			if (!isMedicalUsage(usage)) {
 				products = await products.filter({ hasNot: this.page.locator('span.medOnly') })
 			}
 

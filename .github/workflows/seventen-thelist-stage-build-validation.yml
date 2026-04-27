@@ -61,10 +61,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CA
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js ca
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
@@ -107,10 +104,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to MI
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=mi
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js mi
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
@@ -152,19 +146,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CO
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=co
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js co
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run ci:test:staging:co
       - name: Set Domain to CA
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ secrets.BASE_URL_DEV }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js ca
   nj-tests-staging:
     timeout-minutes: 60
     needs: [co-tests-staging]
@@ -205,10 +193,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to NJ
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ secrets.BASE_URL_STAGE }}${{ secrets.QA_ENDPOINT }}domains/update/?state=nj
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js nj
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests

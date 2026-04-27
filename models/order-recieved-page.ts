@@ -1,5 +1,6 @@
 import test, { expect, Locator, Page } from '@playwright/test'
 import { formatNumbers } from '../utils/order-calculations'
+import { assertFooterLinks } from '../utils/footer-links'
 
 export class OrderReceivedPage {
 	readonly page: Page
@@ -22,11 +23,7 @@ export class OrderReceivedPage {
 		var orderNumber
 		this.page.waitForNavigation()
 		await test.step('Verify Layout', async () => {
-			await expect(this.page.locator('.site-info > span > a')).toHaveAttribute(
-				'href',
-				'/terms-of-use',
-			)
-			await expect(this.page.locator('.site-info > a')).toHaveAttribute('href', '/privacy-policy')
+			await assertFooterLinks(this.page)
 		})
 		await test.step('Verify Order Recieved Totals', async () => {
 			orderNumber = await this.orderNumber.innerText()
