@@ -1,4 +1,4 @@
-import { APIRequestContext, request, test } from '@playwright/test'
+import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
@@ -10,22 +10,17 @@ import { AdminLogin } from '../../models/admin/admin-login-page'
 test.skip('Customer Has Credit - Discount Applied @CA', async ({
 	page,
 	browserName,
+	qaClient,
 }, workerInfo) => {
 	//Arrange
 
 	//Setup Pages
-	const apiContext = await request.newContext({
-		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-		extraHTTPHeaders: {
-			'x-api-key': `${process.env.API_KEY}`,
-		},
-	})
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
-	const createAccountPage = new CreateAccountPage(page, apiContext)
+	const createAccountPage = new CreateAccountPage(page, qaClient)
 	const loginPage = new LoginPage(page)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 	const adminLoginPage = new AdminLogin(page)
 	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
@@ -41,7 +36,7 @@ test.skip('Customer Has Credit - Discount Applied @CA', async ({
 	await loginPage.login(user.email, user.password)
 
 	//Act
-	await shopPage.addProductsToCart(6, mobile)
+	await shopPage.addProductsToCart(6, mobile, 'Delivery', 'recreational')
 
 	//Assert
 	await cartPage.verifyCredit(500)
@@ -50,18 +45,13 @@ test.skip('Customer Has Credit - Discount Applied @CA', async ({
 test.skip('Customer Has Credit - Order Total Equals Rec Limit - Discount Applied ', async ({
 	page,
 	browserName,
+	qaClient,
 }, workerInfo) => {
-	const apiContext = await request.newContext({
-		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-		extraHTTPHeaders: {
-			'x-api-key': `${process.env.API_KEY}`,
-		},
-	})
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
 	const loginPage = new LoginPage(page)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 	//Arrange
@@ -70,7 +60,7 @@ test.skip('Customer Has Credit - Order Total Equals Rec Limit - Discount Applied
 	await loginPage.login('account-credit-300@mail7.io', 'test1234!')
 
 	//Act
-	await shopPage.addProductsToCart(6, mobile)
+	await shopPage.addProductsToCart(6, mobile, 'Delivery', 'recreational')
 
 	//Assert
 	await cartPage.verifyCredit(500)

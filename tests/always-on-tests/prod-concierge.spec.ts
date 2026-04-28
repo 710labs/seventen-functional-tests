@@ -63,7 +63,7 @@ test.describe('PROD CONCIERGE Tests', () => {
 	// ),
 		test(
 			'Prod Concierge check - REC EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
-			{ tag: ['@medical'] },
+			{ tag: ['@recreational'] },
 			async ({ page }) => {
 				const conciergeLogin = new ConciergeLogin(page)
 				const homePageLogin = new HomePageLogin(page)

@@ -93,10 +93,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CA
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ env.POSSYNC_URL }}${{ secrets.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ secrets.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js ca
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests

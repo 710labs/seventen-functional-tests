@@ -1,4 +1,4 @@
-import { test, expect, request } from '@playwright/test'
+import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
@@ -21,14 +21,8 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 	var splitOrderNumber: string
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context }, workerInfo) => {
+	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
-		const apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
 		await context.addCookies([
 			{
 				name: 'vipChecker',
@@ -45,11 +39,11 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
-		const createAccountPage = new CreateAccountPage(page, apiContext)
+		const createAccountPage = new CreateAccountPage(page, qaClient)
 		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-		const checkOutPage = new CheckoutPage(page, apiContext)
+		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+		const checkOutPage = new CheckoutPage(page, qaClient)
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
@@ -70,7 +64,7 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 				fakeEmail,
 				'test1234',
 				zipCode,
-				1,
+				'medical',
 				false,
 				address,
 				'NJ',
@@ -78,12 +72,12 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, 'Pickup', 'Medical')
+			await shopPage.addProductsToCart(orderQuanity, mobile, 'Pickup', 'medical')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
 		await test.step('Choose Fulfillment Slot + Verify Checkout', async () => {
-			await checkOutPage.confirmCheckout(zipCode, cartTotals, 1, true, address)
+			await checkOutPage.confirmCheckout(zipCode, cartTotals, 'medical', true, address)
 		})
 
 		await test.step('Comfirm Order Details on /order-received', async () => {

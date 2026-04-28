@@ -1,12 +1,13 @@
 const csvFilePath = 'utils/hod-orders.csv'
 let csvToJson = require('convert-csv-to-json')
-import { test, expect, devices, request, Page } from '@playwright/test'
+import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { ShopPage } from '../../models/shop-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
+import { normalizeUsageType } from '../usage-types'
 
 test.describe('House Of Dank Order Generator', () => {
 	let orders = csvToJson.fieldDelimiter(',').getJsonFromCsv(csvFilePath)
@@ -46,19 +47,21 @@ test.describe('House Of Dank Order Generator', () => {
 		test(`Add House of Dank Order: ${orders[index].first_name} ${orders[index].last_name} - DOB:${orders[index].dob_month}/${orders[index].dob_day}/${orders[index].dob_year} - ${orders[index].customer_type} - ${orders[index].address} - Order[${orders[index].order}]`, async ({
 			page,
 			browserName,
+			qaClient,
 		}, workerInfo) => {
-			const apiContext = await request.newContext({
-				baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-				extraHTTPHeaders: {
-					'x-api-key': `${process.env.API_KEY}`,
-				},
-			})
+			const customerType = normalizeUsageType(orders[index].customer_type)
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
-			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const createAccountPage = new CreateAccountPage(page, qaClient)
 			const shopPage = new ShopPage(page, browserName, workerInfo)
-			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-			const checkOutPage = new CheckoutPage(page, apiContext)
+			const cartPage = new CartPage(
+				page,
+				qaClient,
+				browserName,
+				workerInfo,
+				customerType,
+			)
+			const checkOutPage = new CheckoutPage(page, qaClient)
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 			let address
@@ -91,7 +94,7 @@ test.describe('House Of Dank Order Generator', () => {
 					orders[index].dob_month,
 					orders[index].dob_year,
 					orders[index].phone,
-					orders[index].customer_type,
+					customerType,
 					address,
 					orders[index].med_card_number,
 					orders[index].drivers_license_number,

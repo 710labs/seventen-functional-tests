@@ -1,4 +1,4 @@
-import { request, test, expect } from '@playwright/test'
+import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
@@ -6,22 +6,16 @@ import { ShopPage } from '../../models/shop-page'
 import { CartPage } from '../../models/cart-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 
-test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName }, workerInfo) => {
+test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName, qaClient }, workerInfo) => {
 	//Arrange
 
 	//Setup Pages
-	const apiContext = await request.newContext({
-		baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-		extraHTTPHeaders: {
-			'x-api-key': `${process.env.API_KEY}`,
-		},
-	})
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
-	const createAccountPage = new CreateAccountPage(page, apiContext)
+	const createAccountPage = new CreateAccountPage(page, qaClient)
 	const loginPage = new LoginPage(page)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
-	const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
+	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 	//Create Account
@@ -33,7 +27,7 @@ test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName }, work
 	await loginPage.login(user.email, user.password)
 
 	//Act
-	await shopPage.addProductsToCart(6, mobile, 'Pickup')
+	await shopPage.addProductsToCart(6, mobile, 'Pickup', 'recreational')
 
 	//Assert
 	await cartPage.cartCounter.waitFor()

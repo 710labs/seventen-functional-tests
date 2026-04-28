@@ -1,4 +1,4 @@
-import { test, request, APIRequestContext } from '@playwright/test'
+import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
@@ -12,31 +12,22 @@ import { faker } from '@faker-js/faker'
 
 test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 	test.describe.configure({ mode: 'parallel' })
-	var apiContext: APIRequestContext
-	test.beforeAll(async () => {
-		apiContext = await request.newContext({
-			baseURL: `${process.env.BASE_URL}${process.env.QA_ENDPOINT}`,
-			extraHTTPHeaders: {
-				'x-api-key': `${process.env.API_KEY}`,
-			},
-		})
-	})
 	test(
 		`Basic Order - Existing Customer - Medical`,
 		{ tag: ['@medical'] },
-		async ({ page, browserName }, workerInfo) => {
+		async ({ page, browserName, qaClient }, workerInfo) => {
 			const address = '933 Alpine Ave'
 			const city = 'Boulder'
 			const state = 'CO'
 			const zipCode = '80304'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
-			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const createAccountPage = new CreateAccountPage(page, qaClient)
 			const myAccountPage = new MyAccountPage(page)
 			const loginPage = new LoginPage(page)
 			const shopPage = new ShopPage(page, browserName, workerInfo)
-			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-			const checkOutPage = new CheckoutPage(page, apiContext)
+			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+			const checkOutPage = new CheckoutPage(page, qaClient)
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
@@ -47,24 +38,24 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 				await myAccountPage.addAddress(address, city, state, zipCode)
 			}
 			await myAccountPage.addMedicalExp()
-			await shopPage.addProductsToCartPickup(6, mobile)
+			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'medical')
 			var cartTotals = await cartPage.verifyCart(zipCode)
-			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 1)
+			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'medical')
 		},
 	)
 	test(
 		`Basic Order - New Customer - Medical`,
 		{ tag: ['@medical'] },
-		async ({ page, browserName }, workerInfo) => {
+		async ({ page, browserName, qaClient }, workerInfo) => {
 			const zipCode = '80304'
 			const email = `test+${uuidv4()}@710labs-test.com`
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
-			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const createAccountPage = new CreateAccountPage(page, qaClient)
 			const myAccountPage = new MyAccountPage(page)
 			const shopPage = new ShopPage(page, browserName, workerInfo)
-			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 1)
-			const checkOutPage = new CheckoutPage(page, apiContext)
+			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+			const checkOutPage = new CheckoutPage(page, qaClient)
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
@@ -81,7 +72,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 				fakeEmail,
 				'test1234',
 				zipCode,
-				1,
+				'medical',
 				false,
 				address,
 				'CO',
@@ -89,27 +80,27 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addColoradoAddress()
 			}
-			await shopPage.addProductsToCartPickup(6, mobile)
+			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'medical')
 			var cartTotals = await cartPage.verifyCart(zipCode)
-			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 1)
+			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'medical')
 		},
 	)
 	test(
 		`Basic Order - Existing Customer - Recreational`,
 		{ tag: ['@recreational'] },
-		async ({ page, browserName }, workerInfo) => {
+		async ({ page, browserName, qaClient }, workerInfo) => {
 			const zipCode = '80304'
 			const address = '933 Alpine Ave'
 			const city = 'Boulder'
 			const state = 'CO'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
-			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const createAccountPage = new CreateAccountPage(page, qaClient)
 			const myAccountPage = new MyAccountPage(page)
 			const loginPage = new LoginPage(page)
 			const shopPage = new ShopPage(page, browserName, workerInfo)
-			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 0)
-			const checkOutPage = new CheckoutPage(page, apiContext)
+			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
+			const checkOutPage = new CheckoutPage(page, qaClient)
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
@@ -120,23 +111,23 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 				await myAccountPage.addAddress(address, city, state, zipCode)
 			}
 
-			await shopPage.addProductsToCartPickup(6, mobile)
+			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'recreational')
 			var cartTotals = await cartPage.verifyCart(zipCode)
-			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 0)
+			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'recreational')
 		},
 	)
 	test(
 		`Basic Order - New Customer - Recreational`,
 		{ tag: ['@recreational'] },
-		async ({ page: page, browserName }, workerInfo) => {
+		async ({ page: page, browserName, qaClient }, workerInfo) => {
 			const zipCode = '80304'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
-			const createAccountPage = new CreateAccountPage(page, apiContext)
+			const createAccountPage = new CreateAccountPage(page, qaClient)
 			const myAccountPage = new MyAccountPage(page)
 			const shopPage = new ShopPage(page, browserName, workerInfo)
-			const cartPage = new CartPage(page, apiContext, browserName, workerInfo, 0)
-			const checkOutPage = new CheckoutPage(page, apiContext)
+			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
+			const checkOutPage = new CheckoutPage(page, qaClient)
 			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
@@ -152,7 +143,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 				fakeEmail,
 				'test1234',
 				zipCode,
-				1,
+				'recreational',
 				false,
 				address,
 				'CO',
@@ -160,9 +151,9 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addColoradoAddress()
 			}
-			await shopPage.addProductsToCartPickup(6, mobile)
+			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'recreational')
 			var cartTotals = await cartPage.verifyCart(zipCode)
-			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 0)
+			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'recreational')
 		},
 	)
 })

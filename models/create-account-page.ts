@@ -1,6 +1,8 @@
-import test, { APIRequestContext, expect, Locator, Page, request } from '@playwright/test'
+import test, { expect, Locator, Page } from '@playwright/test'
 import { faker } from '@faker-js/faker'
 import { fictionalAreacodes } from '../utils/data-generator'
+import { QAClient } from '../support/qa/client'
+import { getUsageLabel, isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
 export class CreateAccountPage {
 	readonly page: Page
@@ -35,13 +37,13 @@ export class CreateAccountPage {
 	readonly defaultAddress: string
 	readonly phoneNumber: Locator
 	apiUser: any
-	apiContext: APIRequestContext
+	qaClient: QAClient
 
 	//svntn_core_pxp_month
 
-	constructor(page: Page, apiContext: APIRequestContext) {
+	constructor(page: Page, qaClient: QAClient) {
 		;(this.page = page),
-			(this.apiContext = apiContext),
+			(this.qaClient = qaClient),
 			(this.userNameField = page.locator('input[name="email"]'))
 		this.passwordField = page.locator('input[name="password"]')
 		this.usageType = page.locator('input[name="svntn_last_usage_type"]')
@@ -74,15 +76,52 @@ export class CreateAccountPage {
 		this.defaultAddress = '123 Main Street'
 		this.phoneNumber = page.locator('input[name="billing_phone"]')
 	}
-	async createApi(usage: string, userType: string): Promise<any> {
+
+	private assertSupportedUsageForState(usage: TestUsageType, state: string) {
+		if (!['CA', 'CO', 'FL', 'NJ'].includes(state)) {
+			throw new Error(`Unsupported registration state "${state}" for usage "${usage}".`)
+		}
+
+		if (state === 'FL' && !isMedicalUsage(usage)) {
+			throw new Error('Florida registration only supports medical usage in this helper.')
+		}
+	}
+
+	private async selectRegistrationUsageType(usage: TestUsageType) {
+		await test.step(`Select ${getUsageLabel(usage)} Usage Type`, async () => {
+			await this.page
+				.locator(`text=${getUsageLabel(usage)} >> input[name="svntn_last_usage_type"]`)
+				.click()
+		})
+	}
+
+	private async uploadMedicalCard(fileName: string = 'CA-DL.jpg') {
+		await test.step('Upload Medical Card', async () => {
+			const medicalCardInput = this.page.locator('input[name="svntn_core_medical_doc"]')
+			await medicalCardInput.waitFor({ state: 'attached' })
+			await medicalCardInput.setInputFiles(fileName)
+			await this.page.waitForTimeout(5000)
+		})
+	}
+
+	private async enterMedicalCardExpiration() {
+		await test.step('Enter Med Card Exp', async () => {
+			await this.medCardExpMonth.selectOption('12')
+			await this.medCardExpDay.selectOption('16')
+			await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+		})
+	}
+
+	async createApi(usage: TestUsageType, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
-			const createUserResponse = await this.apiContext.get(
-				`users/create/?userRole=customer&userUsage=${usage}&userVintage=${userType}`,
-			)
-			this.apiUser = await createUserResponse.json()
+			this.apiUser = await this.qaClient.createUser({
+				user_role: 'customer',
+				user_usage: usage,
+				user_vintage: userType,
+			})
 		})
 
-		return this.apiUser.user
+		return this.apiUser
 	}
 
 	async create(
@@ -91,12 +130,14 @@ export class CreateAccountPage {
 		username: string,
 		password: string,
 		zipcode: string,
-		type: number,
+		usage: TestUsageType,
 		logout: boolean = false,
 		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90210',
 		state: string = 'CA',
 		medCardNumber: string = '1234567890',
 	) {
+		this.assertSupportedUsageForState(usage, state)
+
 		await test.step('Verify Layout', async () => {})
 
 		await test.step('Click Register Link', async () => {
@@ -147,6 +188,17 @@ export class CreateAccountPage {
 
 		if (process.env.NEXT_VERSION === 'true' && state === 'FL') {
 			await test.step('Enter PatientId', async () => {
+				const patientIdCount = await this.patientId.count()
+				if (patientIdCount === 0) {
+					return
+				}
+
+				try {
+					await this.patientId.waitFor({ state: 'visible', timeout: 5000 })
+				} catch {
+					return
+				}
+
 				await this.patientId.click()
 				await this.patientId.fill('1234abcd')
 			})
@@ -183,69 +235,8 @@ export class CreateAccountPage {
 			})
 		})
 
-		if (type == 1 && state === 'CA') {
-			await test.step('Select Medical Usage Type', async () => {
-				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
-			})
-			await test.step('Upload Medical Card', async () => {
-				const medicalCardButton = await this.page.waitForSelector(
-					'input[name="svntn_core_medical_doc"]',
-				)
-				const [medicalCardChooser] = await Promise.all([
-					this.page.waitForEvent('filechooser'),
-					medicalCardButton.click(),
-				])
-				await medicalCardChooser.setFiles('CA-DL.jpg')
-				await medicalCardChooser.page()
-				await this.page.waitForTimeout(5000)
-			})
-
-			await test.step('Enter Med Card Exp', async () => {
-				await this.medCardExpMonth.selectOption('12')
-				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-			})
-		}
-
-		if (type == 1 && state === 'NJ') {
-			await test.step('Select Medical Usage Type', async () => {
-				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
-			})
-			await test.step('Upload Medical Card', async () => {
-				const medicalCardButton = await this.page.waitForSelector(
-					'input[name="svntn_core_medical_doc"]',
-				)
-				const [medicalCardChooser] = await Promise.all([
-					this.page.waitForEvent('filechooser'),
-					medicalCardButton.click(),
-				])
-				await medicalCardChooser.setFiles('CA-DL.jpg')
-				await medicalCardChooser.page()
-				await this.page.waitForTimeout(5000)
-			})
-
-			await test.step('Enter Med Card Exp', async () => {
-				await this.medCardExpMonth.selectOption('12')
-				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-			})
-
-			await test.step('Enter Med Card Number', async () => {
-				await this.medCardNumber.fill(medCardNumber)
-			})
-		}
 		if (state === 'FL') {
-			await test.step('Upload Medical Card', async () => {
-				const medicalCardButton = await this.page.waitForSelector(
-					'input[name="svntn_core_medical_doc"]',
-				)
-				const [medicalCardChooser] = await Promise.all([
-					this.page.waitForEvent('filechooser'),
-					medicalCardButton.click(),
-				])
-				await medicalCardChooser.setFiles('Medical-Card.png')
-				await medicalCardChooser.page()
-			})
+			await this.uploadMedicalCard('Medical-Card.png')
 			await test.step('Enter Med Card Exp', async () => {
 				await expect(this.medCardExpMonth).toBeVisible()
 				await expect(this.medCardExpMonth).toBeEnabled()
@@ -262,7 +253,22 @@ export class CreateAccountPage {
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
+		} else {
+			await this.selectRegistrationUsageType(usage)
 
+			if (isMedicalUsage(usage)) {
+				await this.uploadMedicalCard()
+				await this.enterMedicalCardExpiration()
+
+				if (state === 'NJ') {
+					await test.step('Enter Med Card Number', async () => {
+						await this.medCardNumber.fill(medCardNumber)
+					})
+				}
+			}
+		}
+
+		if (state === 'FL') {
 			await test.step('Complete Usage Type Form', async () => {
 				await (await this.page.$('text=Register')).click()
 				await this.page.waitForTimeout(5000)
@@ -291,7 +297,7 @@ export class CreateAccountPage {
 		birthMonth: number,
 		birthYear: number,
 		phone: string,
-		type: string,
+		type: TestUsageType,
 		address: string,
 		medCardNumber: string,
 		driversLicenseNumber: string,
@@ -345,7 +351,7 @@ export class CreateAccountPage {
 			await this.page.waitForSelector('#eligibilityContext')
 		})
 
-		if (type === 'medical') {
+		if (isMedicalUsage(type)) {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.waitForTimeout(5000)
 				await this.page.getByLabel('Medical', { exact: true }).check()
@@ -385,7 +391,7 @@ export class CreateAccountPage {
 			})
 		}
 
-		if (type === 'recreational') {
+		if (!isMedicalUsage(type)) {
 			await test.step('Select Recreational Usage Type', async () => {
 				await this.page.locator('text=Recreational >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -431,7 +437,7 @@ export class CreateAccountPage {
 		birthMonth: number,
 		birthYear: number,
 		phone: string,
-		type: string,
+		type: TestUsageType,
 		address: string,
 		medCardNumber: string,
 		driversLicenseNumber: string,
@@ -485,7 +491,7 @@ export class CreateAccountPage {
 			await this.page.waitForSelector('#eligibilityContext')
 		})
 
-		if (type === 'Medical') {
+		if (isMedicalUsage(type)) {
 			await test.step('Select Medical Usage Type', async () => {
 				await this.page.waitForTimeout(5000)
 				await this.page.getByLabel('Medical', { exact: true }).check()
@@ -517,7 +523,7 @@ export class CreateAccountPage {
 			})
 		}
 
-		if (type === 'Recreational') {
+		if (!isMedicalUsage(type)) {
 			await test.step('Select Recreational Usage Type', async () => {
 				await this.page.locator('text=Recreational >> input[name="svntn_last_usage_type"]').click()
 			})
@@ -568,7 +574,7 @@ export class CreateAccountPage {
 		})
 		test.info().annotations.push({
 			type: 'Customer Type',
-			description: `${type}`,
+			description: `${getUsageLabel(type)}`,
 		})
 
 		test.info().annotations.push({
@@ -585,7 +591,7 @@ export class CreateAccountPage {
 		username: string,
 		password: string,
 		zipcode: string,
-		type: number,
+		type: TestUsageType,
 		logout: boolean = false,
 		address: string = '933 Alpine Ave, Boulder, CO, 80304',
 		state: string = 'CO',
@@ -669,34 +675,18 @@ export class CreateAccountPage {
 			})
 		})
 
-		if (type == 1 && state === 'CO') {
-			await test.step('Select Medical Usage Type', async () => {
-				await this.page.locator('text=Medical >> input[name="svntn_last_usage_type"]').click()
-			})
-			await test.step('Upload Medical Card', async () => {
-				const medicalCardButton = await this.page.waitForSelector(
-					'input[name="svntn_core_medical_doc"]',
-				)
-				const [medicalCardChooser] = await Promise.all([
-					this.page.waitForEvent('filechooser'),
-					medicalCardButton.click(),
-				])
-				await medicalCardChooser.setFiles('CA-DL.jpg')
-				await medicalCardChooser.page()
-				await this.page.waitForTimeout(5000)
-			})
+		await this.selectRegistrationUsageType(type)
 
-			await test.step('Enter Med Card Exp', async () => {
-				await this.medCardExpMonth.selectOption('12')
-				await this.medCardExpDay.selectOption('16')
-				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-			})
-			await test.step('Complete Usage Type Form', async () => {
-				await (await this.page.$('text=Register')).click()
-				await this.page.waitForTimeout(5000)
-				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
-			})
+		if (isMedicalUsage(type) && state === 'CO') {
+			await this.uploadMedicalCard()
+			await this.enterMedicalCardExpiration()
 		}
+
+		await test.step('Complete Usage Type Form', async () => {
+			await (await this.page.$('text=Register')).click()
+			await this.page.waitForTimeout(5000)
+			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
+		})
 
 		if (logout) {
 			await this.page.goto('/my-account')

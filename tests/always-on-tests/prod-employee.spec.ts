@@ -19,7 +19,7 @@ test.describe('PROD EMPLOYEE-STORE Tests', () => {
 	console.log(`------- \n URL being tested: ${prodConciergeURL} -------- \n `)
 	test(
 		'Prod Employee-Store check - REC EXISTING User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
-		{ tag: ['@medical'] },
+		{ tag: ['@recreational'] },
 		async ({ page }) => {
 			const conciergeLogin = new ConciergeLogin(page)
 			const homePageLogin = new HomePageLogin(page)

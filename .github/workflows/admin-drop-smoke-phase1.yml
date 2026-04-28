@@ -23,10 +23,15 @@ on:
           - 'no'
           - 'yes'
       menu_fixture:
-        description: Optional menu-upload fixture key
+        description: Menu-upload fixture
         required: false
         default: smoke-default
-        type: string
+        type: choice
+        options:
+          - smoke-default
+          - smoke-alt
+          - ca-menu-4-7-25
+          - co-menu-4-7-25
 jobs:
   admin-drop-smoke:
     timeout-minutes: 60
@@ -52,10 +57,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Set Domain to CA
-        uses: JamesIves/fetch-api-data-action@v2.1.0
-        with:
-          endpoint: ${{ env.BASE_URL }}${{ env.QA_ENDPOINT }}domains/update/?state=ca
-          configuration: '{ "method": "GET", "headers": {"x-api-key": "${{ env.API_KEY }}"} }'
+        run: node ./scripts/set-qa-domain.js ca
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run admin-drop smoke tests

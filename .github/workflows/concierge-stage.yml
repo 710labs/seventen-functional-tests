@@ -16,7 +16,7 @@ jobs:
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      BASE_URL: ${{ secrets.BASE_URL_stage }}
+      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true

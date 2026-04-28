@@ -1,4 +1,5 @@
 import bankersRounding from 'bankers-rounding';
+import { getRatesBucketForUsage, isMedicalUsage, type TestUsageType } from './usage-types'
 
 export async function formatNumbers(value: string): Promise<string> {
   return value.replace(/(<([^>]+)>)/gi, '').replace(/\$|,/g, '').replace(/\-|,/g, '');
@@ -7,11 +8,11 @@ export async function formatNumbers(value: string): Promise<string> {
 export async function calculateCartTotals(
   taxRates: any,
   productItems: any[],
-  usageType: number
+  usageType: TestUsageType
 ): Promise<any> {
   var taxRate = await new Array();
-  if (usageType === 0) {
-    taxRate = await taxRates.rates.standard;
+  if (!isMedicalUsage(usageType)) {
+    taxRate = await taxRates[getRatesBucketForUsage(usageType)];
     var grossRate =
       taxRate.find((tax) => {
         return tax.label === 'County Gross Tax';
@@ -25,7 +26,7 @@ export async function calculateCartTotals(
         return tax.label === 'Sales';
       }).rate / 100;
   } else {
-    taxRate = await taxRates.rates['medical-rate'];
+    taxRate = await taxRates[getRatesBucketForUsage(usageType)];
     var grossRate =
       taxRate.find((tax) => {
         return tax.label === 'Gross';
