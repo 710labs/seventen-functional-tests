@@ -94,7 +94,7 @@ export class CartPage {
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
 			await this.checkoutButton.click()
 		})
-		await expect(this.cartItems).not.toBeNull
+		expect(this.cartItems).not.toBeNull()
 
 		return this.cartItems
 	}
