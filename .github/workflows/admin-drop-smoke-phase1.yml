@@ -22,6 +22,24 @@ on:
         options:
           - 'no'
           - 'yes'
+      include_focused_rules:
+        description: Allow destructive focused-rules smoke
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+      focused_rule_group:
+        description: Focused-rules group
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - all
+          - maxqty
+          - minorder
       menu_fixture:
         description: Menu-upload fixture
         required: false
@@ -47,6 +65,7 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
       PRIVATE_STORE_TEST_PASSWORD: ${{ secrets.PRIVATE_STORE_TEST_PASSWORD }}
       MENU_UPLOAD_FIXTURE: ${{ github.event.inputs.menu_fixture }}
     steps:
@@ -64,23 +83,70 @@ jobs:
         run: |
           GREP_INPUT='${{ github.event.inputs.grep }}'
           INCLUDE_MENU_UPLOAD='${{ github.event.inputs.include_menu_upload }}'
+          INCLUDE_FOCUSED_RULES='${{ github.event.inputs.include_focused_rules }}'
+          FOCUSED_RULE_GROUP='${{ github.event.inputs.focused_rule_group }}'
 
-          if [ "$INCLUDE_MENU_UPLOAD" != "yes" ] && echo "$GREP_INPUT" | grep -Eqi 'menu[[:space:]]*upload'; then
+          if [ "$INCLUDE_MENU_UPLOAD" != "yes" ] && echo "$GREP_INPUT" | grep -Eqi 'menu[[:space:]-]*upload|@menu-upload|@destructive'; then
             echo "The destructive menu-upload smoke requires include_menu_upload=yes."
             exit 1
           fi
 
-          if [ -n "$GREP_INPUT" ]; then
-            if [ "$INCLUDE_MENU_UPLOAD" = "yes" ]; then
-              npm run admin:smoke -- --grep "$GREP_INPUT"
-            else
-              npm run admin:smoke -- --grep "$GREP_INPUT" --grep-invert "Menu upload"
+          if [ "$INCLUDE_FOCUSED_RULES" != "yes" ]; then
+            if [ "$FOCUSED_RULE_GROUP" != "none" ]; then
+              echo "The destructive focused-rules smoke requires include_focused_rules=yes."
+              exit 1
             fi
-          elif [ "$INCLUDE_MENU_UPLOAD" = "yes" ]; then
-            npm run admin:smoke
-          else
-            npm run admin:smoke -- --grep-invert "Menu upload"
+
+            if echo "$GREP_INPUT" | grep -Eqi '@admin-drop|@rules|@maxqty|@minorder|focused[[:space:]-]*rules'; then
+              echo "The destructive focused-rules smoke requires include_focused_rules=yes."
+              exit 1
+            fi
           fi
+
+          if [ -n "$GREP_INPUT" ] && [ "$FOCUSED_RULE_GROUP" != "none" ]; then
+            echo "Use either grep or focused_rule_group, not both."
+            exit 1
+          fi
+
+          ARGS=()
+          if [ "$FOCUSED_RULE_GROUP" != "none" ]; then
+            case "$FOCUSED_RULE_GROUP" in
+              all)
+                ARGS+=(--grep "@rules")
+                ;;
+              maxqty)
+                ARGS+=(--grep "@maxqty")
+                ;;
+              minorder)
+                ARGS+=(--grep "@minorder")
+                ;;
+              *)
+                echo "Unsupported focused_rule_group: $FOCUSED_RULE_GROUP"
+                exit 1
+                ;;
+            esac
+          elif [ -n "$GREP_INPUT" ]; then
+            ARGS+=(--grep "$GREP_INPUT")
+          fi
+
+          GREP_INVERT_INPUT=''
+          if [ "$INCLUDE_MENU_UPLOAD" != "yes" ]; then
+            GREP_INVERT_INPUT='Menu upload'
+          fi
+
+          if [ "$FOCUSED_RULE_GROUP" = "none" ] && [ -z "$GREP_INPUT" ]; then
+            if [ -n "$GREP_INVERT_INPUT" ]; then
+              GREP_INVERT_INPUT="$GREP_INVERT_INPUT|@rules"
+            else
+              GREP_INVERT_INPUT='@rules'
+            fi
+          fi
+
+          if [ -n "$GREP_INVERT_INPUT" ]; then
+            ARGS+=(--grep-invert "$GREP_INVERT_INPUT")
+          fi
+
+          npm run admin:smoke -- "${ARGS[@]}"
       - name: Upload Playwright Report
         if: always()
         uses: actions/upload-artifact@v4
