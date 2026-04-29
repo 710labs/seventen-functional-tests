@@ -33,14 +33,14 @@ export class CartPage {
 
 	async goToCheckout() {
 		await test.step('Proceed to Checkout', async () => {
-			this.checkoutButton.click()
+			await this.checkoutButton.click()
 		})
 	}
 
 	async verifyCart(zipcode: string): Promise<any> {
 		if (process.env.BYPASS_TAX_CALC === 'true') {
 			await test.step('Proceed to Checkout', async () => {
-				this.checkoutButton.click()
+				await this.checkoutButton.click()
 			})
 			return this.cartItems
 		}
@@ -92,9 +92,9 @@ export class CartPage {
 			}
 		})
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
-			this.checkoutButton.click()
+			await this.checkoutButton.click()
 		})
-		await expect(this.cartItems).not.toBeNull
+		expect(this.cartItems).not.toBeNull()
 
 		return this.cartItems
 	}

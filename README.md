@@ -203,24 +203,31 @@ Current coverage includes:
 - private-store password smoke
 - order export smoke
 - menu upload smoke
+- focused rules smoke: max quantity and pickup minimum order
 
 Local:
 
 ```bash
 npm run admin:smoke
 MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke -- --grep "Menu upload"
+npm run admin:smoke -- --grep "@maxqty"
+npm run admin:smoke -- --grep "@minorder"
+npm run admin:smoke -- --grep "@rules"
 ```
 
 GitHub Actions:
 
 - manual workflow: `.github/workflows/admin-drop-smoke-phase1.yml`
 - required inputs: `target_env`
-- optional inputs: `grep`, `menu_fixture`, `include_menu_upload`
-- default workflow runs exclude `Menu upload`
+- optional inputs: `grep`, `menu_fixture`, `include_menu_upload`, `include_focused_rules`, `focused_rule_group`
+- default workflow runs exclude `Menu upload` and `@rules`
 - to run menu upload in GitHub Actions, set:
 - `grep`: `Menu upload`
 - `include_menu_upload`: `yes`
 - `menu_fixture`: choose one dropdown option
+- to run focused rules in GitHub Actions, set:
+- `include_focused_rules`: `yes`
+- `focused_rule_group`: choose `all`, `maxqty`, or `minorder`
 
 Menu upload fixtures:
 
@@ -237,6 +244,23 @@ Important behavior:
 - before import, it trashes all currently published products
 - cleanup scope is published products only
 - it does not empty the Trash view
+- if the import fails after cleanup, the environment may temporarily have no published products until the next successful import
+
+Focused rules fixtures:
+
+- committed under `tests/admin-drop-tests/fixtures/focused-rules/`
+- current fixture: `focused-rules-wave1.csv`
+- products include `ADMIN_PHASE3_MAXQTY` and `ADMIN_PHASE3_MINORDER`
+- `ADMIN_PHASE3_MAXQTY` uses `Meta: _isa_wc_max_qty_product_max` for the product max quantity rule
+
+Important focused-rules behavior:
+
+- focused-rules smoke is destructive and should only run on Dev or Stage
+- before import, it trashes all currently published products
+- cleanup scope is published products only
+- it does not empty the Trash view
+- minimum-order tests edit `/wp-admin/admin.php?page=svntn-core-settings`
+- minimum-order tests restore original purchase-limit settings in cleanup
 - if the import fails after cleanup, the environment may temporarily have no published products until the next successful import
 
 ## Load Testing
