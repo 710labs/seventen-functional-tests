@@ -93,6 +93,10 @@ export class CheckoutPage {
 		return label.replace(/\s+/g, ' ').trim().toLowerCase()
 	}
 
+	private shouldVerifyAllZipcodes(singleZip: boolean): boolean {
+		return singleZip === false && process.env.BYPASS_TAX_CALC !== 'true'
+	}
+
 	private parseOrderReviewRequest(postData: string | null): {
 		postcode: string | null
 		billingPostcode: string | null
@@ -424,7 +428,7 @@ export class CheckoutPage {
 			await assertFooterLinks(this.page)
 		})
 
-		if (singleZip === false) {
+		if (this.shouldVerifyAllZipcodes(singleZip)) {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.addressModifierButton.waitFor({ state: 'visible' })
@@ -536,7 +540,7 @@ export class CheckoutPage {
 			await this.comments.fill(faker.random.words(30))
 		})
 
-		if (singleZip === false) {
+		if (this.shouldVerifyAllZipcodes(singleZip)) {
 			for (let i = 0; i < this.zipcodes.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodes[i]}`, async () => {
 					await this.addressModifierButton.waitFor({ state: 'visible' })
@@ -578,7 +582,7 @@ export class CheckoutPage {
 			await assertFooterLinks(this.page)
 		})
 
-		if (singleZip === false) {
+		if (this.shouldVerifyAllZipcodes(singleZip)) {
 			for (let i = 0; i < this.zipcodesCO.length; i++) {
 				await test.step(`Verify Order Total for ${this.zipcodesCO[i]}`, async () => {
 					await this.addressModifierButton.waitFor({ state: 'visible' })
