@@ -185,8 +185,8 @@ async function validateMinimumOrderForFulfillment(
 
 		expect(
 			cartSubtotal,
-			`Expected ${fulfillment} cart subtotal to be above configured minimum ${configuredMinimum} after cart quantity updates`,
-		).toBeGreaterThan(configuredMinimum)
+			`Expected ${fulfillment} cart subtotal to meet configured minimum ${configuredMinimum} after cart quantity updates`,
+		).toBeGreaterThanOrEqual(configuredMinimum)
 
 		const aboveThresholdCartText = `${await storefront.getNoticeText()}\n${await storefront.getBodyText()}`
 		const stillBlockedOnCart = storefront.hasMinimumOrderBlockText(aboveThresholdCartText)

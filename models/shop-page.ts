@@ -39,7 +39,7 @@ export class ShopPage {
 	}
 
 	private getCartPath() {
-		if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+		if ((process.env.BASE_URL ?? '').includes('thelist.theflowery.co')) {
 			return '/reservations/'
 		}
 

@@ -1,5 +1,7 @@
 import test, { expect, Locator, Page } from '@playwright/test'
 
+const cartQtySelector = 'input[name^="cart["][name$="[qty]"], input.qty, .qty'
+
 const cartNoticeSelector = [
 	'.woocommerce-error',
 	'.woocommerce-message',
@@ -114,7 +116,7 @@ export class FocusedRulesStorefrontPage {
 		return test.step(`Read cart quantity for ${productName}`, async () => {
 			const row = this.cartRowByProductName(productName)
 			await expect(row, `Expected cart row for ${productName}`).toBeVisible()
-			const quantityField = row.locator('input.qty, .qty').first()
+			const quantityField = row.locator(cartQtySelector).first()
 			await expect(quantityField, `Expected quantity field for ${productName}`).toBeVisible()
 
 			const tagName = await quantityField.evaluate(element => element.tagName.toLowerCase())
@@ -240,7 +242,7 @@ export class FocusedRulesStorefrontPage {
 		await test.step(`Set cart quantity for ${productName} to ${quantity}`, async () => {
 			const row = this.cartRowByProductName(productName)
 			await expect(row, `Expected cart row for ${productName}`).toBeVisible()
-			const quantityInput = row.locator('input[name^="cart["][name$="[qty]"], input.qty').first()
+			const quantityInput = row.locator(cartQtySelector).first()
 			await expect(quantityInput, `Expected editable quantity input for ${productName}`).toBeVisible()
 
 			await quantityInput.fill(`${quantity}`)
@@ -445,7 +447,7 @@ export class FocusedRulesStorefrontPage {
 
 	private async readCartQuantityValue(productName: string) {
 		const row = this.cartRowByProductName(productName)
-		const quantityField = row.locator('input[name^="cart["][name$="[qty]"], input.qty, .qty').first()
+		const quantityField = row.locator(cartQtySelector).first()
 		const isVisible = await quantityField.isVisible().catch(() => false)
 
 		if (!isVisible) {
