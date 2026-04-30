@@ -2,6 +2,18 @@ import test, { Browser, expect, Locator, Page, TestInfo } from '@playwright/test
 require('dotenv').config({ path: require('find-config')('.env') })
 import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
+type GoToCartOptions = {
+	requireItems?: boolean
+}
+
+type CartLoadState = {
+	hasCartItem: boolean
+	hasCheckoutButton: boolean
+	hasCartTitle: boolean
+	hasEmptyCartText: boolean
+	url: string
+}
+
 export class ShopPage {
 	readonly baseUrl: string
 	readonly page: Page
@@ -24,6 +36,82 @@ export class ShopPage {
 
 	async randomizeCartItems() {
 		return Math.random() * (2 - -2 + -2)
+	}
+
+	private getCartPath() {
+		if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
+			return '/reservations/'
+		}
+
+		return '/cart/'
+	}
+
+	private async getCartLoadState(): Promise<CartLoadState> {
+		return {
+			hasCartItem: await this.page
+				.locator('.cart_item')
+				.first()
+				.isVisible()
+				.catch(() => false),
+			hasCheckoutButton: await this.page
+				.locator('.checkout-button')
+				.first()
+				.isVisible()
+				.catch(() => false),
+			hasCartTitle: await this.page
+				.locator('h1:has-text("Cart"), h1.injected-title:has-text("Cart")')
+				.first()
+				.isVisible()
+				.catch(() => false),
+			hasEmptyCartText: await this.page
+				.getByText(/cart is currently empty/i)
+				.first()
+				.isVisible()
+				.catch(() => false),
+			url: this.page.url(),
+		}
+	}
+
+	private async waitForCartLoaded(options: GoToCartOptions = {}) {
+		const deadline = Date.now() + 30_000
+		let lastState: CartLoadState | null = null
+
+		while (Date.now() < deadline) {
+			lastState = await this.getCartLoadState()
+
+			if (options.requireItems) {
+				if (lastState.hasCartItem || lastState.hasCheckoutButton) {
+					return
+				}
+			} else if (
+				lastState.hasCartItem ||
+				lastState.hasCheckoutButton ||
+				lastState.hasCartTitle ||
+				lastState.hasEmptyCartText
+			) {
+				return
+			}
+
+			await this.page.waitForTimeout(500)
+		}
+
+		const bodyText = await this.page
+			.locator('body')
+			.innerText({ timeout: 1000 })
+			.catch(() => '')
+		const bodyPreview = bodyText.replace(/\s+/g, ' ').trim().slice(0, 500)
+
+		throw new Error(
+			[
+				`Cart page did not load within 30000ms after navigating to ${this.getCartPath()}.`,
+				`Current URL: ${lastState?.url || this.page.url()}`,
+				`Cart item visible: ${lastState?.hasCartItem ?? false}`,
+				`Checkout button visible: ${lastState?.hasCheckoutButton ?? false}`,
+				`Cart title visible: ${lastState?.hasCartTitle ?? false}`,
+				`Empty cart text visible: ${lastState?.hasEmptyCartText ?? false}`,
+				`Body preview: ${bodyPreview}`,
+			].join('\n'),
+		)
 	}
 
 	async addProductsToCart(
@@ -74,25 +162,7 @@ export class ShopPage {
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
-			if (this.workerInfo.project.name === 'Mobile Chrome') {
-				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
-			} else {
-				if (
-					process.env.BASE_URL === 'https://thelist.theflowery.co/' ||
-					process.env.BASE_URL === 'https://thelist-co.710labs.com/' ||
-					process.env.BASE_URL === 'https://thelist-mi.710labs.com/'
-				) {
-					await this.page
-						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
-						.first()
-						.click({ force: true })
-				} else {
-					await this.page
-						.locator(`[href="${process.env.BASE_URL}cart/"]`)
-						.first()
-						.click({ force: true })
-				}
-			}
+			await this.goToCart({ requireItems: true })
 		})
 	}
 	async addSameProductToCart(itemCount: number) {
@@ -125,48 +195,11 @@ export class ShopPage {
 		}
 		await this.page.waitForTimeout(5000)
 	}
-	async goToCart() {
-		if (this.workerInfo.project.name === 'Mobile Chrome') {
-			await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
-		} else {
-			if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
-				await this.page
-					.locator(`[href="${process.env.BASE_URL}reservations/"]`)
-					.first()
-					.click({ force: true })
-			} else if (process.env.BASE_URL === 'https://thelist-mi.710labs.com/') {
-				// Retry loop to ensure cart page loads
-				let retryCount = 0
-				const maxRetries = 5
-				while (retryCount < maxRetries) {
-					console.log(`Attempting to navigate to cart, attempt ${retryCount + 1}/${maxRetries}`)
-					await this.page
-						.locator(`a.cart-contents[title="View your shopping cart"]`)
-						.first()
-						.click({ force: true })
-					// Wait a moment for the page to respond
-					await this.page.waitForTimeout(3000)
-					// Check if cart title is visible
-					const isCartTitleVisible = await this.cartTitle.isVisible()
-					if (isCartTitleVisible) {
-						console.log(`Cart page loaded successfully after ${retryCount + 1} attempt(s)`)
-						break
-					}
-					retryCount++
-					console.log(`Cart title not visible, retry ${retryCount}/${maxRetries}`)
-					if (retryCount === maxRetries) {
-						throw new Error(`Cart page did not load after ${maxRetries} attempts`)
-					}
-				}
-				// Final confirmation that cart title is present
-				await this.cartTitle.waitFor({ timeout: 30000 })
-			} else {
-				await this.page
-					.locator(`[href="${process.env.BASE_URL}cart/"]`)
-					.first()
-					.click({ force: true })
-			}
-		}
+	async goToCart(options: GoToCartOptions = {}) {
+		await test.step('Navigate to Cart', async () => {
+			await this.page.goto(this.getCartPath())
+			await this.waitForCartLoaded(options)
+		})
 	}
 
 	async addProductsToCartPickup(
@@ -218,21 +251,7 @@ export class ShopPage {
 
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
-			if (this.workerInfo.project.name === 'Mobile Chrome') {
-				await this.page.locator(`.footer-cart-contents`).first().click({ force: true })
-			} else {
-				if (process.env.BASE_URL === 'https://thelist.theflowery.co/') {
-					await this.page
-						.locator(`[href="${process.env.BASE_URL}reservations/"]`)
-						.first()
-						.click({ force: true })
-				} else {
-					await this.page
-						.locator(`[href="${process.env.BASE_URL}cart/"]`)
-						.first()
-						.click({ force: true })
-				}
-			}
+			await this.goToCart({ requireItems: true })
 		})
 	}
 }

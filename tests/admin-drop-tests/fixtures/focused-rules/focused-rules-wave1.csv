@@ -1,3 +1,3 @@
 Type,SKU,Name,Published,Visibility in catalog,Regular price,In stock?,Stock,Categories,Meta: _isa_wc_max_qty_product_max
 simple,ADMIN_PHASE3_MAXQTY,ZZ Admin Drop Phase 3 Max Qty,1,visible,60.00,1,100,Close Friends,2
-simple,ADMIN_PHASE3_MINORDER,ZZ Admin Drop Phase 3 Min Order,1,visible,75.00,1,100,Close Friends,
+simple,ADMIN_PHASE3_MINORDER,ZZ Admin Drop Phase 3 Min Order,1,visible,80.00,1,100,Close Friends,

@@ -29,7 +29,7 @@ export const focusedRulesFixture: FocusedRulesFixture = {
 	minimumOrderProduct: {
 		sku: 'ADMIN_PHASE3_MINORDER',
 		name: 'ZZ Admin Drop Phase 3 Min Order',
-		price: 75,
+		price: 80,
 	},
 	pickupMinimum: 150,
 	deliveryMinimum: 150,
