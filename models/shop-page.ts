@@ -14,6 +14,13 @@ type CartLoadState = {
 	url: string
 }
 
+type FulfillmentReadyState = {
+	hasAddToCartButton: boolean
+	hasFulfillmentNav: boolean
+	hasOpenFulfillmentModal: boolean
+	url: string
+}
+
 export class ShopPage {
 	readonly baseUrl: string
 	readonly page: Page
@@ -72,6 +79,146 @@ export class ShopPage {
 		}
 	}
 
+	private getFulfillmentPath(fulfillment: string) {
+		return fulfillment.toLowerCase() === 'pickup' ? '/#pickup' : '/#pickup-deliver'
+	}
+
+	private async getBodyPreview() {
+		const bodyText = await this.page
+			.locator('body')
+			.innerText({ timeout: 1000 })
+			.catch(() => '')
+
+		return bodyText.replace(/\s+/g, ' ').trim().slice(0, 500)
+	}
+
+	private async findFulfillmentOption(fulfillment: string, timeout = 2000) {
+		const candidates = [
+			this.page.locator(`label:has-text("${fulfillment}")`).first(),
+			this.page.locator('#fulfillmentElement').getByText(fulfillment, { exact: true }).first(),
+		]
+
+		for (const candidate of candidates) {
+			if (await candidate.isVisible({ timeout }).catch(() => false)) {
+				return candidate
+			}
+		}
+
+		return null
+	}
+
+	private async getFulfillmentReadyState(): Promise<FulfillmentReadyState> {
+		return {
+			hasAddToCartButton: await this.page
+				.locator('.add_to_cart_button')
+				.first()
+				.isVisible()
+				.catch(() => false),
+			hasFulfillmentNav: await this.page
+				.locator('button.wcse-nav')
+				.first()
+				.isVisible()
+				.catch(() => false),
+			hasOpenFulfillmentModal: await this.page
+				.locator('.wcseZone[data-revealed="fulfillment"] #fulfillmentElement')
+				.first()
+				.isVisible()
+				.catch(() => false),
+			url: this.page.url(),
+		}
+	}
+
+	private async waitForFulfillmentReady(fulfillment: string) {
+		const deadline = Date.now() + 15_000
+		let lastState: FulfillmentReadyState | null = null
+
+		while (Date.now() < deadline) {
+			lastState = await this.getFulfillmentReadyState()
+
+			if (
+				!lastState.hasOpenFulfillmentModal &&
+				(lastState.hasFulfillmentNav || lastState.hasAddToCartButton)
+			) {
+				return
+			}
+
+			await this.page.waitForTimeout(500)
+		}
+
+		throw new Error(
+			[
+				`Fulfillment did not initialize for "${fulfillment}" within 15000ms.`,
+				`Current URL: ${lastState?.url || this.page.url()}`,
+				`Fulfillment nav visible: ${lastState?.hasFulfillmentNav ?? false}`,
+				`Fulfillment modal open: ${lastState?.hasOpenFulfillmentModal ?? false}`,
+				`Add-to-cart button visible: ${lastState?.hasAddToCartButton ?? false}`,
+				`Body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async ensureFulfillmentSelected(fulfillment: string) {
+		if (process.env.NEXT_VERSION !== 'true') {
+			return
+		}
+
+		const fulfillmentNav = this.page.locator('button.wcse-nav').first()
+		const fulfillmentModal = this.page
+			.locator('.wcseZone[data-revealed="fulfillment"] #fulfillmentElement')
+			.first()
+
+		if (
+			(await fulfillmentNav.isVisible({ timeout: 2000 }).catch(() => false)) &&
+			!(await fulfillmentModal.isVisible().catch(() => false))
+		) {
+			return
+		}
+
+		let fulfillmentOption = await this.findFulfillmentOption(fulfillment)
+
+		if (!fulfillmentOption) {
+			await this.page.goto(this.getFulfillmentPath(fulfillment))
+			await this.page.waitForTimeout(1000)
+
+			if (
+				(await fulfillmentNav.isVisible({ timeout: 2000 }).catch(() => false)) &&
+				!(await fulfillmentModal.isVisible().catch(() => false))
+			) {
+				return
+			}
+
+			fulfillmentOption = await this.findFulfillmentOption(fulfillment, 10_000)
+		}
+
+		if (!fulfillmentOption) {
+			throw new Error(
+				[
+					`Could not find a visible "${fulfillment}" fulfillment option.`,
+					`Current URL: ${this.page.url()}`,
+					`Fulfillment nav visible: ${await fulfillmentNav.isVisible().catch(() => false)}`,
+					`Fulfillment modal open: ${await fulfillmentModal.isVisible().catch(() => false)}`,
+					`Add-to-cart button visible: ${await this.page.locator('.add_to_cart_button').first().isVisible().catch(() => false)}`,
+					`Body preview: ${await this.getBodyPreview()}`,
+				].join('\n'),
+			)
+		}
+
+		await fulfillmentOption.click()
+
+		const submitButton = this.page
+			.locator('#fulfillerSubmit, button:has-text("Continue"), button:has-text("Submit")')
+			.first()
+		const hasSubmitButton = await submitButton.isVisible({ timeout: 5000 }).catch(() => false)
+
+		if (hasSubmitButton) {
+			await submitButton.click()
+			await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+			await this.page.waitForTimeout(500)
+		}
+
+		await this.waitForFulfillmentReady(fulfillment)
+	}
+
 	private async waitForCartLoaded(options: GoToCartOptions = {}) {
 		const deadline = Date.now() + 30_000
 		let lastState: CartLoadState | null = null
@@ -126,13 +273,7 @@ export class ShopPage {
 			await this.page.waitForTimeout(3000)
 		})
 		await test.step('Select Fulfillment Method', async () => {
-			if (process.env.NEXT_VERSION === 'true') {
-				await this.page.waitForSelector(`label:has-text("${fulfillment}")`)
-				await this.page.locator(`label:has-text("${fulfillment}") >> nth=0`).click()
-				await this.page.locator('#fulfillerSubmit').click()
-				await this.page.waitForTimeout(2000)
-				await this.page.reload()
-			}
+			await this.ensureFulfillmentSelected(fulfillment)
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
@@ -214,13 +355,7 @@ export class ShopPage {
 			await this.page.waitForTimeout(3000)
 		})
 		await test.step('Select Fulfillment Method', async () => {
-			if (process.env.NEXT_VERSION === 'true') {
-				await this.page.waitForSelector(`label:has-text("${fulfillment}")`)
-				await this.page.locator(`label:has-text("${fulfillment}") >> nth=0`).click()
-				await this.page.locator('#fulfillerSubmit').click()
-				await this.page.waitForTimeout(2000)
-				await this.page.reload()
-			}
+			await this.ensureFulfillmentSelected(fulfillment)
 		})
 		await test.step('Add Products to Cart', async () => {
 			itemCount = itemCount + (await this.randomizeCartItems())
