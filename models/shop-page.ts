@@ -79,8 +79,17 @@ export class ShopPage {
 		}
 	}
 
+	private isFlEnvironment() {
+		const baseUrl = (process.env.BASE_URL ?? '').toLowerCase()
+		const envId = (process.env.ENV_ID ?? '').toLowerCase()
+		return baseUrl.includes('thelist.theflowery.co') || /(^|-)fl($|-)/.test(envId)
+	}
+
 	private getFulfillmentPath(fulfillment: string) {
-		return fulfillment.toLowerCase() === 'pickup' ? '/#pickup' : '/#pickup-deliver'
+		if (fulfillment.toLowerCase() === 'pickup') {
+			return '/#pickup'
+		}
+		return this.isFlEnvironment() ? '/#deliver' : '/#pickup-deliver'
 	}
 
 	private async getBodyPreview() {
