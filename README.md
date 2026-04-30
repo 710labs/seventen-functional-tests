@@ -203,7 +203,7 @@ Current coverage includes:
 - private-store password smoke
 - order export smoke
 - menu upload smoke
-- focused rules smoke: max quantity and pickup minimum order
+- focused rules smoke: max quantity and pickup/delivery minimum order
 
 Local:
 

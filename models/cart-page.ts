@@ -33,14 +33,44 @@ export class CartPage {
 
 	async goToCheckout() {
 		await test.step('Proceed to Checkout', async () => {
-			await this.checkoutButton.click()
+			const checkoutButton = await this.waitForCheckoutButton()
+			await checkoutButton.click()
 		})
+	}
+
+	private async waitForCheckoutButton(): Promise<Locator> {
+		const checkoutButton = this.checkoutButton.first()
+		const isVisible = await checkoutButton
+			.waitFor({ state: 'visible', timeout: 10_000 })
+			.then(() => true)
+			.catch(() => false)
+
+		if (isVisible) {
+			return checkoutButton
+		}
+
+		const cartItemCount = await this.page.locator('.cart_item').count().catch(() => 0)
+		const bodyText = await this.page
+			.locator('body')
+			.innerText({ timeout: 1000 })
+			.catch(() => '')
+		const bodyPreview = bodyText.replace(/\s+/g, ' ').trim().slice(0, 500)
+
+		throw new Error(
+			[
+				'Checkout button was not visible before proceeding to checkout.',
+				`Current URL: ${this.page.url()}`,
+				`Cart item count: ${cartItemCount}`,
+				`Body preview: ${bodyPreview}`,
+			].join('\n'),
+		)
 	}
 
 	async verifyCart(zipcode: string): Promise<any> {
 		if (process.env.BYPASS_TAX_CALC === 'true') {
 			await test.step('Proceed to Checkout', async () => {
-				await this.checkoutButton.click()
+				const checkoutButton = await this.waitForCheckoutButton()
+				await checkoutButton.click()
 			})
 			return this.cartItems
 		}
@@ -92,7 +122,8 @@ export class CartPage {
 			}
 		})
 		await test.step('Confirm Cart + Proceed to Checkout', async () => {
-			await this.checkoutButton.click()
+			const checkoutButton = await this.waitForCheckoutButton()
+			await checkoutButton.click()
 		})
 		expect(this.cartItems).not.toBeNull()
 
