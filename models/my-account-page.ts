@@ -33,6 +33,14 @@ export class MyAccountPage {
 		this.editShippingAddressLink = page.locator('text=Delivery address Edit >> a')
 	}
 
+	private async selectBillingState(state: string) {
+		const stateSelect = this.page.getByLabel('State *')
+
+		if (await stateSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
+			await stateSelect.selectOption(state)
+		}
+	}
+
 	async logout() {
 		await test.step('Verify Layout', async () => {
 			await assertFooterLinks(this.page)
@@ -57,10 +65,7 @@ export class MyAccountPage {
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
 			await this.zipCode.fill(zipCode)
-
-			if (state == 'NJ') {
-				await this.page.getByLabel('State *').selectOption(state)
-			}
+			await this.selectBillingState(state)
 			await this.page.click('button:has-text("Save address")')
 		})
 	}
@@ -89,6 +94,7 @@ export class MyAccountPage {
 			await this.addressLineOne.fill(address)
 			await this.city.fill(city)
 			await this.zipCode.fill(zipCode)
+			await this.selectBillingState(state)
 			await this.page.click('button:has-text("Save address")')
 		})
 	}

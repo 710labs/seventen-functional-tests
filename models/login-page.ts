@@ -1,5 +1,9 @@
 import test, { expect, Locator, Page } from '@playwright/test'
 
+type LoginOptions = {
+	requireFulfillmentRoute?: boolean
+}
+
 export class LoginPage {
 	readonly page: Page
 	readonly userNameField: Locator
@@ -18,7 +22,7 @@ export class LoginPage {
 		this.loginButton = page.locator('[name="login"]')
 	}
 
-	async login(username: string, password: string) {
+	async login(username: string, password: string, options: LoginOptions = {}) {
 		await test.step('Enter Username', async () => {
 			await this.userNameField.click()
 			await this.userNameField.fill(username)
@@ -32,7 +36,16 @@ export class LoginPage {
 
 		await test.step('Click Login Button', async () => {
 			await this.loginButton.click()
-			await expect(this.page.url()).toMatch(/\/(#pickup-deliver|#pickup|)$/);
+			const expectedRoute = options.requireFulfillmentRoute
+				? /^\/#(?:pickup-deliver|pickup|deliver)$/
+				: /^\/(?:#(?:pickup-deliver|pickup|deliver))?$/
+
+			await expect
+				.poll(() => {
+					const url = new URL(this.page.url())
+					return `${url.pathname}${url.hash}`
+				})
+				.toMatch(expectedRoute)
 		})
 	}
 }
