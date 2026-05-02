@@ -1034,7 +1034,7 @@ export class HomePageActions {
 			'li.product.type-product.product-type-simple.status-publish',
 		)
 
-		let i = 3
+		let i = 5
 		let firstProductAdded = false // Track if the first product has been added
 
 		while (true) {
