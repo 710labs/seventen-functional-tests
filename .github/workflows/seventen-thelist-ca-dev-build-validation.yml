@@ -1,6 +1,9 @@
 name: List - CA - Dev - Build Validation
 on:
   workflow_dispatch:
+concurrency:
+  group: thelist-dev-domain-state
+  cancel-in-progress: false
 jobs:
   run-tests:
     timeout-minutes: 60

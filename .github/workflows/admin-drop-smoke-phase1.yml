@@ -50,6 +50,9 @@ on:
           - smoke-alt
           - ca-menu-4-7-25
           - co-menu-4-7-25
+concurrency:
+  group: thelist-${{ github.event.inputs.target_env || 'dev' }}-domain-state
+  cancel-in-progress: false
 jobs:
   admin-drop-smoke:
     timeout-minutes: 60

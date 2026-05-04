@@ -1,5 +1,8 @@
 name: List - CA - Dev - Self-Cancel POC
 on: workflow_dispatch
+concurrency:
+  group: thelist-dev-domain-state
+  cancel-in-progress: false
 
 jobs:
   smoke:

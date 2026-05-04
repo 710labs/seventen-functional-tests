@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
-import zipcodes from '../../utils/zipcodes-fl.json'
 import { AdminLogin } from '../../models/admin/admin-login-page'
 import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
@@ -30,9 +29,8 @@ test.describe('Medical Customer Checkout Florida', () => {
 				path: '/',
 			},
 		])
-		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
-		const zipCode = zipcodes[index]
-		const address = '3275 NW 24th Street Rd'
+		const zipCode = '32003'
+		const address = '1845 Town Center Blvd, Fleming Island, FL 32003'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
 		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'

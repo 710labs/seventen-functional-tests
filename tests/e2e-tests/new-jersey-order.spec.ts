@@ -17,7 +17,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 		{ tag: ['@medical'] },
 		async ({ page, browserName, qaClient }, workerInfo) => {
 			const address = '13 Huntley Rd'
-			const city = 'Summit City'
+			const city = 'Summit'
 			const state = 'NJ'
 			const zipcode = '07901'
 			const ageGatePage = new AgeGatePage(page)
@@ -48,8 +48,8 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 		`Basic Order - New Customer - Medical`,
 		{ tag: ['@medical'] },
 		async ({ page, browserName, qaClient }, workerInfo) => {
-			const address = '13 Huntley Rd Summit City'
-			const city = 'Summit City'
+			const address = '13 Huntley Rd, Summit, NJ 07901'
+			const city = 'Summit'
 			const state = 'NJ'
 			const zipcode = '07901'
 			const email = `test+${uuidv4()}@710labs-test.com`
@@ -93,7 +93,7 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 		{ tag: ['@recreational'] },
 		async ({ page, browserName, qaClient }, workerInfo) => {
 			const address = '13 Huntley Rd'
-			const city = 'Summit City'
+			const city = 'Summit'
 			const state = 'NJ'
 			const zipcode = '07901'
 			const ageGatePage = new AgeGatePage(page)
@@ -122,8 +122,8 @@ test.describe('NJ Order Tests', { tag: ['@NJ'] }, () => {
 		`Basic Order - New Customer - Recreational`,
 		{ tag: ['@recreational'] },
 		async ({ page: page, browserName, qaClient }, workerInfo) => {
-			const address = '13 Huntley Rd Summit City'
-			const city = 'Summit City'
+			const address = '13 Huntley Rd, Summit, NJ 07901'
+			const city = 'Summit'
 			const state = 'NJ'
 			const zipcode = '07901'
 			const ageGatePage = new AgeGatePage(page)

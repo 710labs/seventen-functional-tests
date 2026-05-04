@@ -32,7 +32,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 			},
 		])
 
-		const address = '123 Eight Mile Rd MI'
+		const address = '123 Eight Mile Rd, Detroit, MI 48203'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
 		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'

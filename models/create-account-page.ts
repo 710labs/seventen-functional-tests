@@ -4,6 +4,19 @@ import { fictionalAreacodes } from '../utils/data-generator'
 import { QAClient } from '../support/qa/client'
 import { getUsageLabel, isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
+type RegistrationFieldSnapshot = {
+	exists: boolean
+	value: string
+}
+
+type RegistrationSubmitSnapshot = {
+	url: string
+	address: RegistrationFieldSnapshot
+	billingState: RegistrationFieldSnapshot
+	billingZip: RegistrationFieldSnapshot
+	bodyPreview: string
+}
+
 export class CreateAccountPage {
 	readonly page: Page
 	readonly userNameField: Locator
@@ -112,6 +125,239 @@ export class CreateAccountPage {
 		})
 	}
 
+	private normalizeZip(zipcode?: string) {
+		return (zipcode || '').replace(/\D/g, '').slice(0, 5)
+	}
+
+	private inferZipFromAddress(address: string) {
+		return this.normalizeZip(address.match(/\b\d{5}(?:-\d{4})?\b/)?.[0])
+	}
+
+	private inferStateFromAddress(address: string) {
+		return (address.match(/,\s*([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/)?.[1] || '').toUpperCase()
+	}
+
+	private async getBodyPreview() {
+		const bodyText = await this.page
+			.locator('body')
+			.innerText({ timeout: 1000 })
+			.catch(() => '')
+
+		return bodyText.replace(/\s+/g, ' ').trim().slice(0, 500)
+	}
+
+	private async inputValue(selector: string) {
+		const locator = this.page.locator(selector).first()
+
+		if ((await locator.count()) === 0) {
+			return ''
+		}
+
+		return locator.inputValue({ timeout: 1000 }).catch(() => '')
+	}
+
+	private async inputSnapshot(selector: string): Promise<RegistrationFieldSnapshot> {
+		const locator = this.page.locator(selector).first()
+		const exists = (await locator.count()) > 0
+
+		return {
+			exists,
+			value: exists ? await locator.inputValue({ timeout: 1000 }).catch(() => '') : '',
+		}
+	}
+
+	private async locatorInputSnapshot(locator: Locator): Promise<RegistrationFieldSnapshot> {
+		const exists = (await locator.count()) > 0
+
+		return {
+			exists,
+			value: exists ? await locator.first().inputValue({ timeout: 1000 }).catch(() => '') : '',
+		}
+	}
+
+	private async registrationSubmitSnapshot(): Promise<RegistrationSubmitSnapshot> {
+		return {
+			url: this.page.url(),
+			address: await this.locatorInputSnapshot(this.address),
+			billingState: await this.inputSnapshot(
+				'select[name="billing_state"], input[name="billing_state"], #billing_state',
+			),
+			billingZip: await this.inputSnapshot('input[name="billing_postcode"], #billing_postcode'),
+			bodyPreview: await this.getBodyPreview(),
+		}
+	}
+
+	private formatFieldSnapshot(label: string, snapshot: RegistrationFieldSnapshot) {
+		return `${label}: exists=${snapshot.exists ? 'yes' : 'no'}, value="${snapshot.value}"`
+	}
+
+	private formatSubmitSnapshot(snapshot: RegistrationSubmitSnapshot) {
+		return [
+			`Submitted URL: ${snapshot.url}`,
+			this.formatFieldSnapshot('Submitted address', snapshot.address),
+			this.formatFieldSnapshot('Submitted billing_state', snapshot.billingState),
+			this.formatFieldSnapshot('Submitted billing_postcode', snapshot.billingZip),
+			`Submitted body preview: ${snapshot.bodyPreview}`,
+		]
+	}
+
+	private async waitForOptionalInputValue(
+		selector: string,
+		fieldName: string,
+		matches: (value: string) => boolean,
+	) {
+		const locator = this.page.locator(selector).first()
+
+		if ((await locator.count()) === 0) {
+			return ''
+		}
+
+		const deadline = Date.now() + 5000
+		let lastValue = ''
+
+		while (Date.now() < deadline) {
+			lastValue = (await locator.inputValue().catch(() => '')).trim()
+
+			if (matches(lastValue)) {
+				return lastValue
+			}
+
+			await this.page.waitForTimeout(250)
+		}
+
+		throw new Error(
+			[
+				`Registration address ${fieldName} did not resolve after selecting autocomplete.`,
+				`Last ${fieldName}: "${lastValue}"`,
+				`Current URL: ${this.page.url()}`,
+				`Address value: "${await this.address.inputValue().catch(() => '')}"`,
+				`Body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async assertResolvedAddress(expectedState: string, expectedZip?: string) {
+		const state = expectedState.toUpperCase()
+		const zip = this.normalizeZip(expectedZip)
+
+		await expect(this.address, 'Registration address was not populated.').not.toHaveValue('', {
+			timeout: 5000,
+		})
+
+		await this.waitForOptionalInputValue(
+			'select[name="billing_state"], input[name="billing_state"], #billing_state',
+			'billing_state',
+			value => value.trim().toUpperCase() === state,
+		)
+
+		if (zip) {
+			await this.waitForOptionalInputValue(
+				'input[name="billing_postcode"], #billing_postcode',
+				'billing_postcode',
+				value => this.normalizeZip(value) === zip,
+			)
+		}
+	}
+
+	private async selectResolvedBillingAddress(
+		address: string,
+		expectedState: string,
+		expectedZip?: string,
+	) {
+		await test.step('Enter Billing Address', async () => {
+			await this.address.click()
+			await this.address.fill('')
+			await this.address.pressSequentially(address, { delay: 25 })
+
+			const suggestion = this.page.locator('.pac-item').first()
+			await suggestion.waitFor({ state: 'visible', timeout: 10000 })
+			await suggestion.click()
+
+			await this.assertResolvedAddress(expectedState, expectedZip)
+		})
+	}
+
+	private isShopRouteBeforeEligibility() {
+		const url = new URL(this.page.url())
+
+		return (
+			url.pathname === '/' &&
+			['', '#', '#pickup', '#pickup-deliver', '#deliver'].includes(url.hash)
+		)
+	}
+
+	private async throwSkippedEligibilityError(
+		expectedState: string,
+		expectedZip: string | undefined,
+		submitSnapshot: RegistrationSubmitSnapshot,
+	): Promise<never> {
+		throw new Error(
+			[
+				'Registration skipped the eligibility/license step and redirected to the shop.',
+				`Current URL: ${this.page.url()}`,
+				`Expected state: ${expectedState}`,
+				`Expected zip: ${expectedZip || 'not provided'}`,
+				...this.formatSubmitSnapshot(submitSnapshot),
+				`Current address: "${await this.inputValue('input[name="billing_address_1"]')}"`,
+				`Current billing_state: "${await this.inputValue('select[name="billing_state"], input[name="billing_state"], #billing_state')}"`,
+				`Current billing_postcode: "${await this.inputValue('input[name="billing_postcode"], #billing_postcode')}"`,
+				`Current body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async waitForEligibilityStep(
+		expectedState: string,
+		expectedZip: string | undefined,
+		submitSnapshot: RegistrationSubmitSnapshot,
+	) {
+		const eligibilityContext = this.page.locator('#eligibilityContext')
+		const licenseInput = this.page.locator('input[name="svntn_core_personal_doc"]')
+		const deadline = Date.now() + 20000
+
+		while (Date.now() < deadline) {
+			if (
+				(await eligibilityContext.count()) > 0 ||
+				(await licenseInput.count()) > 0
+			) {
+				return
+			}
+
+			if (this.isShopRouteBeforeEligibility()) {
+				await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
+			}
+
+			await this.page.waitForTimeout(250)
+		}
+
+		if (this.isShopRouteBeforeEligibility()) {
+			await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
+		}
+
+		throw new Error(
+			[
+				'Eligibility/license step did not load after submitting the registration form.',
+				`Current URL: ${this.page.url()}`,
+				`Expected state: ${expectedState}`,
+				`Expected zip: ${expectedZip || 'not provided'}`,
+				...this.formatSubmitSnapshot(submitSnapshot),
+				`Current address: "${await this.inputValue('input[name="billing_address_1"]')}"`,
+				`Current billing_state: "${await this.inputValue('select[name="billing_state"], input[name="billing_state"], #billing_state')}"`,
+				`Current billing_postcode: "${await this.inputValue('input[name="billing_postcode"], #billing_postcode')}"`,
+				`Current body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async submitNewCustomerForm(expectedState: string, expectedZip?: string) {
+		await test.step('Submit New Customer Form', async () => {
+			const submitSnapshot = await this.registrationSubmitSnapshot()
+
+			await this.page.click('button:has-text("Next")')
+			await this.waitForEligibilityStep(expectedState, expectedZip, submitSnapshot)
+		})
+	}
+
 	async createApi(usage: TestUsageType, userType: string): Promise<any> {
 		await test.step('Create Client via API', async () => {
 			this.apiUser = await this.qaClient.createUser({
@@ -132,7 +378,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		usage: TestUsageType,
 		logout: boolean = false,
-		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90210',
+		address: string = '440 N Rodeo Dr, Beverly Hills, CA 90210',
 		state: string = 'CA',
 		medCardNumber: string = '1234567890',
 	) {
@@ -177,13 +423,7 @@ export class CreateAccountPage {
 				await this.zipCode.fill(zipcode)
 			})
 		} else {
-			await test.step('Enter Billing Address', async () => {
-				await this.address.click()
-				await this.address.fill(address)
-				await this.page.waitForTimeout(1000)
-				await this.page.keyboard.press('ArrowDown')
-				await this.page.keyboard.press('Enter')
-			})
+			await this.selectResolvedBillingAddress(address, state, zipcode)
 		}
 
 		if (process.env.NEXT_VERSION === 'true' && state === 'FL') {
@@ -209,11 +449,7 @@ export class CreateAccountPage {
 			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
-		await test.step('Submit New Customer Form', async () => {
-			await this.page.waitForTimeout(2000)
-			await this.page.click('button:has-text("Next")')
-			await this.page.waitForTimeout(1000)
-		})
+		await this.submitNewCustomerForm(state, zipcode)
 
 		await test.step('Upload Drivers License', async () => {
 			const dlUploadButton = await this.page.waitForSelector(
@@ -333,23 +569,16 @@ export class CreateAccountPage {
 			await this.birthYear.selectOption(`${birthYear}`)
 		})
 
-		await test.step('Enter Billing Address', async () => {
-			await this.address.click()
-			await this.address.fill(address)
-			await this.page.waitForTimeout(1000)
-			await this.page.keyboard.press('ArrowDown')
-			await this.page.keyboard.press('Enter')
-		})
+		const addressState = this.inferStateFromAddress(address) || 'MI'
+		const addressZip = this.inferZipFromAddress(address)
+		await this.selectResolvedBillingAddress(address, addressState, addressZip)
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
 			await this.phoneNumber.fill(`${phone}`)
 		})
 
-		await test.step('Click Next Link', async () => {
-			await this.page.getByRole('button', { name: 'Next' }).click()
-			await this.page.waitForSelector('#eligibilityContext')
-		})
+		await this.submitNewCustomerForm(addressState, addressZip)
 
 		if (isMedicalUsage(type)) {
 			await test.step('Select Medical Usage Type', async () => {
@@ -473,23 +702,14 @@ export class CreateAccountPage {
 			await this.birthYear.selectOption(`${birthYear}`)
 		})
 
-		await test.step('Enter Billing Address', async () => {
-			await this.address.click()
-			await this.address.fill(address)
-			await this.page.waitForTimeout(1000)
-			await this.page.keyboard.press('ArrowDown')
-			await this.page.keyboard.press('Enter')
-		})
+		await this.selectResolvedBillingAddress(address, 'CA', this.inferZipFromAddress(address))
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
 			await this.phoneNumber.fill(`${phone}`)
 		})
 
-		await test.step('Click Next Link', async () => {
-			await this.page.getByRole('button', { name: 'Next' }).click()
-			await this.page.waitForSelector('#eligibilityContext')
-		})
+		await this.submitNewCustomerForm('CA', this.inferZipFromAddress(address))
 
 		if (isMedicalUsage(type)) {
 			await test.step('Select Medical Usage Type', async () => {
@@ -593,7 +813,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: TestUsageType,
 		logout: boolean = false,
-		address: string = '933 Alpine Ave, Boulder, CO, 80304',
+		address: string = '933 Alpine Ave, Boulder, CO 80304',
 		state: string = 'CO',
 	) {
 		await test.step('Verify Layout', async () => {})
@@ -635,13 +855,7 @@ export class CreateAccountPage {
 				await this.zipCode.fill(zipcode)
 			})
 		} else {
-			await test.step('Enter Billing Address', async () => {
-				await this.address.click()
-				await this.address.fill(address)
-				await this.page.waitForTimeout(1000)
-				await this.page.keyboard.press('ArrowDown')
-				await this.page.keyboard.press('Enter')
-			})
+			await this.selectResolvedBillingAddress(address, state, zipcode)
 		}
 
 		await test.step('Enter Phone Number', async () => {
@@ -649,11 +863,7 @@ export class CreateAccountPage {
 			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
-		await test.step('Submit New Customer Form', async () => {
-			await this.page.waitForTimeout(2000)
-			await this.page.click('button:has-text("Next")')
-			await this.page.waitForTimeout(1000)
-		})
+		await this.submitNewCustomerForm(state, zipcode)
 
 		await test.step('Upload Drivers License', async () => {
 			const dlUploadButton = await this.page.waitForSelector(

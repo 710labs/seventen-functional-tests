@@ -44,7 +44,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 		`Basic Order - New Customer - Medical`,
 		{ tag: ['@medical'] },
 		async ({ page, browserName, qaClient }, workerInfo) => {
-			const zipCode = '94020'
+			const zipCode = '90210'
 			const email = `test+${uuidv4()}@710labs-test.com`
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
@@ -58,7 +58,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			//await createAccountPage.create(email, 'test1234', zipCode, 1)
-			const address = '123 Rodeo Dr Beverly Hills'
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			var fakeFirstName = faker.name.firstName() + '_Test'
 			var fakeLastName = faker.name.lastName() + '_Test'
 			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
@@ -126,7 +126,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			// await createAccountPage.create(`test+${uuidv4()}@710labs-test.com`, 'test1234!', zipCode, 0)
-			const address = '123 Rodeo Dr Beverly Hills'
+			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			var fakeFirstName = faker.name.firstName() + '_Test'
 			var fakeLastName = faker.name.lastName() + '_Test'
 			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'

@@ -31,7 +31,7 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 				path: '/',
 			},
 		])
-		const address = '13 Huntley Rd, Summit City'
+		const address = '13 Huntley Rd, Summit, NJ 07901'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
 		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'

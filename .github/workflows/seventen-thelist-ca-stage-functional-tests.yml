@@ -1,6 +1,9 @@
 name: List - CA - Stage - Functional Tests
 on:
   workflow_dispatch:
+concurrency:
+  group: thelist-stage-domain-state
+  cancel-in-progress: false
 jobs:
   run-tests:
     timeout-minutes: 60
