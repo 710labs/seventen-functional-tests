@@ -43,7 +43,16 @@ function assertSafeBaseUrl(baseURL) {
 		throw new Error('BASE_URL is required to set the QA domain state.')
 	}
 
-	const { hostname } = new URL(baseURL)
+	let parsed
+	try {
+		parsed = new URL(baseURL)
+	} catch {
+		throw new Error(
+			`BASE_URL "${baseURL}" is not a valid URL. Expected a fully-qualified URL including scheme, e.g. https://thelist-dev.710labs.com.`,
+		)
+	}
+
+	const { hostname } = parsed
 
 	if (
 		PRODUCTION_STATE_HOSTS.has(hostname.toLowerCase()) &&

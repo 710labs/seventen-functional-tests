@@ -13,7 +13,9 @@ test(
 	`Basic Order - New Customer - Medical`,
 	{ tag: ['@medical', '@FL'] },
 	async ({ page, browserName, qaClient }, workerInfo) => {
-		const address = '1845 Town Center Blvd, Fleming Island, FL 32003'
+		const streetAddress = '1845 Town Center Blvd'
+		const city = 'Fleming Island'
+		const address = `${streetAddress}, ${city}, FL 32003`
 		const zipCode = '32003'
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
@@ -45,7 +47,7 @@ test(
 			'FL',
 		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress(address, 'Miami', 'FL', zipCode)
+			await myAccountPage.addAddress(streetAddress, city, 'FL', zipCode)
 		}
 		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'medical')
 		var cartTotals = await cartPage.verifyCart(zipCode)
