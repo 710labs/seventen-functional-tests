@@ -10,9 +10,6 @@ export async function resetCatalogWithFocusedRulesFixture(page: Page, testInfo: 
 			{
 				filePath: focusedRulesFixture.filePath,
 				maxQuantityProduct: focusedRulesFixture.maxQuantityProduct,
-				minimumOrderProduct: focusedRulesFixture.minimumOrderProduct,
-				pickupMinimum: focusedRulesFixture.pickupMinimum,
-				deliveryMinimum: focusedRulesFixture.deliveryMinimum,
 			},
 			null,
 			2,

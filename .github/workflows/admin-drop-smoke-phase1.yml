@@ -38,8 +38,8 @@ on:
         options:
           - none
           - all
-          - maxqty
           - minorder
+          - maxqty
       menu_fixture:
         description: Menu-upload fixture
         required: false
@@ -64,6 +64,8 @@ jobs:
       RUN_ID: ${{ github.run_number }}
       UNIQUE_RUN_ID: ${{ github.run_id }}
       BASE_URL: ${{ github.event.inputs.target_env == 'stage' && secrets.BASE_URL_STAGE || secrets.BASE_URL_DEV }}
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
@@ -100,8 +102,20 @@ jobs:
               exit 1
             fi
 
-            if echo "$GREP_INPUT" | grep -Eqi '@admin-drop|@rules|@maxqty|@minorder|focused[[:space:]-]*rules'; then
+            if echo "$GREP_INPUT" | grep -Eqi '@admin-drop|@rules|@minorder|@maxqty|focused[[:space:]-]*rules'; then
               echo "The destructive focused-rules smoke requires include_focused_rules=yes."
+              exit 1
+            fi
+          fi
+
+          if [ "$INCLUDE_MENU_UPLOAD" != "yes" ]; then
+            if [ "$FOCUSED_RULE_GROUP" = "minorder" ] || [ "$FOCUSED_RULE_GROUP" = "all" ]; then
+              echo "The minimum-order smoke depends on an uploaded menu. Set include_menu_upload=yes when focused_rule_group=$FOCUSED_RULE_GROUP."
+              exit 1
+            fi
+
+            if echo "$GREP_INPUT" | grep -Eqi '@minorder|@rules'; then
+              echo "The minimum-order smoke depends on an uploaded menu. Set include_menu_upload=yes when requesting @minorder or @rules."
               exit 1
             fi
           fi
@@ -111,17 +125,33 @@ jobs:
             exit 1
           fi
 
+          run_admin_smoke() {
+            npm run admin:smoke -- "$@"
+          }
+
+          if [ -n "$GREP_INPUT" ] && echo "$GREP_INPUT" | grep -Eqi '@rules'; then
+            run_admin_smoke --grep "Menu upload"
+            run_admin_smoke --grep "@minorder"
+            run_admin_smoke --grep "@maxqty"
+            exit 0
+          fi
+
           ARGS=()
           if [ "$FOCUSED_RULE_GROUP" != "none" ]; then
             case "$FOCUSED_RULE_GROUP" in
               all)
-                ARGS+=(--grep "@rules")
+                run_admin_smoke --grep "Menu upload"
+                run_admin_smoke --grep "@minorder"
+                run_admin_smoke --grep "@maxqty"
+                exit 0
+                ;;
+              minorder)
+                run_admin_smoke --grep "Menu upload"
+                run_admin_smoke --grep "@minorder"
+                exit 0
                 ;;
               maxqty)
                 ARGS+=(--grep "@maxqty")
-                ;;
-              minorder)
-                ARGS+=(--grep "@minorder")
                 ;;
               *)
                 echo "Unsupported focused_rule_group: $FOCUSED_RULE_GROUP"
@@ -149,7 +179,11 @@ jobs:
             ARGS+=(--grep-invert "$GREP_INVERT_INPUT")
           fi
 
-          npm run admin:smoke -- "${ARGS[@]}"
+          if echo "$GREP_INPUT" | grep -Eqi '@minorder'; then
+            run_admin_smoke --grep "Menu upload"
+          fi
+
+          run_admin_smoke "${ARGS[@]}"
       - name: Upload Playwright Report
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,4 +1,5 @@
 import test, { expect, Locator, Page } from '@playwright/test'
+import { ListPasswordPage } from '../list-password-protect-page'
 
 const cartQtySelector = 'input[name^="cart["][name$="[qty]"], input.qty, .qty'
 
@@ -21,9 +22,11 @@ export class FocusedRulesStorefrontPage {
 	readonly passwordInput: Locator
 	readonly deliveryAddressInput: Locator
 	readonly deliveryAddressSubmitButton: Locator
+	readonly checkoutPassword?: string
 
-	constructor(page: Page) {
+	constructor(page: Page, checkoutPassword = process.env.CHECKOUT_PASSWORD) {
 		this.page = page
+		this.checkoutPassword = checkoutPassword
 		this.ageGateChallenge = page.locator('.age-gate-challenge')
 		this.passAgeGateButton = page.getByText("I'm over 21 or a qualified patient", { exact: true })
 		this.passwordInput = page.locator('input[name="post_password"]').first()
@@ -389,11 +392,33 @@ export class FocusedRulesStorefrontPage {
 			return
 		}
 
-		const password = process.env.CHECKOUT_PASSWORD
+		const password = this.checkoutPassword
 		expect(password, 'CHECKOUT_PASSWORD must be set when storefront password gate is visible').toBeTruthy()
-		await this.passwordInput.fill(`${password}`)
-		await this.passwordInput.press('Enter')
-		await expect(this.passwordInput).toBeHidden({ timeout: 10000 })
+		const listPasswordPage = new ListPasswordPage(this.page)
+		await listPasswordPage.submitPassword(`${password}`)
+		await this.page.waitForLoadState('networkidle').catch(() => {})
+		await this.page.waitForTimeout(500)
+
+		try {
+			await expect
+				.poll(async () => this.hasUnlockedPrivateStore(), {
+					message: 'Expected private-store password gate to unlock after submitting CHECKOUT_PASSWORD',
+					timeout: 10000,
+				})
+				.toBe(true)
+		} catch (error) {
+			const title = await this.page.title().catch(() => 'Unable to read title')
+			const bodyText = await this.getBodyText().catch(() => 'Unable to read body text')
+			throw new Error(
+				[
+					'Private-store password gate did not unlock after submitting CHECKOUT_PASSWORD.',
+					`URL: ${this.page.url()}`,
+					`Title: ${title}`,
+					`Visible text: ${bodyText.replace(/\s+/g, ' ').trim().slice(0, 2000)}`,
+					`${error}`,
+				].join('\n'),
+			)
+		}
 	}
 
 	private async fillDeliveryAddressIfPresent() {
@@ -443,6 +468,33 @@ export class FocusedRulesStorefrontPage {
 
 	private cartRowByProductName(productName: string) {
 		return this.page.locator('.cart_item').filter({ hasText: productName }).first()
+	}
+
+	private async hasUnlockedPrivateStore() {
+		const isPasswordVisible = await this.passwordInput.isVisible().catch(() => false)
+		const title = await this.page.title().catch(() => '')
+
+		if (!isPasswordVisible && !/password/i.test(title)) {
+			return true
+		}
+
+		const currentUrl = this.page.url()
+		const currentPath = new URL(currentUrl).pathname
+
+		return (
+			currentUrl.includes('#usage') ||
+			/\/my-account\/?$/.test(currentPath) ||
+			(await this.page.getByRole('heading', { name: /complete your account/i }).isVisible().catch(() => false)) ||
+			(await this.page
+				.locator('input[name="svntn_last_usage_type"]')
+				.first()
+				.isVisible()
+				.catch(() => false)) ||
+			(await this.page.getByText('MY ACCOUNT', { exact: true }).isVisible().catch(() => false)) ||
+			(await this.page.getByText(/MY BAG/i).isVisible().catch(() => false)) ||
+			(await this.page.locator('.cart_item').first().isVisible().catch(() => false)) ||
+			(await this.page.getByText('Close Friends', { exact: true }).isVisible().catch(() => false))
+		)
 	}
 
 	private async readCartQuantityValue(productName: string) {

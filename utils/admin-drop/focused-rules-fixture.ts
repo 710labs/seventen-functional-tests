@@ -10,9 +10,6 @@ export type FocusedRulesProductFixture = {
 export type FocusedRulesFixture = {
 	filePath: string
 	maxQuantityProduct: FocusedRulesProductFixture
-	minimumOrderProduct: FocusedRulesProductFixture
-	pickupMinimum: number
-	deliveryMinimum: number
 }
 
 export const focusedRulesFixture: FocusedRulesFixture = {
@@ -26,11 +23,4 @@ export const focusedRulesFixture: FocusedRulesFixture = {
 		price: 60,
 		expectedMaxQuantity: 2,
 	},
-	minimumOrderProduct: {
-		sku: 'ADMIN_PHASE3_MINORDER',
-		name: 'ZZ Admin Drop Phase 3 Min Order',
-		price: 80,
-	},
-	pickupMinimum: 150,
-	deliveryMinimum: 150,
 }

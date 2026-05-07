@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test'
+import type { BrowserContext } from '@playwright/test'
 import { AdminProductsPage } from '../../models/admin/admin-products-page'
 import { FocusedRulesStorefrontPage } from '../../models/admin-drop/focused-rules-storefront-page'
 import { focusedRulesFixture } from '../../utils/admin-drop/focused-rules-fixture'
+import {
+	cleanupFocusedRulesCheckoutPassword,
+	ensureFocusedRulesCheckoutPassword,
+	type FocusedRulesStorefrontPasswordStatus,
+} from '../../utils/admin-drop/focused-rules-storefront-password'
 import { resetCatalogWithFocusedRulesFixture } from '../../utils/admin-drop/import-focused-rules-fixture'
 
 test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async ({
@@ -11,14 +17,19 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 	const { maxQuantityProduct } = focusedRulesFixture
 	const expectedMaxQuantity = maxQuantityProduct.expectedMaxQuantity || 2
 	const adminProductsPage = new AdminProductsPage(page)
-	const storefrontContext = await browser.newContext({
-		baseURL: process.env.BASE_URL,
-	})
-	const storefrontPage = await storefrontContext.newPage()
-	const storefront = new FocusedRulesStorefrontPage(storefrontPage)
+	const cleanupErrors: string[] = []
+	let checkoutPasswordStatus: FocusedRulesStorefrontPasswordStatus | undefined
+	let storefrontContext: BrowserContext | undefined
+	let mainError: unknown
 
 	try {
 		await resetCatalogWithFocusedRulesFixture(page, testInfo)
+		checkoutPasswordStatus = await ensureFocusedRulesCheckoutPassword(page, testInfo)
+		storefrontContext = await browser.newContext({
+			baseURL: process.env.BASE_URL,
+		})
+		const storefrontPage = await storefrontContext.newPage()
+		const storefront = new FocusedRulesStorefrontPage(storefrontPage, checkoutPasswordStatus.checkoutPassword)
 
 		await adminProductsPage.openProductEditBySku(maxQuantityProduct.sku)
 		const maxQuantityFieldSnapshots = await adminProductsPage.getVisibleMaxQuantityFieldSnapshots()
@@ -70,7 +81,23 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 			enforcedQuantity <= expectedMaxQuantity || hasEnforcementMessage,
 			`Expected quantity ${expectedMaxQuantity + 1} to be blocked, corrected, or accompanied by a max quantity notice`,
 		).toBe(true)
+	} catch (error) {
+		mainError = error
 	} finally {
-		await storefrontContext.close()
+		if (storefrontContext) {
+			await storefrontContext.close()
+		}
+
+		try {
+			await cleanupFocusedRulesCheckoutPassword(page, checkoutPasswordStatus)
+		} catch (cleanupError) {
+			cleanupErrors.push(`${cleanupError}`)
+		}
+	}
+
+	expect(cleanupErrors, cleanupErrors.join('\n')).toEqual([])
+
+	if (mainError) {
+		throw mainError
 	}
 })
