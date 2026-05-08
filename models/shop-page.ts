@@ -43,7 +43,30 @@ export type StorefrontCheckoutState = {
 	url: string
 }
 
+export type MinimumOrderCartBuildStep = {
+	banner: MinimumOrderBannerState
+	checkoutState: StorefrontCheckoutState
+	expectedRemainingAmount: number | null
+	productName: string
+	quantityAdded: number
+	sku: string | null
+	subtotal: number
+}
+
+export type MinimumOrderCartBuildSummary = {
+	configuredMinimum: number
+	finalBanner: MinimumOrderBannerState
+	finalCheckoutState: StorefrontCheckoutState
+	finalSubtotal: number
+	fulfillment: ShopFulfillment
+	observedUnderMinimum: boolean
+	productsAdded: number
+	steps: MinimumOrderCartBuildStep[]
+}
+
 const minimumOrderNoticeSelector = [
+	'.wc-proceed-to-checkout .wcse-checkout-button.wcse-warning-button',
+	'.wcse-checkout-button.wcse-warning-button',
 	'.woocommerce-error',
 	'.woocommerce-message',
 	'.woocommerce-info',
@@ -157,20 +180,23 @@ export class ShopPage {
 		return Number.parseFloat(normalized[0])
 	}
 
+	private roundMoney(value: number) {
+		return Math.round(value * 100) / 100
+	}
+
 	private hasMinimumOrderBlockText(text: string) {
 		const normalizedText = text.replace(/\s+/g, ' ').toLowerCase()
 
 		return (
-			/order minimum (?:is )?not met/.test(normalizedText) ||
-			/minimum[^.]*not met/.test(normalizedText) ||
-			/add\s+\$?\d+(?:\.\d+)?\s+to check out/.test(normalizedText)
+			/(?:order|pickup|delivery) minimum (?:is )?not met/.test(normalizedText) ||
+			/add\s+\$?\d+(?:\.\d+)?(?:\s+to check out|\s+or\b)/.test(normalizedText)
 		)
 	}
 
 	private parseMinimumOrderRemainingAmount(text: string) {
 		const remainingMatch = text
 			.replace(/,/g, '')
-			.match(/add\s+\$?\s*(\d+(?:\.\d+)?)\s+to check out/i)
+			.match(/add\s+\$?\s*(\d+(?:\.\d+)?)(?=\s*(?:to\s+check\s*out|or\b|\.|$))/i)
 
 		if (!remainingMatch) {
 			return null
@@ -846,6 +872,126 @@ export class ShopPage {
 		})
 	}
 
+	async addProductsUntilMinimumMet(
+		configuredMinimum: number,
+		fulfillment: ShopFulfillment = 'Delivery',
+		usage: TestUsageType = 'recreational',
+		maxProducts = 24,
+	): Promise<MinimumOrderCartBuildSummary> {
+		return test.step('Add products until minimum-order rule is satisfied', async () => {
+			await this.page.goto('/')
+			await this.page.waitForTimeout(1000)
+			await this.ensureFulfillmentSelected(fulfillment)
+
+			const candidates = (await this.getAddableStorefrontProducts(usage)).sort(
+				(left, right) => left.price - right.price,
+			)
+
+			if (candidates.length === 0) {
+				throw new Error('Minimum-order validation found no addable storefront products.')
+			}
+
+			const steps: MinimumOrderCartBuildStep[] = []
+			let observedUnderMinimum = false
+
+			for (let index = 0; index < maxProducts; index += 1) {
+				const candidate = candidates[index] || candidates[candidates.length - 1]
+
+				await this.page.goto('/')
+				await this.page.waitForTimeout(1000)
+				await this.ensureFulfillmentSelected(fulfillment)
+				await this.addStorefrontProduct(candidate, usage)
+				await this.goToCart({ requireItems: true })
+
+				const subtotal = this.roundMoney(await this.getCartSubtotalAmount())
+				let banner = await this.getMinimumOrderBannerState()
+				const checkoutState = await this.getStorefrontCheckoutState()
+				const expectedRemainingAmount =
+					subtotal < configuredMinimum
+						? this.roundMoney(configuredMinimum - subtotal)
+						: null
+
+				if (subtotal < configuredMinimum && banner.isVisible && banner.remainingAmount === null) {
+					await this.page.waitForTimeout(500)
+					banner = await this.getMinimumOrderBannerState()
+				}
+
+				const step: MinimumOrderCartBuildStep = {
+					banner,
+					checkoutState,
+					expectedRemainingAmount,
+					productName: candidate.name,
+					quantityAdded: index + 1,
+					sku: candidate.sku,
+					subtotal,
+				}
+				steps.push(step)
+
+				if (subtotal <= configuredMinimum) {
+					if (subtotal < configuredMinimum) {
+						observedUnderMinimum = true
+						expect(
+							banner.isVisible,
+							`Expected minimum-order banner while subtotal ${subtotal} is below ${configuredMinimum}`,
+						).toBe(true)
+						expect(
+							banner.remainingAmount,
+							`Expected to parse the active "Add $X" amount from minimum-order banner text: "${banner.text || ''}"`,
+						).not.toBeNull()
+						expect(
+							banner.remainingAmount,
+							`Expected banner remaining amount to equal ${configuredMinimum} - ${subtotal}`,
+						).toBeCloseTo(expectedRemainingAmount || 0, 2)
+						expect(
+							banner.text || '',
+							'Expected minimum-order banner text to explain the order minimum block',
+						).toMatch(
+							/(?:order|pickup|delivery) minimum (?:is )?not met|add\s+\$?\d+(?:\.\d+)?(?:\s+to check out|\s+or\b)/i,
+						)
+					}
+					continue
+				}
+
+				expect(
+					observedUnderMinimum,
+					[
+						'Minimum-order validation never observed an under-minimum cart.',
+						`First validated subtotal was ${subtotal}, configured minimum was ${configuredMinimum}.`,
+						'Use a menu with at least one addable product below the generated minimum.',
+					].join(' '),
+				).toBe(true)
+				expect(
+					subtotal,
+					`Expected cart subtotal ${subtotal} to be greater than configured minimum ${configuredMinimum}`,
+				).toBeGreaterThan(configuredMinimum)
+				expect(
+					banner.isVisible,
+					'Expected minimum-order banner to disappear once subtotal exceeds configured minimum',
+				).toBe(false)
+				expect(checkoutState.isReachable, 'Expected checkout to be enabled/reachable').toBe(true)
+
+				return {
+					configuredMinimum,
+					finalBanner: banner,
+					finalCheckoutState: checkoutState,
+					finalSubtotal: subtotal,
+					fulfillment,
+					observedUnderMinimum,
+					productsAdded: index + 1,
+					steps,
+				}
+			}
+
+			const lastStep = steps[steps.length - 1]
+			throw new Error(
+				[
+					`Unable to exceed minimum ${configuredMinimum} after ${steps.length} add-to-cart attempt(s).`,
+					`Last subtotal: ${lastStep?.subtotal ?? 'unknown'}.`,
+				].join(' '),
+			)
+		})
+	}
+
 	async getCartSubtotalAmount() {
 		return test.step('Read cart subtotal amount', async () => {
 			const subtotalSelectors = [
@@ -921,7 +1067,24 @@ export class ShopPage {
 					continue
 				}
 
-				const text = ((await notice.textContent()) || '').replace(/\s+/g, ' ').trim()
+				const text = (
+					(await notice.evaluate(element => {
+						const localText = element.textContent || ''
+						const parentText = element.parentElement?.textContent || ''
+						const grandparentText = element.parentElement?.parentElement?.textContent || ''
+						const minimumTextPattern = /(?:order|pickup|delivery)\s+minimum\s+(?:is\s+)?not\s+met/i
+						const addAmountPattern = /add\s+\$?\s*\d+(?:\.\d+)?(?:\s+to\s+check\s*out|\s+or\b|\.|$)/i
+						const candidates = [localText, parentText, grandparentText]
+							.map(candidate => candidate.replace(/\s+/g, ' ').trim())
+							.filter(Boolean)
+						return (
+							candidates.find(candidate => minimumTextPattern.test(candidate) && addAmountPattern.test(candidate)) ||
+							candidates.find(candidate => minimumTextPattern.test(candidate)) ||
+							candidates.find(candidate => addAmountPattern.test(candidate)) ||
+							localText
+						)
+					})) || ''
+				).replace(/\s+/g, ' ').trim()
 
 				if (text && this.hasMinimumOrderBlockText(text)) {
 					return {
@@ -936,7 +1099,7 @@ export class ShopPage {
 
 			if (this.hasMinimumOrderBlockText(bodyText)) {
 				const minimumOrderMatch = bodyText.match(
-					/(order minimum (?:is )?not met|add\s+\$?\d+(?:\.\d+)?\s+to check out)/i,
+					/((?:order|pickup|delivery) minimum (?:is )?not met(?:\.|\s)*(?:add\s+\$?\d+(?:\.\d+)?(?:\s+to\s+check\s*out|\s+or\b[^.]*|\.?)?)?|add\s+\$?\d+(?:\.\d+)?(?:\s+to\s+check\s*out|\s+or\b[^.]*|\.?))/i,
 				)
 				const text = minimumOrderMatch ? minimumOrderMatch[0] : bodyText.slice(0, 300)
 

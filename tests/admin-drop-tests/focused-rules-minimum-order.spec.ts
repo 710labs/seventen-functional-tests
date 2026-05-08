@@ -82,41 +82,6 @@ async function passStorefrontGates(page: Page, shopPage: ShopPage) {
 	})
 }
 
-async function validateDeliveryCartAboveMinimum(
-	shopPage: ShopPage,
-	configuredMinimum: number,
-	testInfo: TestInfo,
-) {
-	return test.step('Validate delivery cart exceeds minimum and checkout unlocks', async () => {
-		const subtotal = await shopPage.getCartSubtotalAmount()
-		const minimumOrderBanner = await shopPage.getMinimumOrderBannerState()
-		const checkoutState = await shopPage.getStorefrontCheckoutState()
-		const cartItems = await shopPage.page.locator('.cart_item').count()
-
-		await attachJson(testInfo, 'minimum-order-delivery-cart-diagnostics', {
-			configuredMinimum,
-			cartItems,
-			subtotal,
-			minimumOrderBanner,
-			checkoutState,
-			finalUrl: shopPage.page.url(),
-		})
-
-		expect(cartItems, 'Expected delivery cart to contain products after addProductsToCart').toBeGreaterThan(
-			0,
-		)
-		expect(
-			subtotal,
-			`Expected delivery cart subtotal ${subtotal} to exceed generated minimum ${configuredMinimum}`,
-		).toBeGreaterThan(configuredMinimum)
-		expect(
-			minimumOrderBanner.isVisible,
-			'Expected minimum-order banner to be cleared once subtotal exceeds generated minimum',
-		).toBe(false)
-		expect(checkoutState.isReachable, 'Expected checkout to be enabled/reachable').toBe(true)
-	})
-}
-
 test('Focused rules minimum order is enforced @admin-drop @rules @minorder', async ({
 	page,
 	browserName,
@@ -152,10 +117,13 @@ test('Focused rules minimum order is enforced @admin-drop @rules @minorder', asy
 	const checkoutPage = new CheckoutPage(page, qaClient)
 
 	await test.step('Run storefront delivery checkout flow', async () => {
-		const mobile = testInfo.project.name === 'Mobile Chrome'
 		await passStorefrontGates(page, shopPage)
-		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'recreational')
-		await validateDeliveryCartAboveMinimum(shopPage, generatedMinimum, testInfo)
+		const minimumOrderSummary = await shopPage.addProductsUntilMinimumMet(
+			generatedMinimum,
+			'Delivery',
+			'recreational',
+		)
+		await attachJson(testInfo, 'minimum-order-cart-build-summary', minimumOrderSummary)
 		const cartTotals = await cartPage.verifyCart('94020')
 		await checkoutPage.confirmCheckout('94020', cartTotals, 'recreational')
 	})
