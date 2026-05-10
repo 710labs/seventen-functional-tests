@@ -243,7 +243,8 @@ npm run admin:smoke -- --grep "@minorder"
 The minimum-order smoke does not import, reset, trash, or restore products. It depends on a
 previously uploaded menu, changes the pickup and delivery minimum-order admin settings for the
 test, verifies the storefront reaches checkout only after the subtotal exceeds that shared
-minimum, and restores the original admin minimums in cleanup.
+minimum, places a delivery order, records the order number in Playwright attachments, and restores
+the original admin minimums in cleanup.
 
 To run all focused rules locally, run the minimum-order sequence first, then run `@maxqty`.
 Do not use one local `--grep "@rules"` command for this combined path because max quantity

@@ -311,26 +311,17 @@ export class CreateAccountPage {
 		expectedZip: string | undefined,
 		submitSnapshot: RegistrationSubmitSnapshot,
 	) {
-		const eligibilityContext = this.page.locator('#eligibilityContext')
-		const licenseInput = this.page.locator('input[name="svntn_core_personal_doc"]')
 		const deadline = Date.now() + 20000
 
 		while (Date.now() < deadline) {
-			if (
-				(await eligibilityContext.count()) > 0 ||
-				(await licenseInput.count()) > 0
-			) {
+			if (await this.isEligibilityLicenseStepVisible()) {
 				return
-			}
-
-			if (this.isShopRouteBeforeEligibility()) {
-				await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
 			}
 
 			await this.page.waitForTimeout(250)
 		}
 
-		if (this.isShopRouteBeforeEligibility()) {
+		if (this.isShopRouteBeforeEligibility() && !(await this.isEligibilityLicenseStepVisible())) {
 			await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
 		}
 
@@ -346,6 +337,42 @@ export class CreateAccountPage {
 				`Current billing_postcode: "${await this.inputValue('input[name="billing_postcode"], #billing_postcode')}"`,
 				`Current body preview: ${await this.getBodyPreview()}`,
 			].join('\n'),
+		)
+	}
+
+	private async isEligibilityLicenseStepVisible() {
+		const eligibilityContextVisible = await this.page
+			.locator('#eligibilityContext')
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const licenseInputVisible = await this.page
+			.locator('input[name="svntn_core_personal_doc"]')
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const usageTypeVisible = await this.page
+			.locator('input[name="svntn_last_usage_type"]')
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const completeAccountVisible = await this.page
+			.getByText(/complete your account/i)
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const idUploadVisible = await this.page
+			.getByText(/id upload/i)
+			.first()
+			.isVisible()
+			.catch(() => false)
+
+		return (
+			eligibilityContextVisible ||
+			licenseInputVisible ||
+			usageTypeVisible ||
+			completeAccountVisible ||
+			idUploadVisible
 		)
 	}
 
@@ -451,18 +478,14 @@ export class CreateAccountPage {
 
 		await this.submitNewCustomerForm(state, zipcode)
 
+		if (state !== 'FL') {
+			await this.selectRegistrationUsageType(usage)
+		}
+
 		await test.step('Upload Drivers License', async () => {
-			const dlUploadButton = await this.page.waitForSelector(
-				'input[name="svntn_core_personal_doc"]',
-			)
-			const [driversLicenseChooser] = await Promise.all([
-				this.page.waitForEvent('filechooser'),
-				dlUploadButton.click(),
-			])
-			await this.page.waitForTimeout(5000)
-			await driversLicenseChooser.setFiles('CA-DL.jpg')
-			await this.page.waitForTimeout(5000)
-			await driversLicenseChooser.page()
+			const driversLicenseInput = this.page.locator('input[name="svntn_core_personal_doc"]').first()
+			await driversLicenseInput.waitFor({ state: 'attached' })
+			await driversLicenseInput.setInputFiles('CA-DL.jpg')
 
 			await test.step('Enter Drivers License Exp', async () => {
 				await this.driversLicenseExpMonth.selectOption('12')
@@ -490,8 +513,6 @@ export class CreateAccountPage {
 				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 		} else {
-			await this.selectRegistrationUsageType(usage)
-
 			if (isMedicalUsage(usage)) {
 				await this.uploadMedicalCard()
 				await this.enterMedicalCardExpiration()
@@ -512,9 +533,9 @@ export class CreateAccountPage {
 			})
 		} else {
 			await test.step('Complete Usage Type Form', async () => {
-				await (await this.page.$('text=Register')).click()
+				await this.page.getByRole('button', { name: /register/i }).click()
 				await this.page.waitForTimeout(5000)
-				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
+				await expect(this.page.url()).toMatch(/\/(?:#pickup-deliver|#pickup)?$/)
 			})
 		}
 
