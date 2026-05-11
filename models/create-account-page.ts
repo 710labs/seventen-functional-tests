@@ -17,6 +17,12 @@ type RegistrationSubmitSnapshot = {
 	bodyPreview: string
 }
 
+const personalDocInputSelector = 'input[name="svntn_core_personal_doc"]'
+const personalDocSuccessSelector = [
+	'div.eligibilityInput:has(input#svntn_core_personal_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel',
+	'div.eligibilityInput:has(input[name="svntn_core_personal_doc"]) span.unsealLabel.unsealSuccess',
+].join(', ')
+
 export class CreateAccountPage {
 	readonly page: Page
 	readonly userNameField: Locator
@@ -114,6 +120,60 @@ export class CreateAccountPage {
 			await medicalCardInput.waitFor({ state: 'attached' })
 			await medicalCardInput.setInputFiles(fileName)
 			await this.page.waitForTimeout(5000)
+		})
+	}
+
+	private async uploadPersonalDocument(fileName: string = 'CA-DL.jpg') {
+		await test.step('Upload Drivers License', async () => {
+			const driversLicenseInput = this.page.locator(personalDocInputSelector).first()
+			const uploadSuccess = this.page.locator(personalDocSuccessSelector).first()
+
+			await driversLicenseInput.waitFor({ state: 'attached' })
+			const [driversLicenseChooser] = await Promise.all([
+				this.page.waitForEvent('filechooser'),
+				driversLicenseInput.click(),
+			])
+			await driversLicenseChooser.setFiles(fileName)
+			await this.page.waitForFunction(
+				({ selector, filename }) => {
+					const input = document.querySelector(selector)
+
+					return (
+						input instanceof HTMLInputElement &&
+						Array.from(input.files || []).some(file => file.name === filename)
+					)
+				},
+				{ selector: personalDocInputSelector, filename: fileName },
+			)
+
+			try {
+				await uploadSuccess.waitFor({ state: 'visible', timeout: 15000 })
+			} catch (error) {
+				const uploadedFiles = await driversLicenseInput.evaluate(input =>
+					input instanceof HTMLInputElement
+						? Array.from(input.files || []).map(file => file.name)
+						: [],
+				)
+				const eligibilityError = await this.page
+					.locator('p.eligibilityError, .eligibilityError')
+					.allTextContents()
+					.catch(() => [])
+				const bodyPreview = ((await this.page.locator('body').textContent().catch(() => '')) || '')
+					.replace(/\s+/g, ' ')
+					.trim()
+					.slice(0, 1000)
+
+				throw new Error(
+					[
+						'Drivers license file was selected, but the storefront did not mark the ID upload as accepted.',
+						`Expected file: ${fileName}`,
+						`Selected file(s): ${uploadedFiles.join(', ') || 'none'}`,
+						`Eligibility error text: ${eligibilityError.join(' | ') || 'none'}`,
+						`Body preview: ${bodyPreview}`,
+						`${error}`,
+					].join('\n'),
+				)
+			}
 		})
 	}
 
@@ -482,16 +542,12 @@ export class CreateAccountPage {
 			await this.selectRegistrationUsageType(usage)
 		}
 
-		await test.step('Upload Drivers License', async () => {
-			const driversLicenseInput = this.page.locator('input[name="svntn_core_personal_doc"]').first()
-			await driversLicenseInput.waitFor({ state: 'attached' })
-			await driversLicenseInput.setInputFiles('CA-DL.jpg')
+		await this.uploadPersonalDocument('CA-DL.jpg')
 
-			await test.step('Enter Drivers License Exp', async () => {
-				await this.driversLicenseExpMonth.selectOption('12')
-				await this.driversLicenseExpDay.selectOption('16')
-				await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-			})
+		await test.step('Enter Drivers License Exp', async () => {
+			await this.driversLicenseExpMonth.selectOption('12')
+			await this.driversLicenseExpDay.selectOption('16')
+			await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 		})
 
 		if (state === 'FL') {
