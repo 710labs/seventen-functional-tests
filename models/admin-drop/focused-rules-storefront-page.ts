@@ -14,6 +14,14 @@ const cartNoticeSelector = [
 const defaultDeliveryAddress = '123 Rodeo Dr Beverly Hills'
 
 export type FocusedRulesFulfillment = 'Pickup' | 'Delivery'
+export type CartQuantityValidationState = {
+	value: string
+	min: string
+	max: string
+	valid: boolean
+	rangeOverflow: boolean
+	validationMessage: string
+}
 
 export class FocusedRulesStorefrontPage {
 	readonly page: Page
@@ -282,6 +290,32 @@ export class FocusedRulesStorefrontPage {
 					message: `Expected cart quantity for ${productName} to update to ${quantity}`,
 				})
 				.toBe(quantity)
+		})
+	}
+
+	async getCartQuantityValidationState(
+		productName: string,
+	): Promise<CartQuantityValidationState> {
+		return test.step(`Read cart quantity native validation for ${productName}`, async () => {
+			const row = this.cartRowByProductName(productName)
+			await expect(row, `Expected cart row for ${productName}`).toBeVisible()
+			const quantityInput = row.locator(cartQtySelector).first()
+			await expect(quantityInput, `Expected quantity input for ${productName}`).toBeVisible()
+
+			return quantityInput.evaluate(element => {
+				if (!(element instanceof HTMLInputElement)) {
+					throw new Error('Cart quantity control is not an input element')
+				}
+
+				return {
+					value: element.value,
+					min: element.min,
+					max: element.max,
+					valid: element.validity.valid,
+					rangeOverflow: element.validity.rangeOverflow,
+					validationMessage: element.validationMessage,
+				}
+			})
 		})
 	}
 

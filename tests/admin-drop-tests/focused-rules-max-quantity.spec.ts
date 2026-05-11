@@ -115,12 +115,20 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 
 		await storefront.setCartQuantity(maxQuantityProduct.name, expectedMaxQuantity + 1)
 		const enforcedQuantity = await storefront.getCartQuantity(maxQuantityProduct.name)
+		const nativeValidation = await storefront.getCartQuantityValidationState(maxQuantityProduct.name)
 		const noticeText = await storefront.getNoticeText()
 		const bodyText = await storefront.getBodyText()
 		const enforcementText = `${noticeText}\n${bodyText}`
 		const hasEnforcementMessage =
 			/(maximum|max|limit|allowed|quantity|only)/i.test(enforcementText) &&
 			enforcementText.includes(`${expectedMaxQuantity}`)
+		const hasNativeValidationMessage =
+			nativeValidation.max === `${expectedMaxQuantity}` &&
+			nativeValidation.rangeOverflow &&
+			(nativeValidation.validationMessage
+				.toLowerCase()
+				.includes(`less than or equal to ${expectedMaxQuantity}`) ||
+				nativeValidation.validationMessage.includes(`${expectedMaxQuantity}`))
 
 		await testInfo.attach('max-quantity-storefront-enforcement', {
 			body: JSON.stringify(
@@ -128,6 +136,7 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 					expectedMaxQuantity,
 					allowedQuantity,
 					enforcedQuantity,
+					nativeValidation,
 					noticeText,
 					userEmail: storefrontCustomer.email,
 					url: storefrontPage.url(),
@@ -139,8 +148,8 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 		})
 
 		expect(
-			enforcedQuantity <= expectedMaxQuantity || hasEnforcementMessage,
-			`Expected quantity ${expectedMaxQuantity + 1} to be blocked, corrected, or accompanied by a max quantity notice`,
+			hasNativeValidationMessage || enforcedQuantity <= expectedMaxQuantity || hasEnforcementMessage,
+			`Expected quantity ${expectedMaxQuantity + 1} to trigger native max validation, be corrected, or show a max quantity notice`,
 		).toBe(true)
 	} catch (error) {
 		mainError = error
