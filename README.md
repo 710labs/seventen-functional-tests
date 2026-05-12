@@ -237,7 +237,7 @@ GitHub Actions:
 Minimum-order smoke sequence:
 
 ```bash
-MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke:menu-upload
+MENU_UPLOAD_FIXTURE=ca-menu-4-7-25 npm run admin:smoke:menu-upload
 npm run admin:smoke:minorder
 ```
 
@@ -248,7 +248,7 @@ minimum, places a delivery order, records the order number in Playwright attachm
 the original admin minimums in cleanup.
 
 To run all admin-drop coverage locally, use `npm run admin:smoke:all`. It runs the default
-non-destructive smoke first, then menu upload, then `@minorder`, then `@maxqty`.
+non-destructive smoke first, uploads the full CA menu, then runs `@minorder`, then `@maxqty`.
 Do not use one local unordered Playwright invocation for this combined path because max quantity
 resets/imports its own focused fixture and can invalidate the uploaded-menu precondition.
 
@@ -257,7 +257,12 @@ Menu upload fixtures:
 - committed under `tests/admin-drop-tests/fixtures/menu-upload/`
 - selected by `MENU_UPLOAD_FIXTURE`
 - default fixture key: `smoke-default`
+- workflow dropdown default: `ca-menu-4-7-25`
 - workflow dropdown options: `smoke-default`, `smoke-alt`, `ca-menu-4-7-25`, `co-menu-4-7-25`
+
+Use `smoke-default` or `smoke-alt` for importer-only checks. Use `ca-menu-4-7-25` or
+`co-menu-4-7-25` before `@minorder` so the storefront has enough realistic products to build
+a cart above the randomized minimum.
 
 The menu-upload smoke verifies WooCommerce product import success, then checks the environment-matched `/iframe/` page for every product name from the selected CSV fixture.
 

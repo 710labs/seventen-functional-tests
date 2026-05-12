@@ -123,32 +123,98 @@ export class CreateAccountPage {
 		})
 	}
 
+	private async clearPersonalDocumentInput(driversLicenseInput: Locator) {
+		await driversLicenseInput.setInputFiles([])
+		await this.page.evaluate(selector => {
+			const input = document.querySelector(selector)
+			if (!(input instanceof HTMLInputElement)) {
+				return
+			}
+
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+			input.dispatchEvent(new Event('change', { bubbles: true }))
+		}, personalDocInputSelector)
+	}
+
+	private async selectPersonalDocumentWithFileChooser(
+		driversLicenseInput: Locator,
+		fileName: string,
+	) {
+		const [driversLicenseChooser] = await Promise.all([
+			this.page.waitForEvent('filechooser'),
+			driversLicenseInput.click(),
+		])
+
+		// The upload widget initializes asynchronously after the chooser opens.
+		// Matching the older e2e cadence avoids selecting the file before its
+		// reactive upload handlers are ready.
+		await this.page.waitForTimeout(5000)
+		await driversLicenseChooser.setFiles(fileName)
+		await this.page.waitForFunction(
+			({ selector, filename }) => {
+				const input = document.querySelector(selector)
+
+				return (
+					input instanceof HTMLInputElement &&
+					Array.from(input.files || []).some(file => file.name === filename)
+				)
+			},
+			{ selector: personalDocInputSelector, filename: fileName },
+		)
+	}
+
+	private async isPersonalDocumentAccepted(uploadSuccess: Locator) {
+		const successVisible = await uploadSuccess.isVisible().catch(() => false)
+		const expirationEnabled =
+			(await this.driversLicenseExpMonth.isEnabled().catch(() => false)) &&
+			(await this.driversLicenseExpDay.isEnabled().catch(() => false)) &&
+			(await this.driversLicenseExpYear.isEnabled().catch(() => false))
+
+		return successVisible || expirationEnabled
+	}
+
+	private async waitForPersonalDocumentAccepted(uploadSuccess: Locator, timeout = 20000) {
+		const deadline = Date.now() + timeout
+
+		while (Date.now() < deadline) {
+			if (await this.isPersonalDocumentAccepted(uploadSuccess)) {
+				return true
+			}
+
+			await this.page.waitForTimeout(500)
+		}
+
+		return false
+	}
+
 	private async uploadPersonalDocument(fileName: string = 'CA-DL.jpg') {
 		await test.step('Upload Drivers License', async () => {
 			const driversLicenseInput = this.page.locator(personalDocInputSelector).first()
 			const uploadSuccess = this.page.locator(personalDocSuccessSelector).first()
 
 			await driversLicenseInput.waitFor({ state: 'attached' })
-			const [driversLicenseChooser] = await Promise.all([
-				this.page.waitForEvent('filechooser'),
-				driversLicenseInput.click(),
-			])
-			await driversLicenseChooser.setFiles(fileName)
-			await this.page.waitForFunction(
-				({ selector, filename }) => {
-					const input = document.querySelector(selector)
+			await expect(driversLicenseInput).toBeEnabled()
 
-					return (
-						input instanceof HTMLInputElement &&
-						Array.from(input.files || []).some(file => file.name === filename)
-					)
-				},
-				{ selector: personalDocInputSelector, filename: fileName },
-			)
+			let lastError: unknown = null
 
-			try {
-				await uploadSuccess.waitFor({ state: 'visible', timeout: 15000 })
-			} catch (error) {
+			for (let attempt = 1; attempt <= 2; attempt += 1) {
+				if (attempt > 1) {
+					await this.clearPersonalDocumentInput(driversLicenseInput)
+					await this.page.waitForTimeout(1000)
+				}
+
+				try {
+					await this.selectPersonalDocumentWithFileChooser(driversLicenseInput, fileName)
+
+					if (await this.waitForPersonalDocumentAccepted(uploadSuccess)) {
+						return
+					}
+				} catch (error) {
+					lastError = error
+				}
+			}
+
+			{
 				const uploadedFiles = await driversLicenseInput.evaluate(input =>
 					input instanceof HTMLInputElement
 						? Array.from(input.files || []).map(file => file.name)
@@ -158,6 +224,10 @@ export class CreateAccountPage {
 					.locator('p.eligibilityError, .eligibilityError')
 					.allTextContents()
 					.catch(() => [])
+				const successVisible = await uploadSuccess.isVisible().catch(() => false)
+				const expMonthEnabled = await this.driversLicenseExpMonth.isEnabled().catch(() => false)
+				const expDayEnabled = await this.driversLicenseExpDay.isEnabled().catch(() => false)
+				const expYearEnabled = await this.driversLicenseExpYear.isEnabled().catch(() => false)
 				const bodyPreview = ((await this.page.locator('body').textContent().catch(() => '')) || '')
 					.replace(/\s+/g, ' ')
 					.trim()
@@ -169,8 +239,10 @@ export class CreateAccountPage {
 						`Expected file: ${fileName}`,
 						`Selected file(s): ${uploadedFiles.join(', ') || 'none'}`,
 						`Eligibility error text: ${eligibilityError.join(' | ') || 'none'}`,
+						`Upload success badge visible: ${successVisible}`,
+						`Expiration fields enabled: month=${expMonthEnabled}, day=${expDayEnabled}, year=${expYearEnabled}`,
 						`Body preview: ${bodyPreview}`,
-						`${error}`,
+						`${lastError || 'Timed out waiting for upload acceptance'}`,
 					].join('\n'),
 				)
 			}

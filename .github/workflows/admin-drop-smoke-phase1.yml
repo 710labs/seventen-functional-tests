@@ -43,7 +43,7 @@ on:
       menu_fixture:
         description: Menu-upload fixture
         required: false
-        default: smoke-default
+        default: ca-menu-4-7-25
         type: choice
         options:
           - smoke-default
