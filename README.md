@@ -249,8 +249,16 @@ the original admin minimums in cleanup.
 
 To run all admin-drop coverage locally, use `npm run admin:smoke:all`. It runs the default
 non-destructive smoke first, uploads the full CA menu, then runs `@minorder`, then `@maxqty`.
-Do not use one local unordered Playwright invocation for this combined path because max quantity
-resets/imports its own focused fixture and can invalidate the uploaded-menu precondition.
+The command prints each Playwright phase as it runs and finishes with one overall pass/fail
+summary for the full ordered flow. Do not use one local unordered Playwright invocation for this
+combined path because max quantity resets/imports its own focused fixture and can invalidate the
+uploaded-menu precondition.
+
+To override the full-flow menu fixture while keeping the ordered summary runner:
+
+```bash
+ADMIN_SMOKE_ALL_MENU_FIXTURE=co-menu-4-7-25 npm run admin:smoke:all
+```
 
 Menu upload fixtures:
 

@@ -31,7 +31,7 @@
 		"smoke:test:prod:mi": "npx playwright test smoke-test-mi --config=configs/prod-mi.config.ts --workers=1",
 		"smoke:test:prod:nj": "npx playwright test smoke-test-nj --config=configs/prod-nj.config.ts --workers=1",
 		"admin:smoke": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep-invert \"Menu upload|@rules\"",
-		"admin:smoke:all": "npm run admin:smoke && MENU_UPLOAD_FIXTURE=ca-menu-4-7-25 npm run admin:smoke:menu-upload && npm run admin:smoke:minorder && npm run admin:smoke:maxqty",
+		"admin:smoke:all": "node scripts/admin-smoke-all.js",
 		"admin:smoke:menu-upload": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"Menu upload\"",
 		"admin:smoke:minorder": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"@minorder\"",
 		"admin:smoke:maxqty": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"@maxqty\"",
