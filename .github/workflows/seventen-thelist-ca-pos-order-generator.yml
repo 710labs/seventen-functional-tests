@@ -42,6 +42,9 @@ on:
           - dev
           - stage
           - prod
+concurrency:
+  group: thelist-${{ github.event.inputs.environment || 'dev' }}-domain-state
+  cancel-in-progress: false
 jobs:
   pos-order-generator:
     timeout-minutes: 60

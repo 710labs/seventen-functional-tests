@@ -1,6 +1,9 @@
 name: Old - List PR Validation
 on:
   workflow_dispatch:
+concurrency:
+  group: thelist-dev-domain-state
+  cancel-in-progress: false
 jobs:
   ca-tests-dev:
     timeout-minutes: 60

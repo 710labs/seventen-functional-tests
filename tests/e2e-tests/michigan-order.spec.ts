@@ -15,7 +15,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 		`Basic Order - New Customer - In State - Recreational`,
 		{ tag: ['@recreational', '@InState'] },
 		async ({ page, browserName, qaClient }, workerInfo) => {
-			const address = '123 Eight Mile Rd MI'
+			const address = '123 Eight Mile Rd, Detroit, MI 48203'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
 			const createAccountPage = new CreateAccountPage(page, qaClient)
@@ -75,7 +75,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 		`Basic Order - New Customer - Out Of State - Recreational `,
 		{ tag: ['@recreational', '@OutOfState'] },
 		async ({ page, browserName, orders, qaClient }, workerInfo) => {
-			const address = '123 Broadway New York'
+			const address = '123 Broadway, New York, NY 10006'
 			const ageGatePage = new AgeGatePage(page)
 			const listPassword = new ListPasswordPage(page)
 			const createAccountPage = new CreateAccountPage(page, qaClient)

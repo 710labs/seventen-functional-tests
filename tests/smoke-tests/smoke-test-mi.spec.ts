@@ -15,7 +15,7 @@ import { fictionalAreacodes } from '../../utils/data-generator'
 import { writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests MI', () => {
-	const zipCode = '90210'
+	const zipCode = '48203'
 	const orderQuanity = 2
 	var orderNumber: any
 	var splitOrderNumber: string
@@ -32,7 +32,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 			},
 		])
 
-		const address = '123 Eight Mile Rd MI'
+		const address = '123 Eight Mile Rd, Detroit, MI 48203'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
 		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
@@ -48,7 +48,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
-		test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 		await test.step(`Pass Age Gate`, async () => {
 			await ageGatePage.passAgeGate()

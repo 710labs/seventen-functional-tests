@@ -4,6 +4,25 @@ import { fictionalAreacodes } from '../utils/data-generator'
 import { QAClient } from '../support/qa/client'
 import { getUsageLabel, isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
+type RegistrationFieldSnapshot = {
+	exists: boolean
+	value: string
+}
+
+type RegistrationSubmitSnapshot = {
+	url: string
+	address: RegistrationFieldSnapshot
+	billingState: RegistrationFieldSnapshot
+	billingZip: RegistrationFieldSnapshot
+	bodyPreview: string
+}
+
+const personalDocInputSelector = 'input[name="svntn_core_personal_doc"]'
+const personalDocSuccessSelector = [
+	'div.eligibilityInput:has(input#svntn_core_personal_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel',
+	'div.eligibilityInput:has(input[name="svntn_core_personal_doc"]) span.unsealLabel.unsealSuccess',
+].join(', ')
+
 export class CreateAccountPage {
 	readonly page: Page
 	readonly userNameField: Locator
@@ -104,11 +123,397 @@ export class CreateAccountPage {
 		})
 	}
 
+	private async clearPersonalDocumentInput(driversLicenseInput: Locator) {
+		await driversLicenseInput.setInputFiles([])
+		await this.page.evaluate(selector => {
+			const input = document.querySelector(selector)
+			if (!(input instanceof HTMLInputElement)) {
+				return
+			}
+
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+			input.dispatchEvent(new Event('change', { bubbles: true }))
+		}, personalDocInputSelector)
+	}
+
+	private async selectPersonalDocumentWithFileChooser(
+		driversLicenseInput: Locator,
+		fileName: string,
+	) {
+		const [driversLicenseChooser] = await Promise.all([
+			this.page.waitForEvent('filechooser'),
+			driversLicenseInput.click(),
+		])
+
+		// The upload widget initializes asynchronously after the chooser opens.
+		// Matching the older e2e cadence avoids selecting the file before its
+		// reactive upload handlers are ready.
+		await this.page.waitForTimeout(5000)
+		await driversLicenseChooser.setFiles(fileName)
+		await this.page.waitForFunction(
+			({ selector, filename }) => {
+				const input = document.querySelector(selector)
+
+				return (
+					input instanceof HTMLInputElement &&
+					Array.from(input.files || []).some(file => file.name === filename)
+				)
+			},
+			{ selector: personalDocInputSelector, filename: fileName },
+		)
+	}
+
+	private async isPersonalDocumentAccepted(uploadSuccess: Locator) {
+		const successVisible = await uploadSuccess.isVisible().catch(() => false)
+		const expirationEnabled =
+			(await this.driversLicenseExpMonth.isEnabled().catch(() => false)) &&
+			(await this.driversLicenseExpDay.isEnabled().catch(() => false)) &&
+			(await this.driversLicenseExpYear.isEnabled().catch(() => false))
+
+		return successVisible || expirationEnabled
+	}
+
+	private async waitForPersonalDocumentAccepted(uploadSuccess: Locator, timeout = 20000) {
+		const deadline = Date.now() + timeout
+
+		while (Date.now() < deadline) {
+			if (await this.isPersonalDocumentAccepted(uploadSuccess)) {
+				return true
+			}
+
+			await this.page.waitForTimeout(500)
+		}
+
+		return false
+	}
+
+	private async uploadPersonalDocument(fileName: string = 'CA-DL.jpg') {
+		await test.step('Upload Drivers License', async () => {
+			const driversLicenseInput = this.page.locator(personalDocInputSelector).first()
+			const uploadSuccess = this.page.locator(personalDocSuccessSelector).first()
+
+			await driversLicenseInput.waitFor({ state: 'attached' })
+			await expect(driversLicenseInput).toBeEnabled()
+
+			let lastError: unknown = null
+
+			for (let attempt = 1; attempt <= 2; attempt += 1) {
+				if (attempt > 1) {
+					await this.clearPersonalDocumentInput(driversLicenseInput)
+					await this.page.waitForTimeout(1000)
+				}
+
+				try {
+					await this.selectPersonalDocumentWithFileChooser(driversLicenseInput, fileName)
+
+					if (await this.waitForPersonalDocumentAccepted(uploadSuccess)) {
+						return
+					}
+				} catch (error) {
+					lastError = error
+				}
+			}
+
+			{
+				const uploadedFiles = await driversLicenseInput.evaluate(input =>
+					input instanceof HTMLInputElement
+						? Array.from(input.files || []).map(file => file.name)
+						: [],
+				)
+				const eligibilityError = await this.page
+					.locator('p.eligibilityError, .eligibilityError')
+					.allTextContents()
+					.catch(() => [])
+				const successVisible = await uploadSuccess.isVisible().catch(() => false)
+				const expMonthEnabled = await this.driversLicenseExpMonth.isEnabled().catch(() => false)
+				const expDayEnabled = await this.driversLicenseExpDay.isEnabled().catch(() => false)
+				const expYearEnabled = await this.driversLicenseExpYear.isEnabled().catch(() => false)
+				const bodyPreview = ((await this.page.locator('body').textContent().catch(() => '')) || '')
+					.replace(/\s+/g, ' ')
+					.trim()
+					.slice(0, 1000)
+
+				throw new Error(
+					[
+						'Drivers license file was selected, but the storefront did not mark the ID upload as accepted.',
+						`Expected file: ${fileName}`,
+						`Selected file(s): ${uploadedFiles.join(', ') || 'none'}`,
+						`Eligibility error text: ${eligibilityError.join(' | ') || 'none'}`,
+						`Upload success badge visible: ${successVisible}`,
+						`Expiration fields enabled: month=${expMonthEnabled}, day=${expDayEnabled}, year=${expYearEnabled}`,
+						`Body preview: ${bodyPreview}`,
+						`${lastError || 'Timed out waiting for upload acceptance'}`,
+					].join('\n'),
+				)
+			}
+		})
+	}
+
 	private async enterMedicalCardExpiration() {
 		await test.step('Enter Med Card Exp', async () => {
 			await this.medCardExpMonth.selectOption('12')
 			await this.medCardExpDay.selectOption('16')
 			await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
+		})
+	}
+
+	private normalizeZip(zipcode?: string) {
+		return (zipcode || '').replace(/\D/g, '').slice(0, 5)
+	}
+
+	private inferZipFromAddress(address: string) {
+		return this.normalizeZip(address.match(/\b\d{5}(?:-\d{4})?\b/)?.[0])
+	}
+
+	private inferStateFromAddress(address: string) {
+		return (address.match(/,\s*([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/)?.[1] || '').toUpperCase()
+	}
+
+	private async getBodyPreview() {
+		const bodyText = await this.page
+			.locator('body')
+			.innerText({ timeout: 1000 })
+			.catch(() => '')
+
+		return bodyText.replace(/\s+/g, ' ').trim().slice(0, 500)
+	}
+
+	private async inputValue(selector: string) {
+		const locator = this.page.locator(selector).first()
+
+		if ((await locator.count()) === 0) {
+			return ''
+		}
+
+		return locator.inputValue({ timeout: 1000 }).catch(() => '')
+	}
+
+	private async inputSnapshot(selector: string): Promise<RegistrationFieldSnapshot> {
+		const locator = this.page.locator(selector).first()
+		const exists = (await locator.count()) > 0
+
+		return {
+			exists,
+			value: exists ? await locator.inputValue({ timeout: 1000 }).catch(() => '') : '',
+		}
+	}
+
+	private async locatorInputSnapshot(locator: Locator): Promise<RegistrationFieldSnapshot> {
+		const exists = (await locator.count()) > 0
+
+		return {
+			exists,
+			value: exists ? await locator.first().inputValue({ timeout: 1000 }).catch(() => '') : '',
+		}
+	}
+
+	private async registrationSubmitSnapshot(): Promise<RegistrationSubmitSnapshot> {
+		return {
+			url: this.page.url(),
+			address: await this.locatorInputSnapshot(this.address),
+			billingState: await this.inputSnapshot(
+				'select[name="billing_state"], input[name="billing_state"], #billing_state',
+			),
+			billingZip: await this.inputSnapshot('input[name="billing_postcode"], #billing_postcode'),
+			bodyPreview: await this.getBodyPreview(),
+		}
+	}
+
+	private formatFieldSnapshot(label: string, snapshot: RegistrationFieldSnapshot) {
+		return `${label}: exists=${snapshot.exists ? 'yes' : 'no'}, value="${snapshot.value}"`
+	}
+
+	private formatSubmitSnapshot(snapshot: RegistrationSubmitSnapshot) {
+		return [
+			`Submitted URL: ${snapshot.url}`,
+			this.formatFieldSnapshot('Submitted address', snapshot.address),
+			this.formatFieldSnapshot('Submitted billing_state', snapshot.billingState),
+			this.formatFieldSnapshot('Submitted billing_postcode', snapshot.billingZip),
+			`Submitted body preview: ${snapshot.bodyPreview}`,
+		]
+	}
+
+	private async waitForOptionalInputValue(
+		selector: string,
+		fieldName: string,
+		matches: (value: string) => boolean,
+	) {
+		const locator = this.page.locator(selector).first()
+
+		if ((await locator.count()) === 0) {
+			return ''
+		}
+
+		const deadline = Date.now() + 5000
+		let lastValue = ''
+
+		while (Date.now() < deadline) {
+			lastValue = (await locator.inputValue().catch(() => '')).trim()
+
+			if (matches(lastValue)) {
+				return lastValue
+			}
+
+			await this.page.waitForTimeout(250)
+		}
+
+		throw new Error(
+			[
+				`Registration address ${fieldName} did not resolve after selecting autocomplete.`,
+				`Last ${fieldName}: "${lastValue}"`,
+				`Current URL: ${this.page.url()}`,
+				`Address value: "${await this.address.inputValue().catch(() => '')}"`,
+				`Body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async assertResolvedAddress(expectedState: string, expectedZip?: string) {
+		const state = expectedState.toUpperCase()
+		const zip = this.normalizeZip(expectedZip)
+
+		await expect(this.address, 'Registration address was not populated.').not.toHaveValue('', {
+			timeout: 5000,
+		})
+
+		await this.waitForOptionalInputValue(
+			'select[name="billing_state"], input[name="billing_state"], #billing_state',
+			'billing_state',
+			value => value.trim().toUpperCase() === state,
+		)
+
+		if (zip) {
+			await this.waitForOptionalInputValue(
+				'input[name="billing_postcode"], #billing_postcode',
+				'billing_postcode',
+				value => this.normalizeZip(value) === zip,
+			)
+		}
+	}
+
+	private async selectResolvedBillingAddress(
+		address: string,
+		expectedState: string,
+		expectedZip?: string,
+	) {
+		await test.step('Enter Billing Address', async () => {
+			await this.address.click()
+			await this.address.fill('')
+			await this.address.pressSequentially(address, { delay: 25 })
+
+			const suggestion = this.page.locator('.pac-item').first()
+			await suggestion.waitFor({ state: 'visible', timeout: 10000 })
+			await suggestion.click()
+
+			await this.assertResolvedAddress(expectedState, expectedZip)
+		})
+	}
+
+	private isShopRouteBeforeEligibility() {
+		const url = new URL(this.page.url())
+
+		return (
+			url.pathname === '/' &&
+			['', '#', '#pickup', '#pickup-deliver', '#deliver'].includes(url.hash)
+		)
+	}
+
+	private async throwSkippedEligibilityError(
+		expectedState: string,
+		expectedZip: string | undefined,
+		submitSnapshot: RegistrationSubmitSnapshot,
+	): Promise<never> {
+		throw new Error(
+			[
+				'Registration skipped the eligibility/license step and redirected to the shop.',
+				`Current URL: ${this.page.url()}`,
+				`Expected state: ${expectedState}`,
+				`Expected zip: ${expectedZip || 'not provided'}`,
+				...this.formatSubmitSnapshot(submitSnapshot),
+				`Current address: "${await this.inputValue('input[name="billing_address_1"]')}"`,
+				`Current billing_state: "${await this.inputValue('select[name="billing_state"], input[name="billing_state"], #billing_state')}"`,
+				`Current billing_postcode: "${await this.inputValue('input[name="billing_postcode"], #billing_postcode')}"`,
+				`Current body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async waitForEligibilityStep(
+		expectedState: string,
+		expectedZip: string | undefined,
+		submitSnapshot: RegistrationSubmitSnapshot,
+	) {
+		const deadline = Date.now() + 20000
+
+		while (Date.now() < deadline) {
+			if (await this.isEligibilityLicenseStepVisible()) {
+				return
+			}
+
+			await this.page.waitForTimeout(250)
+		}
+
+		if (this.isShopRouteBeforeEligibility() && !(await this.isEligibilityLicenseStepVisible())) {
+			await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
+		}
+
+		throw new Error(
+			[
+				'Eligibility/license step did not load after submitting the registration form.',
+				`Current URL: ${this.page.url()}`,
+				`Expected state: ${expectedState}`,
+				`Expected zip: ${expectedZip || 'not provided'}`,
+				...this.formatSubmitSnapshot(submitSnapshot),
+				`Current address: "${await this.inputValue('input[name="billing_address_1"]')}"`,
+				`Current billing_state: "${await this.inputValue('select[name="billing_state"], input[name="billing_state"], #billing_state')}"`,
+				`Current billing_postcode: "${await this.inputValue('input[name="billing_postcode"], #billing_postcode')}"`,
+				`Current body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private async isEligibilityLicenseStepVisible() {
+		const eligibilityContextVisible = await this.page
+			.locator('#eligibilityContext')
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const licenseInputVisible = await this.page
+			.locator('input[name="svntn_core_personal_doc"]')
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const usageTypeVisible = await this.page
+			.locator('input[name="svntn_last_usage_type"]')
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const completeAccountVisible = await this.page
+			.getByText(/complete your account/i)
+			.first()
+			.isVisible()
+			.catch(() => false)
+		const idUploadVisible = await this.page
+			.getByText(/id upload/i)
+			.first()
+			.isVisible()
+			.catch(() => false)
+
+		return (
+			eligibilityContextVisible ||
+			licenseInputVisible ||
+			usageTypeVisible ||
+			completeAccountVisible ||
+			idUploadVisible
+		)
+	}
+
+	private async submitNewCustomerForm(expectedState: string, expectedZip?: string) {
+		await test.step('Submit New Customer Form', async () => {
+			const submitSnapshot = await this.registrationSubmitSnapshot()
+
+			await this.page.click('button:has-text("Next")')
+			await this.waitForEligibilityStep(expectedState, expectedZip, submitSnapshot)
 		})
 	}
 
@@ -132,7 +537,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		usage: TestUsageType,
 		logout: boolean = false,
-		address: string = '3377 S La Cienega Blvd, Los Angeles, CA 90210',
+		address: string = '440 N Rodeo Dr, Beverly Hills, CA 90210',
 		state: string = 'CA',
 		medCardNumber: string = '1234567890',
 	) {
@@ -177,13 +582,7 @@ export class CreateAccountPage {
 				await this.zipCode.fill(zipcode)
 			})
 		} else {
-			await test.step('Enter Billing Address', async () => {
-				await this.address.click()
-				await this.address.fill(address)
-				await this.page.waitForTimeout(1000)
-				await this.page.keyboard.press('ArrowDown')
-				await this.page.keyboard.press('Enter')
-			})
+			await this.selectResolvedBillingAddress(address, state, zipcode)
 		}
 
 		if (process.env.NEXT_VERSION === 'true' && state === 'FL') {
@@ -209,30 +608,18 @@ export class CreateAccountPage {
 			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
-		await test.step('Submit New Customer Form', async () => {
-			await this.page.waitForTimeout(2000)
-			await this.page.click('button:has-text("Next")')
-			await this.page.waitForTimeout(1000)
-		})
+		await this.submitNewCustomerForm(state, zipcode)
 
-		await test.step('Upload Drivers License', async () => {
-			const dlUploadButton = await this.page.waitForSelector(
-				'input[name="svntn_core_personal_doc"]',
-			)
-			const [driversLicenseChooser] = await Promise.all([
-				this.page.waitForEvent('filechooser'),
-				dlUploadButton.click(),
-			])
-			await this.page.waitForTimeout(5000)
-			await driversLicenseChooser.setFiles('CA-DL.jpg')
-			await this.page.waitForTimeout(5000)
-			await driversLicenseChooser.page()
+		if (state !== 'FL') {
+			await this.selectRegistrationUsageType(usage)
+		}
 
-			await test.step('Enter Drivers License Exp', async () => {
-				await this.driversLicenseExpMonth.selectOption('12')
-				await this.driversLicenseExpDay.selectOption('16')
-				await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
-			})
+		await this.uploadPersonalDocument('CA-DL.jpg')
+
+		await test.step('Enter Drivers License Exp', async () => {
+			await this.driversLicenseExpMonth.selectOption('12')
+			await this.driversLicenseExpDay.selectOption('16')
+			await this.driversLicenseExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 		})
 
 		if (state === 'FL') {
@@ -254,8 +641,6 @@ export class CreateAccountPage {
 				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
 		} else {
-			await this.selectRegistrationUsageType(usage)
-
 			if (isMedicalUsage(usage)) {
 				await this.uploadMedicalCard()
 				await this.enterMedicalCardExpiration()
@@ -270,15 +655,15 @@ export class CreateAccountPage {
 
 		if (state === 'FL') {
 			await test.step('Complete Usage Type Form', async () => {
-				await (await this.page.$('text=Register')).click()
+				await this.page.getByRole('button', { name: /register/i }).click()
 				await this.page.waitForTimeout(5000)
 				await expect(this.page).toHaveURL('/#deliver')
 			})
 		} else {
 			await test.step('Complete Usage Type Form', async () => {
-				await (await this.page.$('text=Register')).click()
+				await this.page.getByRole('button', { name: /register/i }).click()
 				await this.page.waitForTimeout(5000)
-				await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
+				await expect(this.page.url()).toMatch(/\/(?:#pickup-deliver|#pickup)?$/)
 			})
 		}
 
@@ -333,23 +718,16 @@ export class CreateAccountPage {
 			await this.birthYear.selectOption(`${birthYear}`)
 		})
 
-		await test.step('Enter Billing Address', async () => {
-			await this.address.click()
-			await this.address.fill(address)
-			await this.page.waitForTimeout(1000)
-			await this.page.keyboard.press('ArrowDown')
-			await this.page.keyboard.press('Enter')
-		})
+		const addressState = this.inferStateFromAddress(address) || 'MI'
+		const addressZip = this.inferZipFromAddress(address)
+		await this.selectResolvedBillingAddress(address, addressState, addressZip)
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
 			await this.phoneNumber.fill(`${phone}`)
 		})
 
-		await test.step('Click Next Link', async () => {
-			await this.page.getByRole('button', { name: 'Next' }).click()
-			await this.page.waitForSelector('#eligibilityContext')
-		})
+		await this.submitNewCustomerForm(addressState, addressZip)
 
 		if (isMedicalUsage(type)) {
 			await test.step('Select Medical Usage Type', async () => {
@@ -422,7 +800,7 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Complete Usage Type Form', async () => {
-			await await this.page.getByRole('button', { name: 'Register' }).click()
+			await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
 			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
@@ -473,23 +851,14 @@ export class CreateAccountPage {
 			await this.birthYear.selectOption(`${birthYear}`)
 		})
 
-		await test.step('Enter Billing Address', async () => {
-			await this.address.click()
-			await this.address.fill(address)
-			await this.page.waitForTimeout(1000)
-			await this.page.keyboard.press('ArrowDown')
-			await this.page.keyboard.press('Enter')
-		})
+		await this.selectResolvedBillingAddress(address, 'CA', this.inferZipFromAddress(address))
 
 		await test.step('Enter Phone Number', async () => {
 			await this.phoneNumber.click()
 			await this.phoneNumber.fill(`${phone}`)
 		})
 
-		await test.step('Click Next Link', async () => {
-			await this.page.getByRole('button', { name: 'Next' }).click()
-			await this.page.waitForSelector('#eligibilityContext')
-		})
+		await this.submitNewCustomerForm('CA', this.inferZipFromAddress(address))
 
 		if (isMedicalUsage(type)) {
 			await test.step('Select Medical Usage Type', async () => {
@@ -549,7 +918,7 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Complete Usage Type Form', async () => {
-			await await this.page.getByRole('button', { name: 'Register' }).click()
+			await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
 			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
@@ -593,7 +962,7 @@ export class CreateAccountPage {
 		zipcode: string,
 		type: TestUsageType,
 		logout: boolean = false,
-		address: string = '933 Alpine Ave, Boulder, CO, 80304',
+		address: string = '933 Alpine Ave, Boulder, CO 80304',
 		state: string = 'CO',
 	) {
 		await test.step('Verify Layout', async () => {})
@@ -635,13 +1004,7 @@ export class CreateAccountPage {
 				await this.zipCode.fill(zipcode)
 			})
 		} else {
-			await test.step('Enter Billing Address', async () => {
-				await this.address.click()
-				await this.address.fill(address)
-				await this.page.waitForTimeout(1000)
-				await this.page.keyboard.press('ArrowDown')
-				await this.page.keyboard.press('Enter')
-			})
+			await this.selectResolvedBillingAddress(address, state, zipcode)
 		}
 
 		await test.step('Enter Phone Number', async () => {
@@ -649,11 +1012,7 @@ export class CreateAccountPage {
 			await this.phoneNumber.fill(faker.phone.phoneNumber('555-###-####'))
 		})
 
-		await test.step('Submit New Customer Form', async () => {
-			await this.page.waitForTimeout(2000)
-			await this.page.click('button:has-text("Next")')
-			await this.page.waitForTimeout(1000)
-		})
+		await this.submitNewCustomerForm(state, zipcode)
 
 		await test.step('Upload Drivers License', async () => {
 			const dlUploadButton = await this.page.waitForSelector(
@@ -683,7 +1042,7 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Complete Usage Type Form', async () => {
-			await (await this.page.$('text=Register')).click()
+			await this.page.getByRole('button', { name: /register/i }).click()
 			await this.page.waitForTimeout(5000)
 			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})

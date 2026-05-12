@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import { AdminLogin } from '../../models/admin/admin-login-page'
 import { PrivateStoreSettingsPage } from '../../models/admin/private-store-settings-page'
 import { CAStorefrontGatePage } from '../../models/admin-drop/ca-storefront-gate-page'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
@@ -7,7 +6,6 @@ import { ListPasswordPage } from '../../models/list-password-protect-page'
 test('Private Store round trip', async ({ page, browser }) => {
 	const basePassword = process.env.PRIVATE_STORE_TEST_PASSWORD
 	const uniqueRunId = process.env.UNIQUE_RUN_ID || Date.now().toString()
-	const adminLoginPage = new AdminLogin(page)
 	const privateStoreSettingsPage = new PrivateStoreSettingsPage(page)
 	const cleanupErrors: string[] = []
 	let storefrontContext
@@ -30,8 +28,6 @@ test('Private Store round trip', async ({ page, browser }) => {
 		await privateStoreSettingsPage.saveChanges()
 		await privateStoreSettingsPage.goto()
 		expect(await privateStoreSettingsPage.hasPassword(generatedPassword)).toBeTruthy()
-		await adminLoginPage.logout()
-		await expect(page.locator('input[name="log"]')).toBeVisible()
 
 		storefrontContext = await browser.newContext({
 			baseURL: process.env.BASE_URL,
@@ -87,13 +83,11 @@ test('Private Store round trip', async ({ page, browser }) => {
 		await storefrontContext.close()
 		storefrontContext = undefined
 
-		await adminLoginPage.login()
 		await privateStoreSettingsPage.goto()
 	} catch (error) {
 		mainError = error
 	} finally {
 		try {
-			await adminLoginPage.ensureLoggedIn()
 			await privateStoreSettingsPage.goto()
 			const removed = await privateStoreSettingsPage.removePassword(generatedPassword)
 

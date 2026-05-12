@@ -61,7 +61,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
 			// await createAccountPage.createColoradoCustomer(email, 'test1234', zipCode, 1)
-			const address = '933 Alpine Ave, Boulder, CO, 80304'
+			const address = '933 Alpine Ave, Boulder, CO 80304'
 			var fakeFirstName = faker.name.firstName() + '_Test'
 			var fakeLastName = faker.name.lastName() + '_Test'
 			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'
@@ -132,7 +132,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
-			const address = '933 Alpine Ave, Boulder, CO, 80304'
+			const address = '933 Alpine Ave, Boulder, CO 80304'
 			var fakeFirstName = faker.name.firstName() + '_Test'
 			var fakeLastName = faker.name.lastName() + '_Test'
 			var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'

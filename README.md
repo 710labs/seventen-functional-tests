@@ -203,16 +203,17 @@ Current coverage includes:
 - private-store password smoke
 - order export smoke
 - menu upload smoke
-- focused rules smoke: max quantity and pickup/delivery minimum order
+- focused rules smoke: max quantity
+- focused rules smoke: minimum order
 
 Local:
 
 ```bash
 npm run admin:smoke
-MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke -- --grep "Menu upload"
-npm run admin:smoke -- --grep "@maxqty"
-npm run admin:smoke -- --grep "@minorder"
-npm run admin:smoke -- --grep "@rules"
+MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke:menu-upload
+npm run admin:smoke:minorder
+npm run admin:smoke:maxqty
+npm run admin:smoke:all
 ```
 
 GitHub Actions:
@@ -227,14 +228,49 @@ GitHub Actions:
 - `menu_fixture`: choose one dropdown option
 - to run focused rules in GitHub Actions, set:
 - `include_focused_rules`: `yes`
-- `focused_rule_group`: choose `all`, `maxqty`, or `minorder`
+- `focused_rule_group`: choose `all`, `minorder`, or `maxqty`
+- to run minimum order in GitHub Actions, set:
+- `include_menu_upload`: `yes`
+- `include_focused_rules`: `yes`
+- `focused_rule_group`: `minorder`
+
+Minimum-order smoke sequence:
+
+```bash
+MENU_UPLOAD_FIXTURE=ca-menu-4-7-25 npm run admin:smoke:menu-upload
+npm run admin:smoke:minorder
+```
+
+The minimum-order smoke does not import, reset, trash, or restore products. It depends on a
+previously uploaded menu, changes the pickup and delivery minimum-order admin settings for the
+test, verifies the storefront reaches checkout only after the subtotal exceeds that shared
+minimum, places a delivery order, records the order number in Playwright attachments, and restores
+the original admin minimums in cleanup.
+
+To run all admin-drop coverage locally, use `npm run admin:smoke:all`. It runs the default
+non-destructive smoke first, uploads the full CA menu, then runs `@minorder`, then `@maxqty`.
+The command prints each Playwright phase as it runs and finishes with one overall pass/fail
+summary for the full ordered flow. Do not use one local unordered Playwright invocation for this
+combined path because max quantity resets/imports its own focused fixture and can invalidate the
+uploaded-menu precondition.
+
+To override the full-flow menu fixture while keeping the ordered summary runner:
+
+```bash
+ADMIN_SMOKE_ALL_MENU_FIXTURE=co-menu-4-7-25 npm run admin:smoke:all
+```
 
 Menu upload fixtures:
 
 - committed under `tests/admin-drop-tests/fixtures/menu-upload/`
 - selected by `MENU_UPLOAD_FIXTURE`
 - default fixture key: `smoke-default`
+- workflow dropdown default: `ca-menu-4-7-25`
 - workflow dropdown options: `smoke-default`, `smoke-alt`, `ca-menu-4-7-25`, `co-menu-4-7-25`
+
+Use `smoke-default` or `smoke-alt` for importer-only checks. Use `ca-menu-4-7-25` or
+`co-menu-4-7-25` before `@minorder` so the storefront has enough realistic products to build
+a cart above the randomized minimum.
 
 The menu-upload smoke verifies WooCommerce product import success, then checks the environment-matched `/iframe/` page for every product name from the selected CSV fixture.
 
@@ -250,17 +286,17 @@ Focused rules fixtures:
 
 - committed under `tests/admin-drop-tests/fixtures/focused-rules/`
 - current fixture: `focused-rules-wave1.csv`
-- products include `ADMIN_PHASE3_MAXQTY` and `ADMIN_PHASE3_MINORDER`
+- products include `ADMIN_PHASE3_MAXQTY`
 - `ADMIN_PHASE3_MAXQTY` uses `Meta: _isa_wc_max_qty_product_max` for the product max quantity rule
 
 Important focused-rules behavior:
 
 - focused-rules smoke is destructive and should only run on Dev or Stage
-- before import, it trashes all currently published products
+- max quantity resets/imports its own focused fixture before validation
+- minimum order does not import/reset products, but requires a previously uploaded menu
+- destructive fixture imports trash currently published products before import
 - cleanup scope is published products only
-- it does not empty the Trash view
-- minimum-order tests edit `/wp-admin/admin.php?page=svntn-core-settings`
-- minimum-order tests restore original purchase-limit settings in cleanup
+- destructive fixture imports do not empty the Trash view
 - if the import fails after cleanup, the environment may temporarily have no published products until the next successful import
 
 ## Load Testing

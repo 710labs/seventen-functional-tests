@@ -31,7 +31,7 @@ test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserN
 				path: '/',
 			},
 		])
-		const address = '123 Rodeo Dr Beverly Hills'
+		const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
 		var fakeEmail = faker.internet.email(fakeFirstName, fakeLastName, 'test710labstest.com') // 'Jeanne_Doe88@example.fakerjs.dev'

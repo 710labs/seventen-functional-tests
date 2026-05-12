@@ -7,16 +7,16 @@ import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { MyAccountPage } from '../../models/my-account-page'
-import zipcodes from '../../utils/zipcodes-fl.json'
 import { faker } from '@faker-js/faker'
 
 test(
 	`Basic Order - New Customer - Medical`,
 	{ tag: ['@medical', '@FL'] },
 	async ({ page, browserName, qaClient }, workerInfo) => {
-		const address = '3275 NW 24th Street Rd'
-		var index = await Math.floor(Math.random() * (zipcodes.length - 0) + 0)
-		const zipCode = zipcodes[index]
+		const streetAddress = '1845 Town Center Blvd'
+		const city = 'Fleming Island'
+		const address = `${streetAddress}, ${city}, FL 32003`
+		const zipCode = '32003'
 		const email = `test+${uuidv4()}@710labs-test.com`
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
@@ -47,7 +47,7 @@ test(
 			'FL',
 		)
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
-			await myAccountPage.addAddress(address, 'Miami', 'FL', zipCode)
+			await myAccountPage.addAddress(streetAddress, city, 'FL', zipCode)
 		}
 		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'medical')
 		var cartTotals = await cartPage.verifyCart(zipCode)
