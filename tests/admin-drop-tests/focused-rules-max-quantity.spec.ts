@@ -4,7 +4,6 @@ import { AgeGatePage } from '../../models/age-gate-page'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { MyAccountPage } from '../../models/my-account-page'
-import { AdminLogin } from '../../models/admin/admin-login-page'
 import { AdminProductsPage } from '../../models/admin/admin-products-page'
 import { FocusedRulesStorefrontPage } from '../../models/admin-drop/focused-rules-storefront-page'
 import { focusedRulesFixture } from '../../utils/admin-drop/focused-rules-fixture'
@@ -52,12 +51,10 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 	const { maxQuantityProduct } = focusedRulesFixture
 	const expectedMaxQuantity = maxQuantityProduct.expectedMaxQuantity || 2
 	const adminProductsPage = new AdminProductsPage(page)
-	const adminLoginPage = new AdminLogin(page)
 	const cleanupErrors: string[] = []
 	let checkoutPasswordStatus: FocusedRulesStorefrontPasswordStatus | undefined
 	let storefrontContext: BrowserContext | undefined
 	let mainError: unknown
-	let adminLoggedOut = false
 
 	try {
 		await resetCatalogWithFocusedRulesFixture(page, testInfo)
@@ -76,11 +73,12 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 			).toBe(true)
 		}
 
-		await adminLoginPage.logout()
-		adminLoggedOut = true
-
 		storefrontContext = await browser.newContext({
 			baseURL: process.env.BASE_URL,
+			storageState: {
+				cookies: [],
+				origins: [],
+			},
 		})
 		const storefrontPage = await storefrontContext.newPage()
 		const storefront = new FocusedRulesStorefrontPage(storefrontPage, checkoutPasswordStatus.checkoutPassword)
@@ -89,6 +87,7 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 		const storefrontCustomer = buildStorefrontCustomer(testInfo)
 
 		await passStorefrontGates(storefrontPage)
+		await storefrontPage.goto('/my-account/')
 		await createAccountPage.create(
 			storefrontCustomer.firstName,
 			storefrontCustomer.lastName,
@@ -156,15 +155,6 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 	} finally {
 		if (storefrontContext) {
 			await storefrontContext.close()
-		}
-
-		if (adminLoggedOut) {
-			try {
-				await adminLoginPage.login()
-				adminLoggedOut = false
-			} catch (loginError) {
-				cleanupErrors.push(`${loginError}`)
-			}
 		}
 
 		try {

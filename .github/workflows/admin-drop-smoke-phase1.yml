@@ -126,7 +126,7 @@ jobs:
           fi
 
           run_admin_smoke() {
-            npm run admin:smoke -- "$@"
+            npx playwright test --config=configs/admin-drop.config.ts --workers=1 "$@"
           }
 
           if [ -n "$GREP_INPUT" ] && echo "$GREP_INPUT" | grep -Eqi '@rules'; then

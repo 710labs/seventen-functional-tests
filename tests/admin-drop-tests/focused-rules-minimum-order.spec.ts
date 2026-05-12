@@ -7,7 +7,6 @@ import { MyAccountPage } from '../../models/my-account-page'
 import { CartPage } from '../../models/cart-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
-import { AdminLogin } from '../../models/admin/admin-login-page'
 import {
 	SvntnCoreSettingsPage,
 	type MinimumOrderSettings,
@@ -129,12 +128,13 @@ test('Focused rules minimum order is enforced @admin-drop @rules @minorder', asy
 	persistedSettings = await settingsPage.assertMinimumOrderSettings(generatedSettings)
 	await attachJson(testInfo, 'minimum-order-persisted-settings', persistedSettings)
 
-	const adminLoginPage = new AdminLogin(page)
-	await adminLoginPage.logout()
-
 	await test.step('Run storefront delivery checkout flow', async () => {
 		const storefrontContext = await browser.newContext({
 			baseURL: process.env.BASE_URL,
+			storageState: {
+				cookies: [],
+				origins: [],
+			},
 		})
 		const storefrontPage = await storefrontContext.newPage()
 		const shopPage = new ShopPage(storefrontPage, browserName, testInfo)
@@ -144,9 +144,9 @@ test('Focused rules minimum order is enforced @admin-drop @rules @minorder', asy
 		const createAccountPage = new CreateAccountPage(storefrontPage, qaClient)
 		const myAccountPage = new MyAccountPage(storefrontPage)
 		const storefrontCustomer = buildStorefrontCustomer(testInfo)
-		const mobile = testInfo.project.name === 'Mobile Chrome'
 
 		await passStorefrontGates(storefrontPage)
+		await storefrontPage.goto('/my-account/')
 		await createAccountPage.create(
 			storefrontCustomer.firstName,
 			storefrontCustomer.lastName,
@@ -162,55 +162,25 @@ test('Focused rules minimum order is enforced @admin-drop @rules @minorder', asy
 			await myAccountPage.addAddress()
 		}
 
-		const cartBuildAttempts: Array<{
-			attempt: number
-			cartSubtotal: number
-			checkoutState: Awaited<ReturnType<ShopPage['getStorefrontCheckoutState']>>
-			minimumOrderBanner: Awaited<ReturnType<ShopPage['getMinimumOrderBannerState']>>
-			productsRequested: number
-		}> = []
-		let cartSubtotal = 0
-		let minimumOrderBanner: Awaited<ReturnType<ShopPage['getMinimumOrderBannerState']>> | undefined
-		let checkoutState: Awaited<ReturnType<ShopPage['getStorefrontCheckoutState']>> | undefined
+		const minimumOrderSummary = await shopPage.addProductsUntilMinimumMet(
+			generatedMinimum,
+			'Delivery',
+			'recreational',
+		)
+		await attachJson(testInfo, 'minimum-order-cart-build-summary', minimumOrderSummary)
+		const cartSubtotal = minimumOrderSummary.finalSubtotal
+		const minimumOrderBanner = minimumOrderSummary.finalBanner
+		const checkoutState = minimumOrderSummary.finalCheckoutState
 
-		for (let attempt = 1; attempt <= 4; attempt += 1) {
-			const productsRequested = attempt * 6
-			await shopPage.addProductsToCart(productsRequested, mobile, 'Delivery', 'recreational')
-
-			cartSubtotal = await shopPage.getCartSubtotalAmount()
-			minimumOrderBanner = await shopPage.getMinimumOrderBannerState()
-			checkoutState = await shopPage.getStorefrontCheckoutState()
-			cartBuildAttempts.push({
-				attempt,
-				cartSubtotal,
-				checkoutState,
-				minimumOrderBanner,
-				productsRequested,
-			})
-
-			if (cartSubtotal > generatedMinimum) {
-				break
-			}
-		}
-
-		await attachJson(testInfo, 'minimum-order-cart-build-summary', {
-			attempts: cartBuildAttempts,
-			cartSubtotal,
-			checkoutState,
-			configuredMinimum: generatedMinimum,
-			minimumOrderBanner,
-			productsRequested:
-				cartBuildAttempts[cartBuildAttempts.length - 1]?.productsRequested || 0,
-		})
 		expect(
 			cartSubtotal,
 			`Expected cart subtotal ${cartSubtotal} to be greater than generated minimum ${generatedMinimum}`,
 		).toBeGreaterThan(generatedMinimum)
 		expect(
-			minimumOrderBanner?.isVisible,
+			minimumOrderBanner.isVisible,
 			'Expected no minimum-order banner after adding products with the standard e2e flow',
 		).toBe(false)
-		expect(checkoutState?.isReachable, 'Expected checkout to be enabled/reachable').toBe(true)
+		expect(checkoutState.isReachable, 'Expected checkout to be enabled/reachable').toBe(true)
 		await cartPage.goToCheckout()
 		await checkoutPage.selectSlot()
 		await expect(checkoutPage.placeOrderButton).toBeVisible()
@@ -228,7 +198,6 @@ test('Focused rules minimum order is enforced @admin-drop @rules @minorder', asy
 		await storefrontContext.close()
 	})
 
-	await adminLoginPage.login()
 	await settingsPage.goto()
 	await settingsPage.setAndSaveMinimumOrderSettings(originalSettings)
 	restoredSettings = await settingsPage.assertMinimumOrderSettings(originalSettings)

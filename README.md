@@ -210,9 +210,10 @@ Local:
 
 ```bash
 npm run admin:smoke
-MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke -- --grep "Menu upload"
-npm run admin:smoke -- --grep "@minorder"
-npm run admin:smoke -- --grep "@maxqty"
+MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke:menu-upload
+npm run admin:smoke:minorder
+npm run admin:smoke:maxqty
+npm run admin:smoke:all
 ```
 
 GitHub Actions:
@@ -236,8 +237,8 @@ GitHub Actions:
 Minimum-order smoke sequence:
 
 ```bash
-MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke -- --grep "Menu upload"
-npm run admin:smoke -- --grep "@minorder"
+MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke:menu-upload
+npm run admin:smoke:minorder
 ```
 
 The minimum-order smoke does not import, reset, trash, or restore products. It depends on a
@@ -246,8 +247,9 @@ test, verifies the storefront reaches checkout only after the subtotal exceeds t
 minimum, places a delivery order, records the order number in Playwright attachments, and restores
 the original admin minimums in cleanup.
 
-To run all focused rules locally, run the minimum-order sequence first, then run `@maxqty`.
-Do not use one local `--grep "@rules"` command for this combined path because max quantity
+To run all admin-drop coverage locally, use `npm run admin:smoke:all`. It runs the default
+non-destructive smoke first, then menu upload, then `@minorder`, then `@maxqty`.
+Do not use one local unordered Playwright invocation for this combined path because max quantity
 resets/imports its own focused fixture and can invalidate the uploaded-menu precondition.
 
 Menu upload fixtures:
