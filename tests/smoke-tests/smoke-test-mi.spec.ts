@@ -15,7 +15,7 @@ import { fictionalAreacodes } from '../../utils/data-generator'
 import { writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests MI', () => {
-	const zipCode = '90210'
+	const zipCode = '48203'
 	const orderQuanity = 2
 	var orderNumber: any
 	var splitOrderNumber: string
@@ -48,7 +48,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
-		test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 		await test.step(`Pass Age Gate`, async () => {
 			await ageGatePage.passAgeGate()

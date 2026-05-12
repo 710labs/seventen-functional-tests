@@ -655,7 +655,7 @@ export class CreateAccountPage {
 
 		if (state === 'FL') {
 			await test.step('Complete Usage Type Form', async () => {
-				await (await this.page.$('text=Register')).click()
+				await this.page.getByRole('button', { name: /register/i }).click()
 				await this.page.waitForTimeout(5000)
 				await expect(this.page).toHaveURL('/#deliver')
 			})
@@ -800,7 +800,7 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Complete Usage Type Form', async () => {
-			await await this.page.getByRole('button', { name: 'Register' }).click()
+			await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
 			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
@@ -918,7 +918,7 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Complete Usage Type Form', async () => {
-			await await this.page.getByRole('button', { name: 'Register' }).click()
+			await this.page.getByRole('button', { name: 'Register' }).click()
 			await this.page.waitForTimeout(5000)
 			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
@@ -1042,7 +1042,7 @@ export class CreateAccountPage {
 		}
 
 		await test.step('Complete Usage Type Form', async () => {
-			await (await this.page.$('text=Register')).click()
+			await this.page.getByRole('button', { name: /register/i }).click()
 			await this.page.waitForTimeout(5000)
 			await expect(this.page.url()).toMatch(/\/#pickup-deliver|\/#pickup$/)
 		})
