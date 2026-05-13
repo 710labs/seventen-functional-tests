@@ -336,11 +336,11 @@ Tests covering administrative functionality:
 ## Integration Points
 
 ### QA API Endpoints
-- **Base Path**: `/wp-json/seventen-qa/v1/`
-- **User Creation**: `POST /users` with `user_role`, `user_vintage`, `user_usage`
-- **Tax Rates**: `GET /rates?post_code={zip}`
-- **Product Info**: `GET /products` with `product_id`, `product_sku`, or `product_name`
-- **Domain Switching**: `POST /domains` with form `state` (dev/staging)
+- **Base Path**: `/wp-content/plugins/seventen-qa/api/`
+- **User Creation**: `GET /users/create/` with `userRole`, `userVintage`, `userUsage`
+- **Tax Rates**: `GET /rates?postCode={zip}`
+- **Product Info**: `GET /products/` with `productId`, `productSku`, or `productName`
+- **Domain Switching**: `GET /domains/update/?state={state}` (dev/staging)
 
 ### External Services
 - **Acuity Scheduling**: Pickup slot selection (Michigan)
