@@ -1,4 +1,4 @@
-const DEFAULT_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
+const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
 const VALID_STATES = new Set(['ca', 'fl', 'mi', 'co', 'nj'])
 const PRODUCTION_STATE_HOSTS = new Set([
@@ -21,13 +21,16 @@ const fetchFn =
 function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath || trimmedPath === LEGACY_QA_ENDPOINT_PATH) {
-		return DEFAULT_QA_ENDPOINT_PATH
+	if (!trimmedPath) {
+		return LEGACY_QA_ENDPOINT_PATH
 	}
 
 	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
+	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
 
-	return normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	return pathWithTrailingSlash === REST_QA_ENDPOINT_PATH
+		? LEGACY_QA_ENDPOINT_PATH
+		: pathWithTrailingSlash
 }
 
 function buildQaApiBaseUrl(baseURL, qaEndpointPath) {
@@ -97,17 +100,17 @@ async function main() {
 		throw new Error('API_KEY is required to set the QA domain state.')
 	}
 
-	const endpoint = new URL('domains', qaApiBaseUrl).toString()
+	const endpointUrl = new URL('domains/update/', qaApiBaseUrl)
+	endpointUrl.search = new URLSearchParams({ state }).toString()
+	const endpoint = endpointUrl.toString()
 	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
 	const response = await fetchFn(endpoint, {
-		method: 'POST',
+		method: 'GET',
 		headers: {
 			'x-api-key': apiKey,
-			'content-type': 'application/x-www-form-urlencoded',
 		},
-		body: new URLSearchParams({ state }).toString(),
 	})
 	const body = await readBody(response)
 
@@ -117,15 +120,11 @@ async function main() {
 		process.exit(1)
 	}
 
-	const domain = body?.data?.domain
-
-	if (typeof domain !== 'string') {
-		console.error('[qa] Domain set call succeeded but returned an unexpected payload.')
-		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
-		process.exit(1)
+	if (body) {
+		console.log(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
 	}
 
-	console.log(`[qa] Domain state set to ${state}. Returned state domain: ${domain}`)
+	console.log(`[qa] Legacy domain switch request for ${state} succeeded.`)
 }
 
 main().catch(error => {
