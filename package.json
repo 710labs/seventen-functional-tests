@@ -77,9 +77,7 @@
 		"cross-env": "^7.0.3",
 		"dotenv": "^16.0.0",
 		"find-config": "^1.0.0",
-		"fs": "^0.0.1-security",
 		"node-fetch": "^3.2.0",
-		"path": "^0.12.7",
 		"playwright-slack-report": "^1.1.89",
 		"uuid": "^8.3.2"
 	},
@@ -94,7 +92,6 @@
 		"json2csv": "^5.0.7",
 		"pixelmatch": "^6.0.0",
 		"playwright-tesults-reporter": "^1.1.0",
-		"pngjs": "^7.0.0",
-		"save-dev": "^0.0.1-security"
+		"pngjs": "^7.0.0"
 	}
 }
