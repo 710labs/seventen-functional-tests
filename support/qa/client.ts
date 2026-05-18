@@ -2,7 +2,7 @@ import { APIRequestContext, APIResponse } from '@playwright/test'
 
 export const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 export const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
-export const DEFAULT_QA_ENDPOINT_PATH = LEGACY_QA_ENDPOINT_PATH
+export const DEFAULT_QA_ENDPOINT_PATH = REST_QA_ENDPOINT_PATH
 
 export type DomainState = 'ca' | 'fl' | 'mi' | 'co' | 'nj'
 
@@ -44,6 +44,12 @@ type ProductLookup = {
 	product_name?: string
 }
 
+type QaEnvelope<T> = {
+	outcome: string
+	message: string
+	data: T
+}
+
 export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	const trimmedPath = qaEndpointPath?.trim()
 
@@ -51,12 +57,32 @@ export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
-	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
-	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	let endpointPath = trimmedPath
+	try {
+		endpointPath = new URL(trimmedPath).pathname
+	} catch {
+		endpointPath = trimmedPath
+	}
 
-	return pathWithTrailingSlash === REST_QA_ENDPOINT_PATH
-		? DEFAULT_QA_ENDPOINT_PATH
-		: pathWithTrailingSlash
+	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+	const normalizedPath = pathWithoutQuery.startsWith('/')
+		? pathWithoutQuery
+		: `/${pathWithoutQuery}`
+	const normalizedLowerPath = normalizedPath.toLowerCase()
+
+	if (
+		normalizedLowerPath === LEGACY_QA_ENDPOINT_PATH ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/') ||
+		normalizedLowerPath.includes('/wp-json/seventen-qa/v1/') ||
+		normalizedLowerPath === '/wp-json/seventen-qa/v1' ||
+		normalizedLowerPath.includes('/domains/update') ||
+		normalizedLowerPath.includes('/users/create') ||
+		normalizedLowerPath.includes('/users/delete')
+	) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
+
+	return normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
 }
 
 export function buildQaApiBaseUrl(baseURL?: string, qaEndpointPath?: string): string {
@@ -98,64 +124,28 @@ function formatResponseError(action: string, status: number, body: unknown): str
 	return `[qa] ${action} failed with HTTP ${status}`
 }
 
-async function readSuccessfulBody(response: APIResponse, action: string): Promise<unknown> {
+async function unwrapQaData<T>(
+	response: APIResponse,
+	action: string,
+	expectedStatus: number,
+): Promise<T> {
 	const body = await readResponseBody(response)
 
 	if (!response.ok()) {
 		throw new Error(formatResponseError(action, response.status(), body))
 	}
 
-	return body
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === 'object' && !Array.isArray(value)
-		? (value as Record<string, unknown>)
-		: null
-}
-
-function formatUnexpectedPayload(action: string, body: unknown): Error {
-	return new Error(
-		`[qa] ${action} returned an unexpected payload: ${
-			typeof body === 'string' ? body : JSON.stringify(body)
-		}`,
-	)
-}
-
-function normalizeUserPayload(body: unknown, action: string): QaUser {
-	const record = asRecord(body)
-	const data = asRecord(record?.data)
-	const user = asRecord(data?.user) || asRecord(record?.user) || record
-
-	if (user && typeof user.email === 'string' && typeof user.password === 'string') {
-		return user as QaUser
+	if (response.status() !== expectedStatus) {
+		throw new Error(
+			`[qa] ${action} returned HTTP ${response.status()} instead of ${expectedStatus}`,
+		)
 	}
 
-	throw formatUnexpectedPayload(action, body)
-}
-
-function normalizeRatesPayload(body: unknown, action: string): QaRates {
-	const record = asRecord(body)
-	const data = asRecord(record?.data)
-	const rates = asRecord(data?.rates) || asRecord(record?.rates) || record
-
-	if (rates) {
-		return rates as QaRates
+	if (!body || typeof body !== 'object' || !('data' in body)) {
+		throw new Error(`[qa] ${action} returned an unexpected payload.`)
 	}
 
-	throw formatUnexpectedPayload(action, body)
-}
-
-function normalizeProductPayload(body: unknown, action: string): QaProduct {
-	const record = asRecord(body)
-	const data = asRecord(record?.data)
-	const product = asRecord(data?.product) || asRecord(record?.product) || record
-
-	if (product && (typeof product.id === 'number' || typeof product.id === 'string')) {
-		return product as QaProduct
-	}
-
-	throw formatUnexpectedPayload(action, body)
+	return (body as QaEnvelope<T>).data
 }
 
 export class QAClient {
@@ -166,45 +156,39 @@ export class QAClient {
 	}
 
 	async setDomainState(state: DomainState): Promise<string> {
-		const body = await readSuccessfulBody(
-			await this.request.get('domains/update/', {
-				params: { state },
+		const data = await unwrapQaData<{ domain: string }>(
+			await this.request.post('domains', {
+				form: { state },
 			}),
 			`setDomainState(${state})`,
+			200,
 		)
-		const record = asRecord(body)
-		const data = asRecord(record?.data)
-		const domain = data?.domain || record?.domain
 
-		return typeof domain === 'string' ? domain : state
+		return data.domain
 	}
 
 	async createUser(user: QaUserRequest): Promise<QaUser> {
-		const action = 'createUser'
-		const body = await readSuccessfulBody(
-			await this.request.get('users/create/', {
-				params: {
-					userRole: user.user_role,
-					userUsage: user.user_usage,
-					userVintage: user.user_vintage,
-				},
+		const data = await unwrapQaData<{ user: QaUser }>(
+			await this.request.post('users', {
+				form: user,
 			}),
-			action,
+			'createUser',
+			201,
 		)
 
-		return normalizeUserPayload(body, action)
+		return data.user
 	}
 
 	async getRates({ post_code }: { post_code: string }): Promise<QaRates> {
-		const action = `getRates(${post_code})`
-		const body = await readSuccessfulBody(
+		const data = await unwrapQaData<{ rates: QaRates }>(
 			await this.request.get('rates', {
-				params: { postCode: post_code },
+				params: { post_code },
 			}),
-			action,
+			`getRates(${post_code})`,
+			200,
 		)
 
-		return normalizeRatesPayload(body, action)
+		return data.rates
 	}
 
 	async getProduct(selector: ProductLookup): Promise<QaProduct> {
@@ -220,24 +204,14 @@ export class QAClient {
 			.map(([key, value]) => `${key}=${value}`)
 			.join(', ')
 
-		const legacyParams: Record<string, string | number> = {}
-		if (params.product_id !== undefined) {
-			legacyParams.productId = params.product_id
-		}
-		if (params.product_sku !== undefined) {
-			legacyParams.productSku = params.product_sku
-		}
-		if (params.product_name !== undefined) {
-			legacyParams.productName = params.product_name
-		}
-
-		const body = await readSuccessfulBody(
-			await this.request.get('products/', {
-				params: legacyParams,
+		const data = await unwrapQaData<{ product: QaProduct }>(
+			await this.request.get('products', {
+				params,
 			}),
 			`getProduct(${description})`,
+			200,
 		)
 
-		return normalizeProductPayload(body, `getProduct(${description})`)
+		return data.product
 	}
 }

@@ -1,5 +1,6 @@
 const DEFAULT_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
+const QA_REST_NAMESPACE = 'seventen-qa/v1'
 const VALID_STATES = new Set(['ca', 'fl', 'mi', 'co', 'nj'])
 const PRODUCTION_STATE_HOSTS = new Set([
 	'thelist.710labs.com',
@@ -105,6 +106,36 @@ async function readBody(response) {
 	}
 }
 
+function isRecord(value) {
+	return value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isRestNoRoute(body) {
+	return isRecord(body) && body.code === 'rest_no_route'
+}
+
+async function getQaRestNamespaceHint(baseURL) {
+	const restIndexUrl = new URL('/wp-json/', baseURL).toString()
+
+	try {
+		const response = await fetchFn(restIndexUrl, { method: 'GET' })
+		const body = await readBody(response)
+		const namespaces = isRecord(body) && Array.isArray(body.namespaces) ? body.namespaces : []
+
+		if (!response.ok) {
+			return `[qa] WordPress REST index check failed with HTTP ${response.status}: ${restIndexUrl}`
+		}
+
+		if (!namespaces.includes(QA_REST_NAMESPACE)) {
+			return `[qa] WordPress REST index does not list "${QA_REST_NAMESPACE}". Verify the seventen-qa REST plugin/routes are deployed and active for BASE_URL.`
+		}
+
+		return `[qa] WordPress REST index lists "${QA_REST_NAMESPACE}", but the domains route or POST method is missing.`
+	} catch (error) {
+		return `[qa] Unable to inspect WordPress REST index at ${restIndexUrl}: ${formatFetchError(error)}`
+	}
+}
+
 function formatFetchError(error) {
 	if (!(error instanceof Error)) {
 		return `${error}`
@@ -181,6 +212,9 @@ async function main() {
 	if (!response.ok) {
 		console.error(`[qa] Failed to set domain state to ${state}. HTTP ${response.status}`)
 		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+		if (isRestNoRoute(body)) {
+			console.error(await getQaRestNamespaceHint(baseURL))
+		}
 		process.exit(1)
 	}
 
