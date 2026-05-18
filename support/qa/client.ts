@@ -47,7 +47,7 @@ type ProductLookup = {
 export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath || trimmedPath.startsWith('//')) {
+	if (!trimmedPath) {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
 

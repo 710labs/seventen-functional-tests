@@ -21,7 +21,7 @@ const fetchFn =
 function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath || trimmedPath.startsWith('//')) {
+	if (!trimmedPath) {
 		return REST_QA_ENDPOINT_PATH
 	}
 
