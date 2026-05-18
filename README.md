@@ -159,7 +159,7 @@ ADMIN_USER: Use your login for wp-instance
 ADMIN_PW:Use your login for wp-instance
 BYPASS_TAX_CALC:This will run tests without verifying tax totals for orders.
 ADD_ADDRESS_BEFORE_CHECKOUT= Changes workflow so user adds address information before checking out. 
-QA_ENDPOINT=/wp-json/seventen-qa/v1/ for Dev REST QA endpoints. Production endpoints may differ by deployment.
+QA_ENDPOINT=/wp-content/plugins/seventen-qa/api/ (this will not change from env to env)
 ACUITY_USER:Used to automate creating acuity schedule slots. 
 ACUITY_PASSWORD:Used to automate creating acuity schedule slots. 
 ```
@@ -330,20 +330,20 @@ Notes:
 Postman collection with examples of endpoints used for grabbing data used in test assertions.
 
 ### `GET /rates`
-The Dev REST QA API endpoint returns tax rates by `post_code`. Example: `GET /wp-json/seventen-qa/v1/rates?post_code=90210`. Could also use this [Playwright Script](https://gist.github.com/onlyunusedname/c75e8fa21e4516c687202c26c3cfdd76) to grab info from WordPress directly (more accurate)
+This legacy QA API endpoint returns tax rates by `postCode`. Example: `GET /rates?postCode=90210`. Could also use this [Playwright Script](https://gist.github.com/onlyunusedname/c75e8fa21e4516c687202c26c3cfdd76) to grab info from WordPress directly (more accurate)
 
-### `GET /products`
-The Dev REST QA API endpoint returns product info based on one of the following query params. Only one query param is used per search.
+### `GET /products/`
+Returns product info based on one of the following query params. Only one query param is used per search.
 
-- product_id
-- product_sku
-- product_name
+- productId
+- productSku
+- productName
 
-### `POST /users`
-The Dev REST QA API endpoint creates test users for automation with form fields `user_role`, `user_vintage`, and `user_usage`. Users created via this endpoint are still cleaned up every 48 hours automatically.
+### `GET /users/create/`
+This legacy QA API endpoint creates test users for automation with query params `userRole`, `userVintage`, and `userUsage`. Users created via this endpoint are still cleaned up every 48 hours automatically.
 
-### `POST /domains`
-The Dev REST QA API endpoint switches the QA domain state in dev and stage. Send the desired state as form field `state={state}`.
+### `GET /domains/update/?state={state}`
+This legacy QA API endpoint switches the QA domain state in dev and stage. Send the desired state as a query string value.
 
 ### [POST Acuity Webhooks](https://documenter.getpostman.com/view/11482169/UVeDuTqj#d066d956-ab34-4134-9ad4-35338c018539)
 This endpoint will automate the process of enabling/disabling acuity webhooks in all environments + stg. 
