@@ -425,10 +425,10 @@ await page.addStyleTag({
 ## Integration Points
 
 ### API Endpoints
-- **QA Endpoint**: `/wp-json/seventen-qa/v1/`
-- **User Creation**: `POST /users` with `user_role`, `user_vintage`, `user_usage`
+- **QA Endpoint**: `/wp-content/plugins/seventen-qa/api/`
+- **User Creation**: `GET /users/create/` with `userRole`, `userVintage`, `userUsage`
 - **Order Cancellation**: Via admin API
-- **Tax Rate Lookup**: `GET /rates` by `post_code`
+- **Tax Rate Lookup**: `GET /rates` by `postCode`
 
 ### External Services
 - **Acuity Scheduling**: Used for pickup slot selection (Michigan)
