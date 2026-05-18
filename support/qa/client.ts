@@ -51,12 +51,30 @@ export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
-	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
-	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	let endpointPath = trimmedPath
+	try {
+		endpointPath = new URL(trimmedPath).pathname
+	} catch {
+		endpointPath = trimmedPath
+	}
 
-	return pathWithTrailingSlash === REST_QA_ENDPOINT_PATH
-		? DEFAULT_QA_ENDPOINT_PATH
-		: pathWithTrailingSlash
+	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+	const normalizedPath = pathWithoutQuery.startsWith('/')
+		? pathWithoutQuery
+		: `/${pathWithoutQuery}`
+	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	const normalizedLowerPath = pathWithTrailingSlash.toLowerCase()
+
+	if (
+		normalizedLowerPath.includes(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
+		(normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) &&
+			normalizedLowerPath !== LEGACY_QA_ENDPOINT_PATH)
+	) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
+
+	return pathWithTrailingSlash
 }
 
 export function buildQaApiBaseUrl(baseURL?: string, qaEndpointPath?: string): string {
@@ -83,8 +101,10 @@ async function readResponseBody(response: APIResponse): Promise<unknown> {
 
 function formatResponseError(action: string, status: number, body: unknown): string {
 	if (body && typeof body === 'object') {
-		const parsedBody = body as { code?: string; message?: string }
-		const detail = [parsedBody.code, parsedBody.message].filter(Boolean).join(': ')
+		const parsedBody = body as { code?: string; message?: string; outcome?: string }
+		const detail = [parsedBody.code, parsedBody.outcome, parsedBody.message]
+			.filter(Boolean)
+			.join(': ')
 
 		if (detail) {
 			return `[qa] ${action} failed with HTTP ${status}: ${detail}`
@@ -98,10 +118,27 @@ function formatResponseError(action: string, status: number, body: unknown): str
 	return `[qa] ${action} failed with HTTP ${status}`
 }
 
+function getLegacyOutcome(body: unknown): string | null {
+	const record =
+		body && typeof body === 'object' && !Array.isArray(body)
+			? (body as { outcome?: unknown })
+			: null
+
+	return typeof record?.outcome === 'string' ? record.outcome.toLowerCase() : null
+}
+
+function isLegacyFailureOutcome(outcome: string | null): boolean {
+	return outcome === 'unauthorized' || outcome === 'failure' || outcome === 'inactive' || outcome === 'error'
+}
+
 async function readSuccessfulBody(response: APIResponse, action: string): Promise<unknown> {
 	const body = await readResponseBody(response)
 
 	if (!response.ok()) {
+		throw new Error(formatResponseError(action, response.status(), body))
+	}
+
+	if (isLegacyFailureOutcome(getLegacyOutcome(body))) {
 		throw new Error(formatResponseError(action, response.status(), body))
 	}
 

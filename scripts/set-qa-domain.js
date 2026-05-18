@@ -25,12 +25,30 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 		return LEGACY_QA_ENDPOINT_PATH
 	}
 
-	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
-	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	let endpointPath = trimmedPath
+	try {
+		endpointPath = new URL(trimmedPath).pathname
+	} catch {
+		endpointPath = trimmedPath
+	}
 
-	return pathWithTrailingSlash === REST_QA_ENDPOINT_PATH
-		? LEGACY_QA_ENDPOINT_PATH
-		: pathWithTrailingSlash
+	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+	const normalizedPath = pathWithoutQuery.startsWith('/')
+		? pathWithoutQuery
+		: `/${pathWithoutQuery}`
+	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	const normalizedLowerPath = pathWithTrailingSlash.toLowerCase()
+
+	if (
+		normalizedLowerPath.includes(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
+		(normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) &&
+			normalizedLowerPath !== LEGACY_QA_ENDPOINT_PATH)
+	) {
+		return LEGACY_QA_ENDPOINT_PATH
+	}
+
+	return pathWithTrailingSlash
 }
 
 function buildQaApiBaseUrl(baseURL, qaEndpointPath) {
@@ -85,6 +103,46 @@ async function readBody(response) {
 	}
 }
 
+function getLegacyOutcome(body) {
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		return null
+	}
+
+	return typeof body.outcome === 'string' ? body.outcome.toLowerCase() : null
+}
+
+function isLegacyFailureOutcome(outcome) {
+	return ['unauthorized', 'failure', 'inactive', 'error'].includes(outcome)
+}
+
+function formatBody(body) {
+	return typeof body === 'string' ? body : JSON.stringify(body, null, 2)
+}
+
+function getErrorDetails(error) {
+	if (!(error instanceof Error)) {
+		return [String(error)]
+	}
+
+	const details = [error.message]
+	const cause = error.cause
+
+	if (cause) {
+		details.push(cause instanceof Error ? `Cause: ${cause.message}` : `Cause: ${String(cause)}`)
+
+		if (typeof cause === 'object') {
+			for (const field of ['code', 'errno', 'syscall', 'hostname', 'host', 'port', 'address']) {
+				const value = cause[field]
+				if (value !== undefined) {
+					details.push(`Cause ${field}: ${value}`)
+				}
+			}
+		}
+	}
+
+	return details
+}
+
 async function main() {
 	const state = (process.argv[2] || '').toLowerCase()
 	const baseURL = process.env.BASE_URL
@@ -116,18 +174,27 @@ async function main() {
 
 	if (!response.ok) {
 		console.error(`[qa] Failed to set domain state to ${state}. HTTP ${response.status}`)
-		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+		console.error(formatBody(body))
+		process.exit(1)
+	}
+
+	const outcome = getLegacyOutcome(body)
+	if (isLegacyFailureOutcome(outcome)) {
+		console.error(`[qa] Legacy domain switch failed for ${state}. Outcome: ${outcome}`)
+		console.error(formatBody(body))
 		process.exit(1)
 	}
 
 	if (body) {
-		console.log(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+		console.log(formatBody(body))
 	}
 
 	console.log(`[qa] Legacy domain switch request for ${state} succeeded.`)
 }
 
 main().catch(error => {
-	console.error(error instanceof Error ? error.message : error)
+	for (const detail of getErrorDetails(error)) {
+		console.error(detail)
+	}
 	process.exit(1)
 })
