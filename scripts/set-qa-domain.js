@@ -21,7 +21,7 @@ const fetchFn =
 function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath) {
+	if (!trimmedPath || trimmedPath.startsWith('//')) {
 		return REST_QA_ENDPOINT_PATH
 	}
 
@@ -33,6 +33,11 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	}
 
 	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+
+	if (!pathWithoutQuery || pathWithoutQuery === '/' || pathWithoutQuery.startsWith('//')) {
+		return REST_QA_ENDPOINT_PATH
+	}
+
 	const normalizedPath = pathWithoutQuery.startsWith('/')
 		? pathWithoutQuery
 		: `/${pathWithoutQuery}`
@@ -152,6 +157,7 @@ async function postDomainState(endpoint, state, apiKey) {
 				`Requested state: ${state}`,
 				...getErrorDetails(error),
 			].join('\n'),
+			{ cause: error },
 		)
 	}
 }

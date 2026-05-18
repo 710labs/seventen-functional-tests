@@ -47,7 +47,7 @@ type ProductLookup = {
 export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath) {
+	if (!trimmedPath || trimmedPath.startsWith('//')) {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
@@ -59,6 +59,11 @@ export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	}
 
 	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+
+	if (!pathWithoutQuery || pathWithoutQuery === '/' || pathWithoutQuery.startsWith('//')) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
+
 	const normalizedPath = pathWithoutQuery.startsWith('/')
 		? pathWithoutQuery
 		: `/${pathWithoutQuery}`
