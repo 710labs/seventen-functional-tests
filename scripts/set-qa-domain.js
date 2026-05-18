@@ -85,6 +85,30 @@ async function readBody(response) {
 	}
 }
 
+function getErrorDetails(error) {
+	if (!(error instanceof Error)) {
+		return [String(error)]
+	}
+
+	const details = [error.message]
+	const cause = error.cause
+
+	if (cause) {
+		details.push(cause instanceof Error ? `Cause: ${cause.message}` : `Cause: ${String(cause)}`)
+
+		if (typeof cause === 'object') {
+			for (const field of ['code', 'errno', 'syscall', 'hostname', 'host', 'port', 'address']) {
+				const value = cause[field]
+				if (value !== undefined) {
+					details.push(`Cause ${field}: ${value}`)
+				}
+			}
+		}
+	}
+
+	return details
+}
+
 async function main() {
 	const state = (process.argv[2] || '').toLowerCase()
 	const baseURL = process.env.BASE_URL
@@ -128,6 +152,8 @@ async function main() {
 }
 
 main().catch(error => {
-	console.error(error instanceof Error ? error.message : error)
+	for (const detail of getErrorDetails(error)) {
+		console.error(detail)
+	}
 	process.exit(1)
 })
