@@ -52,11 +52,34 @@ type ProductLookup = {
 export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath || trimmedPath === LEGACY_QA_ENDPOINT_PATH) {
+	if (!trimmedPath) {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
-	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
+	let endpointPath = trimmedPath
+	try {
+		endpointPath = new URL(trimmedPath).pathname
+	} catch {
+		endpointPath = trimmedPath
+	}
+
+	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+	const normalizedPath = pathWithoutQuery.startsWith('/')
+		? pathWithoutQuery
+		: `/${pathWithoutQuery}`
+	const normalizedLowerPath = normalizedPath.toLowerCase()
+
+	if (
+		normalizedLowerPath === LEGACY_QA_ENDPOINT_PATH ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/') ||
+		normalizedLowerPath.includes('/wp-json/seventen-qa/v1/') ||
+		normalizedLowerPath === '/wp-json/seventen-qa/v1' ||
+		normalizedLowerPath.includes('/domains/update') ||
+		normalizedLowerPath.includes('/users/create') ||
+		normalizedLowerPath.includes('/users/delete')
+	) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
 
 	return normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
 }

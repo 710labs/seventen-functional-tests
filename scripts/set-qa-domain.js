@@ -21,11 +21,34 @@ const fetchFn =
 function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
-	if (!trimmedPath || trimmedPath === LEGACY_QA_ENDPOINT_PATH) {
+	if (!trimmedPath) {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
-	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
+	let endpointPath = trimmedPath
+	try {
+		endpointPath = new URL(trimmedPath).pathname
+	} catch {
+		endpointPath = trimmedPath
+	}
+
+	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+	const normalizedPath = pathWithoutQuery.startsWith('/')
+		? pathWithoutQuery
+		: `/${pathWithoutQuery}`
+	const normalizedLowerPath = normalizedPath.toLowerCase()
+
+	if (
+		normalizedLowerPath === LEGACY_QA_ENDPOINT_PATH ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/') ||
+		normalizedLowerPath.includes('/wp-json/seventen-qa/v1/') ||
+		normalizedLowerPath === '/wp-json/seventen-qa/v1' ||
+		normalizedLowerPath.includes('/domains/update') ||
+		normalizedLowerPath.includes('/users/create') ||
+		normalizedLowerPath.includes('/users/delete')
+	) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
 
 	return normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
 }
@@ -82,6 +105,57 @@ async function readBody(response) {
 	}
 }
 
+function formatFetchError(error) {
+	if (!(error instanceof Error)) {
+		return `${error}`
+	}
+
+	const lines = [error.message]
+	const cause = error.cause
+
+	if (cause && typeof cause === 'object') {
+		const causeRecord = cause
+		const causeDetails = [
+			causeRecord.code ? `code=${causeRecord.code}` : '',
+			causeRecord.errno ? `errno=${causeRecord.errno}` : '',
+			causeRecord.syscall ? `syscall=${causeRecord.syscall}` : '',
+			causeRecord.hostname ? `hostname=${causeRecord.hostname}` : '',
+			causeRecord.address ? `address=${causeRecord.address}` : '',
+			causeRecord.port ? `port=${causeRecord.port}` : '',
+		].filter(Boolean)
+
+		if (causeDetails.length) {
+			lines.push(`cause: ${causeDetails.join(', ')}`)
+		} else if (causeRecord.message) {
+			lines.push(`cause: ${causeRecord.message}`)
+		}
+	}
+
+	return lines.join('\n')
+}
+
+async function postDomainState(endpoint, state, apiKey) {
+	try {
+		return await fetchFn(endpoint, {
+			method: 'POST',
+			headers: {
+				'x-api-key': apiKey,
+				'content-type': 'application/x-www-form-urlencoded',
+			},
+			body: new URLSearchParams({ state }).toString(),
+		})
+	} catch (error) {
+		throw new Error(
+			[
+				`Unable to reach QA domain switch endpoint.`,
+				`Endpoint: ${endpoint}`,
+				`Requested state: ${state}`,
+				formatFetchError(error),
+			].join('\n'),
+		)
+	}
+}
+
 async function main() {
 	const state = (process.argv[2] || '').toLowerCase()
 	const baseURL = process.env.BASE_URL
@@ -101,14 +175,7 @@ async function main() {
 	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
-	const response = await fetchFn(endpoint, {
-		method: 'POST',
-		headers: {
-			'x-api-key': apiKey,
-			'content-type': 'application/x-www-form-urlencoded',
-		},
-		body: new URLSearchParams({ state }).toString(),
-	})
+	const response = await postDomainState(endpoint, state, apiKey)
 	const body = await readBody(response)
 
 	if (!response.ok) {
