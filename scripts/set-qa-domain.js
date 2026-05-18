@@ -1,4 +1,4 @@
-const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
+const DEFAULT_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
 const VALID_STATES = new Set(['ca', 'fl', 'mi', 'co', 'nj'])
 const PRODUCTION_STATE_HOSTS = new Set([
@@ -22,15 +22,35 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
 	if (!trimmedPath) {
-		return LEGACY_QA_ENDPOINT_PATH
+		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
-	const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`
-	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	let endpointPath = trimmedPath
+	try {
+		endpointPath = new URL(trimmedPath).pathname
+	} catch {
+		endpointPath = trimmedPath
+	}
 
-	return pathWithTrailingSlash === REST_QA_ENDPOINT_PATH
-		? LEGACY_QA_ENDPOINT_PATH
-		: pathWithTrailingSlash
+	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+	const normalizedPath = pathWithoutQuery.startsWith('/')
+		? pathWithoutQuery
+		: `/${pathWithoutQuery}`
+	const normalizedLowerPath = normalizedPath.toLowerCase()
+
+	if (
+		normalizedLowerPath === LEGACY_QA_ENDPOINT_PATH ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/') ||
+		normalizedLowerPath.includes('/wp-json/seventen-qa/v1/') ||
+		normalizedLowerPath === '/wp-json/seventen-qa/v1' ||
+		normalizedLowerPath.includes('/domains/update') ||
+		normalizedLowerPath.includes('/users/create') ||
+		normalizedLowerPath.includes('/users/delete')
+	) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
+
+	return normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
 }
 
 function buildQaApiBaseUrl(baseURL, qaEndpointPath) {
@@ -85,28 +105,55 @@ async function readBody(response) {
 	}
 }
 
-function getErrorDetails(error) {
+function formatFetchError(error) {
 	if (!(error instanceof Error)) {
-		return [String(error)]
+		return `${error}`
 	}
 
-	const details = [error.message]
+	const lines = [error.message]
 	const cause = error.cause
 
-	if (cause) {
-		details.push(cause instanceof Error ? `Cause: ${cause.message}` : `Cause: ${String(cause)}`)
+	if (cause && typeof cause === 'object') {
+		const causeRecord = cause
+		const causeDetails = [
+			causeRecord.code ? `code=${causeRecord.code}` : '',
+			causeRecord.errno ? `errno=${causeRecord.errno}` : '',
+			causeRecord.syscall ? `syscall=${causeRecord.syscall}` : '',
+			causeRecord.hostname ? `hostname=${causeRecord.hostname}` : '',
+			causeRecord.address ? `address=${causeRecord.address}` : '',
+			causeRecord.port ? `port=${causeRecord.port}` : '',
+		].filter(Boolean)
 
-		if (typeof cause === 'object') {
-			for (const field of ['code', 'errno', 'syscall', 'hostname', 'host', 'port', 'address']) {
-				const value = cause[field]
-				if (value !== undefined) {
-					details.push(`Cause ${field}: ${value}`)
-				}
-			}
+		if (causeDetails.length) {
+			lines.push(`cause: ${causeDetails.join(', ')}`)
+		} else if (causeRecord.message) {
+			lines.push(`cause: ${causeRecord.message}`)
 		}
 	}
 
-	return details
+	return lines.join('\n')
+}
+
+async function postDomainState(endpoint, state, apiKey) {
+	try {
+		return await fetchFn(endpoint, {
+			method: 'POST',
+			headers: {
+				'x-api-key': apiKey,
+				'content-type': 'application/x-www-form-urlencoded',
+			},
+			body: new URLSearchParams({ state }).toString(),
+		})
+	} catch (error) {
+		throw new Error(
+			[
+				`Unable to reach QA domain switch endpoint.`,
+				`Endpoint: ${endpoint}`,
+				`Requested state: ${state}`,
+				formatFetchError(error),
+			].join('\n'),
+		)
+	}
 }
 
 async function main() {
@@ -124,18 +171,11 @@ async function main() {
 		throw new Error('API_KEY is required to set the QA domain state.')
 	}
 
-	const endpointUrl = new URL('domains/update/', qaApiBaseUrl)
-	endpointUrl.search = new URLSearchParams({ state }).toString()
-	const endpoint = endpointUrl.toString()
+	const endpoint = new URL('domains', qaApiBaseUrl).toString()
 	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
-	const response = await fetchFn(endpoint, {
-		method: 'GET',
-		headers: {
-			'x-api-key': apiKey,
-		},
-	})
+	const response = await postDomainState(endpoint, state, apiKey)
 	const body = await readBody(response)
 
 	if (!response.ok) {
@@ -144,16 +184,18 @@ async function main() {
 		process.exit(1)
 	}
 
-	if (body) {
-		console.log(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+	const domain = body?.data?.domain
+
+	if (typeof domain !== 'string') {
+		console.error('[qa] Domain set call succeeded but returned an unexpected payload.')
+		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+		process.exit(1)
 	}
 
-	console.log(`[qa] Legacy domain switch request for ${state} succeeded.`)
+	console.log(`[qa] Domain state set to ${state}. Returned state domain: ${domain}`)
 }
 
 main().catch(error => {
-	for (const detail of getErrorDetails(error)) {
-		console.error(detail)
-	}
+	console.error(error instanceof Error ? error.message : error)
 	process.exit(1)
 })
