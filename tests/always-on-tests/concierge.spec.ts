@@ -6,7 +6,7 @@ import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 import { ConciergeLogin } from '../../models/concierge/concierge-login.ts'
 import { ConciergeCreateUser } from '../../models/concierge/concierge-create-user.ts'
-require('dotenv').config('.env')
+require('dotenv').config({ path: '.env' })
 
 test.describe('Concierge Tests', () => {
 	test.setTimeout(200000) // Set the timeout for all tests in this file

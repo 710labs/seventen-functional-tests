@@ -4,7 +4,7 @@ import { AccountPage } from '../../models/always-on/account-page.ts'
 import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
 import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
-require('dotenv').config('.env')
+require('dotenv').config({ path: '.env' })
 import { appendFileSync, writeFileSync } from 'fs'
 
 test.describe('Live Tests', () => {

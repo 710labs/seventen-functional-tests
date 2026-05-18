@@ -36,9 +36,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.13.0'
           cache: 'npm'
       - name: Install dependencies
+        timeout-minutes: 15
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5

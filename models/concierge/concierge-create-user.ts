@@ -1,6 +1,5 @@
-require('dotenv').config('.env')
+require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
-const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
 const { faker } = require('@faker-js/faker')
