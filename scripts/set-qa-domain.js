@@ -22,7 +22,7 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
 	if (!trimmedPath) {
-		return LEGACY_QA_ENDPOINT_PATH
+		return REST_QA_ENDPOINT_PATH
 	}
 
 	let endpointPath = trimmedPath
@@ -40,12 +40,15 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	const normalizedLowerPath = pathWithTrailingSlash.toLowerCase()
 
 	if (
-		normalizedLowerPath.includes(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath === REST_QA_ENDPOINT_PATH ||
+		normalizedLowerPath.startsWith(REST_QA_ENDPOINT_PATH) ||
 		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
-		(normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) &&
-			normalizedLowerPath !== LEGACY_QA_ENDPOINT_PATH)
+		normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.includes('/domains/update') ||
+		normalizedLowerPath.includes('/users/create') ||
+		normalizedLowerPath.includes('/users/delete')
 	) {
-		return LEGACY_QA_ENDPOINT_PATH
+		return REST_QA_ENDPOINT_PATH
 	}
 
 	return pathWithTrailingSlash
@@ -103,18 +106,6 @@ async function readBody(response) {
 	}
 }
 
-function getLegacyOutcome(body) {
-	if (!body || typeof body !== 'object' || Array.isArray(body)) {
-		return null
-	}
-
-	return typeof body.outcome === 'string' ? body.outcome.toLowerCase() : null
-}
-
-function isLegacyFailureOutcome(outcome) {
-	return ['unauthorized', 'failure', 'inactive', 'error'].includes(outcome)
-}
-
 function formatBody(body) {
 	return typeof body === 'string' ? body : JSON.stringify(body, null, 2)
 }
@@ -143,6 +134,28 @@ function getErrorDetails(error) {
 	return details
 }
 
+async function postDomainState(endpoint, state, apiKey) {
+	try {
+		return await fetchFn(endpoint, {
+			method: 'POST',
+			headers: {
+				'x-api-key': apiKey,
+				'content-type': 'application/x-www-form-urlencoded',
+			},
+			body: new URLSearchParams({ state }).toString(),
+		})
+	} catch (error) {
+		throw new Error(
+			[
+				'Unable to reach QA domain switch endpoint.',
+				`Endpoint: ${endpoint}`,
+				`Requested state: ${state}`,
+				...getErrorDetails(error),
+			].join('\n'),
+		)
+	}
+}
+
 async function main() {
 	const state = (process.argv[2] || '').toLowerCase()
 	const baseURL = process.env.BASE_URL
@@ -158,18 +171,11 @@ async function main() {
 		throw new Error('API_KEY is required to set the QA domain state.')
 	}
 
-	const endpointUrl = new URL('domains/update/', qaApiBaseUrl)
-	endpointUrl.search = new URLSearchParams({ state }).toString()
-	const endpoint = endpointUrl.toString()
+	const endpoint = new URL('domains', qaApiBaseUrl).toString()
 	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
-	const response = await fetchFn(endpoint, {
-		method: 'GET',
-		headers: {
-			'x-api-key': apiKey,
-		},
-	})
+	const response = await postDomainState(endpoint, state, apiKey)
 	const body = await readBody(response)
 
 	if (!response.ok) {
@@ -178,18 +184,15 @@ async function main() {
 		process.exit(1)
 	}
 
-	const outcome = getLegacyOutcome(body)
-	if (isLegacyFailureOutcome(outcome)) {
-		console.error(`[qa] Legacy domain switch failed for ${state}. Outcome: ${outcome}`)
+	const domain = body?.data?.domain
+
+	if (typeof domain !== 'string') {
+		console.error('[qa] Domain set call succeeded but returned an unexpected payload.')
 		console.error(formatBody(body))
 		process.exit(1)
 	}
 
-	if (body) {
-		console.log(formatBody(body))
-	}
-
-	console.log(`[qa] Legacy domain switch request for ${state} succeeded.`)
+	console.log(`[qa] Domain state set to ${state}. Returned state domain: ${domain}`)
 }
 
 main().catch(error => {
