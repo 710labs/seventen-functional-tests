@@ -2,7 +2,7 @@ import { APIRequestContext, APIResponse } from '@playwright/test'
 
 export const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 export const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
-export const DEFAULT_QA_ENDPOINT_PATH = LEGACY_QA_ENDPOINT_PATH
+export const DEFAULT_QA_ENDPOINT_PATH = REST_QA_ENDPOINT_PATH
 
 export type DomainState = 'ca' | 'fl' | 'mi' | 'co' | 'nj'
 
@@ -59,6 +59,11 @@ export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	}
 
 	const pathWithoutQuery = endpointPath.split(/[?#]/)[0]
+
+	if (!pathWithoutQuery || pathWithoutQuery === '/' || pathWithoutQuery.startsWith('//')) {
+		return DEFAULT_QA_ENDPOINT_PATH
+	}
+
 	const normalizedPath = pathWithoutQuery.startsWith('/')
 		? pathWithoutQuery
 		: `/${pathWithoutQuery}`
@@ -66,10 +71,13 @@ export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 	const normalizedLowerPath = pathWithTrailingSlash.toLowerCase()
 
 	if (
-		normalizedLowerPath.includes(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath === REST_QA_ENDPOINT_PATH ||
+		normalizedLowerPath.startsWith(REST_QA_ENDPOINT_PATH) ||
 		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
-		(normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) &&
-			normalizedLowerPath !== LEGACY_QA_ENDPOINT_PATH)
+		normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.includes('/domains/update') ||
+		normalizedLowerPath.includes('/users/create') ||
+		normalizedLowerPath.includes('/users/delete')
 	) {
 		return DEFAULT_QA_ENDPOINT_PATH
 	}
@@ -204,8 +212,8 @@ export class QAClient {
 
 	async setDomainState(state: DomainState): Promise<string> {
 		const body = await readSuccessfulBody(
-			await this.request.get('domains/update/', {
-				params: { state },
+			await this.request.post('domains', {
+				form: { state },
 			}),
 			`setDomainState(${state})`,
 		)
@@ -213,17 +221,21 @@ export class QAClient {
 		const data = asRecord(record?.data)
 		const domain = data?.domain || record?.domain
 
-		return typeof domain === 'string' ? domain : state
+		if (typeof domain === 'string') {
+			return domain
+		}
+
+		throw formatUnexpectedPayload(`setDomainState(${state})`, body)
 	}
 
 	async createUser(user: QaUserRequest): Promise<QaUser> {
 		const action = 'createUser'
 		const body = await readSuccessfulBody(
-			await this.request.get('users/create/', {
-				params: {
-					userRole: user.user_role,
-					userUsage: user.user_usage,
-					userVintage: user.user_vintage,
+			await this.request.post('users', {
+				form: {
+					user_role: user.user_role,
+					user_usage: user.user_usage,
+					user_vintage: user.user_vintage,
 				},
 			}),
 			action,
@@ -236,7 +248,7 @@ export class QAClient {
 		const action = `getRates(${post_code})`
 		const body = await readSuccessfulBody(
 			await this.request.get('rates', {
-				params: { postCode: post_code },
+				params: { post_code },
 			}),
 			action,
 		)
@@ -257,20 +269,9 @@ export class QAClient {
 			.map(([key, value]) => `${key}=${value}`)
 			.join(', ')
 
-		const legacyParams: Record<string, string | number> = {}
-		if (params.product_id !== undefined) {
-			legacyParams.productId = params.product_id
-		}
-		if (params.product_sku !== undefined) {
-			legacyParams.productSku = params.product_sku
-		}
-		if (params.product_name !== undefined) {
-			legacyParams.productName = params.product_name
-		}
-
 		const body = await readSuccessfulBody(
 			await this.request.get('products/', {
-				params: legacyParams,
+				params,
 			}),
 			`getProduct(${description})`,
 		)
