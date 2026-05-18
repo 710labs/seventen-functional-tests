@@ -1,4 +1,4 @@
-const DEFAULT_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
+const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
 const VALID_STATES = new Set(['ca', 'fl', 'mi', 'co', 'nj'])
 const PRODUCTION_STATE_HOSTS = new Set([
@@ -22,7 +22,7 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
 	if (!trimmedPath) {
-		return DEFAULT_QA_ENDPOINT_PATH
+		return LEGACY_QA_ENDPOINT_PATH
 	}
 
 	let endpointPath = trimmedPath
@@ -36,21 +36,19 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	const normalizedPath = pathWithoutQuery.startsWith('/')
 		? pathWithoutQuery
 		: `/${pathWithoutQuery}`
-	const normalizedLowerPath = normalizedPath.toLowerCase()
+	const pathWithTrailingSlash = normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	const normalizedLowerPath = pathWithTrailingSlash.toLowerCase()
 
 	if (
-		normalizedLowerPath === LEGACY_QA_ENDPOINT_PATH ||
-		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/') ||
-		normalizedLowerPath.includes('/wp-json/seventen-qa/v1/') ||
-		normalizedLowerPath === '/wp-json/seventen-qa/v1' ||
-		normalizedLowerPath.includes('/domains/update') ||
-		normalizedLowerPath.includes('/users/create') ||
-		normalizedLowerPath.includes('/users/delete')
+		normalizedLowerPath.includes(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
+		(normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) &&
+			normalizedLowerPath !== LEGACY_QA_ENDPOINT_PATH)
 	) {
-		return DEFAULT_QA_ENDPOINT_PATH
+		return LEGACY_QA_ENDPOINT_PATH
 	}
 
-	return normalizedPath.endsWith('/') ? normalizedPath : `${normalizedPath}/`
+	return pathWithTrailingSlash
 }
 
 function buildQaApiBaseUrl(baseURL, qaEndpointPath) {
@@ -105,55 +103,44 @@ async function readBody(response) {
 	}
 }
 
-function formatFetchError(error) {
-	if (!(error instanceof Error)) {
-		return `${error}`
+function getLegacyOutcome(body) {
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		return null
 	}
 
-	const lines = [error.message]
+	return typeof body.outcome === 'string' ? body.outcome.toLowerCase() : null
+}
+
+function isLegacyFailureOutcome(outcome) {
+	return ['unauthorized', 'failure', 'inactive', 'error'].includes(outcome)
+}
+
+function formatBody(body) {
+	return typeof body === 'string' ? body : JSON.stringify(body, null, 2)
+}
+
+function getErrorDetails(error) {
+	if (!(error instanceof Error)) {
+		return [String(error)]
+	}
+
+	const details = [error.message]
 	const cause = error.cause
 
-	if (cause && typeof cause === 'object') {
-		const causeRecord = cause
-		const causeDetails = [
-			causeRecord.code ? `code=${causeRecord.code}` : '',
-			causeRecord.errno ? `errno=${causeRecord.errno}` : '',
-			causeRecord.syscall ? `syscall=${causeRecord.syscall}` : '',
-			causeRecord.hostname ? `hostname=${causeRecord.hostname}` : '',
-			causeRecord.address ? `address=${causeRecord.address}` : '',
-			causeRecord.port ? `port=${causeRecord.port}` : '',
-		].filter(Boolean)
+	if (cause) {
+		details.push(cause instanceof Error ? `Cause: ${cause.message}` : `Cause: ${String(cause)}`)
 
-		if (causeDetails.length) {
-			lines.push(`cause: ${causeDetails.join(', ')}`)
-		} else if (causeRecord.message) {
-			lines.push(`cause: ${causeRecord.message}`)
+		if (typeof cause === 'object') {
+			for (const field of ['code', 'errno', 'syscall', 'hostname', 'host', 'port', 'address']) {
+				const value = cause[field]
+				if (value !== undefined) {
+					details.push(`Cause ${field}: ${value}`)
+				}
+			}
 		}
 	}
 
-	return lines.join('\n')
-}
-
-async function postDomainState(endpoint, state, apiKey) {
-	try {
-		return await fetchFn(endpoint, {
-			method: 'POST',
-			headers: {
-				'x-api-key': apiKey,
-				'content-type': 'application/x-www-form-urlencoded',
-			},
-			body: new URLSearchParams({ state }).toString(),
-		})
-	} catch (error) {
-		throw new Error(
-			[
-				`Unable to reach QA domain switch endpoint.`,
-				`Endpoint: ${endpoint}`,
-				`Requested state: ${state}`,
-				formatFetchError(error),
-			].join('\n'),
-		)
-	}
+	return details
 }
 
 async function main() {
@@ -171,31 +158,43 @@ async function main() {
 		throw new Error('API_KEY is required to set the QA domain state.')
 	}
 
-	const endpoint = new URL('domains', qaApiBaseUrl).toString()
+	const endpointUrl = new URL('domains/update/', qaApiBaseUrl)
+	endpointUrl.search = new URLSearchParams({ state }).toString()
+	const endpoint = endpointUrl.toString()
 	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
-	const response = await postDomainState(endpoint, state, apiKey)
+	const response = await fetchFn(endpoint, {
+		method: 'GET',
+		headers: {
+			'x-api-key': apiKey,
+		},
+	})
 	const body = await readBody(response)
 
 	if (!response.ok) {
 		console.error(`[qa] Failed to set domain state to ${state}. HTTP ${response.status}`)
-		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+		console.error(formatBody(body))
 		process.exit(1)
 	}
 
-	const domain = body?.data?.domain
-
-	if (typeof domain !== 'string') {
-		console.error('[qa] Domain set call succeeded but returned an unexpected payload.')
-		console.error(typeof body === 'string' ? body : JSON.stringify(body, null, 2))
+	const outcome = getLegacyOutcome(body)
+	if (isLegacyFailureOutcome(outcome)) {
+		console.error(`[qa] Legacy domain switch failed for ${state}. Outcome: ${outcome}`)
+		console.error(formatBody(body))
 		process.exit(1)
 	}
 
-	console.log(`[qa] Domain state set to ${state}. Returned state domain: ${domain}`)
+	if (body) {
+		console.log(formatBody(body))
+	}
+
+	console.log(`[qa] Legacy domain switch request for ${state} succeeded.`)
 }
 
 main().catch(error => {
-	console.error(error instanceof Error ? error.message : error)
+	for (const detail of getErrorDetails(error)) {
+		console.error(detail)
+	}
 	process.exit(1)
 })
