@@ -5,7 +5,12 @@ import {
 	test as base,
 } from '@playwright/test'
 import type { APIRequestContext } from '@playwright/test'
-import { QAClient, buildQaApiBaseUrl, type DomainState } from './support/qa/client'
+import {
+	QAClient,
+	buildQaApiBaseUrl,
+	getQaEndpointMode,
+	type DomainState,
+} from './support/qa/client'
 
 export type TestOptions = {
 	orders: string[][]
@@ -44,7 +49,7 @@ export const test = base.extend<TestOptions & TestFixtures>({
 	],
 	qaClient: [
 		async ({ qaRequest }, use) => {
-			await use(new QAClient(qaRequest))
+			await use(new QAClient(qaRequest, getQaEndpointMode(process.env.QA_ENDPOINT)))
 		},
 		{ scope: 'worker' },
 	],

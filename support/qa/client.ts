@@ -2,7 +2,9 @@ import { APIRequestContext, APIResponse } from '@playwright/test'
 
 export const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 export const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
-export const DEFAULT_QA_ENDPOINT_PATH = REST_QA_ENDPOINT_PATH
+export const DEFAULT_QA_ENDPOINT_PATH = LEGACY_QA_ENDPOINT_PATH
+
+export type QaEndpointMode = 'rest' | 'legacy'
 
 export type DomainState = 'ca' | 'fl' | 'mi' | 'co' | 'nj'
 
@@ -72,17 +74,28 @@ export function normalizeQaEndpointPath(qaEndpointPath?: string): string {
 
 	if (
 		normalizedLowerPath === REST_QA_ENDPOINT_PATH ||
-		normalizedLowerPath.startsWith(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.startsWith(REST_QA_ENDPOINT_PATH)
+	) {
+		return REST_QA_ENDPOINT_PATH
+	}
+
+	if (
 		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
 		normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) ||
 		normalizedLowerPath.includes('/domains/update') ||
 		normalizedLowerPath.includes('/users/create') ||
 		normalizedLowerPath.includes('/users/delete')
 	) {
-		return DEFAULT_QA_ENDPOINT_PATH
+		return LEGACY_QA_ENDPOINT_PATH
 	}
 
 	return pathWithTrailingSlash
+}
+
+export function getQaEndpointMode(qaEndpointPath?: string): QaEndpointMode {
+	return normalizeQaEndpointPath(qaEndpointPath).toLowerCase() === REST_QA_ENDPOINT_PATH
+		? 'rest'
+		: 'legacy'
 }
 
 export function buildQaApiBaseUrl(baseURL?: string, qaEndpointPath?: string): string {
@@ -205,12 +218,31 @@ function normalizeProductPayload(body: unknown, action: string): QaProduct {
 
 export class QAClient {
 	readonly request: APIRequestContext
+	readonly endpointMode: QaEndpointMode
 
-	constructor(request: APIRequestContext) {
+	constructor(
+		request: APIRequestContext,
+		endpointMode: QaEndpointMode = getQaEndpointMode(process.env.QA_ENDPOINT),
+	) {
 		this.request = request
+		this.endpointMode = endpointMode
 	}
 
 	async setDomainState(state: DomainState): Promise<string> {
+		if (this.endpointMode === 'legacy') {
+			const body = await readSuccessfulBody(
+				await this.request.get('domains/update/', {
+					params: { state },
+				}),
+				`setDomainState(${state})`,
+			)
+			const record = asRecord(body)
+			const data = asRecord(record?.data)
+			const domain = data?.domain || record?.domain
+
+			return typeof domain === 'string' ? domain : state
+		}
+
 		const body = await readSuccessfulBody(
 			await this.request.post('domains', {
 				form: { state },
@@ -230,6 +262,22 @@ export class QAClient {
 
 	async createUser(user: QaUserRequest): Promise<QaUser> {
 		const action = 'createUser'
+
+		if (this.endpointMode === 'legacy') {
+			const body = await readSuccessfulBody(
+				await this.request.get('users/create/', {
+					params: {
+						userRole: user.user_role,
+						userUsage: user.user_usage,
+						userVintage: user.user_vintage,
+					},
+				}),
+				action,
+			)
+
+			return normalizeUserPayload(body, action)
+		}
+
 		const body = await readSuccessfulBody(
 			await this.request.post('users', {
 				form: {
@@ -246,6 +294,18 @@ export class QAClient {
 
 	async getRates({ post_code }: { post_code: string }): Promise<QaRates> {
 		const action = `getRates(${post_code})`
+
+		if (this.endpointMode === 'legacy') {
+			const body = await readSuccessfulBody(
+				await this.request.get('rates', {
+					params: { postCode: post_code },
+				}),
+				action,
+			)
+
+			return normalizeRatesPayload(body, action)
+		}
+
 		const body = await readSuccessfulBody(
 			await this.request.get('rates', {
 				params: { post_code },
@@ -259,7 +319,7 @@ export class QAClient {
 	async getProduct(selector: ProductLookup): Promise<QaProduct> {
 		const params = Object.fromEntries(
 			Object.entries(selector).filter(([, value]) => value !== undefined && value !== ''),
-		)
+		) as ProductLookup
 
 		if (Object.keys(params).length === 0) {
 			throw new Error('[qa] getProduct requires one of product_id, product_sku, or product_name.')
@@ -268,10 +328,25 @@ export class QAClient {
 		const description = Object.entries(params)
 			.map(([key, value]) => `${key}=${value}`)
 			.join(', ')
+		let requestParams = params as Record<string, string | number>
+
+		if (this.endpointMode === 'legacy') {
+			const legacyParams: Record<string, string | number> = {}
+			if (params.product_id !== undefined) {
+				legacyParams.productId = params.product_id
+			}
+			if (params.product_sku !== undefined) {
+				legacyParams.productSku = params.product_sku
+			}
+			if (params.product_name !== undefined) {
+				legacyParams.productName = params.product_name
+			}
+			requestParams = legacyParams
+		}
 
 		const body = await readSuccessfulBody(
 			await this.request.get('products/', {
-				params,
+				params: requestParams,
 			}),
 			`getProduct(${description})`,
 		)

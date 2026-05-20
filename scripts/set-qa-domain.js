@@ -1,5 +1,6 @@
 const REST_QA_ENDPOINT_PATH = '/wp-json/seventen-qa/v1/'
 const LEGACY_QA_ENDPOINT_PATH = '/wp-content/plugins/seventen-qa/api/'
+const DEFAULT_QA_ENDPOINT_PATH = LEGACY_QA_ENDPOINT_PATH
 const VALID_STATES = new Set(['ca', 'fl', 'mi', 'co', 'nj'])
 const PRODUCTION_STATE_HOSTS = new Set([
 	'thelist.710labs.com',
@@ -22,7 +23,7 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 	const trimmedPath = qaEndpointPath?.trim()
 
 	if (!trimmedPath) {
-		return REST_QA_ENDPOINT_PATH
+		return DEFAULT_QA_ENDPOINT_PATH
 	}
 
 	let endpointPath = trimmedPath
@@ -46,17 +47,28 @@ function normalizeQaEndpointPath(qaEndpointPath) {
 
 	if (
 		normalizedLowerPath === REST_QA_ENDPOINT_PATH ||
-		normalizedLowerPath.startsWith(REST_QA_ENDPOINT_PATH) ||
+		normalizedLowerPath.startsWith(REST_QA_ENDPOINT_PATH)
+	) {
+		return REST_QA_ENDPOINT_PATH
+	}
+
+	if (
 		normalizedLowerPath.includes('/wp-content/plugins/seventen-qa/src/api/') ||
 		normalizedLowerPath.startsWith(LEGACY_QA_ENDPOINT_PATH) ||
 		normalizedLowerPath.includes('/domains/update') ||
 		normalizedLowerPath.includes('/users/create') ||
 		normalizedLowerPath.includes('/users/delete')
 	) {
-		return REST_QA_ENDPOINT_PATH
+		return LEGACY_QA_ENDPOINT_PATH
 	}
 
 	return pathWithTrailingSlash
+}
+
+function getQaEndpointMode(qaEndpointPath) {
+	return normalizeQaEndpointPath(qaEndpointPath).toLowerCase() === REST_QA_ENDPOINT_PATH
+		? 'rest'
+		: 'legacy'
 }
 
 function buildQaApiBaseUrl(baseURL, qaEndpointPath) {
@@ -115,6 +127,18 @@ function formatBody(body) {
 	return typeof body === 'string' ? body : JSON.stringify(body, null, 2)
 }
 
+function getLegacyOutcome(body) {
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		return null
+	}
+
+	return typeof body.outcome === 'string' ? body.outcome.toLowerCase() : null
+}
+
+function isLegacyFailureOutcome(outcome) {
+	return outcome === 'unauthorized' || outcome === 'failure' || outcome === 'inactive' || outcome === 'error'
+}
+
 function getErrorDetails(error) {
 	if (!(error instanceof Error)) {
 		return [String(error)]
@@ -139,16 +163,26 @@ function getErrorDetails(error) {
 	return details
 }
 
-async function postDomainState(endpoint, state, apiKey) {
+async function requestDomainState(endpoint, state, apiKey, endpointMode) {
+	const requestOptions =
+		endpointMode === 'legacy'
+			? {
+					method: 'GET',
+					headers: {
+						'x-api-key': apiKey,
+					},
+				}
+			: {
+					method: 'POST',
+					headers: {
+						'x-api-key': apiKey,
+						'content-type': 'application/x-www-form-urlencoded',
+					},
+					body: new URLSearchParams({ state }).toString(),
+				}
+
 	try {
-		return await fetchFn(endpoint, {
-			method: 'POST',
-			headers: {
-				'x-api-key': apiKey,
-				'content-type': 'application/x-www-form-urlencoded',
-			},
-			body: new URLSearchParams({ state }).toString(),
-		})
+		return await fetchFn(endpoint, requestOptions)
 	} catch (error) {
 		throw new Error(
 			[
@@ -168,6 +202,7 @@ async function main() {
 	const apiKey = process.env.API_KEY || process.env.SEVENTEN_QA_API_KEY
 	assertSafeBaseUrl(baseURL)
 	const qaApiBaseUrl = buildQaApiBaseUrl(baseURL, process.env.QA_ENDPOINT)
+	const endpointMode = getQaEndpointMode(process.env.QA_ENDPOINT)
 
 	if (!VALID_STATES.has(state)) {
 		throw new Error(`Invalid state "${state}". Expected one of: ${Array.from(VALID_STATES).join(', ')}.`)
@@ -177,17 +212,43 @@ async function main() {
 		throw new Error('API_KEY is required to set the QA domain state.')
 	}
 
-	const endpoint = new URL('domains', qaApiBaseUrl).toString()
+	const endpointUrl =
+		endpointMode === 'legacy'
+			? new URL('domains/update/', qaApiBaseUrl)
+			: new URL('domains', qaApiBaseUrl)
+
+	if (endpointMode === 'legacy') {
+		endpointUrl.search = new URLSearchParams({ state }).toString()
+	}
+
+	const endpoint = endpointUrl.toString()
 	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
-	const response = await postDomainState(endpoint, state, apiKey)
+	const response = await requestDomainState(endpoint, state, apiKey, endpointMode)
 	const body = await readBody(response)
 
 	if (!response.ok) {
 		console.error(`[qa] Failed to set domain state to ${state}. HTTP ${response.status}`)
 		console.error(formatBody(body))
 		process.exit(1)
+	}
+
+	if (endpointMode === 'legacy') {
+		const outcome = getLegacyOutcome(body)
+
+		if (isLegacyFailureOutcome(outcome)) {
+			console.error(`[qa] Legacy domain switch failed for ${state}. Outcome: ${outcome}`)
+			console.error(formatBody(body))
+			process.exit(1)
+		}
+
+		if (body) {
+			console.log(formatBody(body))
+		}
+
+		console.log(`[qa] Legacy domain switch request for ${state} succeeded.`)
+		return
 	}
 
 	const domain = body?.data?.domain
