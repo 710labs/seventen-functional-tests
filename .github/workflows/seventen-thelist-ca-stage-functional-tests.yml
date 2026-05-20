@@ -20,7 +20,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
-      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true

@@ -57,7 +57,7 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
       API_KEY: ${{ secrets.API_KEY }}
-      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
       BYPASS_TAX_CALC: true
       POSSYNC_ORDER_COUNT: ${{ github.event.inputs.order_count }}
       POSSYNC_PREFIX: ${{ github.event.inputs.prefix }}
