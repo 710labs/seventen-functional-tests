@@ -118,7 +118,7 @@ test('Menu upload happy path', async ({ page, browser }, testInfo) => {
 
 		await productImporterPage.gotoImporter()
 		await productImporterPage.uploadCsv(fixture.filePath)
-		await productImporterPage.ensureUpdateExistingUnchecked()
+		await productImporterPage.ensureUpdateExistingChecked()
 		await productImporterPage.continueFromUpload()
 		await productImporterPage.runImporterWithDefaultMapping()
 		await productImporterPage.assertNoVisibleImportErrors()
