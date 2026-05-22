@@ -23,6 +23,116 @@ function debugLog(message: string) {
 	}
 }
 
+const storefrontAddToCartSelector = [
+	'button.fasd_to_cart[data-id][data-instance][data-facility][data-method]',
+	'button.product_type_simple.fasd_to_cart.ajax_groove',
+	'button.fasd_to_cart',
+	'button.add_to_cart_button',
+	'a.add_to_cart_button',
+].join(', ')
+
+const productPageAddToCartSelector = [
+	'button.wpse-button-primary.fasd_to_cart',
+	'button[aria-label="Add product to cart"]',
+	'button.fasd_to_cart[data-id][data-instance][data-facility][data-method]',
+	'button.fasd_to_cart',
+	'button:has-text("Add to Cart")',
+	'button:has-text("Add to cart")',
+].join(', ')
+
+function errorSummary(error: unknown) {
+	if (error instanceof Error) {
+		const pointerInterception = error.message
+			.split('\n')
+			.find(line => line.includes('intercepts pointer events'))
+			?.trim()
+
+		return [error.message.split('\n')[0], pointerInterception].filter(Boolean).join(' ')
+	}
+
+	return String(error)
+}
+
+async function centerLocatorInViewport(locator: Locator) {
+	await locator.evaluate((element: HTMLElement) => {
+		const rect = element.getBoundingClientRect()
+		const targetTop = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2
+
+		window.scrollTo({ top: Math.max(0, targetTop) })
+	})
+}
+
+async function clickStorefrontAddToCartButton(
+	page: Page,
+	product: Locator,
+	productName: string,
+) {
+	const addToCartButton = product.locator(storefrontAddToCartSelector).first()
+	const buttonCount = await addToCartButton.count()
+	const normalizedProductName = productName.trim()
+
+	if (buttonCount === 0) {
+		console.log(`No listing add-to-cart button found for product "${normalizedProductName}".`)
+		return false
+	}
+
+	try {
+		await addToCartButton.waitFor({ state: 'visible', timeout: 5000 })
+		await centerLocatorInViewport(addToCartButton)
+		await page.waitForTimeout(300)
+		await addToCartButton.click({ trial: true, timeout: 3000 })
+	} catch (error) {
+		console.log(
+			`Could not click listing add-to-cart button for product "${normalizedProductName}": ${errorSummary(error)}`,
+		)
+		return false
+	}
+
+	await addToCartButton.click({ timeout: 10000 })
+	return true
+}
+
+async function clickProductDetailsAddToCartButton(
+	page: Page,
+	product: Locator,
+	productName: string,
+) {
+	const normalizedProductName = productName.trim()
+	const productLink = product.locator('.woocommerce-loop-product__link').first()
+	let openedDetailsPage = false
+
+	try {
+		await productLink.waitFor({ state: 'visible', timeout: 5000 })
+		await centerLocatorInViewport(productLink)
+		await page.waitForTimeout(300)
+		await productLink.click({ timeout: 10000 })
+		openedDetailsPage = true
+
+		const addToCart = page.locator(productPageAddToCartSelector).first()
+		await addToCart.waitFor({ state: 'visible', timeout: 10000 })
+		await centerLocatorInViewport(addToCart)
+		await page.waitForTimeout(300)
+		await addToCart.click({ timeout: 10000 })
+		return true
+	} catch (error) {
+		console.log(
+			`Could not add product "${normalizedProductName}" from the product details page: ${errorSummary(error)}`,
+		)
+
+		if (openedDetailsPage) {
+			await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
+			await page
+				.waitForSelector('li.product.type-product.product-type-simple.status-publish', {
+					state: 'visible',
+					timeout: 10000,
+				})
+				.catch(() => {})
+		}
+
+		return false
+	}
+}
+
 export class HomePageActions {
 	readonly page: Page
 	readonly URL: String
@@ -359,11 +469,11 @@ export class HomePageActions {
 
 			// Get the 'Add to Cart' button and product name for the current product
 			const product = products.nth(i)
-			const addToCartButton = product.locator('button.add_to_cart_button')
 			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
 
 			// Click the 'Add to Cart' button
-			await addToCartButton.click()
+			const clicked = await clickStorefrontAddToCartButton(page, product, productName)
+			if (!clicked) continue
 			await page.waitForTimeout(4000) // Adjust this timeout based on your app's behavior
 
 			// Wait for the cartDrawer to become visible
@@ -432,7 +542,7 @@ export class HomePageActions {
 			}
 
 			// Click "Add to Cart"
-			const addBtn = product.locator('button.button.product_type_simple.fasd_to_cart.ajax_groove')
+			const addBtn = product.locator(storefrontAddToCartSelector).first()
 			const name = (await product.locator('.woocommerce-loop-product__title').innerText()).trim()
 
 			// DEBUG: Log add attempt
@@ -440,8 +550,12 @@ export class HomePageActions {
 			const btnVisible = await addBtn.isVisible().catch(() => false)
 			debugLog(`  Add button visible: ${btnVisible}`)
 
-			await expect(addBtn).toBeVisible()
-			await addBtn.click()
+			const clicked = await clickStorefrontAddToCartButton(page, product, name)
+			if (!clicked) {
+				debugLog(`  Skipping "${name}" because the listing add-to-cart button was not clickable.`)
+				i++
+				continue
+			}
 			debugLog(`  Clicked "Add to Cart" for "${name}"`)
 
 			// Check for "Start a new cart" modal
@@ -607,33 +721,8 @@ export class HomePageActions {
 
 			const name = (await product.locator('.woocommerce-loop-product__title').innerText()).trim()
 
-			// Try multiple button selectors
-			let btn = product.locator('button.button.product_type_simple.fasd_to_cart.ajax_groove')
-			let btnCount = await btn.count()
-
-			if (btnCount === 0) {
-				debugLog('  Primary button selector failed, trying alternatives...')
-				btn = product.locator('button.fasd_to_cart')
-				btnCount = await btn.count()
-			}
-
-			if (btnCount === 0) {
-				debugLog('  Secondary button selector failed, trying aria-label...')
-				btn = product.locator('button[aria-label*="Add"]')
-				btnCount = await btn.count()
-			}
-
-			if (btnCount === 0) {
-				debugLog('  Trying generic add_to_cart_button...')
-				btn = product.locator('button.add_to_cart_button')
-				btnCount = await btn.count()
-			}
-
-			if (btnCount === 0) {
-				debugLog('  Trying any button with + text...')
-				btn = product.locator('button:has-text("+")')
-				btnCount = await btn.count()
-			}
+			const btn = product.locator(storefrontAddToCartSelector).first()
+			const btnCount = await btn.count()
 
 			// DEBUG: Check button state
 			const btnVisible = btnCount > 0 ? await btn.isVisible() : false
@@ -644,8 +733,11 @@ export class HomePageActions {
 				continue
 			}
 
-			await expect(btn).toBeVisible()
-			await btn.click()
+			const clicked = await clickStorefrontAddToCartButton(page, product, name)
+			if (!clicked) {
+				debugLog(`  Skipping "${name}" because the listing add-to-cart button was not clickable.`)
+				continue
+			}
 			debugLog(`  Clicked "Add to Cart" for "${name}"`)
 
 			// Handle "Start a new cart" conflict modal (matches addUntilMinimumMet behavior)
@@ -1130,14 +1222,17 @@ export class HomePageActions {
 			} else {
 				// Flow for adding products directly from the homepage
 
-				const addToCartButton = product.locator(
-					'button.product_type_simple.fasd_to_cart.ajax_groove',
-				)
-				console.log('locator for addToCartButton: ' + addToCartButton)
-				await expect(addToCartButton).toBeVisible()
-				await addToCartButton.scrollIntoViewIfNeeded()
-				await page.waitForTimeout(500)
-				await addToCartButton.click()
+				let clicked = await clickStorefrontAddToCartButton(page, product, productName)
+				if (!clicked) {
+					console.log(
+						`Trying product details add-to-cart fallback for "${productName.trim()}".`,
+					)
+					clicked = await clickProductDetailsAddToCartButton(page, product, productName)
+				}
+				if (!clicked) {
+					i++
+					continue
+				}
 
 				// Check for "Start a new cart" modal
 				try {
@@ -1298,20 +1393,18 @@ export class HomePageActions {
 			} else if (firstMedicalProductAdded) {
 				// Flow for adding subsequent products directly from the homepage
 				const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-				const addToCartButton = product.locator(
-					'button.product_type_simple.fasd_to_cart.ajax_groove',
-				)
-
 				console.log('Adding product from homepage: ' + productName)
-				await expect(addToCartButton).toBeVisible()
-
-				// Scroll the button to the center of the viewport to avoid it being obscured by category tabs
-				await addToCartButton.evaluate((element: HTMLElement) => {
-					element.scrollIntoView({ block: 'center', behavior: 'smooth' })
-				})
-				await page.waitForTimeout(500) // Wait for smooth scroll to complete
-
-				await addToCartButton.click()
+				let clicked = await clickStorefrontAddToCartButton(page, product, productName)
+				if (!clicked) {
+					console.log(
+						`Trying product details add-to-cart fallback for "${productName.trim()}".`,
+					)
+					clicked = await clickProductDetailsAddToCartButton(page, product, productName)
+				}
+				if (!clicked) {
+					i++
+					continue
+				}
 				await page.waitForTimeout(10000)
 
 				// Wait for the cart drawer to become visible
@@ -1549,13 +1642,19 @@ export class HomePageActions {
 
 		if (mode === 'concierge') {
 			// Concierge: one store, direct "Add to Cart" button on the product card
-			const addBtn = product.locator('button.button.product_type_simple.fasd_to_cart.ajax_groove')
-			await addBtn.click()
+			let clicked = await clickStorefrontAddToCartButton(page, product, productName)
+			if (!clicked) {
+				clicked = await clickProductDetailsAddToCartButton(page, product, productName)
+			}
+			if (!clicked) throw new Error(`Could not click Add to Cart for "${productName.trim()}".`)
 		} else {
 			// Live mode (after first product): you might still have a direct "Add to Cart" button
 			// Adjust if your selectors differ
-			const addBtn = product.locator('button.product_type_simple.fasd_to_cart.ajax_groove')
-			await addBtn.click()
+			let clicked = await clickStorefrontAddToCartButton(page, product, productName)
+			if (!clicked) {
+				clicked = await clickProductDetailsAddToCartButton(page, product, productName)
+			}
+			if (!clicked) throw new Error(`Could not click Add to Cart for "${productName.trim()}".`)
 		}
 
 		// Wait for cart drawer

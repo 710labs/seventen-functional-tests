@@ -2,6 +2,9 @@ import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import type { TestOptions } from '../options'
 
+const DEV_BASE_URL = 'https://thelist-dev.710labs.com'
+const DEV_BASE_DOMAIN = new URL(DEV_BASE_URL).hostname
+
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
 	testDir: './../tests',
@@ -29,7 +32,22 @@ export default defineConfig<TestOptions>({
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 30 * 1000,
-		baseURL: 'https://thelist-dev.710labs.com',
+		baseURL: DEV_BASE_URL,
+		storageState: {
+			cookies: [
+				{
+					name: 'vipChecker',
+					value: '3',
+					domain: DEV_BASE_DOMAIN,
+					path: '/',
+					expires: -1,
+					httpOnly: false,
+					secure: true,
+					sameSite: 'Lax',
+				},
+			],
+			origins: [],
+		},
 		launchOptions: {
 			slowMo: 200,
 		},
