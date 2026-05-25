@@ -106,10 +106,7 @@ export class ProductImporterPage {
 	async ensureUpdateExistingChecked() {
 		await test.step('Check "Update existing products"', async () => {
 			await expect(this.updateExistingCheckbox).toBeVisible()
-
-			if (!(await this.updateExistingCheckbox.isChecked())) {
-				await this.updateExistingCheckbox.check()
-			}
+			await this.updateExistingCheckbox.check()
 
 			await expect(this.updateExistingCheckbox).toBeChecked()
 		})
