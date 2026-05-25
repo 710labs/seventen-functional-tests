@@ -103,6 +103,15 @@ export class ProductImporterPage {
 		})
 	}
 
+	async ensureUpdateExistingChecked() {
+		await test.step('Check "Update existing products"', async () => {
+			await expect(this.updateExistingCheckbox).toBeVisible()
+			await this.updateExistingCheckbox.check()
+
+			await expect(this.updateExistingCheckbox).toBeChecked()
+		})
+	}
+
 	async continueFromUpload() {
 		await test.step('Continue from CSV upload to column mapping', async () => {
 			await this.continueButton.click()
