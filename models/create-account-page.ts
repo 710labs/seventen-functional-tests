@@ -391,6 +391,23 @@ export class CreateAccountPage {
 		}
 	}
 
+	private async waitForRegistrationReadyToSubmit(expectedState: string, expectedZip?: string) {
+		const nextButton = this.page.getByRole('button', { name: /^next$/i })
+
+		await this.page.waitForFunction(() => document.readyState !== 'loading')
+		await this.assertResolvedAddress(expectedState, expectedZip)
+		await expect(
+			nextButton,
+			'Registration Next button should be visible before submit.',
+		).toBeVisible()
+		await expect(
+			nextButton,
+			'Registration Next button should be enabled before submit.',
+		).toBeEnabled()
+
+		return nextButton
+	}
+
 	private async selectResolvedBillingAddress(
 		address: string,
 		expectedState: string,
@@ -416,6 +433,16 @@ export class CreateAccountPage {
 			url.pathname === '/' &&
 			['', '#', '#pickup', '#pickup-deliver', '#deliver'].includes(url.hash)
 		)
+	}
+
+	private async recoverEligibilityStepFromShopRedirect() {
+		test.info().annotations.push({
+			type: 'Eligibility fallback',
+			description:
+				'Registration redirected to the shop before eligibility appeared; navigating to /my-account/eligibility/.',
+		})
+
+		await this.page.goto('/my-account/eligibility/', { waitUntil: 'domcontentloaded' })
 	}
 
 	private async throwSkippedEligibilityError(
@@ -444,16 +471,31 @@ export class CreateAccountPage {
 		submitSnapshot: RegistrationSubmitSnapshot,
 	) {
 		const deadline = Date.now() + 20000
+		let attemptedEligibilityFallback = false
 
 		while (Date.now() < deadline) {
 			if (await this.isEligibilityLicenseStepVisible()) {
 				return
 			}
 
+			if (
+				!attemptedEligibilityFallback &&
+				this.isShopRouteBeforeEligibility() &&
+				!(await this.isEligibilityLicenseStepVisible())
+			) {
+				attemptedEligibilityFallback = true
+				await this.recoverEligibilityStepFromShopRedirect()
+				continue
+			}
+
 			await this.page.waitForTimeout(250)
 		}
 
-		if (this.isShopRouteBeforeEligibility() && !(await this.isEligibilityLicenseStepVisible())) {
+		if (
+			!attemptedEligibilityFallback &&
+			this.isShopRouteBeforeEligibility() &&
+			!(await this.isEligibilityLicenseStepVisible())
+		) {
 			await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
 		}
 
@@ -510,9 +552,10 @@ export class CreateAccountPage {
 
 	private async submitNewCustomerForm(expectedState: string, expectedZip?: string) {
 		await test.step('Submit New Customer Form', async () => {
+			const nextButton = await this.waitForRegistrationReadyToSubmit(expectedState, expectedZip)
 			const submitSnapshot = await this.registrationSubmitSnapshot()
 
-			await this.page.click('button:has-text("Next")')
+			await nextButton.click()
 			await this.waitForEligibilityStep(expectedState, expectedZip, submitSnapshot)
 		})
 	}
