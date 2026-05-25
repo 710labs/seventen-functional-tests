@@ -17,6 +17,7 @@ const MED_CARD_SUCCESS_BADGE_SELECTOR =
 	'div.eligibilityInput:has(input#svntn_core_medical_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel'
 const RATE_LIMIT_ERROR_SELECTOR = 'p.eligibilityError'
 const RATE_LIMIT_ERROR_TEXT = 'You are uploading too fast for me. Give it 1 minute and try again.'
+const RECAPTCHA_BYPASS_COOKIE_NAME = 'qa_wf_captcha_bypass'
 
 function randomFirstName() {
 	const firstNames = [
@@ -217,15 +218,35 @@ function getRateLimitError(page) {
 	return page.locator(RATE_LIMIT_ERROR_SELECTOR).filter({ hasText: RATE_LIMIT_ERROR_TEXT })
 }
 
-async function addVipCookie(page, target) {
-	await page.context().addCookies([
+function buildQaCookies(target) {
+	const targetUrl = new URL(target)
+	const cookies = [
 		{
 			name: 'vipChecker',
 			value: '3',
-			domain: new URL(target).hostname,
+			domain: targetUrl.hostname,
 			path: '/',
 		},
-	])
+	]
+	const recaptchaBypass = process.env.RECAPTCHA_BYPASS
+
+	if (recaptchaBypass && recaptchaBypass.trim()) {
+		cookies.push({
+			name: RECAPTCHA_BYPASS_COOKIE_NAME,
+			value: recaptchaBypass,
+			domain: targetUrl.hostname,
+			path: '/',
+			httpOnly: false,
+			secure: targetUrl.protocol === 'https:',
+			sameSite: 'Lax',
+		})
+	}
+
+	return cookies
+}
+
+async function addQaCookies(page, target) {
+	await page.context().addCookies(buildQaCookies(target))
 }
 
 async function waitForInputFilename(page, inputSelector, expectedFilename) {
@@ -364,7 +385,7 @@ async function reachUploadStep(page, vuContext, test) {
 	const user = createUserProfile()
 	const target = getTarget(vuContext)
 
-	await addVipCookie(page, target)
+	await addQaCookies(page, target)
 
 	await step('Pass Age Gate', async () => {
 		console.log(`[DEBUG] Starting Age Gate. URL: ${page.url()}, Title: ${await page.title()}`)

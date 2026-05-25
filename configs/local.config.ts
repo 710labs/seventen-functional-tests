@@ -1,6 +1,9 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
+import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-bypass'
 require('dotenv').config({ path: require('find-config')('.env') })
 import { v4 as uuidv4 } from 'uuid'
+
+const LOCAL_BASE_URL = 'https://thelist-dev.710labs.com'
 
 /* https://playwright.dev/docs/test-configuration */
 const config: PlaywrightTestConfig = {
@@ -24,7 +27,8 @@ const config: PlaywrightTestConfig = {
 	use: {
 		acceptDownloads: true,
 		actiontimeout: 10 * 60000,
-		baseURL: 'https://thelist-dev.710labs.com',
+		baseURL: LOCAL_BASE_URL,
+		storageState: buildStorageStateWithRecaptchaBypass(LOCAL_BASE_URL),
 		launchOptions: {
 			slowMo: 200,
 		},

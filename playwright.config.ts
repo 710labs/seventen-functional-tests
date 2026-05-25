@@ -1,5 +1,6 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
 import generateCustomLayout from './reporters/slack/slack-alert-layout'
+import { buildStorageStateWithRecaptchaBypass } from './support/qa/recaptcha-bypass'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 /* https://playwright.dev/docs/test-configuration */
@@ -38,6 +39,7 @@ const config: PlaywrightTestConfig = {
 		acceptDownloads: true,
 		actiontimeout: 10 * 60000,
 		baseURL: process.env.BASE_URL,
+		storageState: buildStorageStateWithRecaptchaBypass(process.env.BASE_URL),
 		launchOptions: {
 			slowMo: 200,
 		},

@@ -12,6 +12,7 @@ import {
 	type MinimumOrderSettings,
 } from '../../models/admin/svntn-core-settings-page'
 import { ShopPage } from '../../models/shop-page'
+import { buildStorageStateWithRecaptchaBypass } from '../../support/qa/recaptcha-bypass'
 
 function randomMinimumExcludingCurrent(originalSettings?: MinimumOrderSettings) {
 	for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -131,10 +132,7 @@ test('Focused rules minimum order is enforced @admin-drop @rules @minorder', asy
 	await test.step('Run storefront delivery checkout flow', async () => {
 		const storefrontContext = await browser.newContext({
 			baseURL: process.env.BASE_URL,
-			storageState: {
-				cookies: [],
-				origins: [],
-			},
+			storageState: buildStorageStateWithRecaptchaBypass(process.env.BASE_URL),
 		})
 		const storefrontPage = await storefrontContext.newPage()
 		const shopPage = new ShopPage(storefrontPage, browserName, testInfo)

@@ -71,6 +71,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY }}
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
       PRIVATE_STORE_TEST_PASSWORD: ${{ secrets.PRIVATE_STORE_TEST_PASSWORD }}
       MENU_UPLOAD_FIXTURE: ${{ github.event.inputs.menu_fixture }}
     steps:

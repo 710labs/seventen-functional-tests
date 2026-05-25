@@ -1,6 +1,9 @@
 import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import type { TestOptions } from '../options'
+import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-bypass'
+
+const LIVE_AND_CONCIERGE_BASE_URL = 'https://live-dev.710labs.com/'
 
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
@@ -29,7 +32,8 @@ export default defineConfig<TestOptions>({
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 30 * 1000,
-		baseURL: 'https://live-dev.710labs.com/',
+		baseURL: LIVE_AND_CONCIERGE_BASE_URL,
+		storageState: buildStorageStateWithRecaptchaBypass(LIVE_AND_CONCIERGE_BASE_URL),
 		launchOptions: {
 			slowMo: 200,
 		},

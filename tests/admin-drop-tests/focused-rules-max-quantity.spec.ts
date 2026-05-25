@@ -13,6 +13,7 @@ import {
 	type FocusedRulesStorefrontPasswordStatus,
 } from '../../utils/admin-drop/focused-rules-storefront-password'
 import { resetCatalogWithFocusedRulesFixture } from '../../utils/admin-drop/import-focused-rules-fixture'
+import { buildStorageStateWithRecaptchaBypass } from '../../support/qa/recaptcha-bypass'
 
 function buildStorefrontCustomer(testInfo: TestInfo) {
 	const uniqueId = `${Date.now()}-${testInfo.workerIndex}`
@@ -75,10 +76,7 @@ test('Focused rules max quantity is enforced @admin-drop @rules @maxqty', async 
 
 		storefrontContext = await browser.newContext({
 			baseURL: process.env.BASE_URL,
-			storageState: {
-				cookies: [],
-				origins: [],
-			},
+			storageState: buildStorageStateWithRecaptchaBypass(process.env.BASE_URL),
 		})
 		const storefrontPage = await storefrontContext.newPage()
 		const storefront = new FocusedRulesStorefrontPage(storefrontPage, checkoutPasswordStatus.checkoutPassword)

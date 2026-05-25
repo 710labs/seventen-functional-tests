@@ -221,6 +221,7 @@ jobs:
       - name: Verify required secrets
         env:
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
         run: |
           if [ -z "$ARTILLERY_LIST_PASSWORD" ]; then
             echo "Missing required secret: ARTILLERY_LIST_PASSWORD for environment '${{ github.event.inputs.env }}'" >&2
@@ -230,9 +231,11 @@ jobs:
       - name: Create Fargate worker dotenv
         env:
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
         run: |
           cat > artillery/artillery.fargate.env <<EOF
           ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
           ARTILLERY_TARGET=$ARTILLERY_TARGET
           EOF
 
@@ -258,6 +261,7 @@ jobs:
           ARTILLERY_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
           ARTILLERY_710_MODE: ${{ github.event.inputs.mode }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
           ARTILLERY_EFFECTIVE_VIRTUAL_USERS: ${{ env.ARTILLERY_EFFECTIVE_VIRTUAL_USERS }}
           ARTILLERY_EFFECTIVE_ARRIVAL_RATE: ${{ env.ARTILLERY_EFFECTIVE_ARRIVAL_RATE }}
 

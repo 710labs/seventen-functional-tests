@@ -85,6 +85,32 @@ function randomPhone() {
   return `555-${String(Math.floor(Math.random()*1000)).padStart(3,'0')}-${String(Math.floor(Math.random()*10000)).padStart(4,'0')}`;  
 }  
 
+const RECAPTCHA_BYPASS_COOKIE_NAME = 'qa_wf_captcha_bypass';
+
+function buildQaCookies(target, hostname) {
+  const cookies = [{
+    name:   'vipChecker',
+    value:  '3',
+    domain: hostname,
+    path:   '/',
+  }];
+  const recaptchaBypass = __ENV.RECAPTCHA_BYPASS;
+
+  if (recaptchaBypass && recaptchaBypass.trim()) {
+    cookies.push({
+      name:     RECAPTCHA_BYPASS_COOKIE_NAME,
+      value:    recaptchaBypass,
+      domain:   hostname,
+      path:     '/',
+      httpOnly: false,
+      secure:   target.toLowerCase().startsWith('https://'),
+      sameSite: 'Lax',
+    });
+  }
+
+  return cookies;
+}
+
 // ── Main VU function ──────────────────────────────────────────────────────────  
 export default async function () {  
   const target      = __ENV.TARGET       || 'https://thelist-dev.710labs.com';  
@@ -105,13 +131,8 @@ export default async function () {
   const page    = await context.newPage();  
 
   try {  
-    // Inject VIP cookie before first navigation  
-    await context.addCookies([{  
-      name:   'vipChecker',  
-      value:  '3',  
-      domain: hostname,  
-      path:   '/',  
-    }]);  
+    // Inject QA cookies before first navigation
+    await context.addCookies(buildQaCookies(target, hostname));
 
     // ── 1. Age Gate ───────────────────────────────────────────────────────────  
     await group('Pass Age Gate', async () => {  
@@ -290,4 +311,4 @@ export default async function () {
     await page.close();  
     await context.close();  
   }  
-}  
+}

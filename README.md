@@ -160,6 +160,7 @@ ADMIN_PW:Use your login for wp-instance
 BYPASS_TAX_CALC:This will run tests without verifying tax totals for orders.
 ADD_ADDRESS_BEFORE_CHECKOUT= Changes workflow so user adds address information before checking out. 
 QA_ENDPOINT=/wp-json/seventen-qa/v1/ (fixed REST namespace; not a secret)
+RECAPTCHA_BYPASS: Optional shared secret for the `qa_wf_captcha_bypass` cookie used to bypass Wordfence reCAPTCHA in QA automation.
 ACUITY_USER:Used to automate creating acuity schedule slots. 
 ACUITY_PASSWORD:Used to automate creating acuity schedule slots. 
 ```
@@ -323,6 +324,7 @@ Notes:
 - Use `pacing_mode=rate` for multi-worker runs. Artillery executes `even_spacing` (`arrivalCount`) on only one worker.
 - A 2-second burst is enough to overlap all 100 sessions because each CA flow runs much longer than 2 seconds.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
+- Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate when the GitHub secret is configured; leave it unset to skip the bypass cookie.
 
 
 ## Test Tools

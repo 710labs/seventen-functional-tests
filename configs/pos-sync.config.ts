@@ -1,4 +1,5 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
+import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-bypass'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const config: PlaywrightTestConfig = {
@@ -22,6 +23,7 @@ const config: PlaywrightTestConfig = {
 		acceptDownloads: true,
 		actionTimeout: 20 * 1000,
 		baseURL: process.env.POSSYNC_URL,
+		storageState: buildStorageStateWithRecaptchaBypass(process.env.POSSYNC_URL),
 		launchOptions: {
 			slowMo: 200,
 		},

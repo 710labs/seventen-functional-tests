@@ -1,6 +1,7 @@
 import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import type { TestOptions } from '../options'
+import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-bypass'
 
 const DEV_BASE_URL = 'https://thelist-dev.710labs.com'
 const DEV_BASE_DOMAIN = new URL(DEV_BASE_URL).hostname
@@ -33,21 +34,18 @@ export default defineConfig<TestOptions>({
 		acceptDownloads: true,
 		actionTimeout: 30 * 1000,
 		baseURL: DEV_BASE_URL,
-		storageState: {
-			cookies: [
-				{
-					name: 'vipChecker',
-					value: '3',
-					domain: DEV_BASE_DOMAIN,
-					path: '/',
-					expires: -1,
-					httpOnly: false,
-					secure: true,
-					sameSite: 'Lax',
-				},
-			],
-			origins: [],
-		},
+		storageState: buildStorageStateWithRecaptchaBypass(DEV_BASE_URL, [
+			{
+				name: 'vipChecker',
+				value: '3',
+				domain: DEV_BASE_DOMAIN,
+				path: '/',
+				expires: -1,
+				httpOnly: false,
+				secure: true,
+				sameSite: 'Lax',
+			},
+		]),
 		launchOptions: {
 			slowMo: 200,
 		},

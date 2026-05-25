@@ -1,3 +1,32 @@
+const RECAPTCHA_BYPASS_COOKIE_NAME = 'qa_wf_captcha_bypass'
+
+function buildQaCookies(target) {
+	const targetUrl = new URL(target)
+	const cookies = [
+		{
+			name: 'vipChecker',
+			value: '3',
+			domain: targetUrl.hostname,
+			path: '/',
+		},
+	]
+	const recaptchaBypass = process.env.RECAPTCHA_BYPASS
+
+	if (recaptchaBypass && recaptchaBypass.trim()) {
+		cookies.push({
+			name: RECAPTCHA_BYPASS_COOKIE_NAME,
+			value: recaptchaBypass,
+			domain: targetUrl.hostname,
+			path: '/',
+			httpOnly: false,
+			secure: targetUrl.protocol === 'https:',
+			sameSite: 'Lax',
+		})
+	}
+
+	return cookies
+}
+
 async function CA(page, vuContext, events, test) {
 	function randomFirstName() {
 		const firstNames = [
@@ -158,15 +187,8 @@ async function CA(page, vuContext, events, test) {
 	const itemCount = getCartCount()
 	const target = vuContext.vars.target || 'https://thelist-dev.710labs.com'
 
-	// Inject VIP cookie before navigation
-	await page.context().addCookies([
-		{
-			name: 'vipChecker',
-			value: '3',
-			domain: new URL(target).hostname,
-			path: '/',
-		},
-	])
+	// Inject QA cookies before navigation
+	await page.context().addCookies(buildQaCookies(target))
 
 	await step('Pass Age Gate', async () => {
 		console.log(`[DEBUG] Starting Age Gate. URL: ${page.url()}, Title: ${await page.title()}`)
