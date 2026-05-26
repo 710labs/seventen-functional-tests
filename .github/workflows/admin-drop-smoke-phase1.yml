@@ -69,7 +69,7 @@ jobs:
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
-      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      QA_ENDPOINT: /wp-json/seventen-qa/v1/
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
       RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
       PRIVATE_STORE_TEST_PASSWORD: ${{ secrets.PRIVATE_STORE_TEST_PASSWORD }}
