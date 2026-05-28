@@ -203,6 +203,7 @@ Current coverage includes:
 
 - private-store password smoke
 - order export smoke
+- admin order split smoke
 - menu upload smoke
 - focused rules smoke: max quantity
 - focused rules smoke: minimum order
@@ -211,6 +212,7 @@ Local:
 
 ```bash
 npm run admin:smoke
+npm run admin:smoke:split
 MENU_UPLOAD_FIXTURE=smoke-default npm run admin:smoke:menu-upload
 npm run admin:smoke:minorder
 npm run admin:smoke:maxqty
