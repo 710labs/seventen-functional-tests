@@ -104,5 +104,5 @@ async function main() {
 
 main().catch(error => {
 	console.log('[admin-drop] S3 report upload failed:', error)
-	process.exit(0)
+	process.exit(1)
 })

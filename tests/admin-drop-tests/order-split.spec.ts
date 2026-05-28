@@ -13,6 +13,8 @@ import { buildStorageStateWithRecaptchaBypass } from '../../support/qa/recaptcha
 import type { QAClient } from '../../support/qa/client'
 
 const splitOrderItemCount = 2
+const splitOrderMaxRandomizedItems = 2
+const requiredPublishedProductCount = splitOrderItemCount + splitOrderMaxRandomizedItems
 
 function buildStorefrontCustomer(testInfo: TestInfo) {
 	const uniqueId = `${Date.now()}-${testInfo.workerIndex}`
@@ -53,10 +55,10 @@ async function assertPublishedProductsExist(page: Page, testInfo: TestInfo) {
 			url: page.url(),
 		})
 
-		if (productCount === 0 || emptyStateVisible) {
+		if (productCount < requiredPublishedProductCount || emptyStateVisible) {
 			throw new Error(
 				[
-					'Order-split smoke requires at least one published product before creating the storefront order.',
+					`Order-split smoke requires at least ${requiredPublishedProductCount} published products before creating the storefront order.`,
 					'Run the menu-upload smoke first if this environment has no published menu.',
 					`Published product rows found: ${productCount}`,
 					`Empty state visible: ${emptyStateVisible}`,
@@ -85,11 +87,13 @@ async function passStorefrontGates(page: Page) {
 
 async function createStorefrontOrder({
 	browserName,
+	onOrderCreated,
 	page,
 	qaClient,
 	testInfo,
 }: {
 	browserName: string
+	onOrderCreated?: (orderNumber: string) => void
 	page: Page
 	qaClient: QAClient
 	testInfo: TestInfo
@@ -123,6 +127,7 @@ async function createStorefrontOrder({
 	const cartTotals = await cartPage.verifyCart(customer.zipCode)
 	await checkoutPage.confirmCheckout(customer.zipCode, cartTotals, 'recreational', true, customer.address)
 	const orderNumber = await orderReceivedPage.getOrderNumber()
+	onOrderCreated?.(orderNumber)
 
 	await expect(page).toHaveURL(/order-received/)
 	expect(orderNumber, 'Expected order-split smoke to place an order').toBeTruthy()
@@ -159,6 +164,9 @@ test('Admin can split a storefront order @split', async ({
 
 			return createStorefrontOrder({
 				browserName,
+				onOrderCreated: orderNumber => {
+					createdOrderNumber = orderNumber
+				},
 				page: storefrontPage,
 				qaClient,
 				testInfo,

@@ -271,7 +271,9 @@ async function sendSlackMessage(payload) {
 		return
 	}
 
-	console.log(`[admin-drop] Slack notification failed: ${response.status} ${response.statusText}`)
+	const message = `[admin-drop] Slack notification failed: ${response.status} ${response.statusText}`
+	console.log(message)
+	throw new Error(message)
 }
 
 async function main() {
@@ -295,7 +297,7 @@ async function main() {
 if (require.main === module) {
 	main().catch(error => {
 		console.log('[admin-drop] Slack notification failed:', error)
-		process.exit(0)
+		process.exit(1)
 	})
 }
 
