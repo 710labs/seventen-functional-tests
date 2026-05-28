@@ -1,4 +1,4 @@
-import test, { expect, Locator, Page } from '@playwright/test'
+import test, { expect, Page } from '@playwright/test'
 
 export class EditOrderPage {
 	readonly page: Page
@@ -7,30 +7,35 @@ export class EditOrderPage {
 		this.page = page
 	}
 
-	async splitOrder(orderNumber: any, orderQuanity: any): Promise<string> {
-		var splitOrderNumber
+	async splitOrder(orderNumber: string | number, _orderQuanity?: unknown): Promise<string> {
+		let splitOrderNumber = ''
 		await test.step('Pull Edit Order Page', async () => {
 			await this.page.goto(`/wp-admin/post.php?post=${orderNumber}&action=edit`)
 			//console.log('Order Link:' + (await this.page.url()))
 		})
 		await test.step('Split half of order', async () => {
-			await this.page.locator('text=Split order').click()
-			await this.page.waitForSelector('.item')
-			await this.page.waitForTimeout(500)
-			await (await this.page.$('.qty-split')).click()
-			await (await this.page.$('.qty-split')).fill('1')
-			await this.page.locator('text=Complete split').click()
-			await this.page.waitForTimeout(4000)
+			const splitOrderButton = this.page.locator('text=Split order').first()
+			const splitQuantityInput = this.page.locator('.qty-split').first()
+			const completeSplitButton = this.page.locator('text=Complete split').first()
+
+			await expect(splitOrderButton, 'Expected Split order action to be visible').toBeVisible()
+			await splitOrderButton.click()
+			await expect(this.page.locator('.item').first(), 'Expected split order items to load').toBeVisible()
+			await expect(splitQuantityInput, 'Expected split quantity input to be visible').toBeVisible()
+			await splitQuantityInput.fill('1')
+			await expect(completeSplitButton, 'Expected Complete split action to be visible').toBeVisible()
+			await completeSplitButton.click()
 		})
 		await test.step('Confirm Split', async () => {
-			await this.page.waitForSelector('text=Order split into')
-			splitOrderNumber = await (
-				await (await this.page.$('text=Order split into >> a')).innerText()
-			).replace('#', '')
+			const splitOrderLink = this.page.locator('text=Order split into >> a').first()
+
+			await expect(splitOrderLink, 'Expected split success notice to link to child order').toBeVisible()
+			splitOrderNumber = (await splitOrderLink.innerText()).replace('#', '').trim()
+			expect(splitOrderNumber, 'Expected split child order number to be present').toBeTruthy()
 			await this.page.goto(`/wp-admin/post.php?post=${splitOrderNumber}&action=edit`)
 			await this.page.waitForURL(`/wp-admin/post.php?post=${splitOrderNumber}&action=edit`)
 			await expect(
-				await this.page.locator(`text=Order split from #${orderNumber}`),
+				this.page.locator(`text=Order split from #${orderNumber}`),
 				'split should link to original order',
 			).toBeVisible()
 		})
@@ -38,7 +43,7 @@ export class EditOrderPage {
 		return splitOrderNumber
 	}
 
-	async cancelOrder(orderNumber: any) {
+	async cancelOrder(orderNumber: string | number) {
 		await test.step('Pull Edit Order Page', async () => {
 			await this.page.goto(`/wp-admin/post.php?post=${orderNumber}&action=edit`)
 		})

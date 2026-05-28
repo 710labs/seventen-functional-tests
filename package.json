@@ -33,6 +33,7 @@
 		"admin:smoke": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep-invert \"Menu upload|@rules\"",
 		"admin:smoke:all": "node scripts/admin-smoke-all.js",
 		"admin:smoke:menu-upload": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"Menu upload\"",
+		"admin:smoke:split": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"@split\"",
 		"admin:smoke:minorder": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"@minorder\"",
 		"admin:smoke:maxqty": "npx playwright test --config=configs/admin-drop.config.ts --workers=1 --grep \"@maxqty\"",
 		"helper:acuityslots:dev": "npx playwright test -g \"Acuity Helpers\" --config=configs/automation.config.ts --project=Desktop Chrome --workers=10",

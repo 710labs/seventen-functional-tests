@@ -64,12 +64,21 @@ jobs:
       RUN_ID: ${{ github.run_number }}
       UNIQUE_RUN_ID: ${{ github.run_id }}
       BASE_URL: ${{ github.event.inputs.target_env == 'stage' && secrets.BASE_URL_STAGE || secrets.BASE_URL_DEV }}
+      ADMIN_DROP_MERGED_REPORT: true
+      PWTEST_BLOB_DO_NOT_REMOVE: 1
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       QA_ENDPOINT: /wp-json/seventen-qa/v1/
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
       RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
       PRIVATE_STORE_TEST_PASSWORD: ${{ secrets.PRIVATE_STORE_TEST_PASSWORD }}
@@ -90,6 +99,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run admin-drop smoke tests
+        id: admin-drop-tests
         run: |
           GREP_INPUT='${{ github.event.inputs.grep }}'
           INCLUDE_MENU_UPLOAD='${{ github.event.inputs.include_menu_upload }}'
@@ -130,8 +140,11 @@ jobs:
             exit 1
           fi
 
+          ADMIN_DROP_PHASE_INDEX=0
+
           run_admin_smoke() {
-            npx playwright test --config=configs/admin-drop.config.ts --workers=1 "$@"
+            ADMIN_DROP_PHASE_INDEX=$((ADMIN_DROP_PHASE_INDEX + 1))
+            PLAYWRIGHT_BLOB_OUTPUT_NAME="admin-drop-${ADMIN_DROP_PHASE_INDEX}.zip" npx playwright test --config=configs/admin-drop.config.ts --workers=1 "$@"
           }
 
           if [ -n "$GREP_INPUT" ] && echo "$GREP_INPUT" | grep -Eqi '@rules'; then
@@ -189,6 +202,31 @@ jobs:
           fi
 
           run_admin_smoke "${ARGS[@]}"
+      - name: Merge Admin Drop Playwright reports
+        id: merge-admin-drop-report
+        if: always()
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report
+          PLAYWRIGHT_HTML_OPEN: never
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/admin-drop-results.json
+        run: |
+          if [ -n "$(find blob-report -name '*.zip' -print -quit 2>/dev/null)" ]; then
+            npx playwright merge-reports --reporter=html,json blob-report
+          else
+            echo "No Admin Drop blob reports found; skipping report merge."
+          fi
+      - name: Upload merged Playwright Report to S3
+        if: always()
+        continue-on-error: true
+        run: node ./scripts/upload-playwright-report-s3.js
+      - name: Send Admin Drop Slack notification
+        if: always()
+        continue-on-error: true
+        env:
+          ADMIN_DROP_TEST_OUTCOME: ${{ steps.admin-drop-tests.outcome }}
+          ADMIN_DROP_MERGE_OUTCOME: ${{ steps.merge-admin-drop-report.outcome }}
+        run: node ./scripts/send-admin-drop-slack-report.js
       - name: Upload Playwright Report
         if: always()
         uses: actions/upload-artifact@v4
