@@ -19,7 +19,7 @@ jobs:
       RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
-      QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
+      QA_ENDPOINT: /wp-json/seventen-qa/v1/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN }}

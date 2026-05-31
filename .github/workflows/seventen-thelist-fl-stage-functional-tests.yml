@@ -21,7 +21,7 @@ jobs:
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
       RESULTS_URL: 'https://710labs.github.io/seventen-functional-tests/'
-      QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
+      QA_ENDPOINT: /wp-json/seventen-qa/v1/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
@@ -50,4 +50,4 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright In Stage Env
-        run: npx run ci:test:staging:fl
+        run: npm run ci:test:staging:fl
