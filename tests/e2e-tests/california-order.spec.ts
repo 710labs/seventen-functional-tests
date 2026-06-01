@@ -35,7 +35,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			}
 			await myAccountPage.addMedicalExp()
 
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'medical')
+			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'medical')
 			var cartTotals = await cartPage.verifyCart(`94020`)
 			await checkOutPage.confirmCheckout('94020', cartTotals, 'medical')
 		},
@@ -77,7 +77,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'medical')
+			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'medical')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 'medical')
 		},
@@ -103,7 +103,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'recreational')
+			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'recreational')
 			var cartTotals = await cartPage.verifyCart(`94020`)
 			await checkOutPage.confirmCheckout('94020', cartTotals, 'recreational')
 		},
@@ -145,7 +145,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(6, mobile, 'Delivery', 'recreational')
+			await shopPage.addProductsToCart(5, mobile, 'Delivery', 'recreational')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 'recreational')
 		},
