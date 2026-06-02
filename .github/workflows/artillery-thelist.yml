@@ -48,6 +48,10 @@ on:
         description: 'Duration (seconds)'
         required: true
         default: '60'
+      cart_item_count:
+        description: 'Products to add to each cart'
+        required: false
+        default: '6'
       fargate_workers:
         description: 'Fargate workers (workflow divides rate-mode cluster totals across run-fargate --count workers)'
         required: false
@@ -90,6 +94,7 @@ jobs:
           echo "ARTILLERY_ARRIVAL_RATE=${{ github.event.inputs.arrival_rate || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_ARRIVAL_COUNT=${{ github.event.inputs.arrival_count || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
+          echo "ARTILLERY_CART_ITEM_COUNT=${{ github.event.inputs.cart_item_count || '6' }}" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_WORKERS=${{ github.event.inputs.fargate_workers || '1' }}" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_CPU=${{ github.event.inputs.fargate_cpu || '4' }}" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_MEMORY=${{ github.event.inputs.fargate_memory || '8' }}" >> $GITHUB_ENV
@@ -104,6 +109,7 @@ jobs:
           ARTILLERY_ARRIVAL_RATE=$(echo $ARTILLERY_ARRIVAL_RATE | sed 's/"//g')
           ARTILLERY_ARRIVAL_COUNT=$(echo $ARTILLERY_ARRIVAL_COUNT | sed 's/"//g')
           ARTILLERY_DURATION=$(echo $ARTILLERY_DURATION | sed 's/"//g')
+          ARTILLERY_CART_ITEM_COUNT=$(echo $ARTILLERY_CART_ITEM_COUNT | sed 's/"//g')
           ARTILLERY_FARGATE_WORKERS=$(echo $ARTILLERY_FARGATE_WORKERS | sed 's/"//g')
           ARTILLERY_FARGATE_CPU=$(echo $ARTILLERY_FARGATE_CPU | sed 's/"//g')
           ARTILLERY_FARGATE_MEMORY=$(echo $ARTILLERY_FARGATE_MEMORY | sed 's/"//g')
@@ -113,6 +119,7 @@ jobs:
           echo "ARTILLERY_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE" >> $GITHUB_ENV
           echo "ARTILLERY_ARRIVAL_COUNT=$ARTILLERY_ARRIVAL_COUNT" >> $GITHUB_ENV
           echo "ARTILLERY_DURATION=$ARTILLERY_DURATION" >> $GITHUB_ENV
+          echo "ARTILLERY_CART_ITEM_COUNT=$ARTILLERY_CART_ITEM_COUNT" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_WORKERS=$ARTILLERY_FARGATE_WORKERS" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_CPU=$ARTILLERY_FARGATE_CPU" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY" >> $GITHUB_ENV
@@ -173,6 +180,7 @@ jobs:
       - name: Show derived load topology
         run: |
           echo "Cluster totals: maxVusers=$ARTILLERY_VIRTUAL_USERS workers=$ARTILLERY_FARGATE_WORKERS pacing_mode=$ARTILLERY_PACING_MODE duration=$ARTILLERY_DURATION"
+          echo "Cart items per user: $ARTILLERY_CART_ITEM_COUNT"
           if [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
             echo "Cluster arrival rate: $ARTILLERY_ARRIVAL_RATE users/sec"
             echo "Per-worker topology: maxVusers=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS arrivalRate=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE"
@@ -238,6 +246,7 @@ jobs:
           ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
           RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
           ARTILLERY_TARGET=$ARTILLERY_TARGET
+          ARTILLERY_CART_ITEM_COUNT=$ARTILLERY_CART_ITEM_COUNT
           EOF
 
       - name: Verify Fargate worker dotenv
@@ -256,6 +265,7 @@ jobs:
           ARTILLERY_ARRIVAL_RATE: ${{ github.event.inputs.arrival_rate }}
           ARTILLERY_ARRIVAL_COUNT: ${{ github.event.inputs.arrival_count }}
           ARTILLERY_DURATION: ${{ github.event.inputs.duration }}
+          ARTILLERY_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '6' }}
           ARTILLERY_FARGATE_WORKERS: ${{ github.event.inputs.fargate_workers || '1' }}
           ARTILLERY_FARGATE_CPU: ${{ github.event.inputs.fargate_cpu || '4' }}
           ARTILLERY_FARGATE_MEMORY: ${{ github.event.inputs.fargate_memory || '8' }}

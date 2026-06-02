@@ -1,0 +1,25 @@
+config:
+  target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+  includeFiles:
+    - qa-cookies.js
+    - CA-DL.jpg
+    - Medical-Card.png
+  phases:
+    - duration: 1
+      arrivalCount: 1
+      maxVusers: 1
+  engines:
+    playwright:
+      trace: true
+      launchOptions:
+        headless: false
+        slowMo: 250
+      contextOptions:
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        viewport:
+          width: 1280
+          height: 720
+  processor: './artillery-scripts.js'
+scenarios:
+  - engine: playwright
+    testFunction: 'CA'

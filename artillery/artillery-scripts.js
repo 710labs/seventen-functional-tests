@@ -1,3 +1,5 @@
+const fs = require('fs')
+const path = require('path')
 const { addQaCookies } = require('./qa-cookies')
 
 const REGISTRATION_ADDRESS_SELECTOR = 'input[name="billing_address_1"]'
@@ -13,6 +15,16 @@ const DL_EXPIRATION_SELECTORS = [
 	'select[name="svntn_core_pxp_day"]',
 	'select[name="svntn_core_pxp_year"]',
 ]
+const DEFAULT_CART_ITEM_COUNT = 6
+const CHECKOUT_BUTTON_SELECTOR = [
+	'.checkout-button',
+	'a.checkout-button',
+	'.wc-proceed-to-checkout .wcse-checkout-button.wcse-warning-button',
+	'.wcse-checkout-button.wcse-warning-button',
+	'button:has-text("Continue to checkout")',
+	'a:has-text("Continue to checkout")',
+].join(', ')
+const DEBUG_SCREENSHOT_DIR = path.resolve(__dirname, 'debug-screenshots')
 
 function normalizeZip(value) {
 	return String(value || '').trim().slice(0, 5)
@@ -22,6 +34,93 @@ async function getBodyPreview(page) {
 	const bodyText = await page.locator('body').textContent().catch(() => '')
 
 	return (bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 1000)
+}
+
+function shouldCaptureDebugScreenshots() {
+	return process.env.ARTILLERY_DEBUG_SCREENSHOTS !== 'false'
+}
+
+function parsePositiveInt(rawValue, fallback) {
+	const parsed = Number.parseInt(rawValue, 10)
+
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function getCartCount() {
+	return parsePositiveInt(process.env.ARTILLERY_CART_ITEM_COUNT, DEFAULT_CART_ITEM_COUNT)
+}
+
+async function captureDebugScreenshot(page, label) {
+	if (!shouldCaptureDebugScreenshots()) {
+		return undefined
+	}
+
+	fs.mkdirSync(DEBUG_SCREENSHOT_DIR, { recursive: true })
+
+	const safeLabel = label.replace(/[^a-z0-9-]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()
+	const screenshotPath = path.join(DEBUG_SCREENSHOT_DIR, `${Date.now()}-${safeLabel}.png`)
+
+	await page.screenshot({ path: screenshotPath, fullPage: true }).catch(error => {
+		console.warn(`[DEBUG] Could not capture screenshot "${label}": ${error.message}`)
+	})
+
+	return screenshotPath
+}
+
+async function getCartDebugState(page) {
+	const checkoutButton = page.locator(CHECKOUT_BUTTON_SELECTOR).first()
+	const cartItems = page.locator('.cart_item')
+	const notices = await page
+		.locator('.woocommerce-message, .woocommerce-error, .wc-block-components-notice-banner, .notyf__toast')
+		.allTextContents()
+		.catch(() => [])
+
+	return {
+		url: page.url(),
+		cartItemCount: await cartItems.count().catch(() => 0),
+		checkoutButtonCount: await page.locator(CHECKOUT_BUTTON_SELECTOR).count().catch(() => 0),
+		checkoutButtonVisible: await checkoutButton.isVisible().catch(() => false),
+		checkoutButtonEnabled: await checkoutButton.isEnabled().catch(() => false),
+		emptyCartVisible: await page
+			.getByText(/cart is currently empty/i)
+			.first()
+			.isVisible()
+			.catch(() => false),
+		cartCountText: await page
+			.locator('a.cart-contents, .cart-contents, .rsp-countdown-content')
+			.first()
+			.textContent()
+			.catch(() => ''),
+		notices: notices.map(text => text.replace(/\s+/g, ' ').trim()).filter(Boolean),
+		bodyPreview: await getBodyPreview(page),
+	}
+}
+
+async function waitForCheckoutButton(page, timeoutMs = 15000) {
+	const checkoutButton = page.locator(CHECKOUT_BUTTON_SELECTOR).first()
+	const deadline = Date.now() + timeoutMs
+
+	while (Date.now() < deadline) {
+		const visible = await checkoutButton.isVisible().catch(() => false)
+		const enabled = await checkoutButton.isEnabled().catch(() => false)
+
+		if (visible && enabled) {
+			return checkoutButton
+		}
+
+		await page.waitForTimeout(500)
+	}
+
+	const cartState = await getCartDebugState(page)
+	const screenshotPath = await captureDebugScreenshot(page, 'checkout-button-missing')
+
+	throw new Error(
+		[
+			'Checkout button was not visible/enabled before proceeding to checkout.',
+			`Cart state: ${JSON.stringify(cartState, null, 2)}`,
+			`Screenshot: ${screenshotPath || 'not captured'}`,
+		].join('\n'),
+	)
 }
 
 async function waitForOptionalInputValue(page, selector, fieldName, matches) {
@@ -378,10 +477,6 @@ async function CA(page, vuContext, events, test) {
 		return randomNumber < 0.5 ? 'Pickup' : 'Delivery'
 	}
 
-	function getCartCount() {
-		return 3
-	}
-
 	const { step } = test
 	const userid = vuContext.vars.userid
 	const recordid = vuContext.vars.recordid
@@ -589,9 +684,21 @@ async function CA(page, vuContext, events, test) {
 				)
 			}
 
-			const indices = Array.from({ length: itemCount }, (_, index) => index)
+				const indices = Array.from({ length: itemCount }, (_, index) => index)
+				const addToCartButtonCount = await addToCartButtons.count()
 
-			for (let i = indices.length - 1; i > 0; i--) {
+				if (addToCartButtonCount < itemCount) {
+					throw new Error(
+						[
+							`Requested ${itemCount} cart items, but only found ${addToCartButtonCount} add-to-cart buttons.`,
+							`Usage type: ${usageType}`,
+							`Current URL: ${page.url()}`,
+							`Body preview: ${await getBodyPreview(page)}`,
+						].join('\n'),
+					)
+				}
+
+				for (let i = indices.length - 1; i > 0; i--) {
 				const j = Math.floor(Math.random() * (i + 1))
 				;[indices[i], indices[j]] = [indices[j], indices[i]]
 			}
@@ -600,6 +707,8 @@ async function CA(page, vuContext, events, test) {
 				await addToCartButtons.nth(index).click({ force: true })
 				await page.waitForTimeout(2000)
 			}
+
+			await captureDebugScreenshot(page, 'after-add-items-to-cart')
 		})
 		// await step('Add Promo Item To Cart', async () => {
 		// 	await page.waitForTimeout(5000)
@@ -643,17 +752,22 @@ async function CA(page, vuContext, events, test) {
 		// 	})
 		// })
 
-		await step('Review Cart', async () => {
-			console.log(`[DEBUG] Reviewing Cart. URL: ${page.url()}`)
-			await step('Navigate To Cart', async () => {
-				await page.locator('a.cart-contents').click()
-				console.log(`[DEBUG] In Cart. URL: ${page.url()}`)
+			await step('Review Cart', async () => {
+				console.log(`[DEBUG] Reviewing Cart. URL: ${page.url()}`)
+				await step('Navigate To Cart', async () => {
+					await page.locator('a.cart-contents').click()
+					console.log(`[DEBUG] In Cart. URL: ${page.url()}`)
+					await page.waitForLoadState('domcontentloaded').catch(() => {})
+					const cartState = await getCartDebugState(page)
+					console.log(`[DEBUG_CART_STATE] ${JSON.stringify(cartState)}`)
+					await captureDebugScreenshot(page, 'cart-page-before-checkout')
+				})
+				await step('Navigate To Checkout', async () => {
+					const checkoutButton = await waitForCheckoutButton(page)
+					await checkoutButton.click()
+					console.log(`[DEBUG] At Checkout. URL: ${page.url()}`)
+				})
 			})
-			await step('Navigate To Checkout', async () => {
-				await page.locator('.checkout-button').click()
-				console.log(`[DEBUG] At Checkout. URL: ${page.url()}`)
-			})
-		})
 	})
 
 	await step('Checkout Cart', async () => {
