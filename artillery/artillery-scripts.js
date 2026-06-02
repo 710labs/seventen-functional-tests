@@ -37,7 +37,7 @@ async function getBodyPreview(page) {
 }
 
 function shouldCaptureDebugScreenshots() {
-	return process.env.ARTILLERY_DEBUG_SCREENSHOTS !== 'false'
+	return process.env.ARTILLERY_DEBUG_SCREENSHOTS === 'true'
 }
 
 function parsePositiveInt(rawValue, fallback) {
