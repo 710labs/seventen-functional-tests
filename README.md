@@ -326,7 +326,8 @@ Notes:
 - Use `pacing_mode=rate` for multi-worker runs. Artillery executes `even_spacing` (`arrivalCount`) on only one worker.
 - A 2-second burst is enough to overlap all 100 sessions because each CA flow runs much longer than 2 seconds.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
-- Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate when the GitHub secret is configured; leave it unset to skip the bypass cookie.
+- Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate and CI fails fast when the GitHub secret is missing.
+- Local load runs can still start without `RECAPTCHA_BYPASS`, but the scripts will warn and skip the recaptcha bypass cookie. Preferred local usage: `RECAPTCHA_BYPASS=<secret> ARTILLERY_LIST_PASSWORD=<password> npm run load:ca:dev`.
 
 
 ## Test Tools

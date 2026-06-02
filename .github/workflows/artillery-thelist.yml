@@ -9,8 +9,6 @@ on:
         options:
           - https://thelist-dev.710labs.com
           - https://thelist-stage.710labs.com
-          - https://thelist-mi.710labs.com
-          - https://thelist-co.710labs.com
           - https://thelist.710labs.com
       env:
         type: choice
@@ -26,8 +24,6 @@ on:
         required: true
         options:
           - ca
-          - co
-          - mi
       virtual_users:
         description: 'Cluster total max concurrent users (maxVusers across all workers)'
         required: false
@@ -214,6 +210,7 @@ jobs:
       - name: Verify Artillery dependencies
         run: |
           test -f "$ARTILLERY_CONFIG"
+          test -f artillery/qa-cookies.js
           test -f artillery/artillery-scripts.js
           test -f artillery/CA-DL.jpg
           test -f artillery/Medical-Card.png
@@ -225,6 +222,10 @@ jobs:
         run: |
           if [ -z "$ARTILLERY_LIST_PASSWORD" ]; then
             echo "Missing required secret: ARTILLERY_LIST_PASSWORD for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+          if [ -z "$RECAPTCHA_BYPASS" ]; then
+            echo "Missing required secret: RECAPTCHA_BYPASS for environment '${{ github.event.inputs.env }}'" >&2
             exit 1
           fi
 

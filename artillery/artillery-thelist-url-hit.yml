@@ -1,5 +1,7 @@
 config:
   target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+  includeFiles:
+    - qa-cookies.js
   phases:
     - duration: 60
       arrivalRate: 1

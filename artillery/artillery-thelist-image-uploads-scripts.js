@@ -1,4 +1,5 @@
 const path = require('path')
+const { addQaCookies } = require('./qa-cookies')
 
 const DRIVER_LICENSE_FILES = ['CA-DL.heic', 'CA-DL.jpg', 'CA-DL.png']
 const MED_CARD_FILES = ['Medical-Card.heic', 'Medical-Card.jpeg', 'Medical-Card.png']
@@ -10,14 +11,25 @@ const DEFAULT_RATE_LIMIT_ERROR_TIMEOUT_MS = 1500
 const DEFAULT_ASSERT_RATE_LIMIT = true
 
 const DL_INPUT_SELECTOR = 'input[name="svntn_core_personal_doc"]'
-const DL_SUCCESS_BADGE_SELECTOR =
-	'div.eligibilityInput:has(input#svntn_core_personal_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel'
+const DL_SUCCESS_BADGE_SELECTOR = [
+	'div.eligibilityInput:has(input#svntn_core_personal_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel',
+	'div.eligibilityInput:has(input[name="svntn_core_personal_doc"]) span.unsealLabel.unsealSuccess',
+].join(', ')
 const MED_CARD_INPUT_SELECTOR = 'input[name="svntn_core_medical_doc"]'
-const MED_CARD_SUCCESS_BADGE_SELECTOR =
-	'div.eligibilityInput:has(input#svntn_core_medical_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel'
+const MED_CARD_SUCCESS_BADGE_SELECTOR = [
+	'div.eligibilityInput:has(input#svntn_core_medical_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel',
+	'div.eligibilityInput:has(input[name="svntn_core_medical_doc"]) span.unsealLabel.unsealSuccess',
+].join(', ')
+const REGISTRATION_ADDRESS_SELECTOR = 'input[name="billing_address_1"]'
+const BILLING_STATE_SELECTOR = 'select[name="billing_state"], input[name="billing_state"], #billing_state'
+const BILLING_ZIP_SELECTOR = 'input[name="billing_postcode"], #billing_postcode'
+const DL_EXPIRATION_SELECTORS = [
+	'select[name="svntn_core_pxp_month"]',
+	'select[name="svntn_core_pxp_day"]',
+	'select[name="svntn_core_pxp_year"]',
+]
 const RATE_LIMIT_ERROR_SELECTOR = 'p.eligibilityError'
 const RATE_LIMIT_ERROR_TEXT = 'You are uploading too fast for me. Give it 1 minute and try again.'
-const RECAPTCHA_BYPASS_COOKIE_NAME = 'qa_wf_captcha_bypass'
 
 function randomFirstName() {
 	const firstNames = [
@@ -206,47 +218,242 @@ function createUserProfile() {
 		email: `loadtest-${firstName.toLowerCase()}.${lastName.toLowerCase()}.${randomNumber()}@loadtest.com`,
 		password: `Upload-${randomNumber()}-Pass!`,
 		address: '3377 S La Cienega Blvd, Los Angeles, CA 90016',
+		state: 'CA',
+		zip: '90016',
 		phoneNumber: randomPhoneNumber(),
 	}
 }
 
 function getSuccessBadge(page, successSelector) {
-	return page.locator(successSelector).filter({ hasText: 'On file' })
+	return page.locator(successSelector).first()
 }
 
 function getRateLimitError(page) {
 	return page.locator(RATE_LIMIT_ERROR_SELECTOR).filter({ hasText: RATE_LIMIT_ERROR_TEXT })
 }
 
-function buildQaCookies(target) {
-	const targetUrl = new URL(target)
-	const cookies = [
-		{
-			name: 'vipChecker',
-			value: '3',
-			domain: targetUrl.hostname,
-			path: '/',
-		},
-	]
-	const recaptchaBypass = process.env.RECAPTCHA_BYPASS
-
-	if (recaptchaBypass && recaptchaBypass.trim()) {
-		cookies.push({
-			name: RECAPTCHA_BYPASS_COOKIE_NAME,
-			value: recaptchaBypass,
-			domain: targetUrl.hostname,
-			path: '/',
-			httpOnly: false,
-			secure: targetUrl.protocol === 'https:',
-			sameSite: 'Lax',
-		})
-	}
-
-	return cookies
+function normalizeZip(value) {
+	return String(value || '').trim().slice(0, 5)
 }
 
-async function addQaCookies(page, target) {
-	await page.context().addCookies(buildQaCookies(target))
+async function getBodyPreview(page) {
+	const bodyText = await page.locator('body').textContent().catch(() => '')
+
+	return (bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 1000)
+}
+
+async function waitForOptionalInputValue(page, selector, fieldName, matches) {
+	const locator = page.locator(selector).first()
+
+	if ((await locator.count()) === 0) {
+		return ''
+	}
+
+	const deadline = Date.now() + 5000
+	let lastValue = ''
+
+	while (Date.now() < deadline) {
+		lastValue = (await locator.inputValue().catch(() => '')).trim()
+
+		if (matches(lastValue)) {
+			return lastValue
+		}
+
+		await page.waitForTimeout(250)
+	}
+
+	throw new Error(
+		[
+			`Registration address ${fieldName} did not resolve after selecting autocomplete.`,
+			`Last ${fieldName}: "${lastValue}"`,
+			`Current URL: ${page.url()}`,
+			`Address value: "${await page.locator(REGISTRATION_ADDRESS_SELECTOR).inputValue().catch(() => '')}"`,
+			`Body preview: ${await getBodyPreview(page)}`,
+		].join('\n'),
+	)
+}
+
+async function assertResolvedAddress(page, expectedState, expectedZip) {
+	const address = page.locator(REGISTRATION_ADDRESS_SELECTOR).first()
+	const state = expectedState.toUpperCase()
+	const zip = normalizeZip(expectedZip)
+	const deadline = Date.now() + 5000
+	let lastAddress = ''
+
+	await address.waitFor({ state: 'visible', timeout: 10000 })
+
+	while (Date.now() < deadline) {
+		lastAddress = (await address.inputValue().catch(() => '')).trim()
+
+		if (lastAddress) {
+			break
+		}
+
+		await page.waitForTimeout(250)
+	}
+
+	if (!lastAddress) {
+		throw new Error('Registration address was not populated.')
+	}
+
+	await waitForOptionalInputValue(
+		page,
+		BILLING_STATE_SELECTOR,
+		'billing_state',
+		value => value.trim().toUpperCase() === state,
+	)
+
+	if (zip) {
+		await waitForOptionalInputValue(
+			page,
+			BILLING_ZIP_SELECTOR,
+			'billing_postcode',
+			value => normalizeZip(value) === zip,
+		)
+	}
+}
+
+async function waitForLocatorEnabled(page, locator, label, timeoutMs = 10000) {
+	const deadline = Date.now() + timeoutMs
+
+	while (Date.now() < deadline) {
+		const visible = await locator.isVisible().catch(() => false)
+		const enabled = await locator.isEnabled().catch(() => false)
+
+		if (visible && enabled) {
+			return
+		}
+
+		await page.waitForTimeout(250)
+	}
+
+	throw new Error(`${label} should be visible and enabled before submit.`)
+}
+
+async function waitForRegistrationReadyToSubmit(page, expectedState, expectedZip) {
+	const nextButton = page.getByRole('button', { name: /^next$/i })
+
+	await page.waitForFunction(() => document.readyState !== 'loading')
+	await assertResolvedAddress(page, expectedState, expectedZip)
+	await nextButton.waitFor({ state: 'visible', timeout: 10000 })
+	await waitForLocatorEnabled(page, nextButton, 'Registration Next button')
+
+	return nextButton
+}
+
+function isShopRouteBeforeEligibility(page) {
+	try {
+		const url = new URL(page.url())
+
+		return (
+			url.pathname === '/' &&
+			['', '#', '#pickup', '#pickup-deliver', '#deliver'].includes(url.hash)
+		)
+	} catch (error) {
+		return false
+	}
+}
+
+async function isEligibilityLicenseStepVisible(page) {
+	const eligibilityContextVisible = await page
+		.locator('#eligibilityContext')
+		.first()
+		.isVisible()
+		.catch(() => false)
+	const licenseInputVisible = await page
+		.locator(DL_INPUT_SELECTOR)
+		.first()
+		.isVisible()
+		.catch(() => false)
+	const usageTypeVisible = await page
+		.locator('input[name="svntn_last_usage_type"]')
+		.first()
+		.isVisible()
+		.catch(() => false)
+	const completeAccountVisible = await page
+		.getByText(/complete your account/i)
+		.first()
+		.isVisible()
+		.catch(() => false)
+	const idUploadVisible = await page
+		.getByText(/id upload/i)
+		.first()
+		.isVisible()
+		.catch(() => false)
+
+	return (
+		eligibilityContextVisible ||
+		licenseInputVisible ||
+		usageTypeVisible ||
+		completeAccountVisible ||
+		idUploadVisible
+	)
+}
+
+async function waitForEligibilityStep(page, target) {
+	const deadline = Date.now() + 20000
+	let attemptedEligibilityFallback = false
+
+	while (Date.now() < deadline) {
+		if (await isEligibilityLicenseStepVisible(page)) {
+			return
+		}
+
+		if (!attemptedEligibilityFallback && isShopRouteBeforeEligibility(page)) {
+			attemptedEligibilityFallback = true
+			console.warn(
+				'[registration] Redirected to the shop before eligibility appeared; navigating to /my-account/eligibility/.',
+			)
+			await page.goto(new URL('/my-account/eligibility/', target).toString(), {
+				waitUntil: 'domcontentloaded',
+			})
+			continue
+		}
+
+		await page.waitForTimeout(250)
+	}
+
+	throw new Error(
+		[
+			'Eligibility/license step did not load after submitting the registration form.',
+			`Current URL: ${page.url()}`,
+			`Body preview: ${await getBodyPreview(page)}`,
+		].join('\n'),
+	)
+}
+
+async function isUploadAccepted(page, inputSelector, successSelector) {
+	const successVisible = await getSuccessBadge(page, successSelector).isVisible().catch(() => false)
+
+	if (successVisible) {
+		return true
+	}
+
+	if (inputSelector !== DL_INPUT_SELECTOR) {
+		return false
+	}
+
+	const expirationEnabled = await Promise.all(
+		DL_EXPIRATION_SELECTORS.map(selector =>
+			page.locator(selector).first().isEnabled().catch(() => false),
+		),
+	)
+
+	return expirationEnabled.every(Boolean)
+}
+
+async function waitForUploadAccepted(page, inputSelector, successSelector, timeoutMs) {
+	const deadline = Date.now() + timeoutMs
+
+	while (Date.now() < deadline) {
+		if (await isUploadAccepted(page, inputSelector, successSelector)) {
+			return true
+		}
+
+		await page.waitForTimeout(500)
+	}
+
+	return false
 }
 
 async function waitForInputFilename(page, inputSelector, expectedFilename) {
@@ -300,7 +507,6 @@ async function waitForVisible(locator, timeoutMs) {
 async function attemptUpload(page, inputSelector, successSelector, filename, timeouts = {}) {
 	const successTimeoutMs = timeouts.successTimeoutMs || DEFAULT_UPLOAD_SUCCESS_TIMEOUT_MS
 	const fileInput = page.locator(inputSelector)
-	const successBadge = getSuccessBadge(page, successSelector)
 	const resolvedFilePath = path.resolve(__dirname, filename)
 	const startedAt = Date.now()
 
@@ -308,25 +514,19 @@ async function attemptUpload(page, inputSelector, successSelector, filename, tim
 	await fileInput.setInputFiles(resolvedFilePath)
 	await waitForInputFilename(page, inputSelector, filename)
 
-	try {
-		await successBadge.waitFor({ state: 'visible', timeout: successTimeoutMs })
-
+	if (await waitForUploadAccepted(page, inputSelector, successSelector, successTimeoutMs)) {
 		return {
 			success: true,
 			elapsedMs: Date.now() - startedAt,
 			filename,
 		}
-	} catch (error) {
-		if (error.name === 'TimeoutError') {
-			return {
-				success: false,
-				elapsedMs: Date.now() - startedAt,
-				filename,
-				errorMessage: error.message,
-			}
-		}
+	}
 
-		throw error
+	return {
+		success: false,
+		elapsedMs: Date.now() - startedAt,
+		filename,
+		errorMessage: `Timed out after ${successTimeoutMs}ms waiting for upload acceptance`,
 	}
 }
 
@@ -338,7 +538,6 @@ async function attemptDlRateLimitUpload(page, filename, timeouts = {}) {
 	const rateLimitErrorTimeoutMs =
 		timeouts.rateLimitErrorTimeoutMs || DEFAULT_RATE_LIMIT_ERROR_TIMEOUT_MS
 	const fileInput = page.locator(DL_INPUT_SELECTOR)
-	const successBadge = getSuccessBadge(page, DL_SUCCESS_BADGE_SELECTOR)
 	const rateLimitError = getRateLimitError(page)
 	const resolvedFilePath = path.resolve(__dirname, filename)
 	const startedAt = Date.now()
@@ -348,7 +547,7 @@ async function attemptDlRateLimitUpload(page, filename, timeouts = {}) {
 	await waitForInputFilename(page, DL_INPUT_SELECTOR, filename)
 
 	const rateLimitErrorVisible = await waitForVisible(rateLimitError, rateLimitErrorTimeoutMs)
-	const onFileVisible = await successBadge.isVisible()
+	const onFileVisible = await isUploadAccepted(page, DL_INPUT_SELECTOR, DL_SUCCESS_BADGE_SELECTOR)
 
 	return {
 		status: rateLimitErrorVisible ? 'blocked' : 'not_blocked',
@@ -398,8 +597,8 @@ async function reachUploadStep(page, vuContext, test) {
 			await page
 				.getByRole('button', { name: "I'm over 21 or a qualified patient" })
 				.click({ timeout: 60000 })
+			})
 		})
-	})
 
 	await step('Enter List Password', async () => {
 		console.log(`[DEBUG] Entering List Password. URL: ${page.url()}`)
@@ -469,9 +668,10 @@ async function reachUploadStep(page, vuContext, test) {
 			})
 
 			await step('Submit New Customer Form', async () => {
+				const nextButton = await waitForRegistrationReadyToSubmit(page, user.state, user.zip)
 				await page.waitForTimeout(2000)
-				await page.click('button:has-text("Next")')
-				await page.waitForTimeout(1000)
+				await nextButton.click()
+				await waitForEligibilityStep(page, target)
 			})
 		})
 	})

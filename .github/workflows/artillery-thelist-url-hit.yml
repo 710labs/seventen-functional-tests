@@ -64,15 +64,39 @@ jobs:
       - name: Verify Artillery dependencies
         run: |
           test -f "$ARTILLERY_CONFIG"
+          test -f artillery/qa-cookies.js
           test -f artillery/artillery-thelist-url-hit-scripts.js
+
+      - name: Verify required secrets
+        env:
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          if [ -z "$RECAPTCHA_BYPASS" ]; then
+            echo "Missing required secret: RECAPTCHA_BYPASS for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+
+      - name: Create Fargate worker dotenv
+        env:
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          cat > artillery/artillery-thelist-url-hit.fargate.env <<EOF
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          EOF
+
+      - name: Verify Fargate worker dotenv
+        run: |
+          test -f artillery/artillery-thelist-url-hit.fargate.env
 
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-url-hit/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --dotenv artillery/artillery-thelist-url-hit.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-url-hit/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
 
       - name: Upload Artillery reports
         if: always()
