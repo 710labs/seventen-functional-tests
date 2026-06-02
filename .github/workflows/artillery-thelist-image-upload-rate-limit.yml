@@ -237,6 +237,7 @@ jobs:
       - name: Verify Artillery dependencies
         run: |
           test -f "$ARTILLERY_CONFIG"
+          test -f artillery/qa-cookies.js
           test -f artillery/artillery-thelist-image-uploads-scripts.js
           test -f artillery/CA-DL.heic
           test -f artillery/CA-DL.jpg
@@ -249,6 +250,10 @@ jobs:
         run: |
           if [ -z "$ARTILLERY_LIST_PASSWORD" ]; then
             echo "Missing required secret: ARTILLERY_LIST_PASSWORD for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+          if [ -z "$RECAPTCHA_BYPASS" ]; then
+            echo "Missing required secret: RECAPTCHA_BYPASS for environment '${{ github.event.inputs.env }}'" >&2
             exit 1
           fi
 

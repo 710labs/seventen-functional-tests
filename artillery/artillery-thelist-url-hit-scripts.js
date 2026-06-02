@@ -1,3 +1,5 @@
+const { addQaCookies } = require('./qa-cookies')
+
 async function waitForInitialPageState(page) {
 	const checks = [
 		{
@@ -35,6 +37,8 @@ async function waitForInitialPageState(page) {
 async function TheListUrlHit(page, vuContext, events, test) {
 	const { step } = test
 	const target = vuContext.vars.target || process.env.ARTILLERY_TARGET || 'https://thelist-dev.710labs.com'
+
+	await addQaCookies(page, target)
 
 	await step('Open selected The List URL', async () => {
 		const response = await page.goto(target, { waitUntil: 'domcontentloaded' })
