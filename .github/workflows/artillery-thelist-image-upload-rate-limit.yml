@@ -164,7 +164,7 @@ jobs:
             prod)
               case "$ARTILLERY_TARGET" in
                 https://thelist.710labs.com|https://thelist-mi.710labs.com|https://thelist-co.710labs.com|https://thelist-nj.710labs.com)
-                  exit 0
+                  :
                   ;;
                 *)
                   echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected a production host." >&2
@@ -178,7 +178,7 @@ jobs:
               ;;
           esac
 
-          if [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
+          if [ "$ARTILLERY_ENV" != "prod" ] && [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
             echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
             exit 1
           fi
