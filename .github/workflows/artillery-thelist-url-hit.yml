@@ -28,6 +28,9 @@ on:
         description: 'Duration (seconds)'
         required: true
         default: '60'
+concurrency:
+  group: thelist-${{ github.event.inputs.env }}-domain-state
+  cancel-in-progress: false
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -44,6 +47,42 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Validate dev/stage target
+        run: |
+          case "$ARTILLERY_ENV" in
+            dev)
+              EXPECTED_TARGET="https://thelist-dev.710labs.com"
+              ;;
+            stage)
+              EXPECTED_TARGET="https://thelist-stage.710labs.com"
+              ;;
+            *)
+              echo "Unsupported env for URL-hit Artillery run: $ARTILLERY_ENV" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
+            echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
+            exit 1
+          fi
+
+      - name: Set Domain to CA
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          QA_ENDPOINT: /wp-json/seventen-qa/v1/
+        run: |
+          if [ -z "$API_KEY" ]; then
+            echo "Missing required secret: API_KEY for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+
+          BASE_URL="$ARTILLERY_TARGET" node ./scripts/set-qa-domain.js ca
 
       - name: Prepare Artillery config copy
         run: |
@@ -106,15 +145,6 @@ jobs:
           path: artillery-reports
           if-no-files-found: ignore
 
-      - name: Notify about failures
-        if: failure()
-        uses: 8398a7/action-slack@v3.15.1
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,eventName,job,took,pullRequest
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
       - name: Slack notifications
         if: always()
         uses: 8398a7/action-slack@v3.15.1
@@ -125,7 +155,16 @@ jobs:
             {
               attachments: [{
                 color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
-                text: `${process.env.AS_WORKFLOW}\n${process.env.AS_JOB} (${process.env.AS_COMMIT}) of ${process.env.AS_REPO}@${process.env.AS_REF} by ${process.env.AS_AUTHOR} ${{ job.status }} in ${process.env.AS_TOOK}`,
+                title: 'Artillery Load Test - URL Hit',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ github.event.inputs.env }}`,
+                  `Target: ${{ github.event.inputs.target }}`,
+                  `Max VUs: ${{ github.event.inputs.virtual_users || '1' }}`,
+                  `Arrival rate: ${{ github.event.inputs.arrival_rate || '1' }}`,
+                  `Duration: ${{ github.event.inputs.duration }} seconds`,
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
               }]
             }
         env:

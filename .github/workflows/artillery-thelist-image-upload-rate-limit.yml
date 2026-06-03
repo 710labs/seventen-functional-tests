@@ -85,6 +85,9 @@ on:
         options:
           - 'true'
           - 'false'
+concurrency:
+  group: thelist-${{ github.event.inputs.env }}-domain-state
+  cancel-in-progress: false
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -97,6 +100,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
 
       - name: Set environment variables based on inputs
         run: |
@@ -144,6 +151,50 @@ jobs:
           echo "ARTILLERY_WINDOW_SECONDS=$ARTILLERY_WINDOW_SECONDS" >> $GITHUB_ENV
           echo "ARTILLERY_RATE_LIMIT_ERROR_TIMEOUT_MS=$ARTILLERY_RATE_LIMIT_ERROR_TIMEOUT_MS" >> $GITHUB_ENV
           echo "ARTILLERY_ASSERT_RATE_LIMIT=$ARTILLERY_ASSERT_RATE_LIMIT" >> $GITHUB_ENV
+
+      - name: Validate target
+        run: |
+          case "$ARTILLERY_ENV" in
+            dev)
+              EXPECTED_TARGET="https://thelist-dev.710labs.com"
+              ;;
+            stage)
+              EXPECTED_TARGET="https://thelist-stage.710labs.com"
+              ;;
+            prod)
+              case "$ARTILLERY_TARGET" in
+                https://thelist.710labs.com|https://thelist-mi.710labs.com|https://thelist-co.710labs.com|https://thelist-nj.710labs.com)
+                  :
+                  ;;
+                *)
+                  echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected a production host." >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "Unsupported env for image upload rate-limit Artillery run: $ARTILLERY_ENV" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "$ARTILLERY_ENV" != "prod" ] && [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
+            echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
+            exit 1
+          fi
+
+      - name: Set Domain to CA
+        if: ${{ github.event.inputs.env == 'dev' || github.event.inputs.env == 'stage' }}
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          QA_ENDPOINT: /wp-json/seventen-qa/v1/
+        run: |
+          if [ -z "$API_KEY" ]; then
+            echo "Missing required secret: API_KEY for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+
+          BASE_URL="$ARTILLERY_TARGET" node ./scripts/set-qa-domain.js ca
 
       - name: Validate and derive load test topology
         run: |
@@ -294,15 +345,6 @@ jobs:
           path: artillery-reports
           if-no-files-found: ignore
 
-      - name: Notify about failures
-        if: failure()
-        uses: 8398a7/action-slack@v3.15.1
-        with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,eventName,job,took,pullRequest
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
       - name: Slack notifications
         if: always()
         uses: 8398a7/action-slack@v3.15.1
@@ -313,7 +355,21 @@ jobs:
             {
               attachments: [{
                 color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
-                text: `${process.env.AS_WORKFLOW}\n${process.env.AS_JOB} (${process.env.AS_COMMIT}) of ${process.env.AS_REPO}@${process.env.AS_REF} by ${process.env.AS_AUTHOR} ${{ job.status }} in ${process.env.AS_TOOK}`,
+                title: 'Artillery Load Test - Image Upload Rate Limit',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ github.event.inputs.env }}`,
+                  `Target: ${{ github.event.inputs.target }}`,
+                  `Pacing: ${{ github.event.inputs.pacing_mode }}`,
+                  `Max VUs: ${{ github.event.inputs.virtual_users || '1' }}`,
+                  `Arrival rate/count: ${{ github.event.inputs.arrival_rate || '1' }} / ${{ github.event.inputs.arrival_count || '1' }}`,
+                  `Duration: ${{ github.event.inputs.duration }} seconds`,
+                  `Upload attempts/window: ${{ github.event.inputs.upload_attempts || '70' }} / ${{ github.event.inputs.window_seconds || '300' }} seconds`,
+                  `Assert rate limit: ${{ github.event.inputs.assert_rate_limit || 'true' }}`,
+                  `Workers: ${{ github.event.inputs.fargate_workers || '1' }}`,
+                  `CPU/Memory: ${{ github.event.inputs.fargate_cpu || '4' }} vCPU / ${{ github.event.inputs.fargate_memory || '8' }} GB`,
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
               }]
             }
         env:
