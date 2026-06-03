@@ -2,14 +2,6 @@ name: Load Tests - The List
 on:
   workflow_dispatch:
     inputs:
-      target:
-        type: choice
-        description: 'Url'
-        required: true
-        options:
-          - https://thelist-dev.710labs.com
-          - https://thelist-stage.710labs.com
-          - https://thelist.710labs.com
       env:
         type: choice
         description: 'Environment'
@@ -17,132 +9,269 @@ on:
         options:
           - dev
           - stage
-          - prod
-      mode:
+      load_pattern:
         type: choice
-        description: 'Mode'
+        description: 'Load pattern'
         required: true
+        default: concurrent_burst
         options:
-          - ca
-      virtual_users:
-        description: 'Cluster total max concurrent users (maxVusers across all workers)'
-        required: false
-        default: '1'
-      pacing_mode:
+          - concurrent_burst
+          - total_spread
+      load_size:
         type: choice
-        description: 'Pacing mode (rate=new users per second, even_spacing=users spread evenly over duration)'
+        description: 'Users'
         required: true
-        default: 'rate'
+        default: '1'
         options:
-          - rate
-          - even_spacing
-      arrival_rate:
-        description: 'Cluster total new users per second (arrivalRate across all workers) = Rate pace'
-        required: false
-        default: '1'
-      arrival_count:
-        description: 'Users across the whole duration (arrivalCount) = Even Spacing pace'
-        required: false
-        default: '1'
-      duration:
-        description: 'Duration (seconds)'
-        required: true
-        default: '60'
-      cart_item_count:
-        description: 'Products to add to each cart'
-        required: false
-        default: '6'
-      fargate_workers:
-        description: 'Fargate workers (workflow divides rate-mode cluster totals across run-fargate --count workers)'
-        required: false
-        default: '1'
-      fargate_cpu:
-        description: 'vCPU per Fargate worker (run-fargate --cpu)'
-        required: false
-        default: '4'
-      fargate_memory:
-        description: 'Memory in GB per Fargate worker (run-fargate --memory)'
-        required: false
-        default: '8'
-      fargate_capacity:
-        type: choice
-        description: 'Fargate capacity'
-        required: true
-        default: 'on_demand'
-        options:
-          - on_demand
-          - spot
+          - '1'
+          - '5'
+          - '10'
+          - '25'
+          - '50'
+          - '75'
+          - '100'
+          - '150'
+          - '200'
 jobs:
   artillery:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.env }}
 
     permissions:
-      contents: read # needed so that checkout of repository can happen
-      id-token: write # additionally needed now for OIDC
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set environment variables based on inputs
+      - name: Resolve load preset
+        id: resolve_load_preset
         run: |
-          echo "ARTILLERY_TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
-          echo "ARTILLERY_ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
-          echo "ARTILLERY_VIRTUAL_USERS=${{ github.event.inputs.virtual_users || '1' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_PACING_MODE=${{ github.event.inputs.pacing_mode || 'rate' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_ARRIVAL_RATE=${{ github.event.inputs.arrival_rate || '1' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_ARRIVAL_COUNT=${{ github.event.inputs.arrival_count || '1' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_DURATION=${{ github.event.inputs.duration || '300' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_CART_ITEM_COUNT=${{ github.event.inputs.cart_item_count || '6' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_WORKERS=${{ github.event.inputs.fargate_workers || '1' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_CPU=${{ github.event.inputs.fargate_cpu || '4' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_MEMORY=${{ github.event.inputs.fargate_memory || '8' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_CAPACITY=${{ github.event.inputs.fargate_capacity || 'on_demand' }}" >> $GITHUB_ENV
-          echo "ARTILLERY_REPORT_APIKEY=${{ secrets.ARTILLERY_REPORT_APIKEY }}" >> $GITHUB_ENV
-          echo "ARTILLERY_710_MODE=${{ github.event.inputs.mode }}" >> $GITHUB_ENV
+          ARTILLERY_ENV="${{ github.event.inputs.env }}"
+          ARTILLERY_LOAD_PATTERN="${{ github.event.inputs.load_pattern }}"
+          ARTILLERY_LOAD_SIZE="${{ github.event.inputs.load_size }}"
+          ARTILLERY_710_MODE=ca
+          ARTILLERY_CART_ITEM_COUNT=6
+          ARTILLERY_FARGATE_CAPACITY=on_demand
+          ARTILLERY_FARGATE_SPOT_FLAG=
 
-      - name: Strip quotes from environment variables
-        run: |
-          ARTILLERY_TARGET=$(echo $ARTILLERY_TARGET | sed 's/"//g')
-          ARTILLERY_VIRTUAL_USERS=$(echo $ARTILLERY_VIRTUAL_USERS | sed 's/"//g')
-          ARTILLERY_ARRIVAL_RATE=$(echo $ARTILLERY_ARRIVAL_RATE | sed 's/"//g')
-          ARTILLERY_ARRIVAL_COUNT=$(echo $ARTILLERY_ARRIVAL_COUNT | sed 's/"//g')
-          ARTILLERY_DURATION=$(echo $ARTILLERY_DURATION | sed 's/"//g')
-          ARTILLERY_CART_ITEM_COUNT=$(echo $ARTILLERY_CART_ITEM_COUNT | sed 's/"//g')
-          ARTILLERY_FARGATE_WORKERS=$(echo $ARTILLERY_FARGATE_WORKERS | sed 's/"//g')
-          ARTILLERY_FARGATE_CPU=$(echo $ARTILLERY_FARGATE_CPU | sed 's/"//g')
-          ARTILLERY_FARGATE_MEMORY=$(echo $ARTILLERY_FARGATE_MEMORY | sed 's/"//g')
-          ARTILLERY_FARGATE_CAPACITY=$(echo $ARTILLERY_FARGATE_CAPACITY | sed 's/"//g')
-          echo "ARTILLERY_TARGET=$ARTILLERY_TARGET" >> $GITHUB_ENV
-          echo "ARTILLERY_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS" >> $GITHUB_ENV
-          echo "ARTILLERY_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE" >> $GITHUB_ENV
-          echo "ARTILLERY_ARRIVAL_COUNT=$ARTILLERY_ARRIVAL_COUNT" >> $GITHUB_ENV
-          echo "ARTILLERY_DURATION=$ARTILLERY_DURATION" >> $GITHUB_ENV
-          echo "ARTILLERY_CART_ITEM_COUNT=$ARTILLERY_CART_ITEM_COUNT" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_WORKERS=$ARTILLERY_FARGATE_WORKERS" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_CPU=$ARTILLERY_FARGATE_CPU" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY" >> $GITHUB_ENV
-          echo "ARTILLERY_FARGATE_CAPACITY=$ARTILLERY_FARGATE_CAPACITY" >> $GITHUB_ENV
+          case "$ARTILLERY_ENV" in
+            dev)
+              ARTILLERY_TARGET="https://thelist-dev.710labs.com"
+              ;;
+            stage)
+              ARTILLERY_TARGET="https://thelist-stage.710labs.com"
+              ;;
+            *)
+              echo "Unsupported env: $ARTILLERY_ENV" >&2
+              exit 1
+              ;;
+          esac
 
-      - name: Validate and derive load test topology
-        run: |
+          case "$ARTILLERY_LOAD_PATTERN:$ARTILLERY_LOAD_SIZE" in
+            concurrent_burst:1)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=1
+              ARTILLERY_ARRIVAL_RATE=1
+              ARTILLERY_ARRIVAL_COUNT=1
+              ARTILLERY_DURATION=1
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:5)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=5
+              ARTILLERY_ARRIVAL_RATE=5
+              ARTILLERY_ARRIVAL_COUNT=5
+              ARTILLERY_DURATION=1
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:10)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=10
+              ARTILLERY_ARRIVAL_RATE=10
+              ARTILLERY_ARRIVAL_COUNT=10
+              ARTILLERY_DURATION=1
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:25)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=25
+              ARTILLERY_ARRIVAL_RATE=25
+              ARTILLERY_ARRIVAL_COUNT=25
+              ARTILLERY_DURATION=1
+              ARTILLERY_FARGATE_WORKERS=5
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:50)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=50
+              ARTILLERY_ARRIVAL_RATE=25
+              ARTILLERY_ARRIVAL_COUNT=50
+              ARTILLERY_DURATION=2
+              ARTILLERY_FARGATE_WORKERS=5
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:75)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=75
+              ARTILLERY_ARRIVAL_RATE=25
+              ARTILLERY_ARRIVAL_COUNT=75
+              ARTILLERY_DURATION=3
+              ARTILLERY_FARGATE_WORKERS=5
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:100)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=100
+              ARTILLERY_ARRIVAL_RATE=50
+              ARTILLERY_ARRIVAL_COUNT=100
+              ARTILLERY_DURATION=2
+              ARTILLERY_FARGATE_WORKERS=5
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:150)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=150
+              ARTILLERY_ARRIVAL_RATE=50
+              ARTILLERY_ARRIVAL_COUNT=150
+              ARTILLERY_DURATION=3
+              ARTILLERY_FARGATE_WORKERS=10
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            concurrent_burst:200)
+              ARTILLERY_PACING_MODE=rate
+              ARTILLERY_VIRTUAL_USERS=200
+              ARTILLERY_ARRIVAL_RATE=100
+              ARTILLERY_ARRIVAL_COUNT=200
+              ARTILLERY_DURATION=2
+              ARTILLERY_FARGATE_WORKERS=10
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:1)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=1
+              ARTILLERY_ARRIVAL_RATE=1
+              ARTILLERY_ARRIVAL_COUNT=1
+              ARTILLERY_DURATION=60
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:5)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=5
+              ARTILLERY_ARRIVAL_RATE=5
+              ARTILLERY_ARRIVAL_COUNT=5
+              ARTILLERY_DURATION=120
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:10)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=10
+              ARTILLERY_ARRIVAL_RATE=10
+              ARTILLERY_ARRIVAL_COUNT=10
+              ARTILLERY_DURATION=180
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:25)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=25
+              ARTILLERY_ARRIVAL_RATE=25
+              ARTILLERY_ARRIVAL_COUNT=25
+              ARTILLERY_DURATION=300
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:50)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=50
+              ARTILLERY_ARRIVAL_RATE=50
+              ARTILLERY_ARRIVAL_COUNT=50
+              ARTILLERY_DURATION=300
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:75)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=75
+              ARTILLERY_ARRIVAL_RATE=75
+              ARTILLERY_ARRIVAL_COUNT=75
+              ARTILLERY_DURATION=420
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:100)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=100
+              ARTILLERY_ARRIVAL_RATE=100
+              ARTILLERY_ARRIVAL_COUNT=100
+              ARTILLERY_DURATION=600
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:150)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=150
+              ARTILLERY_ARRIVAL_RATE=150
+              ARTILLERY_ARRIVAL_COUNT=150
+              ARTILLERY_DURATION=900
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            total_spread:200)
+              ARTILLERY_PACING_MODE=even_spacing
+              ARTILLERY_VIRTUAL_USERS=200
+              ARTILLERY_ARRIVAL_RATE=200
+              ARTILLERY_ARRIVAL_COUNT=200
+              ARTILLERY_DURATION=1200
+              ARTILLERY_FARGATE_WORKERS=1
+              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_MEMORY=8
+              ;;
+            *)
+              echo "Unsupported load preset: ${ARTILLERY_LOAD_PATTERN}:${ARTILLERY_LOAD_SIZE}" >&2
+              exit 1
+              ;;
+          esac
+
           ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS
           ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE
 
-          if [ "$ARTILLERY_FARGATE_WORKERS" -gt 1 ] && [ "$ARTILLERY_PACING_MODE" = "even_spacing" ]; then
-            echo "pacing_mode=even_spacing is not supported with multiple Fargate workers. Use pacing_mode=rate so load is distributed across workers." >&2
-            exit 1
-          fi
+          if [ "$ARTILLERY_FARGATE_WORKERS" -gt 1 ]; then
+            if [ "$ARTILLERY_PACING_MODE" != "rate" ]; then
+              echo "Only rate presets may use multiple Fargate workers." >&2
+              exit 1
+            fi
 
-          if [ "$ARTILLERY_FARGATE_WORKERS" -gt 1 ] && [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
             if [ $((ARTILLERY_VIRTUAL_USERS % ARTILLERY_FARGATE_WORKERS)) -ne 0 ]; then
-              echo "virtual_users ($ARTILLERY_VIRTUAL_USERS) must divide evenly by fargate_workers ($ARTILLERY_FARGATE_WORKERS) so the workflow can derive exact per-worker concurrency." >&2
+              echo "Preset virtual_users ($ARTILLERY_VIRTUAL_USERS) must divide evenly by workers ($ARTILLERY_FARGATE_WORKERS)." >&2
               exit 1
             fi
 
             if [ $((ARTILLERY_ARRIVAL_RATE % ARTILLERY_FARGATE_WORKERS)) -ne 0 ]; then
-              echo "arrival_rate ($ARTILLERY_ARRIVAL_RATE) must divide evenly by fargate_workers ($ARTILLERY_FARGATE_WORKERS) so the workflow can derive exact per-worker arrival rates." >&2
+              echo "Preset arrival_rate ($ARTILLERY_ARRIVAL_RATE) must divide evenly by workers ($ARTILLERY_FARGATE_WORKERS)." >&2
               exit 1
             fi
 
@@ -150,35 +279,64 @@ jobs:
             ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$((ARTILLERY_ARRIVAL_RATE / ARTILLERY_FARGATE_WORKERS))
           fi
 
-          if [ "$ARTILLERY_EFFECTIVE_VIRTUAL_USERS" -lt 1 ]; then
-            echo "Derived per-worker maxVusers must be at least 1. Current value: $ARTILLERY_EFFECTIVE_VIRTUAL_USERS" >&2
-            exit 1
-          fi
-
-          if [ "$ARTILLERY_PACING_MODE" = "rate" ] && [ "$ARTILLERY_EFFECTIVE_ARRIVAL_RATE" -lt 1 ]; then
-            echo "Derived per-worker arrival_rate must be at least 1. Current value: $ARTILLERY_EFFECTIVE_ARRIVAL_RATE" >&2
-            exit 1
-          fi
-
-          if [ "$ARTILLERY_FARGATE_CAPACITY" = "spot" ]; then
-            echo "ARTILLERY_FARGATE_SPOT_FLAG=--spot" >> $GITHUB_ENV
-          else
-            echo "ARTILLERY_FARGATE_SPOT_FLAG=" >> $GITHUB_ENV
-          fi
-
           if [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
-            echo "ARTILLERY_TOTAL_TOPOLOGY_TAG=total-${ARTILLERY_VIRTUAL_USERS}vu-${ARTILLERY_ARRIVAL_RATE}rps" >> $GITHUB_ENV
-            echo "ARTILLERY_PER_WORKER_TOPOLOGY_TAG=per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu-${ARTILLERY_EFFECTIVE_ARRIVAL_RATE}rps" >> $GITHUB_ENV
+            ARTILLERY_TOTAL_TOPOLOGY_TAG="total-${ARTILLERY_VIRTUAL_USERS}vu-${ARTILLERY_ARRIVAL_RATE}rps"
+            ARTILLERY_PER_WORKER_TOPOLOGY_TAG="per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu-${ARTILLERY_EFFECTIVE_ARRIVAL_RATE}rps"
           else
-            echo "ARTILLERY_TOTAL_TOPOLOGY_TAG=total-${ARTILLERY_VIRTUAL_USERS}vu-${ARTILLERY_ARRIVAL_COUNT}count" >> $GITHUB_ENV
-            echo "ARTILLERY_PER_WORKER_TOPOLOGY_TAG=per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu" >> $GITHUB_ENV
+            ARTILLERY_TOTAL_TOPOLOGY_TAG="total-${ARTILLERY_VIRTUAL_USERS}vu-${ARTILLERY_ARRIVAL_COUNT}count"
+            ARTILLERY_PER_WORKER_TOPOLOGY_TAG="per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu"
           fi
 
-          echo "ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS" >> $GITHUB_ENV
-          echo "ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE" >> $GITHUB_ENV
+          {
+            echo "ARTILLERY_TARGET=$ARTILLERY_TARGET"
+            echo "ARTILLERY_ENV=$ARTILLERY_ENV"
+            echo "ARTILLERY_LOAD_PATTERN=$ARTILLERY_LOAD_PATTERN"
+            echo "ARTILLERY_LOAD_SIZE=$ARTILLERY_LOAD_SIZE"
+            echo "ARTILLERY_710_MODE=$ARTILLERY_710_MODE"
+            echo "ARTILLERY_PACING_MODE=$ARTILLERY_PACING_MODE"
+            echo "ARTILLERY_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS"
+            echo "ARTILLERY_ARRIVAL_RATE=$ARTILLERY_ARRIVAL_RATE"
+            echo "ARTILLERY_ARRIVAL_COUNT=$ARTILLERY_ARRIVAL_COUNT"
+            echo "ARTILLERY_DURATION=$ARTILLERY_DURATION"
+            echo "ARTILLERY_CART_ITEM_COUNT=$ARTILLERY_CART_ITEM_COUNT"
+            echo "ARTILLERY_FARGATE_WORKERS=$ARTILLERY_FARGATE_WORKERS"
+            echo "ARTILLERY_FARGATE_CPU=$ARTILLERY_FARGATE_CPU"
+            echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY"
+            echo "ARTILLERY_FARGATE_CAPACITY=$ARTILLERY_FARGATE_CAPACITY"
+            echo "ARTILLERY_FARGATE_SPOT_FLAG=$ARTILLERY_FARGATE_SPOT_FLAG"
+            echo "ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS"
+            echo "ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE"
+            echo "ARTILLERY_TOTAL_TOPOLOGY_TAG=$ARTILLERY_TOTAL_TOPOLOGY_TAG"
+            echo "ARTILLERY_PER_WORKER_TOPOLOGY_TAG=$ARTILLERY_PER_WORKER_TOPOLOGY_TAG"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "target=$ARTILLERY_TARGET"
+            echo "env=$ARTILLERY_ENV"
+            echo "load_pattern=$ARTILLERY_LOAD_PATTERN"
+            echo "load_size=$ARTILLERY_LOAD_SIZE"
+            echo "mode=$ARTILLERY_710_MODE"
+            echo "pacing_mode=$ARTILLERY_PACING_MODE"
+            echo "virtual_users=$ARTILLERY_VIRTUAL_USERS"
+            echo "arrival_rate=$ARTILLERY_ARRIVAL_RATE"
+            echo "arrival_count=$ARTILLERY_ARRIVAL_COUNT"
+            echo "duration=$ARTILLERY_DURATION"
+            echo "cart_item_count=$ARTILLERY_CART_ITEM_COUNT"
+            echo "fargate_workers=$ARTILLERY_FARGATE_WORKERS"
+            echo "fargate_cpu=$ARTILLERY_FARGATE_CPU"
+            echo "fargate_memory=$ARTILLERY_FARGATE_MEMORY"
+            echo "fargate_capacity=$ARTILLERY_FARGATE_CAPACITY"
+            echo "effective_virtual_users=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS"
+            echo "effective_arrival_rate=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE"
+            echo "total_topology_tag=$ARTILLERY_TOTAL_TOPOLOGY_TAG"
+            echo "per_worker_topology_tag=$ARTILLERY_PER_WORKER_TOPOLOGY_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Show derived load topology
         run: |
+          echo "Environment: $ARTILLERY_ENV"
+          echo "Target: $ARTILLERY_TARGET"
+          echo "Load preset: $ARTILLERY_LOAD_PATTERN / $ARTILLERY_LOAD_SIZE users"
           echo "Cluster totals: maxVusers=$ARTILLERY_VIRTUAL_USERS workers=$ARTILLERY_FARGATE_WORKERS pacing_mode=$ARTILLERY_PACING_MODE duration=$ARTILLERY_DURATION"
           echo "Cart items per user: $ARTILLERY_CART_ITEM_COUNT"
           if [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
@@ -190,11 +348,11 @@ jobs:
           fi
 
       - name: Prepare Artillery Config Copy
+        id: prepare_artillery_config
         run: |
-          TMP_DIR=artillery
-          TMP_CONFIG="$TMP_DIR/artillery-${{ github.event.inputs.mode }}.generated.yml"
+          TMP_CONFIG="artillery/artillery-ca.generated.yml"
 
-          cp artillery/artillery-${{ github.event.inputs.mode }}-single-phase.yml "$TMP_CONFIG"
+          cp artillery/artillery-ca-single-phase.yml "$TMP_CONFIG"
           sed -i "s/duration: 900/duration: $ARTILLERY_DURATION/g" "$TMP_CONFIG"
           sed -i "s/maxVusers: 10/maxVusers: $ARTILLERY_EFFECTIVE_VIRTUAL_USERS/g" "$TMP_CONFIG"
           sed -i "s|target:.*|target: $ARTILLERY_TARGET|g" "$TMP_CONFIG"
@@ -207,7 +365,8 @@ jobs:
             sed -i "s/arrivalRate: 1/arrivalRate: $ARTILLERY_EFFECTIVE_ARRIVAL_RATE/g" "$TMP_CONFIG"
           fi
 
-          echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> $GITHUB_ENV
+          echo "ARTILLERY_CONFIG=$TMP_CONFIG" >> "$GITHUB_ENV"
+          echo "config=$TMP_CONFIG" >> "$GITHUB_OUTPUT"
 
       - name: Show generated Artillery phase
         run: |
@@ -256,28 +415,28 @@ jobs:
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ env.ARTILLERY_FARGATE_WORKERS }} --cpu ${{ env.ARTILLERY_FARGATE_CPU }} --memory ${{ env.ARTILLERY_FARGATE_MEMORY }} ${{ env.ARTILLERY_FARGATE_SPOT_FLAG }} --dotenv artillery/artillery.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.pacing_mode }}/${{ env.ARTILLERY_TOTAL_TOPOLOGY_TAG }}/${{ env.ARTILLERY_PER_WORKER_TOPOLOGY_TAG }}/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.mode }}/${{ github.event.inputs.fargate_workers || '1' }}workers/${{ github.event.inputs.fargate_cpu || '4' }}cpu-${{ github.event.inputs.fargate_memory || '8' }}gb/${{ github.event.inputs.fargate_capacity || 'on_demand' }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ steps.resolve_load_preset.outputs.fargate_workers }} --cpu ${{ steps.resolve_load_preset.outputs.fargate_cpu }} --memory ${{ steps.resolve_load_preset.outputs.fargate_memory }} --dotenv artillery/artillery.fargate.env ${{ steps.prepare_artillery_config.outputs.config }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ steps.resolve_load_preset.outputs.env }}/${{ steps.resolve_load_preset.outputs.load_pattern }}/preset-${{ steps.resolve_load_preset.outputs.load_size }}/${{ steps.resolve_load_preset.outputs.total_topology_tag }}/${{ steps.resolve_load_preset.outputs.per_worker_topology_tag }}/${{ steps.resolve_load_preset.outputs.duration }}seconds/${{ steps.resolve_load_preset.outputs.fargate_workers }}workers/${{ steps.resolve_load_preset.outputs.fargate_cpu }}cpu-${{ steps.resolve_load_preset.outputs.fargate_memory }}gb/${{ steps.resolve_load_preset.outputs.fargate_capacity }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          ARTILLERY_TARGET: ${{ github.event.inputs.target }}
-          ARTILLERY_VIRTUAL_USERS: ${{ github.event.inputs.virtual_users }}
-          ARTILLERY_ARRIVAL_RATE: ${{ github.event.inputs.arrival_rate }}
-          ARTILLERY_ARRIVAL_COUNT: ${{ github.event.inputs.arrival_count }}
-          ARTILLERY_DURATION: ${{ github.event.inputs.duration }}
-          ARTILLERY_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '6' }}
-          ARTILLERY_FARGATE_WORKERS: ${{ github.event.inputs.fargate_workers || '1' }}
-          ARTILLERY_FARGATE_CPU: ${{ github.event.inputs.fargate_cpu || '4' }}
-          ARTILLERY_FARGATE_MEMORY: ${{ github.event.inputs.fargate_memory || '8' }}
-          ARTILLERY_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
-          ARTILLERY_710_MODE: ${{ github.event.inputs.mode }}
+          ARTILLERY_TARGET: ${{ steps.resolve_load_preset.outputs.target }}
+          ARTILLERY_VIRTUAL_USERS: ${{ steps.resolve_load_preset.outputs.virtual_users }}
+          ARTILLERY_ARRIVAL_RATE: ${{ steps.resolve_load_preset.outputs.arrival_rate }}
+          ARTILLERY_ARRIVAL_COUNT: ${{ steps.resolve_load_preset.outputs.arrival_count }}
+          ARTILLERY_DURATION: ${{ steps.resolve_load_preset.outputs.duration }}
+          ARTILLERY_CART_ITEM_COUNT: ${{ steps.resolve_load_preset.outputs.cart_item_count }}
+          ARTILLERY_FARGATE_WORKERS: ${{ steps.resolve_load_preset.outputs.fargate_workers }}
+          ARTILLERY_FARGATE_CPU: ${{ steps.resolve_load_preset.outputs.fargate_cpu }}
+          ARTILLERY_FARGATE_MEMORY: ${{ steps.resolve_load_preset.outputs.fargate_memory }}
+          ARTILLERY_FARGATE_CAPACITY: ${{ steps.resolve_load_preset.outputs.fargate_capacity }}
+          ARTILLERY_710_MODE: ${{ steps.resolve_load_preset.outputs.mode }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
-          ARTILLERY_EFFECTIVE_VIRTUAL_USERS: ${{ env.ARTILLERY_EFFECTIVE_VIRTUAL_USERS }}
-          ARTILLERY_EFFECTIVE_ARRIVAL_RATE: ${{ env.ARTILLERY_EFFECTIVE_ARRIVAL_RATE }}
+          ARTILLERY_EFFECTIVE_VIRTUAL_USERS: ${{ steps.resolve_load_preset.outputs.effective_virtual_users }}
+          ARTILLERY_EFFECTIVE_ARRIVAL_RATE: ${{ steps.resolve_load_preset.outputs.effective_arrival_rate }}
 
       - name: Set current date as env variable
-        run: echo "NOW=$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+        run: echo "NOW=$(date +'%Y-%m-%dT%H:%M:%S')" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -309,4 +468,4 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        if: always() # Pick up events even if the job fails or is canceled.
+        if: always()

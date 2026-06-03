@@ -305,28 +305,45 @@ Important focused-rules behavior:
 ## Load Testing
 Use the manual [Load Tests - The List](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist.yml) workflow for browser load tests on AWS Fargate.
 
-Recommended preset for a 100 concurrent CA burst:
+The standard workflow has three inputs:
 
-- target: `https://thelist-dev.710labs.com`
-- env: `dev`
-- mode: `ca`
-- virtual_users: `100`
-- pacing_mode: `rate`
-- arrival_rate: `50`
-- duration: `2`
-- cart_item_count: `6`
-- fargate_workers: `5`
-- fargate_cpu: `4`
-- fargate_memory: `8`
-- fargate_capacity: `on_demand`
+- env: `dev` or `stage`
+- load_pattern: `concurrent_burst` or `total_spread`
+- load_size: `1`, `5`, `10`, `25`, `50`, `75`, `100`, `150`, or `200`
+
+`concurrent_burst` starts users quickly to create overlapping browser sessions:
+
+| load_size | maxVusers | arrivalRate | duration | workers | CPU | memory |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1 | 1 | 1 | 1 | 4 | 8 |
+| 5 | 5 | 5 | 1 | 1 | 4 | 8 |
+| 10 | 10 | 10 | 1 | 1 | 4 | 8 |
+| 25 | 25 | 25 | 1 | 5 | 4 | 8 |
+| 50 | 50 | 25 | 2 | 5 | 4 | 8 |
+| 75 | 75 | 25 | 3 | 5 | 4 | 8 |
+| 100 | 100 | 50 | 2 | 5 | 4 | 8 |
+| 150 | 150 | 50 | 3 | 10 | 4 | 8 |
+| 200 | 200 | 100 | 2 | 10 | 4 | 8 |
+
+`total_spread` distributes the selected total users across a longer window:
+
+| load_size | maxVusers | arrivalCount | duration | workers | CPU | memory |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1 | 1 | 60 | 1 | 4 | 8 |
+| 5 | 5 | 5 | 120 | 1 | 4 | 8 |
+| 10 | 10 | 10 | 180 | 1 | 4 | 8 |
+| 25 | 25 | 25 | 300 | 1 | 4 | 8 |
+| 50 | 50 | 50 | 300 | 1 | 4 | 8 |
+| 75 | 75 | 75 | 420 | 1 | 4 | 8 |
+| 100 | 100 | 100 | 600 | 1 | 4 | 8 |
+| 150 | 150 | 150 | 900 | 1 | 4 | 8 |
+| 200 | 200 | 200 | 1200 | 1 | 4 | 8 |
 
 Notes:
 
-- In `rate` mode, `virtual_users` and `arrival_rate` are cluster totals. With `100` VUs and `50` users/sec across `5` workers, the workflow derives `20` max VUs and `10` users/sec per worker.
-- The totals must divide evenly across `fargate_workers` for multi-worker `rate` runs. The workflow will fail fast instead of rounding.
-- Use `pacing_mode=rate` for multi-worker runs. Artillery executes `even_spacing` (`arrivalCount`) on only one worker.
-- A 2-second burst is enough to overlap all 100 sessions because each CA flow runs much longer than 2 seconds.
-- The CA load flow adds `6` products per cart by default. Override `cart_item_count` in the workflow or `ARTILLERY_CART_ITEM_COUNT` locally.
+- The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
+- The standard workflow always runs the CA load flow and adds `6` products per cart.
+- Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
 - Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate and CI fails fast when the GitHub secret is missing.
 - Local load runs can still start without `RECAPTCHA_BYPASS`, but the scripts will warn and skip the recaptcha bypass cookie. Preferred local usage: `RECAPTCHA_BYPASS=<secret> ARTILLERY_LIST_PASSWORD=<password> npm run load:ca:dev`.
