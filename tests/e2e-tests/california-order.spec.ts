@@ -145,7 +145,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(5, mobile, 'Delivery', 'recreational')
+			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'recreational')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 'recreational')
 		},
