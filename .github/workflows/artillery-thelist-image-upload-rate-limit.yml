@@ -85,9 +85,6 @@ on:
         options:
           - 'true'
           - 'false'
-concurrency:
-  group: thelist-${{ github.event.inputs.env }}-domain-state
-  cancel-in-progress: false
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -182,19 +179,6 @@ jobs:
             echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
             exit 1
           fi
-
-      - name: Set Domain to CA
-        if: ${{ github.event.inputs.env == 'dev' || github.event.inputs.env == 'stage' }}
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          QA_ENDPOINT: /wp-json/seventen-qa/v1/
-        run: |
-          if [ -z "$API_KEY" ]; then
-            echo "Missing required secret: API_KEY for environment '${{ github.event.inputs.env }}'" >&2
-            exit 1
-          fi
-
-          BASE_URL="$ARTILLERY_TARGET" node ./scripts/set-qa-domain.js ca
 
       - name: Validate and derive load test topology
         run: |

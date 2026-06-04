@@ -32,9 +32,6 @@ on:
           - '100'
           - '150'
           - '200'
-concurrency:
-  group: thelist-${{ github.event.inputs.env }}-domain-state
-  cancel-in-progress: false
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -337,18 +334,6 @@ jobs:
             echo "total_topology_tag=$ARTILLERY_TOTAL_TOPOLOGY_TAG"
             echo "per_worker_topology_tag=$ARTILLERY_PER_WORKER_TOPOLOGY_TAG"
           } >> "$GITHUB_OUTPUT"
-
-      - name: Set Domain to CA
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          QA_ENDPOINT: /wp-json/seventen-qa/v1/
-        run: |
-          if [ -z "$API_KEY" ]; then
-            echo "Missing required secret: API_KEY for environment '${{ github.event.inputs.env }}'" >&2
-            exit 1
-          fi
-
-          BASE_URL="$ARTILLERY_TARGET" node ./scripts/set-qa-domain.js ca
 
       - name: Show derived load topology
         run: |

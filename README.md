@@ -343,7 +343,6 @@ Notes:
 
 - The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
 - The standard workflow always runs the CA load flow and adds `6` products per cart.
-- Dev/stage Artillery workflows set the QA domain state to CA before Artillery config generation and Fargate execution.
 - Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
 - Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate and CI fails fast when the GitHub secret is missing.
