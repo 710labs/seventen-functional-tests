@@ -309,21 +309,22 @@ The standard workflow has three inputs:
 
 - env: `dev` or `stage`
 - load_pattern: `concurrent_burst` or `total_spread`
-- load_size: `1`, `5`, `10`, `25`, `50`, `75`, `100`, `150`, or `200`
+- load_size: `1`, `5`, `10`, `25`, `50`, `75`, `100`, `150`, `200`, or `300`
 
 `concurrent_burst` starts users quickly to create overlapping browser sessions:
 
-| load_size | maxVusers | arrivalRate | duration | workers | CPU | memory |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 1 | 1 | 1 | 1 | 4 | 8 |
-| 5 | 5 | 5 | 1 | 1 | 4 | 8 |
-| 10 | 10 | 10 | 1 | 1 | 4 | 8 |
-| 25 | 25 | 25 | 1 | 5 | 4 | 8 |
-| 50 | 50 | 25 | 2 | 5 | 4 | 8 |
-| 75 | 75 | 25 | 3 | 5 | 4 | 8 |
-| 100 | 100 | 50 | 2 | 5 | 4 | 8 |
-| 150 | 150 | 50 | 3 | 10 | 4 | 8 |
-| 200 | 200 | 100 | 2 | 10 | 4 | 8 |
+| load_size | maxVusers | arrivalRate | duration | workers | CPU/worker | memory/worker | total CPU | total memory |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1 | 1 | 1 | 1 | 4 | 8 | 4 | 8 |
+| 5 | 5 | 5 | 1 | 5 | 2 | 8 | 10 | 40 |
+| 10 | 10 | 10 | 1 | 10 | 2 | 8 | 20 | 80 |
+| 25 | 25 | 25 | 1 | 25 | 2 | 8 | 50 | 200 |
+| 50 | 50 | 25 | 2 | 25 | 2 | 8 | 50 | 200 |
+| 75 | 75 | 25 | 3 | 25 | 2 | 8 | 50 | 200 |
+| 100 | 100 | 50 | 2 | 50 | 1 | 8 | 50 | 400 |
+| 150 | 150 | 50 | 3 | 50 | 1 | 8 | 50 | 400 |
+| 200 | 200 | 100 | 2 | 60 | 1 | 8 | 60 | 480 |
+| 300 | 300 | 100 | 3 | 64 | 1 | 8 | 64 | 512 |
 
 `total_spread` distributes the selected total users across a longer window:
 
@@ -338,12 +339,13 @@ The standard workflow has three inputs:
 | 100 | 100 | 100 | 600 | 1 | 4 | 8 |
 | 150 | 150 | 150 | 900 | 1 | 4 | 8 |
 | 200 | 200 | 200 | 1200 | 1 | 4 | 8 |
+| 300 | 300 | 300 | 1800 | 1 | 4 | 8 |
 
 Notes:
 
 - The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
 - The standard workflow always runs the CA load flow and adds `6` products per cart.
-- Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly.
+- Multi-worker burst presets derive per-worker `maxVusers` and `arrivalRate`; high-end burst presets may round per-worker `maxVusers` up and use fractional per-worker `arrivalRate` so the workflow can use the 60-64 vCPU range.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
 - Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate and CI fails fast when the GitHub secret is missing.
 - Slack notifications include final Artillery JSON report stats for VUsers, top errors, and session length when a report is available.
