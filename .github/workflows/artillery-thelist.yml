@@ -90,8 +90,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=5
               ARTILLERY_ARRIVAL_COUNT=5
               ARTILLERY_DURATION=1
-              ARTILLERY_FARGATE_WORKERS=1
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=5
+              ARTILLERY_FARGATE_CPU=2
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:10)
@@ -100,8 +100,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=10
               ARTILLERY_ARRIVAL_COUNT=10
               ARTILLERY_DURATION=1
-              ARTILLERY_FARGATE_WORKERS=1
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=10
+              ARTILLERY_FARGATE_CPU=2
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:25)
@@ -110,8 +110,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=25
               ARTILLERY_ARRIVAL_COUNT=25
               ARTILLERY_DURATION=1
-              ARTILLERY_FARGATE_WORKERS=5
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=25
+              ARTILLERY_FARGATE_CPU=2
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:50)
@@ -120,8 +120,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=25
               ARTILLERY_ARRIVAL_COUNT=50
               ARTILLERY_DURATION=2
-              ARTILLERY_FARGATE_WORKERS=5
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=25
+              ARTILLERY_FARGATE_CPU=2
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:75)
@@ -130,8 +130,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=25
               ARTILLERY_ARRIVAL_COUNT=75
               ARTILLERY_DURATION=3
-              ARTILLERY_FARGATE_WORKERS=5
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=25
+              ARTILLERY_FARGATE_CPU=2
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:100)
@@ -140,8 +140,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=50
               ARTILLERY_ARRIVAL_COUNT=100
               ARTILLERY_DURATION=2
-              ARTILLERY_FARGATE_WORKERS=5
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=50
+              ARTILLERY_FARGATE_CPU=1
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:150)
@@ -150,8 +150,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=50
               ARTILLERY_ARRIVAL_COUNT=150
               ARTILLERY_DURATION=3
-              ARTILLERY_FARGATE_WORKERS=10
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=50
+              ARTILLERY_FARGATE_CPU=1
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             concurrent_burst:200)
@@ -160,8 +160,8 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=100
               ARTILLERY_ARRIVAL_COUNT=200
               ARTILLERY_DURATION=2
-              ARTILLERY_FARGATE_WORKERS=10
-              ARTILLERY_FARGATE_CPU=4
+              ARTILLERY_FARGATE_WORKERS=50
+              ARTILLERY_FARGATE_CPU=1
               ARTILLERY_FARGATE_MEMORY=8
               ;;
             total_spread:1)
@@ -291,6 +291,9 @@ jobs:
             ARTILLERY_PER_WORKER_TOPOLOGY_TAG="per-worker-${ARTILLERY_EFFECTIVE_VIRTUAL_USERS}vu"
           fi
 
+          ARTILLERY_TOTAL_FARGATE_CPU=$((ARTILLERY_FARGATE_WORKERS * ARTILLERY_FARGATE_CPU))
+          ARTILLERY_TOTAL_FARGATE_MEMORY=$((ARTILLERY_FARGATE_WORKERS * ARTILLERY_FARGATE_MEMORY))
+
           {
             echo "ARTILLERY_TARGET=$ARTILLERY_TARGET"
             echo "ARTILLERY_ENV=$ARTILLERY_ENV"
@@ -306,6 +309,8 @@ jobs:
             echo "ARTILLERY_FARGATE_WORKERS=$ARTILLERY_FARGATE_WORKERS"
             echo "ARTILLERY_FARGATE_CPU=$ARTILLERY_FARGATE_CPU"
             echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY"
+            echo "ARTILLERY_TOTAL_FARGATE_CPU=$ARTILLERY_TOTAL_FARGATE_CPU"
+            echo "ARTILLERY_TOTAL_FARGATE_MEMORY=$ARTILLERY_TOTAL_FARGATE_MEMORY"
             echo "ARTILLERY_FARGATE_CAPACITY=$ARTILLERY_FARGATE_CAPACITY"
             echo "ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS"
             echo "ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE"
@@ -328,6 +333,8 @@ jobs:
             echo "fargate_workers=$ARTILLERY_FARGATE_WORKERS"
             echo "fargate_cpu=$ARTILLERY_FARGATE_CPU"
             echo "fargate_memory=$ARTILLERY_FARGATE_MEMORY"
+            echo "total_fargate_cpu=$ARTILLERY_TOTAL_FARGATE_CPU"
+            echo "total_fargate_memory=$ARTILLERY_TOTAL_FARGATE_MEMORY"
             echo "fargate_capacity=$ARTILLERY_FARGATE_CAPACITY"
             echo "effective_virtual_users=$ARTILLERY_EFFECTIVE_VIRTUAL_USERS"
             echo "effective_arrival_rate=$ARTILLERY_EFFECTIVE_ARRIVAL_RATE"
@@ -341,6 +348,8 @@ jobs:
           echo "Target: $ARTILLERY_TARGET"
           echo "Load preset: $ARTILLERY_LOAD_PATTERN / $ARTILLERY_LOAD_SIZE users"
           echo "Cluster totals: maxVusers=$ARTILLERY_VIRTUAL_USERS workers=$ARTILLERY_FARGATE_WORKERS pacing_mode=$ARTILLERY_PACING_MODE duration=$ARTILLERY_DURATION"
+          echo "Fargate per worker: ${ARTILLERY_FARGATE_CPU} vCPU / ${ARTILLERY_FARGATE_MEMORY} GB"
+          echo "Fargate total: ${ARTILLERY_TOTAL_FARGATE_CPU} vCPU / ${ARTILLERY_TOTAL_FARGATE_MEMORY} GB"
           echo "Cart items per user: $ARTILLERY_CART_ITEM_COUNT"
           if [ "$ARTILLERY_PACING_MODE" = "rate" ]; then
             echo "Cluster arrival rate: $ARTILLERY_ARRIVAL_RATE users/sec"
@@ -426,7 +435,7 @@ jobs:
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ steps.resolve_load_preset.outputs.fargate_workers }} --cpu ${{ steps.resolve_load_preset.outputs.fargate_cpu }} --memory ${{ steps.resolve_load_preset.outputs.fargate_memory }} --dotenv artillery/artillery.fargate.env ${{ steps.prepare_artillery_config.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ steps.resolve_load_preset.outputs.env }}/${{ steps.resolve_load_preset.outputs.load_pattern }}/preset-${{ steps.resolve_load_preset.outputs.load_size }}/${{ steps.resolve_load_preset.outputs.total_topology_tag }}/${{ steps.resolve_load_preset.outputs.per_worker_topology_tag }}/${{ steps.resolve_load_preset.outputs.duration }}seconds/${{ steps.resolve_load_preset.outputs.fargate_workers }}workers/${{ steps.resolve_load_preset.outputs.fargate_cpu }}cpu-${{ steps.resolve_load_preset.outputs.fargate_memory }}gb/${{ steps.resolve_load_preset.outputs.fargate_capacity }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ steps.resolve_load_preset.outputs.fargate_workers }} --cpu ${{ steps.resolve_load_preset.outputs.fargate_cpu }} --memory ${{ steps.resolve_load_preset.outputs.fargate_memory }} --dotenv artillery/artillery.fargate.env ${{ steps.prepare_artillery_config.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ steps.resolve_load_preset.outputs.env }}/${{ steps.resolve_load_preset.outputs.load_pattern }}/preset-${{ steps.resolve_load_preset.outputs.load_size }}/${{ steps.resolve_load_preset.outputs.total_topology_tag }}/${{ steps.resolve_load_preset.outputs.per_worker_topology_tag }}/${{ steps.resolve_load_preset.outputs.duration }}seconds/${{ steps.resolve_load_preset.outputs.fargate_workers }}workers/${{ steps.resolve_load_preset.outputs.fargate_cpu }}cpu-${{ steps.resolve_load_preset.outputs.fargate_memory }}gb-per-worker/total-${{ steps.resolve_load_preset.outputs.total_fargate_cpu }}cpu-${{ steps.resolve_load_preset.outputs.total_fargate_memory }}gb/${{ steps.resolve_load_preset.outputs.fargate_capacity }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -439,6 +448,8 @@ jobs:
           ARTILLERY_FARGATE_WORKERS: ${{ steps.resolve_load_preset.outputs.fargate_workers }}
           ARTILLERY_FARGATE_CPU: ${{ steps.resolve_load_preset.outputs.fargate_cpu }}
           ARTILLERY_FARGATE_MEMORY: ${{ steps.resolve_load_preset.outputs.fargate_memory }}
+          ARTILLERY_TOTAL_FARGATE_CPU: ${{ steps.resolve_load_preset.outputs.total_fargate_cpu }}
+          ARTILLERY_TOTAL_FARGATE_MEMORY: ${{ steps.resolve_load_preset.outputs.total_fargate_memory }}
           ARTILLERY_FARGATE_CAPACITY: ${{ steps.resolve_load_preset.outputs.fargate_capacity }}
           ARTILLERY_710_MODE: ${{ steps.resolve_load_preset.outputs.mode }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
@@ -476,7 +487,8 @@ jobs:
                   `Target: ${{ steps.resolve_load_preset.outputs.target }}`,
                   `Duration: ${{ steps.resolve_load_preset.outputs.duration }} seconds`,
                   `Workers: ${{ steps.resolve_load_preset.outputs.fargate_workers }}`,
-                  `CPU/Memory: ${{ steps.resolve_load_preset.outputs.fargate_cpu }} vCPU / ${{ steps.resolve_load_preset.outputs.fargate_memory }} GB`,
+                  `Per worker: ${{ steps.resolve_load_preset.outputs.fargate_cpu }} vCPU / ${{ steps.resolve_load_preset.outputs.fargate_memory }} GB`,
+                  `Total Fargate: ${{ steps.resolve_load_preset.outputs.total_fargate_cpu }} vCPU / ${{ steps.resolve_load_preset.outputs.total_fargate_memory }} GB`,
                   '',
                   `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
                   '',
