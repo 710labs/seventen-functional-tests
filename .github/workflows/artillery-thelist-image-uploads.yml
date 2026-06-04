@@ -272,15 +272,27 @@ jobs:
         run: |
           test -f artillery/artillery-thelist-image-uploads.fargate.env
 
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p artillery-reports
+          REPORT_PATH="artillery-reports/thelist-image-uploads-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ env.ARTILLERY_FARGATE_WORKERS }} --cpu ${{ env.ARTILLERY_FARGATE_CPU }} --memory ${{ env.ARTILLERY_FARGATE_MEMORY }} ${{ env.ARTILLERY_FARGATE_SPOT_FLAG }} --dotenv artillery/artillery-thelist-image-uploads.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-image-uploads/${{ github.event.inputs.pacing_mode }}/${{ env.ARTILLERY_TOTAL_TOPOLOGY_TAG }}/${{ env.ARTILLERY_PER_WORKER_TOPOLOGY_TAG }}/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.fargate_workers || '1' }}workers/${{ github.event.inputs.fargate_cpu || '4' }}cpu-${{ github.event.inputs.fargate_memory || '8' }}gb/${{ github.event.inputs.fargate_capacity || 'on_demand' }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ env.ARTILLERY_FARGATE_WORKERS }} --cpu ${{ env.ARTILLERY_FARGATE_CPU }} --memory ${{ env.ARTILLERY_FARGATE_MEMORY }} ${{ env.ARTILLERY_FARGATE_SPOT_FLAG }} --dotenv artillery/artillery-thelist-image-uploads.fargate.env ${{ env.ARTILLERY_CONFIG }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-image-uploads/${{ github.event.inputs.pacing_mode }}/${{ env.ARTILLERY_TOTAL_TOPOLOGY_TAG }}/${{ env.ARTILLERY_PER_WORKER_TOPOLOGY_TAG }}/${{ github.event.inputs.duration }}seconds/${{ github.event.inputs.fargate_workers || '1' }}workers/${{ github.event.inputs.fargate_cpu || '4' }}cpu-${{ github.event.inputs.fargate_memory || '8' }}gb/${{ github.event.inputs.fargate_capacity || 'on_demand' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
 
       - name: Upload Artillery reports
         if: always()
@@ -311,6 +323,9 @@ jobs:
                   `Duration: ${{ github.event.inputs.duration }} seconds`,
                   `Workers: ${{ github.event.inputs.fargate_workers || '1' }}`,
                   `CPU/Memory: ${{ github.event.inputs.fargate_cpu || '4' }} vCPU / ${{ github.event.inputs.fargate_memory || '8' }} GB`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
                   `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
                 ].join('\n'),
               }]

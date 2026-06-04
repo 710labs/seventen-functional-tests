@@ -128,14 +128,26 @@ jobs:
         run: |
           test -f artillery/artillery-thelist-url-hit.fargate.env
 
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p artillery-reports
+          REPORT_PATH="artillery-reports/thelist-url-hit-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Execute load tests on AWS
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --dotenv artillery/artillery-thelist-url-hit.fargate.env ${{ env.ARTILLERY_CONFIG }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-url-hit/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --dotenv artillery/artillery-thelist-url-hit.fargate.env ${{ env.ARTILLERY_CONFIG }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-url-hit/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
 
       - name: Upload Artillery reports
         if: always()
@@ -163,6 +175,9 @@ jobs:
                   `Max VUs: ${{ github.event.inputs.virtual_users || '1' }}`,
                   `Arrival rate: ${{ github.event.inputs.arrival_rate || '1' }}`,
                   `Duration: ${{ github.event.inputs.duration }} seconds`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
                   `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
                 ].join('\n'),
               }]

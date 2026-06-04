@@ -8,6 +8,9 @@ export class CartPage {
 	browserName: any
 	workerInfo: TestInfo
 	checkoutButton: Locator
+	recLimitWarning: Locator
+	conditionalityToggle: Locator
+	conditionalCheckoutButton: Locator
 	cartItems: any[]
 	cartTotal: any
 	usageType: TestUsageType
@@ -25,6 +28,9 @@ export class CartPage {
 		this.browserName = browserName
 		this.workerInfo = workerInfo
 		this.checkoutButton = this.page.locator('.checkout-button')
+		this.recLimitWarning = this.page.locator('.medonly-issue')
+		this.conditionalityToggle = this.page.locator('#conditionality')
+		this.conditionalCheckoutButton = this.page.locator('.conditional-checkout-button')
 		this.cartItems = new Array()
 		this.usageType = usageType
 		this.qaClient = qaClient
@@ -38,7 +44,28 @@ export class CartPage {
 		})
 	}
 
+	private async handleRecreationalLimit(): Promise<Locator | null> {
+		const warning = this.recLimitWarning.first()
+		const limitHit = await warning.isVisible()
+
+		if (!limitHit) {
+			return null
+		}
+
+		return await test.step('Bypass recreational limit', async () => {
+			const continueButton = this.conditionalCheckoutButton.first()
+			await this.conditionalityToggle.check()
+			await continueButton.waitFor({ state: 'visible', timeout: 10_000 })
+			return continueButton
+		})
+	}
+
 	private async waitForCheckoutButton(): Promise<Locator> {
+		const conditionalButton = await this.handleRecreationalLimit()
+		if (conditionalButton) {
+			return conditionalButton
+		}
+
 		const checkoutButton = this.checkoutButton.first()
 		const isVisible = await checkoutButton
 			.waitFor({ state: 'visible', timeout: 10_000 })
