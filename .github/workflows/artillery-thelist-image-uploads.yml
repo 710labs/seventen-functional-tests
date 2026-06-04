@@ -112,6 +112,26 @@ jobs:
           echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_CAPACITY=$ARTILLERY_FARGATE_CAPACITY" >> $GITHUB_ENV
 
+      - name: Validate dev/stage target
+        run: |
+          case "$ARTILLERY_ENV" in
+            dev)
+              EXPECTED_TARGET="https://thelist-dev.710labs.com"
+              ;;
+            stage)
+              EXPECTED_TARGET="https://thelist-stage.710labs.com"
+              ;;
+            *)
+              echo "Unsupported env for image uploads Artillery run: $ARTILLERY_ENV" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
+            echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
+            exit 1
+          fi
+
       - name: Validate and derive load test topology
         run: |
           ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS

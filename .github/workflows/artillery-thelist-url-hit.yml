@@ -49,6 +49,26 @@ jobs:
         with:
           node-version: '22.13.0'
 
+      - name: Validate dev/stage target
+        run: |
+          case "$ARTILLERY_ENV" in
+            dev)
+              EXPECTED_TARGET="https://thelist-dev.710labs.com"
+              ;;
+            stage)
+              EXPECTED_TARGET="https://thelist-stage.710labs.com"
+              ;;
+            *)
+              echo "Unsupported env for URL-hit Artillery run: $ARTILLERY_ENV" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
+            echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
+            exit 1
+          fi
+
       - name: Prepare Artillery config copy
         run: |
           TMP_CONFIG=artillery/artillery-thelist-url-hit.generated.yml
