@@ -60,7 +60,6 @@ jobs:
           ARTILLERY_710_MODE=ca
           ARTILLERY_CART_ITEM_COUNT=6
           ARTILLERY_FARGATE_CAPACITY=on_demand
-          ARTILLERY_ALLOW_UNEVEN_WORKERS=false
 
           case "$ARTILLERY_ENV" in
             dev)
@@ -162,10 +161,9 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=100
               ARTILLERY_ARRIVAL_COUNT=200
               ARTILLERY_DURATION=2
-              ARTILLERY_FARGATE_WORKERS=60
+              ARTILLERY_FARGATE_WORKERS=50
               ARTILLERY_FARGATE_CPU=1
               ARTILLERY_FARGATE_MEMORY=8
-              ARTILLERY_ALLOW_UNEVEN_WORKERS=true
               ;;
             concurrent_burst:300)
               ARTILLERY_PACING_MODE=rate
@@ -173,10 +171,9 @@ jobs:
               ARTILLERY_ARRIVAL_RATE=100
               ARTILLERY_ARRIVAL_COUNT=300
               ARTILLERY_DURATION=3
-              ARTILLERY_FARGATE_WORKERS=64
+              ARTILLERY_FARGATE_WORKERS=50
               ARTILLERY_FARGATE_CPU=1
               ARTILLERY_FARGATE_MEMORY=8
-              ARTILLERY_ALLOW_UNEVEN_WORKERS=true
               ;;
             total_spread:1)
               ARTILLERY_PACING_MODE=even_spacing
@@ -293,23 +290,18 @@ jobs:
               exit 1
             fi
 
-            if [ $((ARTILLERY_VIRTUAL_USERS % ARTILLERY_FARGATE_WORKERS)) -eq 0 ]; then
-              ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$((ARTILLERY_VIRTUAL_USERS / ARTILLERY_FARGATE_WORKERS))
-            elif [ "$ARTILLERY_ALLOW_UNEVEN_WORKERS" = "true" ]; then
-              ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$(((ARTILLERY_VIRTUAL_USERS + ARTILLERY_FARGATE_WORKERS - 1) / ARTILLERY_FARGATE_WORKERS))
-            else
+            if [ $((ARTILLERY_VIRTUAL_USERS % ARTILLERY_FARGATE_WORKERS)) -ne 0 ]; then
               echo "Preset virtual_users ($ARTILLERY_VIRTUAL_USERS) must divide evenly by workers ($ARTILLERY_FARGATE_WORKERS)." >&2
               exit 1
             fi
 
-            if [ $((ARTILLERY_ARRIVAL_RATE % ARTILLERY_FARGATE_WORKERS)) -eq 0 ]; then
-              ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$((ARTILLERY_ARRIVAL_RATE / ARTILLERY_FARGATE_WORKERS))
-            elif [ "$ARTILLERY_ALLOW_UNEVEN_WORKERS" = "true" ]; then
-              ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$(awk -v arrival_rate="$ARTILLERY_ARRIVAL_RATE" -v workers="$ARTILLERY_FARGATE_WORKERS" 'BEGIN { printf "%.4f", arrival_rate / workers }')
-            else
+            if [ $((ARTILLERY_ARRIVAL_RATE % ARTILLERY_FARGATE_WORKERS)) -ne 0 ]; then
               echo "Preset arrival_rate ($ARTILLERY_ARRIVAL_RATE) must divide evenly by workers ($ARTILLERY_FARGATE_WORKERS)." >&2
               exit 1
             fi
+
+            ARTILLERY_EFFECTIVE_VIRTUAL_USERS=$((ARTILLERY_VIRTUAL_USERS / ARTILLERY_FARGATE_WORKERS))
+            ARTILLERY_EFFECTIVE_ARRIVAL_RATE=$((ARTILLERY_ARRIVAL_RATE / ARTILLERY_FARGATE_WORKERS))
           fi
 
           ARTILLERY_TOTAL_VIRTUAL_USERS=$((ARTILLERY_EFFECTIVE_VIRTUAL_USERS * ARTILLERY_FARGATE_WORKERS))

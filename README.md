@@ -323,8 +323,8 @@ The standard workflow has three inputs:
 | 75 | 75 | 25 | 3 | 25 | 2 | 8 | 50 | 200 |
 | 100 | 100 | 50 | 2 | 50 | 1 | 8 | 50 | 400 |
 | 150 | 150 | 50 | 3 | 50 | 1 | 8 | 50 | 400 |
-| 200 | 200 | 100 | 2 | 60 | 1 | 8 | 60 | 480 |
-| 300 | 300 | 100 | 3 | 64 | 1 | 8 | 64 | 512 |
+| 200 | 200 | 100 | 2 | 50 | 1 | 8 | 50 | 400 |
+| 300 | 300 | 100 | 3 | 50 | 1 | 8 | 50 | 400 |
 
 `total_spread` distributes the selected total users across a longer window:
 
@@ -345,7 +345,7 @@ Notes:
 
 - The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
 - The standard workflow always runs the CA load flow and adds `6` products per cart.
-- Multi-worker burst presets derive per-worker `maxVusers` and `arrivalRate`; high-end burst presets may round per-worker `maxVusers` up and use fractional per-worker `arrivalRate` so the workflow can use the 60-64 vCPU range.
+- Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly. This avoids fractional per-worker arrival rates, which can produce zero created VUsers in Fargate runs.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
 - Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate and CI fails fast when the GitHub secret is missing.
 - Slack notifications include final Artillery JSON report stats for VUsers, top errors, and session length when a report is available.
