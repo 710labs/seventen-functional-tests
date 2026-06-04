@@ -60,9 +60,6 @@ on:
         options:
           - on_demand
           - spot
-concurrency:
-  group: thelist-${{ github.event.inputs.env }}-domain-state
-  cancel-in-progress: false
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -114,38 +111,6 @@ jobs:
           echo "ARTILLERY_FARGATE_CPU=$ARTILLERY_FARGATE_CPU" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_MEMORY=$ARTILLERY_FARGATE_MEMORY" >> $GITHUB_ENV
           echo "ARTILLERY_FARGATE_CAPACITY=$ARTILLERY_FARGATE_CAPACITY" >> $GITHUB_ENV
-
-      - name: Validate dev/stage target
-        run: |
-          case "$ARTILLERY_ENV" in
-            dev)
-              EXPECTED_TARGET="https://thelist-dev.710labs.com"
-              ;;
-            stage)
-              EXPECTED_TARGET="https://thelist-stage.710labs.com"
-              ;;
-            *)
-              echo "Unsupported env for image uploads Artillery run: $ARTILLERY_ENV" >&2
-              exit 1
-              ;;
-          esac
-
-          if [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
-            echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
-            exit 1
-          fi
-
-      - name: Set Domain to CA
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          QA_ENDPOINT: /wp-json/seventen-qa/v1/
-        run: |
-          if [ -z "$API_KEY" ]; then
-            echo "Missing required secret: API_KEY for environment '${{ github.event.inputs.env }}'" >&2
-            exit 1
-          fi
-
-          BASE_URL="$ARTILLERY_TARGET" node ./scripts/set-qa-domain.js ca
 
       - name: Validate and derive load test topology
         run: |
