@@ -46,10 +46,7 @@ export class CartPage {
 
 	private async handleRecreationalLimit(): Promise<Locator | null> {
 		const warning = this.recLimitWarning.first()
-		const limitHit = await warning
-			.waitFor({ state: 'visible', timeout: 3_000 })
-			.then(() => true)
-			.catch(() => false)
+		const limitHit = await warning.isVisible()
 
 		if (!limitHit) {
 			return null
