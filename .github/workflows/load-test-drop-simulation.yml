@@ -32,13 +32,45 @@ on:
           - http-funnel
           - dry
       bypass_browsers:
+        type: choice
         description: Bypass browser count
-        required: false
+        required: true
         default: '100'
+        options:
+          - '1'
+          - '5'
+          - '10'
+          - '20'
+          - '30'
+          - '40'
+          - '50'
+          - '60'
+          - '70'
+          - '80'
+          - '90'
+          - '100'
+          - '150'
+          - '200'
       realqueue_browsers:
+        type: choice
         description: Real queue browser count
-        required: false
+        required: true
         default: '50'
+        options:
+          - '1'
+          - '5'
+          - '10'
+          - '20'
+          - '30'
+          - '40'
+          - '50'
+          - '60'
+          - '70'
+          - '80'
+          - '90'
+          - '100'
+          - '150'
+          - '200'
       gate_iso:
         description: Queue-It event start time as ISO-8601. Empty means now.
         required: false
@@ -152,6 +184,18 @@ jobs:
             fi
           }
 
+          require_browser_preset() {
+            local label="$1"
+            local value="$2"
+            local presets='1|5|10|20|30|40|50|60|70|80|90|100|150|200'
+            local preset_list="${presets//|/, }"
+
+            if ! [[ "$value" =~ ^($presets)$ ]]; then
+              echo "$label must be one of the configured presets: $preset_list. Received: $value" >&2
+              exit 1
+            fi
+          }
+
           ARTILLERY_ENV="${INPUT_ENV//\"/}"
           ARTILLERY_TARGET="${INPUT_TARGET//\"/}"
           ARTILLERY_MODE="${INPUT_MODE//\"/}"
@@ -192,6 +236,8 @@ jobs:
 
           require_non_negative_int "bypass_browsers" "$BYPASS_BROWSERS"
           require_non_negative_int "realqueue_browsers" "$REALQUEUE_BROWSERS"
+          require_browser_preset "bypass_browsers" "$BYPASS_BROWSERS"
+          require_browser_preset "realqueue_browsers" "$REALQUEUE_BROWSERS"
 
           RUN_REALQUEUE=false
           RUN_ENTRY=false
