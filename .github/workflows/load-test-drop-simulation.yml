@@ -1,0 +1,909 @@
+name: Load Test- Drop Simulation
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        description: Environment
+        required: true
+        default: stage
+        options:
+          - stage
+          - dev
+      target:
+        type: choice
+        description: Target URL
+        required: true
+        default: https://thelist-stage.710labs.com
+        options:
+          - https://thelist-stage.710labs.com
+          - https://thelist-dev.710labs.com
+      mode:
+        type: choice
+        description: Simulation mode
+        required: true
+        default: flip
+        options:
+          - flip
+          - entry-only
+          - bypass-only
+          - realqueue-only
+          - http-funnel
+          - dry
+      bypass_browsers:
+        description: Bypass browser count
+        required: false
+        default: '100'
+      realqueue_browsers:
+        description: Real queue browser count
+        required: false
+        default: '50'
+      gate_iso:
+        description: Queue-It event start time as ISO-8601. Empty means now.
+        required: false
+        default: ''
+      place_orders:
+        type: choice
+        description: Click #place_order after checkout
+        required: true
+        default: 'false'
+        options:
+          - 'false'
+          - 'true'
+      screenshots:
+        type: choice
+        description: Capture worker debug screenshots
+        required: true
+        default: 'false'
+        options:
+          - 'false'
+          - 'true'
+      fargate_capacity:
+        type: choice
+        description: Fargate capacity
+        required: true
+        default: on_demand
+        options:
+          - on_demand
+          - spot
+
+concurrency:
+  group: drop-simulation-${{ github.event.inputs.env || 'stage' }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env || 'stage' }}
+
+    permissions:
+      contents: read
+
+    outputs:
+      env: ${{ steps.resolve.outputs.env }}
+      target: ${{ steps.resolve.outputs.target }}
+      mode: ${{ steps.resolve.outputs.mode }}
+      gate_iso: ${{ steps.resolve.outputs.gate_iso }}
+      gate_tag: ${{ steps.resolve.outputs.gate_tag }}
+      place_orders: ${{ steps.resolve.outputs.place_orders }}
+      screenshots: ${{ steps.resolve.outputs.screenshots }}
+      fargate_capacity: ${{ steps.resolve.outputs.fargate_capacity }}
+      fargate_spot_flag: ${{ steps.resolve.outputs.fargate_spot_flag }}
+      run_realqueue: ${{ steps.resolve.outputs.run_realqueue }}
+      run_entry: ${{ steps.resolve.outputs.run_entry }}
+      run_bypass: ${{ steps.resolve.outputs.run_bypass }}
+      run_http_funnel: ${{ steps.resolve.outputs.run_http_funnel }}
+      run_dry: ${{ steps.resolve.outputs.run_dry }}
+      bypass_browsers: ${{ steps.resolve.outputs.bypass_browsers }}
+      bypass_workers: ${{ steps.resolve.outputs.bypass_workers }}
+      bypass_per_worker: ${{ steps.resolve.outputs.bypass_per_worker }}
+      realqueue_browsers: ${{ steps.resolve.outputs.realqueue_browsers }}
+      realqueue_workers: ${{ steps.resolve.outputs.realqueue_workers }}
+      realqueue_per_worker: ${{ steps.resolve.outputs.realqueue_per_worker }}
+
+    steps:
+      - name: Resolve drop simulation plan
+        id: resolve
+        env:
+          INPUT_ENV: ${{ github.event.inputs.env || 'stage' }}
+          INPUT_TARGET: ${{ github.event.inputs.target || 'https://thelist-stage.710labs.com' }}
+          INPUT_MODE: ${{ github.event.inputs.mode || 'flip' }}
+          INPUT_BYPASS_BROWSERS: ${{ github.event.inputs.bypass_browsers || '100' }}
+          INPUT_REALQUEUE_BROWSERS: ${{ github.event.inputs.realqueue_browsers || '50' }}
+          INPUT_GATE_ISO: ${{ github.event.inputs.gate_iso }}
+          INPUT_PLACE_ORDERS: ${{ github.event.inputs.place_orders || 'false' }}
+          INPUT_SCREENSHOTS: ${{ github.event.inputs.screenshots || 'false' }}
+          INPUT_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
+        run: |
+          set -euo pipefail
+
+          resolve_target() {
+            case "$1" in
+              dev) echo "https://thelist-dev.710labs.com" ;;
+              stage) echo "https://thelist-stage.710labs.com" ;;
+              *) echo "Unsupported env: $1" >&2; exit 1 ;;
+            esac
+          }
+
+          resolve_browser_workers() {
+            local browsers="$1"
+
+            if [ "$browsers" -le 10 ]; then
+              echo 1
+              return
+            fi
+
+            if [ $((browsers % 10)) -ne 0 ]; then
+              echo "Browser counts above 10 must divide evenly into 10-browser Fargate workers. Received: $browsers" >&2
+              exit 1
+            fi
+
+            echo $((browsers / 10))
+          }
+
+          require_non_negative_int() {
+            local label="$1"
+            local value="$2"
+
+            if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+              echo "$label must be a non-negative integer. Received: $value" >&2
+              exit 1
+            fi
+          }
+
+          ARTILLERY_ENV="${INPUT_ENV//\"/}"
+          ARTILLERY_TARGET="${INPUT_TARGET//\"/}"
+          ARTILLERY_MODE="${INPUT_MODE//\"/}"
+          BYPASS_BROWSERS="${INPUT_BYPASS_BROWSERS//\"/}"
+          REALQUEUE_BROWSERS="${INPUT_REALQUEUE_BROWSERS//\"/}"
+          GATE_ISO="${INPUT_GATE_ISO//\"/}"
+          PLACE_ORDERS="${INPUT_PLACE_ORDERS//\"/}"
+          SCREENSHOTS="${INPUT_SCREENSHOTS//\"/}"
+          FARGATE_CAPACITY="${INPUT_FARGATE_CAPACITY//\"/}"
+
+          EXPECTED_TARGET="$(resolve_target "$ARTILLERY_ENV")"
+
+          if [ "$ARTILLERY_TARGET" != "$EXPECTED_TARGET" ]; then
+            echo "Target $ARTILLERY_TARGET does not match env $ARTILLERY_ENV. Expected $EXPECTED_TARGET." >&2
+            exit 1
+          fi
+
+          case "$ARTILLERY_MODE" in
+            flip|entry-only|bypass-only|realqueue-only|http-funnel|dry) ;;
+            *) echo "Unsupported mode: $ARTILLERY_MODE" >&2; exit 1 ;;
+          esac
+
+          case "$PLACE_ORDERS" in
+            true|false) ;;
+            *) echo "place_orders must be true or false. Received: $PLACE_ORDERS" >&2; exit 1 ;;
+          esac
+
+          case "$SCREENSHOTS" in
+            true|false) ;;
+            *) echo "screenshots must be true or false. Received: $SCREENSHOTS" >&2; exit 1 ;;
+          esac
+
+          case "$FARGATE_CAPACITY" in
+            on_demand) FARGATE_SPOT_FLAG="" ;;
+            spot) FARGATE_SPOT_FLAG="--spot" ;;
+            *) echo "Unsupported fargate_capacity: $FARGATE_CAPACITY" >&2; exit 1 ;;
+          esac
+
+          require_non_negative_int "bypass_browsers" "$BYPASS_BROWSERS"
+          require_non_negative_int "realqueue_browsers" "$REALQUEUE_BROWSERS"
+
+          RUN_REALQUEUE=false
+          RUN_ENTRY=false
+          RUN_BYPASS=false
+          RUN_HTTP_FUNNEL=false
+          RUN_DRY=false
+
+          case "$ARTILLERY_MODE" in
+            flip)
+              RUN_REALQUEUE=true
+              RUN_ENTRY=true
+              RUN_BYPASS=true
+              ;;
+            entry-only)
+              RUN_ENTRY=true
+              ;;
+            bypass-only)
+              RUN_BYPASS=true
+              ;;
+            realqueue-only)
+              RUN_REALQUEUE=true
+              ;;
+            http-funnel)
+              RUN_HTTP_FUNNEL=true
+              ;;
+            dry)
+              RUN_DRY=true
+              ;;
+          esac
+
+          if [ "$RUN_REALQUEUE" = "true" ] && [ "$REALQUEUE_BROWSERS" -lt 1 ]; then
+            echo "Mode $ARTILLERY_MODE requires realqueue_browsers to be at least 1." >&2
+            exit 1
+          fi
+
+          if [ "$RUN_BYPASS" = "true" ] && [ "$BYPASS_BROWSERS" -lt 1 ]; then
+            echo "Mode $ARTILLERY_MODE requires bypass_browsers to be at least 1." >&2
+            exit 1
+          fi
+
+          if [ "$RUN_HTTP_FUNNEL" = "true" ] && [ "$BYPASS_BROWSERS" -lt 1 ]; then
+            echo "Mode $ARTILLERY_MODE requires bypass_browsers to be at least 1." >&2
+            exit 1
+          fi
+
+          BYPASS_WORKERS="$(resolve_browser_workers "$BYPASS_BROWSERS")"
+          REALQUEUE_WORKERS="$(resolve_browser_workers "$REALQUEUE_BROWSERS")"
+          BYPASS_PER_WORKER=$((BYPASS_BROWSERS / BYPASS_WORKERS))
+          REALQUEUE_PER_WORKER=$((REALQUEUE_BROWSERS / REALQUEUE_WORKERS))
+
+          if [ -z "$GATE_ISO" ]; then
+            RESOLVED_GATE_ISO="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          else
+            RESOLVED_GATE_ISO="$(node -e "const date = new Date(process.argv[1]); if (Number.isNaN(date.getTime())) { console.error('Invalid gate_iso: ' + process.argv[1]); process.exit(1); } console.log(date.toISOString());" "$GATE_ISO")"
+          fi
+
+          GATE_TAG="$(printf '%s' "$RESOLVED_GATE_ISO" | sed 's/[^A-Za-z0-9._-]/-/g')"
+
+          {
+            echo "env=$ARTILLERY_ENV"
+            echo "target=$ARTILLERY_TARGET"
+            echo "mode=$ARTILLERY_MODE"
+            echo "gate_iso=$RESOLVED_GATE_ISO"
+            echo "gate_tag=$GATE_TAG"
+            echo "place_orders=$PLACE_ORDERS"
+            echo "screenshots=$SCREENSHOTS"
+            echo "fargate_capacity=$FARGATE_CAPACITY"
+            echo "fargate_spot_flag=$FARGATE_SPOT_FLAG"
+            echo "run_realqueue=$RUN_REALQUEUE"
+            echo "run_entry=$RUN_ENTRY"
+            echo "run_bypass=$RUN_BYPASS"
+            echo "run_http_funnel=$RUN_HTTP_FUNNEL"
+            echo "run_dry=$RUN_DRY"
+            echo "bypass_browsers=$BYPASS_BROWSERS"
+            echo "bypass_workers=$BYPASS_WORKERS"
+            echo "bypass_per_worker=$BYPASS_PER_WORKER"
+            echo "realqueue_browsers=$REALQUEUE_BROWSERS"
+            echo "realqueue_workers=$REALQUEUE_WORKERS"
+            echo "realqueue_per_worker=$REALQUEUE_PER_WORKER"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Drop Simulation Plan"
+            echo
+            echo "- Environment: $ARTILLERY_ENV"
+            echo "- Target: $ARTILLERY_TARGET"
+            echo "- Mode: $ARTILLERY_MODE"
+            echo "- Gate: $RESOLVED_GATE_ISO"
+            echo "- Realqueue browsers: $REALQUEUE_BROWSERS across $REALQUEUE_WORKERS workers ($REALQUEUE_PER_WORKER each)"
+            echo "- Bypass browsers: $BYPASS_BROWSERS across $BYPASS_WORKERS workers ($BYPASS_PER_WORKER each)"
+            echo "- Place orders: $PLACE_ORDERS"
+            echo "- Screenshots: $SCREENSHOTS"
+            echo "- Fargate capacity: $FARGATE_CAPACITY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dry:
+    name: Dry run
+    needs: plan
+    if: ${{ needs.plan.outputs.run_dry == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ needs.plan.outputs.env }}
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Install loadtest dependencies
+        run: npm ci --prefix loadtest --no-audit
+
+      - name: Validate checked-in configs
+        run: node loadtest/scripts/validate-configs.js loadtest/config
+
+      - name: Render smoke configs
+        env:
+          ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
+          GATE_ISO: ${{ needs.plan.outputs.gate_iso }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p loadtest/generated
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-bypass.yml --output loadtest/generated/browser-bypass.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-bypass-dry
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-realqueue.yml --output loadtest/generated/browser-realqueue.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-realqueue-dry
+          node loadtest/scripts/render-config.js --config loadtest/config/http-entry.yml --output loadtest/generated/http-entry.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-entry-dry
+          node loadtest/scripts/render-config.js --config loadtest/config/http-funnel.yml --output loadtest/generated/http-funnel.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-http-funnel-dry
+          node loadtest/scripts/validate-configs.js loadtest/generated
+          node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --dry-run
+
+      - name: Report dry run
+        run: |
+          {
+            echo "## Drop Simulation Dry Run"
+            echo
+            echo "No Fargate workers were launched."
+            echo
+            echo "- Environment: ${{ needs.plan.outputs.env }}"
+            echo "- Target: ${{ needs.plan.outputs.target }}"
+            echo "- Gate: ${{ needs.plan.outputs.gate_iso }}"
+            echo "- Realqueue browsers: ${{ needs.plan.outputs.realqueue_browsers }}"
+            echo "- Bypass browsers: ${{ needs.plan.outputs.bypass_browsers }}"
+            echo "- Place orders: ${{ needs.plan.outputs.place_orders }}"
+            echo "- Screenshots: ${{ needs.plan.outputs.screenshots }}"
+            echo "- Fargate capacity: ${{ needs.plan.outputs.fargate_capacity }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notifications
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'good',
+                title: 'Load Test- Drop Simulation / Dry Run',
+                text: [
+                  `Status: validated`,
+                  `Environment: ${{ needs.plan.outputs.env }}`,
+                  `Mode: ${{ needs.plan.outputs.mode }}`,
+                  `Target: ${{ needs.plan.outputs.target }}`,
+                  `Gate: ${{ needs.plan.outputs.gate_iso }}`,
+                  `No Fargate workers were launched.`,
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  realqueue:
+    name: Realqueue browsers
+    needs: plan
+    if: ${{ needs.plan.outputs.run_realqueue == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ needs.plan.outputs.env }}
+    timeout-minutes: 240
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Install loadtest dependencies
+        run: npm ci --prefix loadtest --no-audit
+
+      - name: Verify required secrets
+        env:
+          AWS_ACCESS_KEY_ID_VALUE: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY_VALUE: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_REGION_VALUE: ${{ secrets.S3_REGION }}
+          ARTILLERY_REPORT_APIKEY_VALUE: ${{ secrets.ARTILLERY_REPORT_APIKEY }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in AWS_ACCESS_KEY_ID_VALUE AWS_SECRET_ACCESS_KEY_VALUE S3_REGION_VALUE ARTILLERY_REPORT_APIKEY_VALUE ARTILLERY_LIST_PASSWORD RECAPTCHA_BYPASS; do
+            if [ -z "${!secret_name}" ]; then
+              echo "Missing required secret/env value: $secret_name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Wait until realqueue start window
+        env:
+          GATE_ISO: ${{ needs.plan.outputs.gate_iso }}
+        run: node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --lead-ms 300000 --max-wait-ms 86400000
+
+      - name: Prepare realqueue config
+        id: prepare_artillery
+        env:
+          ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
+          REALQUEUE_BROWSERS: ${{ needs.plan.outputs.realqueue_browsers }}
+          REALQUEUE_WORKERS: ${{ needs.plan.outputs.realqueue_workers }}
+          PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
+          SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
+          VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p loadtest/generated
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-realqueue.yml --output loadtest/generated/browser-realqueue.yml --workers "$REALQUEUE_WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration 900 --arrival-rate "$REALQUEUE_BROWSERS" --max-vusers "$REALQUEUE_BROWSERS" --name drop-realqueue
+          node loadtest/scripts/validate-configs.js loadtest/generated/browser-realqueue.yml
+
+          cat > loadtest/generated/browser-realqueue.fargate.env <<EOF
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          VIP_COOKIE_VALUE=${VIP_COOKIE_VALUE_SECRET:-3}
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
+          PLACE_ORDERS=$PLACE_ORDERS
+          ARTILLERY_PLACE_ORDERS=$PLACE_ORDERS
+          SCREENSHOTS=$SCREENSHOTS
+          ARTILLERY_SCREENSHOTS=$SCREENSHOTS
+          ARTILLERY_CART_ITEM_COUNT=3
+          ARTILLERY_QUEUE_WAIT_MS=1200000
+          EOF
+
+          echo "config=loadtest/generated/browser-realqueue.yml" >> "$GITHUB_OUTPUT"
+          echo "dotenv=loadtest/generated/browser-realqueue.fargate.env" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p loadtest/reports
+          REPORT_PATH="loadtest/reports/drop-simulation-realqueue-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Execute realqueue browsers on AWS Fargate
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.realqueue_workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/realqueue/${{ needs.plan.outputs.realqueue_browsers }}browsers/${{ needs.plan.outputs.realqueue_workers }}workers/gate-${{ needs.plan.outputs.gate_tag }}/orders-${{ needs.plan.outputs.place_orders }}/${{ needs.plan.outputs.fargate_capacity }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
+
+      - name: Check thresholds
+        if: always()
+        run: node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" --max-vusers-failed 0 --optional
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop-simulation-realqueue-report
+          path: loadtest/reports
+          if-no-files-found: ignore
+
+      - name: Slack notifications
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                title: 'Load Test- Drop Simulation / Realqueue',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ needs.plan.outputs.env }}`,
+                  `Mode: ${{ needs.plan.outputs.mode }}`,
+                  `Target: ${{ needs.plan.outputs.target }}`,
+                  `Gate: ${{ needs.plan.outputs.gate_iso }}`,
+                  `Browsers: ${{ needs.plan.outputs.realqueue_browsers }}`,
+                  `Workers: ${{ needs.plan.outputs.realqueue_workers }}`,
+                  `Place orders: ${{ needs.plan.outputs.place_orders }}`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  entry:
+    name: HTTP entry stampede
+    needs: plan
+    if: ${{ needs.plan.outputs.run_entry == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ needs.plan.outputs.env }}
+    timeout-minutes: 120
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Install loadtest dependencies
+        run: npm ci --prefix loadtest --no-audit
+
+      - name: Verify required secrets
+        env:
+          AWS_ACCESS_KEY_ID_VALUE: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY_VALUE: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_REGION_VALUE: ${{ secrets.S3_REGION }}
+          ARTILLERY_REPORT_APIKEY_VALUE: ${{ secrets.ARTILLERY_REPORT_APIKEY }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in AWS_ACCESS_KEY_ID_VALUE AWS_SECRET_ACCESS_KEY_VALUE S3_REGION_VALUE ARTILLERY_REPORT_APIKEY_VALUE; do
+            if [ -z "${!secret_name}" ]; then
+              echo "Missing required secret/env value: $secret_name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Wait until gate
+        env:
+          GATE_ISO: ${{ needs.plan.outputs.gate_iso }}
+        run: node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --max-wait-ms 86400000
+
+      - name: Prepare HTTP entry config
+        id: prepare_artillery
+        env:
+          ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p loadtest/generated
+          node loadtest/scripts/render-config.js --config loadtest/config/http-entry.yml --output loadtest/generated/http-entry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 180 --arrival-rate 250 --max-vusers 2000 --keep-arrival-rate --keep-max-vusers --name drop-http-entry
+          node loadtest/scripts/validate-configs.js loadtest/generated/http-entry.yml
+
+          cat > loadtest/generated/http-entry.fargate.env <<EOF
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          EOF
+
+          echo "config=loadtest/generated/http-entry.yml" >> "$GITHUB_OUTPUT"
+          echo "dotenv=loadtest/generated/http-entry.fargate.env" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p loadtest/reports
+          REPORT_PATH="loadtest/reports/drop-simulation-http-entry-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Execute HTTP entry on AWS Fargate
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 1 --memory 2 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/http-entry/gate-${{ needs.plan.outputs.gate_tag }}/${{ needs.plan.outputs.fargate_capacity }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop-simulation-http-entry-report
+          path: loadtest/reports
+          if-no-files-found: ignore
+
+      - name: Slack notifications
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                title: 'Load Test- Drop Simulation / HTTP Entry',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ needs.plan.outputs.env }}`,
+                  `Target: ${{ needs.plan.outputs.target }}`,
+                  `Gate: ${{ needs.plan.outputs.gate_iso }}`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  bypass:
+    name: Bypass browsers
+    needs: plan
+    if: ${{ needs.plan.outputs.run_bypass == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ needs.plan.outputs.env }}
+    timeout-minutes: 240
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Install loadtest dependencies
+        run: npm ci --prefix loadtest --no-audit
+
+      - name: Verify required secrets
+        env:
+          AWS_ACCESS_KEY_ID_VALUE: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY_VALUE: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_REGION_VALUE: ${{ secrets.S3_REGION }}
+          ARTILLERY_REPORT_APIKEY_VALUE: ${{ secrets.ARTILLERY_REPORT_APIKEY }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in AWS_ACCESS_KEY_ID_VALUE AWS_SECRET_ACCESS_KEY_VALUE S3_REGION_VALUE ARTILLERY_REPORT_APIKEY_VALUE ARTILLERY_LIST_PASSWORD RECAPTCHA_BYPASS; do
+            if [ -z "${!secret_name}" ]; then
+              echo "Missing required secret/env value: $secret_name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Wait until gate
+        env:
+          GATE_ISO: ${{ needs.plan.outputs.gate_iso }}
+        run: node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --max-wait-ms 86400000
+
+      - name: Prepare bypass config
+        id: prepare_artillery
+        env:
+          ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
+          BYPASS_BROWSERS: ${{ needs.plan.outputs.bypass_browsers }}
+          BYPASS_WORKERS: ${{ needs.plan.outputs.bypass_workers }}
+          PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
+          SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
+          VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p loadtest/generated
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-bypass.yml --output loadtest/generated/browser-bypass.yml --workers "$BYPASS_WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration 900 --arrival-rate "$BYPASS_BROWSERS" --max-vusers "$BYPASS_BROWSERS" --name drop-bypass
+          node loadtest/scripts/validate-configs.js loadtest/generated/browser-bypass.yml
+
+          cat > loadtest/generated/browser-bypass.fargate.env <<EOF
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          VIP_COOKIE_VALUE=${VIP_COOKIE_VALUE_SECRET:-3}
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
+          PLACE_ORDERS=$PLACE_ORDERS
+          ARTILLERY_PLACE_ORDERS=$PLACE_ORDERS
+          SCREENSHOTS=$SCREENSHOTS
+          ARTILLERY_SCREENSHOTS=$SCREENSHOTS
+          ARTILLERY_CART_ITEM_COUNT=3
+          EOF
+
+          echo "config=loadtest/generated/browser-bypass.yml" >> "$GITHUB_OUTPUT"
+          echo "dotenv=loadtest/generated/browser-bypass.fargate.env" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p loadtest/reports
+          REPORT_PATH="loadtest/reports/drop-simulation-bypass-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Execute bypass browsers on AWS Fargate
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.bypass_workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/bypass/${{ needs.plan.outputs.bypass_browsers }}browsers/${{ needs.plan.outputs.bypass_workers }}workers/gate-${{ needs.plan.outputs.gate_tag }}/orders-${{ needs.plan.outputs.place_orders }}/${{ needs.plan.outputs.fargate_capacity }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
+
+      - name: Check thresholds
+        if: always()
+        run: node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" --max-vusers-failed 0 --optional
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop-simulation-bypass-report
+          path: loadtest/reports
+          if-no-files-found: ignore
+
+      - name: Slack notifications
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                title: 'Load Test- Drop Simulation / Bypass',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ needs.plan.outputs.env }}`,
+                  `Mode: ${{ needs.plan.outputs.mode }}`,
+                  `Target: ${{ needs.plan.outputs.target }}`,
+                  `Gate: ${{ needs.plan.outputs.gate_iso }}`,
+                  `Browsers: ${{ needs.plan.outputs.bypass_browsers }}`,
+                  `Workers: ${{ needs.plan.outputs.bypass_workers }}`,
+                  `Place orders: ${{ needs.plan.outputs.place_orders }}`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  http-funnel:
+    name: HTTP funnel
+    needs: plan
+    if: ${{ needs.plan.outputs.run_http_funnel == 'true' }}
+    runs-on: ubuntu-latest
+    environment: ${{ needs.plan.outputs.env }}
+    timeout-minutes: 120
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Install loadtest dependencies
+        run: npm ci --prefix loadtest --no-audit
+
+      - name: Verify required secrets
+        env:
+          AWS_ACCESS_KEY_ID_VALUE: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY_VALUE: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_REGION_VALUE: ${{ secrets.S3_REGION }}
+          ARTILLERY_REPORT_APIKEY_VALUE: ${{ secrets.ARTILLERY_REPORT_APIKEY }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in AWS_ACCESS_KEY_ID_VALUE AWS_SECRET_ACCESS_KEY_VALUE S3_REGION_VALUE ARTILLERY_REPORT_APIKEY_VALUE ARTILLERY_LIST_PASSWORD RECAPTCHA_BYPASS; do
+            if [ -z "${!secret_name}" ]; then
+              echo "Missing required secret/env value: $secret_name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Wait until gate
+        env:
+          GATE_ISO: ${{ needs.plan.outputs.gate_iso }}
+        run: node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --max-wait-ms 86400000
+
+      - name: Prepare HTTP funnel config
+        id: prepare_artillery
+        env:
+          ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+          VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p loadtest/generated
+          node loadtest/scripts/render-config.js --config loadtest/config/http-funnel.yml --output loadtest/generated/http-funnel.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 300 --arrival-rate 50 --max-vusers 150 --keep-arrival-rate --keep-max-vusers --name drop-http-funnel
+          node loadtest/scripts/validate-configs.js loadtest/generated/http-funnel.yml
+
+          cat > loadtest/generated/http-funnel.fargate.env <<EOF
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          VIP_COOKIE_VALUE=${VIP_COOKIE_VALUE_SECRET:-3}
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
+          EOF
+
+          echo "config=loadtest/generated/http-funnel.yml" >> "$GITHUB_OUTPUT"
+          echo "dotenv=loadtest/generated/http-funnel.fargate.env" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p loadtest/reports
+          REPORT_PATH="loadtest/reports/drop-simulation-http-funnel-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Execute HTTP funnel on AWS Fargate
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 2 --memory 4 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/http-funnel/gate-${{ needs.plan.outputs.gate_tag }}/${{ needs.plan.outputs.fargate_capacity }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
+
+      - name: Check thresholds
+        if: always()
+        run: node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" --max-error-rate 0.01 --optional
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop-simulation-http-funnel-report
+          path: loadtest/reports
+          if-no-files-found: ignore
+
+      - name: Slack notifications
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                title: 'Load Test- Drop Simulation / HTTP Funnel',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ needs.plan.outputs.env }}`,
+                  `Target: ${{ needs.plan.outputs.target }}`,
+                  `Gate: ${{ needs.plan.outputs.gate_iso }}`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
