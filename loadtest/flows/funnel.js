@@ -215,7 +215,11 @@ function getCartCount() {
 }
 
 function getUsageType() {
-	return normalizeChoice(process.env.ARTILLERY_USAGE_TYPE, ['Recreational'], DEFAULT_USAGE_TYPE)
+	return normalizeChoice(
+		process.env.ARTILLERY_USAGE_TYPE,
+		['Recreational', 'Medical'],
+		DEFAULT_USAGE_TYPE,
+	)
 }
 
 function getFulfillmentType() {
