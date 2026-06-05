@@ -33,6 +33,14 @@ on:
           - '150'
           - '200'
           - '300'
+      include_vip_cookie:
+        type: choice
+        description: 'Include vipChecker=3 queue-bypass cookie'
+        required: true
+        default: 'yes'
+        options:
+          - 'yes'
+          - 'no'
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -57,6 +65,7 @@ jobs:
           ARTILLERY_ENV="${{ github.event.inputs.env }}"
           ARTILLERY_LOAD_PATTERN="${{ github.event.inputs.load_pattern }}"
           ARTILLERY_LOAD_SIZE="${{ github.event.inputs.load_size }}"
+          ARTILLERY_INCLUDE_VIP_COOKIE="${{ github.event.inputs.include_vip_cookie }}"
           ARTILLERY_710_MODE=ca
           ARTILLERY_CART_ITEM_COUNT=6
           ARTILLERY_FARGATE_CAPACITY=on_demand
@@ -322,6 +331,7 @@ jobs:
             echo "ARTILLERY_ENV=$ARTILLERY_ENV"
             echo "ARTILLERY_LOAD_PATTERN=$ARTILLERY_LOAD_PATTERN"
             echo "ARTILLERY_LOAD_SIZE=$ARTILLERY_LOAD_SIZE"
+            echo "ARTILLERY_INCLUDE_VIP_COOKIE=$ARTILLERY_INCLUDE_VIP_COOKIE"
             echo "ARTILLERY_710_MODE=$ARTILLERY_710_MODE"
             echo "ARTILLERY_PACING_MODE=$ARTILLERY_PACING_MODE"
             echo "ARTILLERY_VIRTUAL_USERS=$ARTILLERY_VIRTUAL_USERS"
@@ -346,6 +356,7 @@ jobs:
             echo "env=$ARTILLERY_ENV"
             echo "load_pattern=$ARTILLERY_LOAD_PATTERN"
             echo "load_size=$ARTILLERY_LOAD_SIZE"
+            echo "include_vip_cookie=$ARTILLERY_INCLUDE_VIP_COOKIE"
             echo "mode=$ARTILLERY_710_MODE"
             echo "pacing_mode=$ARTILLERY_PACING_MODE"
             echo "virtual_users=$ARTILLERY_VIRTUAL_USERS"
@@ -370,6 +381,7 @@ jobs:
           echo "Environment: $ARTILLERY_ENV"
           echo "Target: $ARTILLERY_TARGET"
           echo "Load preset: $ARTILLERY_LOAD_PATTERN / $ARTILLERY_LOAD_SIZE users"
+          echo "VIP queue bypass cookie: $ARTILLERY_INCLUDE_VIP_COOKIE"
           echo "Cluster totals: maxVusers=$ARTILLERY_VIRTUAL_USERS workers=$ARTILLERY_FARGATE_WORKERS pacing_mode=$ARTILLERY_PACING_MODE duration=$ARTILLERY_DURATION"
           echo "Fargate per worker: ${ARTILLERY_FARGATE_CPU} vCPU / ${ARTILLERY_FARGATE_MEMORY} GB"
           echo "Fargate total: ${ARTILLERY_TOTAL_FARGATE_CPU} vCPU / ${ARTILLERY_TOTAL_FARGATE_MEMORY} GB"
@@ -441,6 +453,7 @@ jobs:
           RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
           ARTILLERY_TARGET=$ARTILLERY_TARGET
           ARTILLERY_CART_ITEM_COUNT=$ARTILLERY_CART_ITEM_COUNT
+          ARTILLERY_INCLUDE_VIP_COOKIE=$ARTILLERY_INCLUDE_VIP_COOKIE
           EOF
 
       - name: Verify Fargate worker dotenv
@@ -468,6 +481,7 @@ jobs:
           ARTILLERY_ARRIVAL_COUNT: ${{ steps.resolve_load_preset.outputs.arrival_count }}
           ARTILLERY_DURATION: ${{ steps.resolve_load_preset.outputs.duration }}
           ARTILLERY_CART_ITEM_COUNT: ${{ steps.resolve_load_preset.outputs.cart_item_count }}
+          ARTILLERY_INCLUDE_VIP_COOKIE: ${{ steps.resolve_load_preset.outputs.include_vip_cookie }}
           ARTILLERY_FARGATE_WORKERS: ${{ steps.resolve_load_preset.outputs.fargate_workers }}
           ARTILLERY_FARGATE_CPU: ${{ steps.resolve_load_preset.outputs.fargate_cpu }}
           ARTILLERY_FARGATE_MEMORY: ${{ steps.resolve_load_preset.outputs.fargate_memory }}
@@ -507,6 +521,7 @@ jobs:
                   `Environment: ${{ steps.resolve_load_preset.outputs.env }}`,
                   `Pattern: ${{ steps.resolve_load_preset.outputs.load_pattern }}`,
                   `Preset: ${{ steps.resolve_load_preset.outputs.load_size }} users`,
+                  `VIP queue bypass: ${{ steps.resolve_load_preset.outputs.include_vip_cookie }}`,
                   `Target: ${{ steps.resolve_load_preset.outputs.target }}`,
                   `Duration: ${{ steps.resolve_load_preset.outputs.duration }} seconds`,
                   `Workers: ${{ steps.resolve_load_preset.outputs.fargate_workers }}`,

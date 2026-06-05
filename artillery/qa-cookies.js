@@ -3,6 +3,12 @@ const VIP_CHECKER_COOKIE_NAME = 'vipChecker'
 
 let warnedAboutMissingRecaptchaBypass = false
 
+function shouldIncludeVipCookie() {
+	const setting = process.env.ARTILLERY_INCLUDE_VIP_COOKIE
+
+	return !setting || !['0', 'false', 'no', 'off'].includes(setting.trim().toLowerCase())
+}
+
 function getRecaptchaBypassSecret() {
 	const secret = process.env.RECAPTCHA_BYPASS
 
@@ -22,14 +28,17 @@ function warnMissingRecaptchaBypass() {
 
 function buildQaCookies(target) {
 	const targetUrl = new URL(target)
-	const cookies = [
-		{
+	const cookies = []
+
+	if (shouldIncludeVipCookie()) {
+		cookies.push({
 			name: VIP_CHECKER_COOKIE_NAME,
 			value: '3',
 			domain: targetUrl.hostname,
 			path: '/',
-		},
-	]
+		})
+	}
+
 	const recaptchaBypass = getRecaptchaBypassSecret()
 
 	if (!recaptchaBypass) {
@@ -76,4 +85,5 @@ module.exports = {
 	addQaCookies,
 	buildQaCookies,
 	getRecaptchaBypassSecret,
+	shouldIncludeVipCookie,
 }
