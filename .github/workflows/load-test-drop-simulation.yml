@@ -187,14 +187,13 @@ jobs:
           require_browser_preset() {
             local label="$1"
             local value="$2"
+            local presets='1|5|10|20|30|40|50|60|70|80|90|100|150|200'
+            local preset_list="${presets//|/, }"
 
-            case "$value" in
-              1|5|10|20|30|40|50|60|70|80|90|100|150|200) ;;
-              *)
-                echo "$label must be one of the configured presets: 1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200. Received: $value" >&2
-                exit 1
-                ;;
-            esac
+            if ! [[ "$value" =~ ^($presets)$ ]]; then
+              echo "$label must be one of the configured presets: $preset_list. Received: $value" >&2
+              exit 1
+            fi
           }
 
           ARTILLERY_ENV="${INPUT_ENV//\"/}"
