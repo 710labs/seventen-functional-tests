@@ -53,14 +53,14 @@ Run **Load Test- Drop Simulation** manually from GitHub Actions.
 - `env`: `stage` or `dev`; production is intentionally excluded.
 - `target`: must match the selected environment URL.
 - `mode`: `flip`, `entry-only`, `bypass-only`, `realqueue-only`, `http-funnel`, or `dry`.
-- `bypass_browsers`: total bypass browser concurrency; default `100`.
-- `realqueue_browsers`: total real-queue browser concurrency; default `50`.
+- `bypass_browsers`: total bypass browser concurrency; default `100`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
+- `realqueue_browsers`: total real-queue browser concurrency; default `50`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `gate_iso`: Queue-It event start time. Empty means "now".
 - `place_orders`: default `false`; when false, browser funnels stop before `#place_order`.
 - `screenshots`: default `false`; enable only for small debugging runs.
 - `fargate_capacity`: `on_demand` or `spot`.
 
-For browser counts above 10, use values divisible by 10. The workflow derives exact 10-browser Fargate workers, so the default 100 bypass browsers become 10 workers and the default 50 realqueue browsers become 5 workers.
+The workflow derives exact 10-browser Fargate workers for presets above 10, so the default 100 bypass browsers become 10 workers and the default 50 realqueue browsers become 5 workers.
 
 ## Modes
 
