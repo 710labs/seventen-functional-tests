@@ -10,3 +10,14 @@ utils/zipcode-final.json
 order_ids.txt
 order_id.txt
 artillery/debug-screenshots/
+
+# Load test generated artifacts
+loadtest/.env
+loadtest/.env.*
+loadtest/*.env
+loadtest/artifacts/
+loadtest/generated/
+loadtest/reports/
+loadtest/screenshots/
+loadtest/debug-screenshots/
+loadtest/**/*.generated.*

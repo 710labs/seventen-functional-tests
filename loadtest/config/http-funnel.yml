@@ -1,0 +1,50 @@
+config:
+  target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+  variables:
+    target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+    defaultTarget: "https://thelist-stage.710labs.com"
+    listPassword: "{{ $processEnvironment.ARTILLERY_LIST_PASSWORD }}"
+    recaptchaBypass: "{{ $processEnvironment.RECAPTCHA_BYPASS }}"
+  phases:
+    - name: "funnel"
+      duration: 300
+      arrivalRate: 5
+      maxVusers: 100
+  http:
+    timeout: 45
+    cookieJarOptions:
+      rejectPublicSuffixes: false
+    defaults:
+      headers:
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        accept-language: "en-US,en;q=0.9"
+        user-agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+  processor: "../flows/http.js"
+scenarios:
+  - name: "HTTP age/password/register funnel"
+    engine: "http"
+    beforeRequest:
+      - "addFunnelCookiesAndHeaders"
+    flow:
+      - get:
+          url: "/"
+          afterResponse:
+            - "captureFunnelState"
+      - get:
+          url: "/wp-json/age-gate/v3/check?age_gate[lang]=en&age_gate[confirm]=1"
+          beforeRequest:
+            - "prepareAgeGateApiRequest"
+          afterResponse:
+            - "captureFunnelState"
+      - post:
+          url: "/"
+          beforeRequest:
+            - "preparePasswordPostRequest"
+          afterResponse:
+            - "captureFunnelState"
+      - get:
+          url: "/register/"
+          beforeRequest:
+            - "prepareRegisterGetRequest"
+          afterResponse:
+            - "assertFunnelResponse"

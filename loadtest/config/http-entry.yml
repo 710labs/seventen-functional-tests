@@ -1,0 +1,29 @@
+config:
+  target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+  variables:
+    target: "{{ $processEnvironment.ARTILLERY_TARGET }}"
+    defaultTarget: "https://thelist-stage.710labs.com"
+  phases:
+    - name: "queue-entry"
+      duration: 60
+      arrivalRate: 25
+      maxVusers: 300
+  http:
+    timeout: 30
+    defaults:
+      headers:
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        accept-language: "en-US,en;q=0.9"
+        user-agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+  processor: "../flows/http.js"
+scenarios:
+  - name: "HTTP entry queue redirect"
+    engine: "http"
+    beforeRequest:
+      - "prepareEntryRequest"
+    flow:
+      - get:
+          url: "/"
+          followRedirect: false
+          afterResponse:
+            - "assertQueueItRedirect"

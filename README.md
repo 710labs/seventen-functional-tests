@@ -303,13 +303,16 @@ Important focused-rules behavior:
 - if the import fails after cleanup, the environment may temporarily have no published products until the next successful import
 
 ## Load Testing
+Use the manual [Load Test- Drop Simulation](https://github.com/710labs/seventen-functional-tests/actions/workflows/load-test-drop-simulation.yml) workflow for Queue-It drop simulation load on dev/stage. It uses the self-contained `loadtest/` Artillery suite and AWS Fargate to run HTTP entry traffic, optional HTTP funnel traffic, VIP-bypass browser users, and real Queue-It browser users. See [loadtest/README.md](loadtest/README.md) before running a full flip; Queue-It must be enabled on the target and the full 100 + 50 browser run needs enough Fargate quota headroom.
+
 Use the manual [Load Tests - The List](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist.yml) workflow for browser load tests on AWS Fargate.
 
-The standard workflow has three inputs:
+The standard workflow has four inputs:
 
 - env: `dev` or `stage`
 - load_pattern: `concurrent_burst` or `total_spread`
 - load_size: `1`, `5`, `10`, `25`, `50`, `75`, `100`, `150`, `200`, or `300`
+- include_vip_cookie: `yes` or `no`; defaults to `yes` and injects `vipChecker=3` to bypass the queue
 
 `concurrent_burst` starts users quickly to create overlapping browser sessions:
 
@@ -345,6 +348,7 @@ Notes:
 
 - The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
 - The standard workflow always runs the CA load flow and adds `6` products per cart.
+- The standard workflow injects the VIP queue-bypass cookie by default. Set `include_vip_cookie` to `no` when the queue should be part of the measured path.
 - Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly. This avoids fractional per-worker arrival rates, which can produce zero created VUsers in Fargate runs.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
 - Browser load tests pass `RECAPTCHA_BYPASS` through to Fargate and CI fails fast when the GitHub secret is missing.

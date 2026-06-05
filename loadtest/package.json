@@ -1,0 +1,17 @@
+{
+	"name": "seventen-loadtest",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Load test drop simulation helpers for generated Artillery worker configs.",
+	"scripts": {
+		"render-config": "node scripts/render-config.js",
+		"validate-configs": "node scripts/validate-configs.js",
+		"check-thresholds": "node scripts/check-thresholds.js",
+		"wait-until-gate": "node scripts/wait-until-gate.js"
+	},
+	"dependencies": {
+		"artillery": "^2.0.31",
+		"cheerio": "^1.2.0",
+		"js-yaml": "^3.14.1"
+	}
+}

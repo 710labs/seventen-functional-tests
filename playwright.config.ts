@@ -42,6 +42,7 @@ const config: PlaywrightTestConfig = {
 		storageState: buildStorageStateWithRecaptchaBypass(process.env.BASE_URL),
 		launchOptions: {
 			slowMo: 200,
+			headless: !!process.env.CI,
 		},
 		trace: 'retain-on-failure',
 		screenshot: 'on',
