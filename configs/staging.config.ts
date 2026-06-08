@@ -4,6 +4,7 @@ import { TestOptions } from '../options'
 import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-bypass'
 
 const STAGING_BASE_URL = 'https://thelist-stage.710labs.com'
+const STAGING_BASE_DOMAIN = new URL(STAGING_BASE_URL).hostname
 
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
@@ -27,7 +28,18 @@ export default defineConfig<TestOptions>({
 		acceptDownloads: true,
 		actionTimeout: 30 * 1000,
 		baseURL: STAGING_BASE_URL,
-		storageState: buildStorageStateWithRecaptchaBypass(STAGING_BASE_URL),
+			storageState: buildStorageStateWithRecaptchaBypass(STAGING_BASE_URL, [
+				{
+					name: 'vipChecker',
+					value: '3',
+					domain: STAGING_BASE_DOMAIN,
+					path: '/',
+					expires: -1,
+					httpOnly: false,
+					secure: true,
+					sameSite: 'Lax',
+				},
+			]),
 		launchOptions: {
 			slowMo: 200,
 		},
