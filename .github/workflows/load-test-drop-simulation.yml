@@ -79,10 +79,10 @@ on:
         type: choice
         description: Click #place_order after checkout
         required: true
-        default: 'false'
+        default: 'true'
         options:
-          - 'false'
           - 'true'
+          - 'false'
       screenshots:
         type: choice
         description: Capture worker debug screenshots
@@ -144,7 +144,7 @@ jobs:
           INPUT_BYPASS_BROWSERS: ${{ github.event.inputs.bypass_browsers || '100' }}
           INPUT_REALQUEUE_BROWSERS: ${{ github.event.inputs.realqueue_browsers || '50' }}
           INPUT_GATE_ISO: ${{ github.event.inputs.gate_iso }}
-          INPUT_PLACE_ORDERS: ${{ github.event.inputs.place_orders || 'false' }}
+          INPUT_PLACE_ORDERS: ${{ github.event.inputs.place_orders || 'true' }}
           INPUT_SCREENSHOTS: ${{ github.event.inputs.screenshots || 'false' }}
           INPUT_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
         run: |

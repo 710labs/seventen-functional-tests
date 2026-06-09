@@ -34,13 +34,13 @@ node loadtest/scripts/render-config.js \
   --max-vusers 1
 ```
 
-Run a local browser bypass smoke without placing orders:
+Run a local browser bypass smoke with order placement:
 
 ```bash
 ARTILLERY_TARGET=https://thelist-stage.710labs.com \
 ARTILLERY_LIST_PASSWORD='<list password>' \
 RECAPTCHA_BYPASS='<qa captcha bypass secret>' \
-PLACE_ORDERS=false \
+PLACE_ORDERS=true \
 SCREENSHOTS=false \
 npm --prefix loadtest exec -- artillery run loadtest/generated/browser-bypass.local.yml \
   --output loadtest/reports/browser-bypass-local.json
@@ -56,7 +56,7 @@ Run **Load Test- Drop Simulation** manually from GitHub Actions.
 - `bypass_browsers`: total bypass browser concurrency; default `100`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `realqueue_browsers`: total real-queue browser concurrency; default `50`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `gate_iso`: Queue-It event start time. Empty means "now".
-- `place_orders`: default `false`; when false, browser funnels stop before `#place_order`.
+- `place_orders`: default `true`; when true, browser funnels click `#place_order`.
 - `screenshots`: default `false`; enable only for small debugging runs.
 - `fargate_capacity`: `on_demand` or `spot`.
 
@@ -104,6 +104,6 @@ Before a full 150-browser flip, verify regional Fargate vCPU, ENI, subnet IP, an
 
 ## Safety
 
-`place_orders=false` is the default and should stay that way for stage-safe checkout path validation. Use `place_orders=true` only after explicit approval for inventory, POS/payment, KYC, notification, and cleanup impact.
+`place_orders=true` is the default. Use `place_orders=false` only for explicit checkout-path smoke runs that must stop before order submission.
 
 Generated configs, dotenv files, reports, and screenshots under `loadtest/` are ignored by git.
