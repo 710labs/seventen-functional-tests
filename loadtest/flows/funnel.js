@@ -3,7 +3,7 @@ const path = require('path')
 
 const DEFAULT_TARGET = 'https://thelist-dev.710labs.com'
 const DEFAULT_CART_ITEM_COUNT = 3
-const DEFAULT_QUEUE_WAIT_MS = 20 * 60 * 1000
+const DEFAULT_QUEUE_WAIT_MS = 60 * 60 * 1000
 const DEFAULT_READY_WAIT_MS = 60 * 1000
 const DEFAULT_REGISTRATION_ADDRESS = '3377 S La Cienega Blvd, Los Angeles, CA 90016'
 const DEFAULT_REGISTRATION_STATE = 'CA'
@@ -986,7 +986,7 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 	)
 	const queueWaitMs = parsePositiveInt(
 		options.queueWaitMs || process.env.ARTILLERY_QUEUE_WAIT_MS,
-		readyWaitMs,
+		vip ? readyWaitMs : DEFAULT_QUEUE_WAIT_MS,
 	)
 
 	await measuredStep(events, step, 'cookies', 'Inject QA Cookies', async () => {
@@ -1041,7 +1041,6 @@ async function storeFunnelBypass(page, vuContext, events, test) {
 async function storeFunnelRealQueue(page, vuContext, events, test) {
 	return runFunnel(page, vuContext, events, test, {
 		vip: false,
-		queueWaitMs: DEFAULT_QUEUE_WAIT_MS,
 	})
 }
 

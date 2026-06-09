@@ -7,7 +7,7 @@ This directory contains the self-contained Artillery suite for the manual **Load
 - `config/http-entry.yml`: HTTP stampede against `/` with no VIP cookie. It expects a `302` redirect to `queue-it.net`.
 - `config/http-funnel.yml`: HTTP-only funnel pressure with `vipChecker` and optional reCAPTCHA bypass.
 - `config/browser-bypass.yml`: Playwright browser funnel with `vipChecker`, defaulting to 100 browsers in the workflow.
-- `config/browser-realqueue.yml`: Playwright browser funnel without `vipChecker`, defaulting to 50 browsers and waiting up to 20 minutes for Queue-It release.
+- `config/browser-realqueue.yml`: Playwright browser funnel without `vipChecker`, defaulting to 50 browsers and waiting up to 60 minutes for Queue-It release in the workflow.
 
 Browser scenarios use `flows/funnel.js`. HTTP scenarios use `flows/http.js`.
 
@@ -56,6 +56,7 @@ Run **Load Test- Drop Simulation** manually from GitHub Actions.
 - `bypass_browsers`: total bypass browser concurrency; default `100`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `realqueue_browsers`: total real-queue browser concurrency; default `50`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `gate_iso`: Queue-It event start time. Empty means "now".
+- `queue_wait_minutes`: max time realqueue browsers wait for Queue-It release; default `60`. Presets: `20`, `30`, `45`, `60`, `90`, `120`.
 - `place_orders`: default `true`; when true, browser funnels click `#place_order`.
 - `screenshots`: default `false`; enable only for small debugging runs.
 - `fargate_capacity`: `on_demand` or `spot`.
@@ -92,6 +93,8 @@ Optional:
 `http-entry` only passes when Queue-It is active server-side for the target and `/` returns a `302` with a `queue-it.net` location. If the target returns `200`, Queue-It is not enabled for that route or the integration is client-side JavaScript; in that case HTTP cannot validate the redirect and the real browser scenarios become the source of truth.
 
 For a meaningful `flip` run, configure the Queue-It event and outflow outside this repo before starting the workflow. Realqueue browsers are launched before the gate and intentionally omit `vipChecker`.
+
+If a realqueue smoke run fails with `Storefront was not ready within N seconds` while the current URL is still Queue-It, the browser wait path worked but Queue-It did not release the user inside `queue_wait_minutes`. That is expected when testing before the scheduled event release. A full success requires the user to leave Queue-It, reach the storefront, and complete the funnel.
 
 ## Fargate Sizing
 

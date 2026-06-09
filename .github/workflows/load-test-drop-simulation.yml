@@ -75,6 +75,18 @@ on:
         description: Queue-It event start time as ISO-8601. Empty means now.
         required: false
         default: ''
+      queue_wait_minutes:
+        type: choice
+        description: Max minutes realqueue browsers wait for Queue-It release
+        required: true
+        default: '60'
+        options:
+          - '20'
+          - '30'
+          - '45'
+          - '60'
+          - '90'
+          - '120'
       place_orders:
         type: choice
         description: Click #place_order after checkout
@@ -118,6 +130,8 @@ jobs:
       mode: ${{ steps.resolve.outputs.mode }}
       gate_iso: ${{ steps.resolve.outputs.gate_iso }}
       gate_tag: ${{ steps.resolve.outputs.gate_tag }}
+      queue_wait_minutes: ${{ steps.resolve.outputs.queue_wait_minutes }}
+      queue_wait_ms: ${{ steps.resolve.outputs.queue_wait_ms }}
       place_orders: ${{ steps.resolve.outputs.place_orders }}
       screenshots: ${{ steps.resolve.outputs.screenshots }}
       fargate_capacity: ${{ steps.resolve.outputs.fargate_capacity }}
@@ -144,6 +158,7 @@ jobs:
           INPUT_BYPASS_BROWSERS: ${{ github.event.inputs.bypass_browsers || '100' }}
           INPUT_REALQUEUE_BROWSERS: ${{ github.event.inputs.realqueue_browsers || '50' }}
           INPUT_GATE_ISO: ${{ github.event.inputs.gate_iso }}
+          INPUT_QUEUE_WAIT_MINUTES: ${{ github.event.inputs.queue_wait_minutes || '60' }}
           INPUT_PLACE_ORDERS: ${{ github.event.inputs.place_orders || 'true' }}
           INPUT_SCREENSHOTS: ${{ github.event.inputs.screenshots || 'false' }}
           INPUT_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
@@ -196,12 +211,25 @@ jobs:
             fi
           }
 
+          require_queue_wait_preset() {
+            local value="$1"
+
+            case "$value" in
+              20|30|45|60|90|120) ;;
+              *)
+                echo "queue_wait_minutes must be one of the configured presets: 20, 30, 45, 60, 90, 120. Received: $value" >&2
+                exit 1
+                ;;
+            esac
+          }
+
           ARTILLERY_ENV="${INPUT_ENV//\"/}"
           ARTILLERY_TARGET="${INPUT_TARGET//\"/}"
           ARTILLERY_MODE="${INPUT_MODE//\"/}"
           BYPASS_BROWSERS="${INPUT_BYPASS_BROWSERS//\"/}"
           REALQUEUE_BROWSERS="${INPUT_REALQUEUE_BROWSERS//\"/}"
           GATE_ISO="${INPUT_GATE_ISO//\"/}"
+          QUEUE_WAIT_MINUTES="${INPUT_QUEUE_WAIT_MINUTES//\"/}"
           PLACE_ORDERS="${INPUT_PLACE_ORDERS//\"/}"
           SCREENSHOTS="${INPUT_SCREENSHOTS//\"/}"
           FARGATE_CAPACITY="${INPUT_FARGATE_CAPACITY//\"/}"
@@ -238,6 +266,10 @@ jobs:
           require_non_negative_int "realqueue_browsers" "$REALQUEUE_BROWSERS"
           require_browser_preset "bypass_browsers" "$BYPASS_BROWSERS"
           require_browser_preset "realqueue_browsers" "$REALQUEUE_BROWSERS"
+          require_non_negative_int "queue_wait_minutes" "$QUEUE_WAIT_MINUTES"
+          require_queue_wait_preset "$QUEUE_WAIT_MINUTES"
+
+          QUEUE_WAIT_MS=$((QUEUE_WAIT_MINUTES * 60 * 1000))
 
           RUN_REALQUEUE=false
           RUN_ENTRY=false
@@ -302,6 +334,8 @@ jobs:
             echo "mode=$ARTILLERY_MODE"
             echo "gate_iso=$RESOLVED_GATE_ISO"
             echo "gate_tag=$GATE_TAG"
+            echo "queue_wait_minutes=$QUEUE_WAIT_MINUTES"
+            echo "queue_wait_ms=$QUEUE_WAIT_MS"
             echo "place_orders=$PLACE_ORDERS"
             echo "screenshots=$SCREENSHOTS"
             echo "fargate_capacity=$FARGATE_CAPACITY"
@@ -326,6 +360,7 @@ jobs:
             echo "- Target: $ARTILLERY_TARGET"
             echo "- Mode: $ARTILLERY_MODE"
             echo "- Gate: $RESOLVED_GATE_ISO"
+            echo "- Realqueue max wait: $QUEUE_WAIT_MINUTES minutes"
             echo "- Realqueue browsers: $REALQUEUE_BROWSERS across $REALQUEUE_WORKERS workers ($REALQUEUE_PER_WORKER each)"
             echo "- Bypass browsers: $BYPASS_BROWSERS across $BYPASS_WORKERS workers ($BYPASS_PER_WORKER each)"
             echo "- Place orders: $PLACE_ORDERS"
@@ -384,6 +419,7 @@ jobs:
             echo "- Environment: ${{ needs.plan.outputs.env }}"
             echo "- Target: ${{ needs.plan.outputs.target }}"
             echo "- Gate: ${{ needs.plan.outputs.gate_iso }}"
+            echo "- Realqueue max wait: ${{ needs.plan.outputs.queue_wait_minutes }} minutes"
             echo "- Realqueue browsers: ${{ needs.plan.outputs.realqueue_browsers }}"
             echo "- Bypass browsers: ${{ needs.plan.outputs.bypass_browsers }}"
             echo "- Place orders: ${{ needs.plan.outputs.place_orders }}"
@@ -470,6 +506,7 @@ jobs:
           ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
           REALQUEUE_BROWSERS: ${{ needs.plan.outputs.realqueue_browsers }}
           REALQUEUE_WORKERS: ${{ needs.plan.outputs.realqueue_workers }}
+          QUEUE_WAIT_MS: ${{ needs.plan.outputs.queue_wait_ms }}
           PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
           SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
           VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
@@ -493,7 +530,7 @@ jobs:
           SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_CART_ITEM_COUNT=3
-          ARTILLERY_QUEUE_WAIT_MS=1200000
+          ARTILLERY_QUEUE_WAIT_MS=$QUEUE_WAIT_MS
           EOF
 
           echo "config=loadtest/generated/browser-realqueue.yml" >> "$GITHUB_OUTPUT"
@@ -510,7 +547,7 @@ jobs:
       - name: Execute realqueue browsers on AWS Fargate
         uses: artilleryio/action-cli@v1
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.realqueue_workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/realqueue/${{ needs.plan.outputs.realqueue_browsers }}browsers/${{ needs.plan.outputs.realqueue_workers }}workers/gate-${{ needs.plan.outputs.gate_tag }}/orders-${{ needs.plan.outputs.place_orders }}/${{ needs.plan.outputs.fargate_capacity }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.realqueue_workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/realqueue/${{ needs.plan.outputs.realqueue_browsers }}browsers/${{ needs.plan.outputs.realqueue_workers }}workers/queuewait-${{ needs.plan.outputs.queue_wait_minutes }}m/gate-${{ needs.plan.outputs.gate_tag }}/orders-${{ needs.plan.outputs.place_orders }}/${{ needs.plan.outputs.fargate_capacity }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -550,6 +587,7 @@ jobs:
                   `Gate: ${{ needs.plan.outputs.gate_iso }}`,
                   `Browsers: ${{ needs.plan.outputs.realqueue_browsers }}`,
                   `Workers: ${{ needs.plan.outputs.realqueue_workers }}`,
+                  `Queue wait: ${{ needs.plan.outputs.queue_wait_minutes }} minutes`,
                   `Place orders: ${{ needs.plan.outputs.place_orders }}`,
                   '',
                   `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
