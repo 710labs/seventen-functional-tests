@@ -303,7 +303,7 @@ Important focused-rules behavior:
 - if the import fails after cleanup, the environment may temporarily have no published products until the next successful import
 
 ## Load Testing
-Use the manual [Load Test- Drop Simulation](https://github.com/710labs/seventen-functional-tests/actions/workflows/load-test-drop-simulation.yml) workflow for Queue-It drop simulation load on dev/stage. It uses the self-contained `loadtest/` Artillery suite and AWS Fargate to run HTTP entry traffic, optional HTTP funnel traffic, VIP-bypass browser users, and real Queue-It browser users. See [loadtest/README.md](loadtest/README.md) before running a full flip; Queue-It must be enabled on the target and the full 100 + 50 browser run needs enough Fargate quota headroom.
+Use the manual [Load Test- Drop Simulation](https://github.com/710labs/seventen-functional-tests/actions/workflows/load-test-drop-simulation.yml) workflow for Queue-It drop simulation load on dev/stage. It uses the self-contained `loadtest/` Artillery suite and AWS Fargate to run VIP-bypass browser users and real Queue-It browser users during `flip`; HTTP entry and HTTP funnel checks are explicit-only modes. See [loadtest/README.md](loadtest/README.md) before running a full flip; Queue-It must be enabled on the target and the full 100 + 50 browser run needs enough Fargate quota headroom.
 
 Use the manual [Load Tests - The List](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist.yml) workflow for browser load tests on AWS Fargate.
 

@@ -280,7 +280,6 @@ jobs:
           case "$ARTILLERY_MODE" in
             flip)
               RUN_REALQUEUE=true
-              RUN_ENTRY=true
               RUN_BYPASS=true
               ;;
             entry-only)

@@ -65,7 +65,7 @@ The workflow derives exact 10-browser Fargate workers for presets above 10, so t
 
 ## Modes
 
-- `flip`: starts realqueue browsers 5 minutes before `gate_iso`, then starts HTTP entry and bypass browsers at `gate_iso`.
+- `flip`: starts realqueue browsers 5 minutes before `gate_iso`, then starts bypass browsers at `gate_iso`. HTTP load is intentionally excluded from flip; use `entry-only`, `http-funnel`, or an external tool such as k6 for HTTP pressure.
 - `entry-only`: runs only the Queue-It HTTP entry redirect test.
 - `bypass-only`: runs only VIP-cookie browser users.
 - `realqueue-only`: runs only non-VIP browser users.
