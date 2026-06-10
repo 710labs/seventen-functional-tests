@@ -15,7 +15,7 @@ const DL_EXPIRATION_SELECTORS = [
 	'select[name="svntn_core_pxp_day"]',
 	'select[name="svntn_core_pxp_year"]',
 ]
-const DEFAULT_CART_ITEM_COUNT = 6
+const DEFAULT_CART_ITEM_COUNT = 4
 const CHECKOUT_BUTTON_SELECTOR = [
 	'.checkout-button',
 	'a.checkout-button',
@@ -471,10 +471,8 @@ async function CA(page, vuContext, events, test) {
 		return randomNumber < 0.5 ? 'Medical' : 'Recreational'
 	}
 
-	function getRandomFulfillmentType() {
-		const randomNumber = Math.random()
-
-		return randomNumber < 0.5 ? 'Pickup' : 'Delivery'
+	function getFulfillmentType() {
+		return 'Pickup'
 	}
 
 	const { step } = test
@@ -487,7 +485,7 @@ async function CA(page, vuContext, events, test) {
 	const userState = 'CA'
 	const userZip = '90016'
 	const usageType = getRandomUsageType()
-	const fulfillmentType = getRandomFulfillmentType()
+	const fulfillmentType = getFulfillmentType()
 	const itemCount = getCartCount()
 	const target = vuContext.vars.target || 'https://thelist-dev.710labs.com'
 

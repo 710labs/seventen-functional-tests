@@ -347,7 +347,7 @@ The standard workflow has four inputs:
 Notes:
 
 - The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
-- The standard workflow always runs the CA load flow and adds `6` products per cart.
+- The standard workflow always runs the CA load flow, uses Pickup fulfillment, and adds `4` products per cart.
 - The standard workflow injects the VIP queue-bypass cookie by default. Set `include_vip_cookie` to `no` when the queue should be part of the measured path.
 - Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly. This avoids fractional per-worker arrival rates, which can produce zero created VUsers in Fargate runs.
 - Keep smaller smoke runs in normal CI. Use the burst preset for manual or scheduled performance testing.
