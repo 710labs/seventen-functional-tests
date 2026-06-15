@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 const DEFAULT_TARGET = 'https://thelist-dev.710labs.com'
-const DEFAULT_CART_ITEM_COUNT = 3
+const DEFAULT_CART_ITEM_COUNT = 1
 const DEFAULT_QUEUE_WAIT_MS = 60 * 60 * 1000
 const DEFAULT_READY_WAIT_MS = 60 * 1000
 const DEFAULT_REGISTRATION_ADDRESS = '3377 S La Cienega Blvd, Los Angeles, CA 90016'
@@ -866,17 +866,6 @@ async function getAddToCartButtons(page, usageType) {
 	return page.locator(FALLBACK_ADD_TO_CART_SELECTOR)
 }
 
-function shuffle(values) {
-	const copy = values.slice()
-
-	for (let index = copy.length - 1; index > 0; index -= 1) {
-		const swapIndex = Math.floor(Math.random() * (index + 1))
-		;[copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]]
-	}
-
-	return copy
-}
-
 async function addItemsToCart(page, usageType, itemCount, step) {
 	await step('Add Items To Cart', async () => {
 		const addToCartButtons = await getAddToCartButtons(page, usageType)
@@ -893,7 +882,7 @@ async function addItemsToCart(page, usageType, itemCount, step) {
 			)
 		}
 
-		for (const index of shuffle(Array.from({ length: itemCount }, (_, itemIndex) => itemIndex))) {
+		for (let index = 0; index < itemCount; index += 1) {
 			await addToCartButtons.nth(index).click({ force: true })
 			await page.waitForTimeout(2000)
 		}
