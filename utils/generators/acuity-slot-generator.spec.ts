@@ -1,7 +1,29 @@
-import { Page, test } from '@playwright/test'
-const csvFilePath = 'utils/delivery-slots.csv'
+import { Locator, Page, test } from '@playwright/test'
+const csvFilePath = process.env.ACUITY_SLOT_FILE || 'utils/delivery-slots.csv'
 let csvToJson = require('convert-csv-to-json')
 const { Parser } = require('json2csv')
+
+const schedulingFrameSelector = '[data-test="scheduling"], [data-test="scheduling-iframe"]'
+
+async function schedulingLocator(page: Page, selector: string): Promise<Locator> {
+	if ((await page.locator(schedulingFrameSelector).count()) > 0) {
+		return page.frameLocator(schedulingFrameSelector).locator(selector)
+	}
+
+	return page.locator(selector)
+}
+
+async function schedulingText(
+	page: Page,
+	text: string,
+	options?: { exact?: boolean },
+): Promise<Locator> {
+	if ((await page.locator(schedulingFrameSelector).count()) > 0) {
+		return page.frameLocator(schedulingFrameSelector).getByText(text, options)
+	}
+
+	return page.getByText(text, options)
+}
 
 test.describe('Acuity Automation', () => {
 	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
@@ -25,7 +47,7 @@ test.describe('Acuity Automation', () => {
 	})
 
 	for (let index = 0; index < slots.length; index++) {
-		test(`Add Acuity Slots: ${slots[index].Partner_region_zone};${slots[index].AppointmentID};${slots[index].URL};${slots[index].DateOffered};${slots[index].CalendarName};${slots[index].DateOfferred};${slots[index].TimeOffered};${slots[index].LinkText};${slots[index].Availability} @helper`, async ({}, workerInfo) => {
+		test(`Add Acuity Slots: ${slots[index].Partner_region_zone};${slots[index].AppointmentID};${slots[index].URL};${slots[index].DateOffered};${slots[index].CalendarName};${slots[index].TimeOffered};${slots[index].LinkText};${slots[index].Availability} @helper`, async ({}, workerInfo) => {
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 			await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 				//Navigate to Zone
@@ -34,61 +56,51 @@ test.describe('Acuity Automation', () => {
 				await page.goto(slots[index].URL)
 
 				// Start Create Slot
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('#offer-class-btn')
-					.first()
-					.click()
+				const offerClassButton = await schedulingLocator(
+					page,
+					'#offer-class-btn, [data-testid="offer-class"]',
+				)
+				await offerClassButton.first().click()
 				// Select "Another Test Calendar"
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('select[name="calendar"]')
-					.selectOption({ label: slots[index].CalendarName })
+				const calendarSelect = await schedulingLocator(page, 'select[name="calendar"]')
+				await calendarSelect.selectOption({ label: slots[index].CalendarName })
 				// Date Selector
 				// Select Day of Month
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('#date-input')
-					.fill(`${slots[index].DateOffered}`)
+				const dateInput = await schedulingLocator(page, '#date-input')
+				await dateInput.fill(`${slots[index].DateOffered}`)
 
 				// Select Time
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('[placeholder="Ex\\. 9\\:00am"]')
-					.click()
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('[placeholder="Ex\\. 9\\:00am"]')
-					.fill(`${slots[index].TimeOffered}`)
+				const timeInput = await schedulingLocator(page, '[placeholder="Ex\\. 9\\:00am"]')
+				await timeInput.click()
+				await timeInput.fill(`${slots[index].TimeOffered}`)
 				// Save Class
+				const saveClassButton = await schedulingText(page, 'Save Class')
 				await Promise.all([
 					page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-					page.frameLocator('[data-test="scheduling"]').locator('text=Save Class').click(),
+					saveClassButton.click(),
 				])
 
 				//Edit Capacity
 				//Select Slot
 				//Prevent 12PM and 2PM collison
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.getByText(`${slots[index].LinkText}`, { exact: true })
-					.click()
+				const slotLink = await schedulingText(page, `${slots[index].LinkText}`, { exact: true })
+				await slotLink.click()
 
 				// Click Edit
-				await page.frameLocator('[data-test="scheduling"]').locator('text=Edit').click()
+				const editButton = await schedulingText(page, 'Edit')
+				await editButton.click()
 
 				// Edit Capacity Value
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('text=Max number of people for this class >> input[name="group_max"]')
-					.click()
-				await page
-					.frameLocator('[data-test="scheduling"]')
-					.locator('text=Max number of people for this class >> input[name="group_max"]')
-					.fill(slots[index].Availability)
+				const capacityInput = await schedulingLocator(
+					page,
+					'text=Max number of people for this class >> input[name="group_max"]',
+				)
+				await capacityInput.click()
+				await capacityInput.fill(slots[index].Availability)
 
 				// Save Slot
-				await page.frameLocator('[data-test="scheduling"]').locator('text=Save Changes').click()
+				const saveChangesButton = await schedulingText(page, 'Save Changes')
+				await saveChangesButton.click()
 			})
 		})
 	}

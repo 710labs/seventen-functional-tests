@@ -1,6 +1,42 @@
 name: Acuity Slot Automation - In Progress
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        description: Validate the selected CSV only, or upload slots to Acuity.
+        required: true
+        default: validate_only
+        options:
+          - validate_only
+          - upload
+      slot_file:
+        type: string
+        description: Committed CSV path under utils/. Ignored when slot_file_url is set.
+        required: false
+        default: utils/delivery-slots.csv
+      slot_file_url:
+        type: string
+        description: Optional direct HTTPS raw CSV URL. Use only for emergency runs.
+        required: false
+        default: ''
+      workers:
+        type: choice
+        description: Number of parallel Playwright workers for upload mode.
+        required: true
+        default: '3'
+        options:
+          - '1'
+          - '2'
+          - '3'
+      slot_grep:
+        type: string
+        description: Optional regex to target a specific slot after Acuity Automation.
+        required: false
+        default: ''
+concurrency:
+  group: acuity-slot-automation
+  cancel-in-progress: false
 jobs:
   acuity-slot-automation:
     timeout-minutes: 60
@@ -27,12 +63,82 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Prepare Acuity slot CSV
+        env:
+          SLOT_FILE: ${{ inputs.slot_file }}
+          SLOT_FILE_URL: ${{ inputs.slot_file_url }}
+        run: |
+          set -euo pipefail
+
+          selected_file=".acuity-input/selected-delivery-slots.csv"
+          mkdir -p "$(dirname "$selected_file")"
+
+          if [[ -n "$SLOT_FILE_URL" ]]; then
+            case "$SLOT_FILE_URL" in
+              https://*) ;;
+              *)
+                echo "::error::slot_file_url must be a direct HTTPS URL to raw CSV bytes."
+                exit 1
+                ;;
+            esac
+
+            curl --proto '=https' --tlsv1.2 --fail --location --show-error --silent \
+              --retry 3 --retry-all-errors --max-time 60 \
+              --output "$selected_file" "$SLOT_FILE_URL"
+            echo "ACUITY_SLOT_SOURCE=$SLOT_FILE_URL" >> "$GITHUB_ENV"
+          else
+            SLOT_FILE="${SLOT_FILE:-utils/delivery-slots.csv}"
+            case "$SLOT_FILE" in
+              utils/*.csv) ;;
+              *)
+                echo "::error::slot_file must be a CSV file under utils/."
+                exit 1
+                ;;
+            esac
+
+            if [[ "$SLOT_FILE" == *".."* ]]; then
+              echo "::error::slot_file must not contain path traversal."
+              exit 1
+            fi
+
+            cp "$SLOT_FILE" "$selected_file"
+            echo "ACUITY_SLOT_SOURCE=$SLOT_FILE" >> "$GITHUB_ENV"
+          fi
+
+          echo "ACUITY_SLOT_FILE=$selected_file" >> "$GITHUB_ENV"
+      - name: Validate Acuity slot CSV
+        run: node scripts/validate-acuity-slots.js "$ACUITY_SLOT_FILE"
+      - name: Upload selected Acuity CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acuity-selected-delivery-slots
+          path: .acuity-input/selected-delivery-slots.csv
+          if-no-files-found: ignore
       - name: Install Playwright
+        if: inputs.mode == 'upload'
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run helper:acuityslots
+        if: inputs.mode == 'upload'
+        env:
+          SLOT_GREP: ${{ inputs.slot_grep }}
+          WORKERS: ${{ inputs.workers }}
+        run: |
+          set -euo pipefail
+
+          grep_pattern="Acuity Automation"
+          if [[ -n "$SLOT_GREP" ]]; then
+            grep_pattern="Acuity Automation.*$SLOT_GREP"
+          fi
+
+          npx playwright test \
+            --grep "$grep_pattern" \
+            --config=configs/automation.config.ts \
+            --project="Desktop Chrome" \
+            --workers="$WORKERS" \
+            --reporter=list,html
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() && inputs.mode == 'upload'
         with:
           name: playwright-report
           path: playwright-report/
