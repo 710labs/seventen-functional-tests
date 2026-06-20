@@ -21,6 +21,7 @@ const workspace = path.resolve(process.env.GITHUB_WORKSPACE || process.cwd())
 const resolvedPath = path.resolve(workspace, inputPath)
 const relativePath = path.relative(workspace, resolvedPath)
 const source = process.env.ACUITY_SLOT_SOURCE || inputPath
+const shouldNormalizeSlotFile = process.env.ACUITY_NORMALIZE_SLOT_FILE === 'true'
 
 function isInsideWorkspace(relative) {
 	return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
@@ -59,6 +60,30 @@ function parseDate(value) {
 	}
 
 	return date
+}
+
+function normalizeRowLevelQuotes(value) {
+	const lines = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+	let normalizedRows = 0
+
+	const normalizedLines = lines.map((line, index) => {
+		if (index === 0 || line.trim() === '') {
+			return line
+		}
+
+		const trimmed = line.trim()
+		if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.includes(';')) {
+			normalizedRows += 1
+			return trimmed.slice(1, -1).replace(/""/g, '"')
+		}
+
+		return line
+	})
+
+	return {
+		content: normalizedLines.join('\n'),
+		normalizedRows,
+	}
 }
 
 function appendSummary(lines) {
@@ -104,9 +129,22 @@ async function main() {
 		fail(`Acuity slot CSV path is not a file: ${inputPath}`)
 	}
 
-	const content = fs.readFileSync(resolvedPath, 'utf8')
+	let content = fs.readFileSync(resolvedPath, 'utf8')
 	if (!content.trim()) {
 		fail(`Acuity slot CSV is empty: ${inputPath}`)
+	}
+
+	const normalization = normalizeRowLevelQuotes(content)
+	if (normalization.normalizedRows > 0) {
+		if (!shouldNormalizeSlotFile) {
+			fail('Acuity slot CSV has row-level quoted records.', [
+				`${normalization.normalizedRows} row(s) appear wrapped in outer quotes.`,
+				'Remove row-level quotes or set ACUITY_NORMALIZE_SLOT_FILE=true for a temporary workflow copy.',
+			])
+		}
+
+		content = normalization.content
+		fs.writeFileSync(resolvedPath, content)
 	}
 
 	const headerLine = content.split(/\r?\n/, 1)[0].replace(/^\uFEFF/, '')
@@ -213,6 +251,7 @@ async function main() {
 		`- Date range: ${firstDate} to ${lastDate}`,
 		`- Zones: ${sortedZones.length}`,
 		`- Calendars: ${sortedCalendars.join(', ')}`,
+		`- Normalized row-level quotes: ${normalization.normalizedRows}`,
 		'',
 		'<details><summary>Zone list</summary>',
 		'',

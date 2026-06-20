@@ -107,6 +107,8 @@ jobs:
 
           echo "ACUITY_SLOT_FILE=$selected_file" >> "$GITHUB_ENV"
       - name: Validate Acuity slot CSV
+        env:
+          ACUITY_NORMALIZE_SLOT_FILE: 'true'
         run: node scripts/validate-acuity-slots.js "$ACUITY_SLOT_FILE"
       - name: Upload selected Acuity CSV
         if: always()
