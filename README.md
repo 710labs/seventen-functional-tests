@@ -309,7 +309,7 @@ Use the manual [Load Tests - The List](https://github.com/710labs/seventen-funct
 
 The standard workflow has four inputs:
 
-- env: `dev` or `stage`
+- env: `dev`, `stage`, or `prod-ca`
 - load_pattern: `concurrent_burst` or `total_spread`
 - load_size: `1`, `5`, `10`, `25`, `50`, `75`, `100`, `150`, `200`, or `300`
 - include_vip_cookie: `yes` or `no`; defaults to `yes` and injects `vipChecker=3` to bypass the queue
@@ -346,7 +346,7 @@ The standard workflow has four inputs:
 
 Notes:
 
-- The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`.
+- The workflow derives target URL from `env`: dev uses `https://thelist-dev.710labs.com`; stage uses `https://thelist-stage.710labs.com`; prod-ca uses `https://thelist.710labs.com`.
 - The standard workflow always runs the CA load flow, uses Pickup fulfillment, and adds `4` products per cart.
 - The standard workflow injects the VIP queue-bypass cookie by default. Set `include_vip_cookie` to `no` when the queue should be part of the measured path.
 - Multi-worker burst presets derive exact per-worker `maxVusers` and `arrivalRate`; the resolver fails fast if a preset cannot divide evenly. This avoids fractional per-worker arrival rates, which can produce zero created VUsers in Fargate runs.

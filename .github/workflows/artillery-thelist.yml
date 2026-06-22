@@ -4,11 +4,12 @@ on:
     inputs:
       env:
         type: choice
-        description: 'Environment (prod intentionally excluded to avoid production load tests)'
+        description: 'Environment'
         required: true
         options:
           - dev
           - stage
+          - prod-ca
       load_pattern:
         type: choice
         description: 'Load pattern'
@@ -76,6 +77,9 @@ jobs:
               ;;
             stage)
               ARTILLERY_TARGET="https://thelist-stage.710labs.com"
+              ;;
+            prod-ca)
+              ARTILLERY_TARGET="https://thelist.710labs.com"
               ;;
             *)
               echo "Unsupported env: $ARTILLERY_ENV" >&2
