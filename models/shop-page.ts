@@ -6,6 +6,10 @@ type GoToCartOptions = {
 	requireItems?: boolean
 }
 
+type AddProductsToCartOptions = {
+	exactItemCount?: boolean
+}
+
 type CartLoadState = {
 	hasCartItem: boolean
 	hasCheckoutButton: boolean
@@ -108,6 +112,31 @@ export class ShopPage {
 
 	async randomizeCartItems() {
 		return Math.random() * (2 - -2 + -2)
+	}
+
+	private async getStorefrontCartItemCount() {
+		const cartLinks = this.page.locator(
+			'a[href*="/cart"], a.cart-contents, .cart-contents, .wpse-cart-count, .cart-count',
+		)
+		const linkCount = await cartLinks.count().catch(() => 0)
+
+		for (let index = 0; index < linkCount; index += 1) {
+			const cartLink = cartLinks.nth(index)
+			const isVisible = await cartLink.isVisible().catch(() => false)
+
+			if (!isVisible) {
+				continue
+			}
+
+			const text = ((await cartLink.textContent().catch(() => '')) || '').replace(/\s+/g, ' ').trim()
+			const parenthesizedCount = text.match(/\((\d+)\)/)
+
+			if (parenthesizedCount) {
+				return Number(parenthesizedCount[1])
+			}
+		}
+
+		return 0
 	}
 
 	private getCartPath() {
@@ -1208,6 +1237,7 @@ export class ShopPage {
 		mobile = false,
 		fulfillment = 'Delivery',
 		usage: TestUsageType = 'recreational',
+		options: AddProductsToCartOptions = {},
 	) {
 		await test.step('Navigate to Shop page', async () => {
 			await this.page.waitForTimeout(3000)
@@ -1218,11 +1248,17 @@ export class ShopPage {
 			await this.ensureFulfillmentSelected(fulfillment)
 		})
 		await test.step('Add Products to Cart', async () => {
-			itemCount = itemCount + (await this.randomizeCartItems())
+			const targetItemCount = options.exactItemCount
+				? itemCount
+				: itemCount + (await this.randomizeCartItems())
 			await this.page.waitForSelector(storefrontAddToCartSelector)
 			const products = this.getAddableProductCards(usage)
 
-			for (let i = 0; i < itemCount; i++) {
+			for (let i = 0; i < targetItemCount; i++) {
+				if (options.exactItemCount && (await this.getStorefrontCartItemCount()) >= itemCount) {
+					break
+				}
+
 				await test.step(`Add Products # ${i + 1}`, async () => {
 					await expect(products.nth(i)).toBeVisible({ timeout: 5000 })
 					var productCard = products.nth(i)

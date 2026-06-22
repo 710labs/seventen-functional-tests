@@ -62,7 +62,9 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, 'Delivery', 'recreational')
+			await shopPage.addProductsToCart(orderQuanity, mobile, 'Delivery', 'recreational', {
+				exactItemCount: true,
+			})
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
