@@ -7,7 +7,7 @@ import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { faker } from '@faker-js/faker'
-import { writeFileSync } from 'fs'
+import { appendFileSync, writeFileSync } from 'fs'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
@@ -16,7 +16,6 @@ test.describe('Basic Acceptance Tests CA', () => {
 	var cartTotals: any
 
 	test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
-		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		await context.addCookies([
 			{
 				name: 'vipChecker',
@@ -75,9 +74,10 @@ test.describe('Basic Acceptance Tests CA', () => {
 		await test.step('Comfirm Order Details on /order-received', async () => {
 			orderNumber = await orderReceived.getOrderNumber()
 			await expect(orderNumber, 'Failed to create order').not.toBeNull()
-			//write order number to file to use for cancel order via API
+			// Record every project order so prod cleanup can cancel both desktop and mobile orders.
+			appendFileSync('order_ids.txt', `${orderNumber}\n`, { encoding: 'utf-8' })
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
-			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
+			console.log(`✅ Wrote order_id.txt and appended order_ids.txt → ${orderNumber}`)
 		})
 	})
 })

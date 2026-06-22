@@ -32,6 +32,7 @@ jobs:
     # expose the order-id and split-order-id out to downstream jobs
     outputs:
       order-id: ${{ steps.extract.outputs.orderID }}
+      order_ids_json: ${{ steps.extract.outputs.order_ids_json }}
       split-order-id: ${{ steps.extract-split.outputs.splitOrderID }}
 
     steps:
@@ -59,19 +60,33 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 3
-      - name: Read order_id.txt
+      - name: Read order_ids.txt
+        if: always()
         id: extract
         run: |
-          if [[ -f order_id.txt ]]; then
-            ORDER_ID=$(<order_id.txt)
-            echo "✅ Found Order ID: $ORDER_ID"
-            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
+          if [[ -f order_ids.txt ]]; then
+            tr -d '\r' < order_ids.txt | sed '/^[[:space:]]*$/d' | sort -u > /tmp/order_ids_flat.txt
+          elif [[ -f order_id.txt ]]; then
+            tr -d '\r' < order_id.txt | sed '/^[[:space:]]*$/d' | sort -u > /tmp/order_ids_flat.txt
           else
-            echo "⚠️  order_id.txt not found; setting empty orderID"
-            # still emit the output key, just blank
-            echo "orderID=" >> $GITHUB_OUTPUT
+            : > /tmp/order_ids_flat.txt
+          fi
+
+          if [[ -s /tmp/order_ids_flat.txt ]]; then
+            ORDER_ID=$(head -n 1 /tmp/order_ids_flat.txt)
+            COUNT=$(wc -l < /tmp/order_ids_flat.txt | tr -d ' ')
+            echo "Found $COUNT Order ID(s):"
+            cat /tmp/order_ids_flat.txt
+            JSON=$(node -e "const fs=require('fs'); const ids=fs.readFileSync('/tmp/order_ids_flat.txt','utf8').split(/\r?\n/).filter(Boolean); process.stdout.write(JSON.stringify(ids));")
+            echo "orderID=$ORDER_ID" >> "$GITHUB_OUTPUT"
+            echo "order_ids_json=$JSON" >> "$GITHUB_OUTPUT"
+          else
+            echo "order_ids.txt not found; setting empty order outputs"
+            echo "orderID=" >> "$GITHUB_OUTPUT"
+            echo "order_ids_json=[]" >> "$GITHUB_OUTPUT"
           fi
       - name: Read split_order_id.txt
+        if: always()
         id: extract-split
         run: |
           if [[ -f split_order_id.txt ]]; then
@@ -97,13 +112,19 @@ jobs:
     steps:
       - name: Cancel test order via WooCommerce API
         # only call if we actually got an ID
-        if: ${{ needs.smoke.outputs.order-id != '' }}
+        if: ${{ needs.smoke.outputs.order_ids_json != '' && needs.smoke.outputs.order_ids_json != '[]' }}
+        env:
+          ORDER_IDS_JSON: ${{ needs.smoke.outputs.order_ids_json }}
         run: |
-          echo "🛠 Cancelling order ${{ needs.smoke.outputs.order-id }}…"
-          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke.outputs.order-id }}" \
-            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
-            -H "Content-Type: application/json" \
-            -d '{"status":"cancelled"}'
+          node -e "JSON.parse(process.env.ORDER_IDS_JSON).forEach(id => console.log(id))" > /tmp/order_ids_to_cancel.txt
+          while IFS= read -r ORDER_ID; do
+            [ -n "$ORDER_ID" ] || continue
+            echo "Cancelling order ${ORDER_ID}..."
+            curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${ORDER_ID}" \
+              -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
+              -H "Content-Type: application/json" \
+              -d '{"status":"cancelled"}'
+          done < /tmp/order_ids_to_cancel.txt
       - name: Cancel split order via WooCommerce API
         # only call if we actually got an ID
         if: ${{ needs.smoke.outputs.split-order-id != '' }}

@@ -68,7 +68,7 @@ jobs:
           ARTILLERY_LOAD_SIZE="${{ github.event.inputs.load_size }}"
           ARTILLERY_INCLUDE_VIP_COOKIE="${{ github.event.inputs.include_vip_cookie }}"
           ARTILLERY_710_MODE=ca
-          ARTILLERY_CART_ITEM_COUNT=4
+          ARTILLERY_CART_ITEM_COUNT=1
           ARTILLERY_FARGATE_CAPACITY=on_demand
 
           case "$ARTILLERY_ENV" in

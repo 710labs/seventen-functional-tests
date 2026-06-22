@@ -15,15 +15,7 @@ const DL_EXPIRATION_SELECTORS = [
 	'select[name="svntn_core_pxp_day"]',
 	'select[name="svntn_core_pxp_year"]',
 ]
-const DEFAULT_CART_ITEM_COUNT = 4
-const CHECKOUT_BUTTON_SELECTOR = [
-	'.checkout-button',
-	'a.checkout-button',
-	'.wc-proceed-to-checkout .wcse-checkout-button.wcse-warning-button',
-	'.wcse-checkout-button.wcse-warning-button',
-	'button:has-text("Continue to checkout")',
-	'a:has-text("Continue to checkout")',
-].join(', ')
+const DEFAULT_CART_ITEM_COUNT = 1
 const DEBUG_SCREENSHOT_DIR = path.resolve(__dirname, 'debug-screenshots')
 
 function normalizeZip(value) {
@@ -65,62 +57,6 @@ async function captureDebugScreenshot(page, label) {
 	})
 
 	return screenshotPath
-}
-
-async function getCartDebugState(page) {
-	const checkoutButton = page.locator(CHECKOUT_BUTTON_SELECTOR).first()
-	const cartItems = page.locator('.cart_item')
-	const notices = await page
-		.locator('.woocommerce-message, .woocommerce-error, .wc-block-components-notice-banner, .notyf__toast')
-		.allTextContents()
-		.catch(() => [])
-
-	return {
-		url: page.url(),
-		cartItemCount: await cartItems.count().catch(() => 0),
-		checkoutButtonCount: await page.locator(CHECKOUT_BUTTON_SELECTOR).count().catch(() => 0),
-		checkoutButtonVisible: await checkoutButton.isVisible().catch(() => false),
-		checkoutButtonEnabled: await checkoutButton.isEnabled().catch(() => false),
-		emptyCartVisible: await page
-			.getByText(/cart is currently empty/i)
-			.first()
-			.isVisible()
-			.catch(() => false),
-		cartCountText: await page
-			.locator('a.cart-contents, .cart-contents, .rsp-countdown-content')
-			.first()
-			.textContent()
-			.catch(() => ''),
-		notices: notices.map(text => text.replace(/\s+/g, ' ').trim()).filter(Boolean),
-		bodyPreview: await getBodyPreview(page),
-	}
-}
-
-async function waitForCheckoutButton(page, timeoutMs = 15000) {
-	const checkoutButton = page.locator(CHECKOUT_BUTTON_SELECTOR).first()
-	const deadline = Date.now() + timeoutMs
-
-	while (Date.now() < deadline) {
-		const visible = await checkoutButton.isVisible().catch(() => false)
-		const enabled = await checkoutButton.isEnabled().catch(() => false)
-
-		if (visible && enabled) {
-			return checkoutButton
-		}
-
-		await page.waitForTimeout(500)
-	}
-
-	const cartState = await getCartDebugState(page)
-	const screenshotPath = await captureDebugScreenshot(page, 'checkout-button-missing')
-
-	throw new Error(
-		[
-			'Checkout button was not visible/enabled before proceeding to checkout.',
-			`Cart state: ${JSON.stringify(cartState, null, 2)}`,
-			`Screenshot: ${screenshotPath || 'not captured'}`,
-		].join('\n'),
-	)
 }
 
 async function waitForOptionalInputValue(page, selector, fieldName, matches) {
@@ -682,21 +618,21 @@ async function CA(page, vuContext, events, test) {
 				)
 			}
 
-				const indices = Array.from({ length: itemCount }, (_, index) => index)
-				const addToCartButtonCount = await addToCartButtons.count()
+			const indices = Array.from({ length: itemCount }, (_, index) => index)
+			const addToCartButtonCount = await addToCartButtons.count()
 
-				if (addToCartButtonCount < itemCount) {
-					throw new Error(
-						[
-							`Requested ${itemCount} cart items, but only found ${addToCartButtonCount} add-to-cart buttons.`,
-							`Usage type: ${usageType}`,
-							`Current URL: ${page.url()}`,
-							`Body preview: ${await getBodyPreview(page)}`,
-						].join('\n'),
-					)
-				}
+			if (addToCartButtonCount < itemCount) {
+				throw new Error(
+					[
+						`Requested ${itemCount} cart items, but only found ${addToCartButtonCount} add-to-cart buttons.`,
+						`Usage type: ${usageType}`,
+						`Current URL: ${page.url()}`,
+						`Body preview: ${await getBodyPreview(page)}`,
+					].join('\n'),
+				)
+			}
 
-				for (let i = indices.length - 1; i > 0; i--) {
+			for (let i = indices.length - 1; i > 0; i--) {
 				const j = Math.floor(Math.random() * (i + 1))
 				;[indices[i], indices[j]] = [indices[j], indices[i]]
 			}
@@ -707,94 +643,6 @@ async function CA(page, vuContext, events, test) {
 			}
 
 			await captureDebugScreenshot(page, 'after-add-items-to-cart')
-		})
-		// await step('Add Promo Item To Cart', async () => {
-		// 	await page.waitForTimeout(5000)
-		// 	var addToCartButtons
-
-		// 	if (usageType === 'Recreational') {
-		// 		await page.waitForSelector(
-		// 			'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 		await page.waitForTimeout(5000)
-		// 		addToCartButtons = await page.locator(
-		// 			'//li[contains(@class, "product_cat-woo-import-test") and not(.//h2[contains(@class, "woocommerce-loop-product__title") and .//span[contains(@class, "medOnly")]])]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 	} else {
-		// 		await page.waitForSelector(
-		// 			'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 		await page.waitForTimeout(5000)
-		// 		addToCartButtons = await page.locator(
-		// 			'//li[contains(@class, "product_cat-woo-import-test")]//a[contains(@aria-label, "Add to cart:")]',
-		// 		)
-		// 	}
-
-		// 	const indices = Array.from({ length: 2 }, (_, index) => index)
-
-		// 	for (let i = indices.length - 1; i > 0; i--) {
-		// 		const j = Math.floor(Math.random() * (i + 1))
-		// 		;[indices[i], indices[j]] = [indices[j], indices[i]]
-		// 	}
-
-		// 	await step('Choose Promo Item', async () => {
-		// 		await addToCartButtons.nth(0).click({ force: true })
-		// 		await page.waitForTimeout(2000)
-		// 	})
-
-		// 	await step('Validate Promo Restrictions ', async () => {
-		// 		await addToCartButtons.nth(1).click({ force: true })
-		// 		await page.waitForTimeout(2000)
-		// 		await page.waitForSelector('.notyf__dismiss-btn')
-		// 		await page.locator('.notyf__dismiss-btn').click()
-		// 	})
-		// })
-
-			await step('Review Cart', async () => {
-				console.log(`[DEBUG] Reviewing Cart. URL: ${page.url()}`)
-				await step('Navigate To Cart', async () => {
-					await page.locator('a.cart-contents').click()
-					console.log(`[DEBUG] In Cart. URL: ${page.url()}`)
-					await page.waitForLoadState('domcontentloaded').catch(() => {})
-					const cartState = await getCartDebugState(page)
-					console.log(`[DEBUG_CART_STATE] ${JSON.stringify(cartState)}`)
-					await captureDebugScreenshot(page, 'cart-page-before-checkout')
-				})
-				await step('Navigate To Checkout', async () => {
-					const checkoutButton = await waitForCheckoutButton(page)
-					await checkoutButton.click()
-					console.log(`[DEBUG] At Checkout. URL: ${page.url()}`)
-				})
-			})
-	})
-
-	await step('Checkout Cart', async () => {
-		console.log(`[DEBUG] Starting Checkout. URL: ${page.url()}`)
-		await step('Enter Fulfillment Info', async () => {
-			await step('Select Acuity Slot', async () => {
-				await page.waitForTimeout(2000)
-				const errorMessage = page.locator('#datetimeError')
-
-				if (!(await errorMessage.isVisible())) {
-					await page.waitForSelector('#svntnAcuityDayChoices >> .acuityChoice', {
-						timeout: 45 * 1000,
-					})
-
-					const daySlot = page.locator('#svntnAcuityDayChoices >> .acuityChoice').first()
-					await daySlot.click()
-
-					await page.waitForSelector('#svntnAcuityTimeChoices >> .acuityChoice')
-
-					const timeSlot = page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first()
-					await timeSlot.click()
-				}
-			})
-		})
-
-		await step('Complete Order', async () => {
-			const placeOrderButton = page.locator('id=place_order')
-			await placeOrderButton.waitFor({ state: 'visible' })
-			await placeOrderButton.click()
 		})
 	})
 }

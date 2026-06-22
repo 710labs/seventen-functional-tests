@@ -29,6 +29,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
     outputs:
       order-id: ${{ steps.extract.outputs.orderID }}
+      order_ids_json: ${{ steps.extract.outputs.order_ids_json }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,25 +52,41 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 3
-      - name: Read order_id.txt
+      - name: Read order_ids.txt
         if: always()
         id: extract
         run: |
-          if [[ -f order_id.txt ]]; then
-            ORDER_ID=$(<order_id.txt)
-            echo "✅ Found Order ID: $ORDER_ID"
-            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
+          if [[ -f order_ids.txt ]]; then
+            tr -d '\r' < order_ids.txt | sed '/^[[:space:]]*$/d' | sort -u > /tmp/order_ids_flat.txt
+          elif [[ -f order_id.txt ]]; then
+            tr -d '\r' < order_id.txt | sed '/^[[:space:]]*$/d' | sort -u > /tmp/order_ids_flat.txt
           else
-            echo "⚠️  order_id.txt not found; setting empty orderID"
-            # still emit the output key, just blank
-            echo "orderID=" >> $GITHUB_OUTPUT
+            : > /tmp/order_ids_flat.txt
+          fi
+
+          if [[ -s /tmp/order_ids_flat.txt ]]; then
+            ORDER_ID=$(head -n 1 /tmp/order_ids_flat.txt)
+            COUNT=$(wc -l < /tmp/order_ids_flat.txt | tr -d ' ')
+            echo "Found $COUNT Order ID(s):"
+            cat /tmp/order_ids_flat.txt
+            JSON=$(node -e "const fs=require('fs'); const ids=fs.readFileSync('/tmp/order_ids_flat.txt','utf8').split(/\r?\n/).filter(Boolean); process.stdout.write(JSON.stringify(ids));")
+            echo "orderID=$ORDER_ID" >> "$GITHUB_OUTPUT"
+            echo "order_ids_json=$JSON" >> "$GITHUB_OUTPUT"
+          else
+            echo "order_ids.txt not found; setting empty order outputs"
+            echo "orderID=" >> "$GITHUB_OUTPUT"
+            echo "order_ids_json=[]" >> "$GITHUB_OUTPUT"
           fi
   cleanup:
     name: Cleanup Cancel Test Order
     needs: smoke-test-prod-ca
     runs-on: ubuntu-latest
     # always run this job, even if `smoke` failed
-    if: always()
+    if: ${{ always() && needs.smoke-test-prod-ca.outputs.order_ids_json != '' && needs.smoke-test-prod-ca.outputs.order_ids_json != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        order_id: ${{ fromJson(needs.smoke-test-prod-ca.outputs.order_ids_json) }}
     env:
       WC_CONSUMER_KEY: ${{ secrets.WOO_CA_PROD_KEY }}
       WC_CONSUMER_SECRET: ${{ secrets.WOO_CA_PROD_SECRET }}
@@ -77,11 +94,9 @@ jobs:
 
     steps:
       - name: Cancel test order via WooCommerce API
-        # only call if we actually got an ID
-        if: ${{ needs.smoke-test-prod-ca.outputs.order-id != '' }}
         run: |
-          echo "🛠 Cancelling order ${{ needs.smoke-test-prod-ca.outputs.order-id }}…"
-          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke-test-prod-ca.outputs.order-id }}" \
+          echo "Cancelling order ${{ matrix.order_id }}..."
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ matrix.order_id }}" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
