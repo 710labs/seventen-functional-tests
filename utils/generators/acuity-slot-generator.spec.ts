@@ -65,11 +65,37 @@ async function failWithPageContext(
 	throw new Error(`${message} Current URL: ${page.url()}. Page title: ${title}.${causeMessage}`)
 }
 
+async function loginPageMessage(page: Page): Promise<string | null> {
+	if (!isSquarespaceLoginUrl(page.url())) {
+		return null
+	}
+
+	const bodyText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => '')
+	const normalizedText = bodyText.replace(/\s+/g, ' ').trim()
+	if (!normalizedText) {
+		return null
+	}
+
+	const hasLoginProblem = [
+		'captcha',
+		'incorrect',
+		'invalid',
+		'try again',
+		'two-factor',
+		'unable to log in',
+		'verification',
+	].some((fragment) => normalizedText.toLowerCase().includes(fragment))
+
+	return hasLoginProblem ? normalizedText.slice(0, 300) : null
+}
+
 async function assertAcuityAccess(page: Page, context: string): Promise<void> {
 	if (isSquarespaceLoginUrl(page.url())) {
+		const pageMessage = await loginPageMessage(page)
+		const message = pageMessage ? ` Login page message: ${pageMessage}` : ''
 		await failWithPageContext(
 			page,
-			`${context}: Acuity login did not complete or the session expired.`,
+			`${context}: Acuity login did not complete or the session expired.${message}`,
 		)
 	}
 
@@ -81,16 +107,19 @@ async function assertAcuityAccess(page: Page, context: string): Promise<void> {
 	}
 }
 
-async function waitForLoginRedirect(page: Page): Promise<void> {
-	try {
-		await page.waitForURL((url) => !isSquarespaceLoginUrl(url.toString()), {
-			timeout: 60 * 1000,
+async function waitForLoginAttempt(page: Page): Promise<void> {
+	await page
+		.waitForURL((url) => !isSquarespaceLoginUrl(url.toString()), {
+			timeout: 30 * 1000,
 		})
-	} catch (error) {
-		await failWithPageContext(page, 'Acuity login did not complete after submitting credentials.', error)
-	}
+		.catch(() => undefined)
 
-	await assertAcuityAccess(page, 'Acuity login')
+	await page.waitForLoadState('networkidle', { timeout: 10 * 1000 }).catch(() => undefined)
+
+	const pageMessage = await loginPageMessage(page)
+	if (pageMessage) {
+		await failWithPageContext(page, `Acuity login was rejected. Login page message: ${pageMessage}`)
+	}
 }
 
 async function openAcuitySlotPage(page: Page, slotUrl: string): Promise<void> {
@@ -133,7 +162,7 @@ test.describe('Acuity Automation', () => {
 			await page.locator('[placeholder="Password"]').clear()
 			await page.locator('[placeholder="Password"]').fill(acuityPassword)
 			await page.locator('[data-test="login-button"]').click()
-			await waitForLoginRedirect(page)
+			await waitForLoginAttempt(page)
 			await openAcuitySlotPage(page, slots[0].URL)
 			await waitForOfferClassButton(page, slots[0].URL)
 		})
