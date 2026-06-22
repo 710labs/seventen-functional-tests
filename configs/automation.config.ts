@@ -3,6 +3,7 @@ import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-by
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const AUTOMATION_BASE_URL = 'https://thelist-dev.710labs.com'
+const captureAcuityFailureArtifacts = process.env.ACUITY_UPLOAD_CI_ARTIFACTS === 'true'
 
 const config: PlaywrightTestConfig = {
 	testDir: './../utils/generators/',
@@ -29,9 +30,9 @@ const config: PlaywrightTestConfig = {
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'off',
+		trace: captureAcuityFailureArtifacts ? 'retain-on-failure' : 'off',
 		video: 'off',
-		screenshot: 'off',
+		screenshot: captureAcuityFailureArtifacts ? 'only-on-failure' : 'off',
 	},
 	projects: [
 		{

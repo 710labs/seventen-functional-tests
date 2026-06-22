@@ -4,6 +4,7 @@ let csvToJson = require('convert-csv-to-json')
 const { Parser } = require('json2csv')
 
 const schedulingFrameSelector = '[data-test="scheduling"], [data-test="scheduling-iframe"]'
+const offerClassButtonSelector = '#offer-class-btn, [data-testid="offer-class"]'
 
 async function schedulingLocator(page: Page, selector: string): Promise<Locator> {
 	if ((await page.locator(schedulingFrameSelector).count()) > 0) {
@@ -25,6 +26,96 @@ async function schedulingText(
 	return page.getByText(text, options)
 }
 
+function requireEnv(name: string): string {
+	const value = process.env[name]
+	if (!value) {
+		throw new Error(`${name} is required to run the Acuity upload helper.`)
+	}
+
+	return value
+}
+
+function isSquarespaceLoginUrl(url: string): boolean {
+	const normalizedUrl = url.toLowerCase()
+	return (
+		normalizedUrl.includes('login.squarespace.com') ||
+		(normalizedUrl.includes('squarespace.com') && normalizedUrl.includes('/login'))
+	)
+}
+
+function isAuthChallengeUrl(url: string): boolean {
+	const normalizedUrl = url.toLowerCase()
+	return [
+		'captcha',
+		'challenge',
+		'mfa',
+		'security-check',
+		'two-factor',
+		'verification',
+	].some((fragment) => normalizedUrl.includes(fragment))
+}
+
+async function failWithPageContext(
+	page: Page,
+	message: string,
+	cause?: unknown,
+): Promise<never> {
+	const title = await page.title().catch(() => 'unavailable')
+	const causeMessage = cause instanceof Error ? ` ${cause.message}` : ''
+	throw new Error(`${message} Current URL: ${page.url()}. Page title: ${title}.${causeMessage}`)
+}
+
+async function assertAcuityAccess(page: Page, context: string): Promise<void> {
+	if (isSquarespaceLoginUrl(page.url())) {
+		await failWithPageContext(
+			page,
+			`${context}: Acuity login did not complete or the session expired.`,
+		)
+	}
+
+	if (isAuthChallengeUrl(page.url())) {
+		await failWithPageContext(
+			page,
+			`${context}: Squarespace returned an authentication challenge that cannot be completed in CI.`,
+		)
+	}
+}
+
+async function waitForLoginRedirect(page: Page): Promise<void> {
+	try {
+		await page.waitForURL((url) => !isSquarespaceLoginUrl(url.toString()), {
+			timeout: 60 * 1000,
+		})
+	} catch (error) {
+		await failWithPageContext(page, 'Acuity login did not complete after submitting credentials.', error)
+	}
+
+	await assertAcuityAccess(page, 'Acuity login')
+}
+
+async function openAcuitySlotPage(page: Page, slotUrl: string): Promise<void> {
+	await page.goto(slotUrl, { waitUntil: 'domcontentloaded' })
+	await page.waitForLoadState('networkidle', { timeout: 10 * 1000 }).catch(() => undefined)
+	await assertAcuityAccess(page, `Opening Acuity slot ${slotUrl}`)
+}
+
+async function waitForOfferClassButton(page: Page, slotUrl: string): Promise<Locator> {
+	const offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
+
+	try {
+		await offerClassButton.first().waitFor({ state: 'visible', timeout: 45 * 1000 })
+	} catch (error) {
+		await assertAcuityAccess(page, `Loading Acuity slot ${slotUrl}`)
+		await failWithPageContext(
+			page,
+			`Acuity appointment editor did not load for ${slotUrl}. Expected ${offerClassButtonSelector}.`,
+			error,
+		)
+	}
+
+	return offerClassButton
+}
+
 test.describe('Acuity Automation', () => {
 	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
 	let page: Page
@@ -33,16 +124,18 @@ test.describe('Acuity Automation', () => {
 		//add new one with expected values
 		page = await browser.newPage()
 		await test.step('Login to Acuity Scheduling', async () => {
+			const acuityUser = requireEnv('ACUITY_USER')
+			const acuityPassword = requireEnv('ACUITY_PASSWORD')
+
 			await page.goto('https://login.squarespace.com/')
-			await page.waitForTimeout(1000)
 			await page.locator('[placeholder="name\\@example\\.com"]').clear()
-			await page.locator('[placeholder="name\\@example\\.com"]').fill(`${process.env.ACUITY_USER}`)
-			await page.waitForTimeout(1000)
+			await page.locator('[placeholder="name\\@example\\.com"]').fill(acuityUser)
 			await page.locator('[placeholder="Password"]').clear()
-			await page.locator('[placeholder="Password"]').fill(`${process.env.ACUITY_PASSWORD}`)
-			await page.waitForTimeout(1000)
-			await Promise.all([page.locator('[data-test="login-button"]').click()])
-			await page.waitForTimeout(45 * 1000)
+			await page.locator('[placeholder="Password"]').fill(acuityPassword)
+			await page.locator('[data-test="login-button"]').click()
+			await waitForLoginRedirect(page)
+			await openAcuitySlotPage(page, slots[0].URL)
+			await waitForOfferClassButton(page, slots[0].URL)
 		})
 	})
 
@@ -51,15 +144,10 @@ test.describe('Acuity Automation', () => {
 			test.skip(workerInfo.project.name === 'Mobile Chrome')
 			await test.step(`Create Slot on ${slots[index].DateOffered} - ${slots[index].TimeOffered}`, async () => {
 				//Navigate to Zone
-				await page.goto(slots[index].URL)
-				await page.waitForTimeout(10000)
-				await page.goto(slots[index].URL)
+				await openAcuitySlotPage(page, slots[index].URL)
 
 				// Start Create Slot
-				const offerClassButton = await schedulingLocator(
-					page,
-					'#offer-class-btn, [data-testid="offer-class"]',
-				)
+				const offerClassButton = await waitForOfferClassButton(page, slots[index].URL)
 				await offerClassButton.first().click()
 				// Select "Another Test Calendar"
 				const calendarSelect = await schedulingLocator(page, 'select[name="calendar"]')
