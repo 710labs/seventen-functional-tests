@@ -162,7 +162,7 @@ jobs:
         env:
           SLOT_GREP: ${{ inputs.slot_grep }}
           WORKERS: ${{ inputs.workers }}
-          ACUITY_HEADLESS: 'false'
+          ACUITY_HEADLESS: 'true'
           ACUITY_UPLOAD_CI_ARTIFACTS: 'true'
         run: |
           set -euo pipefail
@@ -181,7 +181,7 @@ jobs:
             export ACUITY_REQUIRE_STORAGE_STATE=true
           fi
 
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npx playwright test \
+          npx playwright test \
             --grep "$grep_pattern" \
             --config=configs/automation.config.ts \
             --project="Desktop Chrome" \
