@@ -5,6 +5,15 @@ require('dotenv').config({ path: require('find-config')('.env') })
 const AUTOMATION_BASE_URL = 'https://thelist-dev.710labs.com'
 const captureAcuityFailureArtifacts = process.env.ACUITY_UPLOAD_CI_ARTIFACTS === 'true'
 
+function envBoolean(name: string, defaultValue: boolean): boolean {
+	const value = process.env[name]
+	if (value === undefined) {
+		return defaultValue
+	}
+
+	return ['1', 'true', 'yes'].includes(value.toLowerCase())
+}
+
 const config: PlaywrightTestConfig = {
 	testDir: './../utils/generators/',
 	timeout: 3 * 60000,
@@ -27,6 +36,7 @@ const config: PlaywrightTestConfig = {
 		actionTimeout: 20 * 1000,
 		baseURL: AUTOMATION_BASE_URL,
 		storageState: buildStorageStateWithRecaptchaBypass(AUTOMATION_BASE_URL),
+		headless: envBoolean('ACUITY_HEADLESS', !!process.env.CI),
 		launchOptions: {
 			slowMo: 200,
 		},

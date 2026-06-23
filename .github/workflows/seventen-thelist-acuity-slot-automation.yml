@@ -22,13 +22,14 @@ on:
         default: ''
       workers:
         type: choice
-        description: Number of parallel Playwright workers for upload mode.
+        description: Playwright workers for upload mode. Values above 1 require ACUITY_STORAGE_STATE_B64.
         required: true
-        default: '1'
+        default: '3'
         options:
           - '1'
           - '2'
           - '3'
+          - '4'
       slot_grep:
         type: string
         description: Optional regex to target a specific slot after Acuity Automation.
@@ -52,6 +53,7 @@ jobs:
       BYPASS_TAX_CALC: true
       ACUITY_USER: ${{ secrets.ACUITY_USER }}
       ACUITY_PASSWORD: ${{ secrets.ACUITY_PASSWORD }}
+      ACUITY_STORAGE_STATE_B64: ${{ secrets.ACUITY_STORAGE_STATE_B64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -117,10 +119,28 @@ jobs:
           name: acuity-selected-delivery-slots
           path: .acuity-input/selected-delivery-slots.csv
           if-no-files-found: ignore
+      - name: Prepare Acuity auth state
+        if: inputs.mode == 'upload'
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${ACUITY_STORAGE_STATE_B64:-}" ]]; then
+            mkdir -p .auth
+            printf '%s' "$ACUITY_STORAGE_STATE_B64" | base64 --decode > .auth/acuity-storage-state.json
+            echo "ACUITY_STORAGE_STATE_FILE=.auth/acuity-storage-state.json" >> "$GITHUB_ENV"
+            echo "Using Acuity storage state from ACUITY_STORAGE_STATE_B64."
+          else
+            echo "No ACUITY_STORAGE_STATE_B64 secret found; falling back to Acuity username/password login."
+          fi
       - name: Verify Acuity credentials
         if: inputs.mode == 'upload'
         run: |
           set -euo pipefail
+
+          if [[ -n "${ACUITY_STORAGE_STATE_FILE:-}" ]]; then
+            echo "Acuity storage state is configured. ACUITY_USER and ACUITY_PASSWORD are fallback credentials only."
+            exit 0
+          fi
 
           missing=()
           if [[ -z "${ACUITY_USER:-}" ]]; then
@@ -136,12 +156,13 @@ jobs:
           fi
       - name: Install Playwright
         if: inputs.mode == 'upload'
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
         if: inputs.mode == 'upload'
         env:
           SLOT_GREP: ${{ inputs.slot_grep }}
           WORKERS: ${{ inputs.workers }}
+          ACUITY_HEADLESS: 'false'
           ACUITY_UPLOAD_CI_ARTIFACTS: 'true'
         run: |
           set -euo pipefail
@@ -151,7 +172,16 @@ jobs:
             grep_pattern="Acuity Automation.*$SLOT_GREP"
           fi
 
-          npx playwright test \
+          if [[ "$WORKERS" != "1" ]]; then
+            if [[ -z "${ACUITY_STORAGE_STATE_FILE:-}" ]]; then
+              echo "::error::Multiple Acuity workers require ACUITY_STORAGE_STATE_B64 so workers do not run concurrent Squarespace login automation."
+              exit 1
+            fi
+
+            export ACUITY_REQUIRE_STORAGE_STATE=true
+          fi
+
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npx playwright test \
             --grep "$grep_pattern" \
             --config=configs/automation.config.ts \
             --project="Desktop Chrome" \
