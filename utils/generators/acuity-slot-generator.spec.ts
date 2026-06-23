@@ -16,6 +16,7 @@ const defaultAcuityStorageStateFiles = [
 	'.auth/acuity-storage-state.json',
 ]
 const requireStoredAcuityAuth = process.env.ACUITY_REQUIRE_STORAGE_STATE === 'true'
+const acuityEditorNavigationAttempts = 3
 
 type AcuityStorageStateFile = {
 	path: string
@@ -144,6 +145,59 @@ function requireStoredAcuityAuthState(): void {
 	throw new Error(
 		'ACUITY_REQUIRE_STORAGE_STATE=true, but no valid stored Acuity auth state was available. Run npm run helper:acuityslots:auth and set ACUITY_STORAGE_STATE_FILE or ACUITY_STORAGE_STATE_B64 before running with multiple workers.',
 	)
+}
+
+function isStoredAcuityAuthUnavailableError(error: unknown): boolean {
+	return (
+		error instanceof Error &&
+		error.message.startsWith('Stored Acuity auth state from ')
+	)
+}
+
+function storedAcuityAuthUnavailable(message: string): null {
+	if (requireStoredAcuityAuth) {
+		throw new Error(message)
+	}
+
+	console.log(`${message}; falling back to login automation.`)
+	return null
+}
+
+function directAcuityEditorUrl(slotUrl: string): string {
+	try {
+		const url = new URL(slotUrl)
+		const appointmentId = url.searchParams.get('id')
+		if (!appointmentId) {
+			return slotUrl
+		}
+
+		const directUrl = new URL('https://secure.acuityscheduling.com/appointments.php')
+		directUrl.searchParams.set(
+			'action',
+			url.searchParams.get('action') || 'editAppointmentType',
+		)
+		directUrl.searchParams.set('id', appointmentId)
+		return directUrl.toString()
+	} catch {
+		return slotUrl
+	}
+}
+
+function isRecoverableAcuityEditorRedirect(url: string): boolean {
+	try {
+		const parsedUrl = new URL(url)
+		if (parsedUrl.hostname !== 'secure.acuityscheduling.com') {
+			return false
+		}
+
+		if (parsedUrl.pathname.includes('/oauth2/squarespace-attached/callback')) {
+			return true
+		}
+
+		return parsedUrl.pathname === '/appointments.php' && !parsedUrl.searchParams.get('id')
+	} catch {
+		return false
+	}
 }
 
 async function failWithPageContext(
@@ -283,7 +337,8 @@ async function waitForLoginAttempt(page: Page, timeoutMs: number): Promise<strin
 }
 
 async function verifyAcuitySession(page: Page, slotUrl: string): Promise<string | null> {
-	await page.goto(slotUrl, { waitUntil: 'domcontentloaded' })
+	const editorUrl = directAcuityEditorUrl(slotUrl)
+	await page.goto(editorUrl, { waitUntil: 'domcontentloaded' })
 	await page
 		.waitForLoadState('networkidle', { timeout: pageLoadSettleTimeoutMs })
 		.catch(() => undefined)
@@ -308,15 +363,18 @@ async function verifyAcuitySession(page: Page, slotUrl: string): Promise<string 
 	}
 
 	if (isSquarespaceLoginUrl(page.url())) {
-		return `Redirected back to the Squarespace login page when opening Acuity slot ${slotUrl}.`
+		return `Redirected back to the Squarespace login page when opening Acuity slot ${editorUrl}.`
 	}
 
-	await waitForOfferClassButton(page, slotUrl)
+	await waitForOfferClassButton(page, editorUrl)
 	return null
 }
 
 async function openAcuityLoginEntry(page: Page, slotUrl: string, timeoutMs: number): Promise<void> {
-	await page.goto(slotUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
+	await page.goto(directAcuityEditorUrl(slotUrl), {
+		waitUntil: 'domcontentloaded',
+		timeout: timeoutMs,
+	})
 	await page
 		.waitForLoadState('networkidle', {
 			timeout: Math.min(pageLoadSettleTimeoutMs, timeoutMs),
@@ -375,20 +433,22 @@ async function pageFromStoredAcuitySession(
 			return page
 		}
 
-		console.log(
-			`Stored Acuity auth state from ${storageStateFile.path} did not verify; falling back to login automation. Message: ${loginDiagnostic(sessionProblem)}`,
+		return storedAcuityAuthUnavailable(
+			`Stored Acuity auth state from ${storageStateFile.path} did not verify. Message: ${loginDiagnostic(sessionProblem)}`,
 		)
-		return null
 	} catch (error) {
+		if (isStoredAcuityAuthUnavailableError(error)) {
+			throw error
+		}
+
 		if (isNonRetryableAuthError(error)) {
 			throw error
 		}
 
 		const errorMessage = error instanceof Error ? error.message : String(error)
-		console.log(
-			`Stored Acuity auth state from ${storageStateFile.path} failed; falling back to login automation. Message: ${loginDiagnostic(errorMessage)}`,
+		return storedAcuityAuthUnavailable(
+			`Stored Acuity auth state from ${storageStateFile.path} failed. Message: ${loginDiagnostic(errorMessage)}`,
 		)
-		return null
 	} finally {
 		if (!keepContext) {
 			await closePageContext(page)
@@ -509,23 +569,41 @@ async function loginToAcuityWithRetry(
 }
 
 async function openAcuitySlotPage(page: Page, slotUrl: string): Promise<void> {
-	await page.goto(slotUrl, { waitUntil: 'domcontentloaded' })
+	const editorUrl = directAcuityEditorUrl(slotUrl)
+	await page.goto(editorUrl, { waitUntil: 'domcontentloaded' })
 	await page.waitForLoadState('networkidle', { timeout: 10 * 1000 }).catch(() => undefined)
-	await assertAcuityAccess(page, `Opening Acuity slot ${slotUrl}`)
+	await assertAcuityAccess(page, `Opening Acuity slot ${editorUrl}`)
 }
 
 async function waitForOfferClassButton(page: Page, slotUrl: string): Promise<Locator> {
-	const offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
+	const editorUrl = directAcuityEditorUrl(slotUrl)
+	let offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
 
-	try {
-		await offerClassButton.first().waitFor({ state: 'visible', timeout: 45 * 1000 })
-	} catch (error) {
-		await assertAcuityAccess(page, `Loading Acuity slot ${slotUrl}`)
-		await failWithPageContext(
-			page,
-			`Acuity appointment editor did not load for ${slotUrl}. Expected ${offerClassButtonSelector}.`,
-			error,
-		)
+	for (let attempt = 1; attempt <= acuityEditorNavigationAttempts; attempt++) {
+		try {
+			await offerClassButton.first().waitFor({ state: 'visible', timeout: 45 * 1000 })
+			return offerClassButton
+		} catch (error) {
+			await assertAcuityAccess(page, `Loading Acuity slot ${editorUrl}`)
+
+			if (
+				attempt < acuityEditorNavigationAttempts &&
+				isRecoverableAcuityEditorRedirect(page.url())
+			) {
+				console.log(
+					`Acuity opened ${page.url()} instead of the editor; retrying direct editor URL for ${editorUrl}.`,
+				)
+				await openAcuitySlotPage(page, editorUrl)
+				offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
+				continue
+			}
+
+			await failWithPageContext(
+				page,
+				`Acuity appointment editor did not load for ${editorUrl}. Expected ${offerClassButtonSelector}.`,
+				error,
+			)
+		}
 	}
 
 	return offerClassButton
@@ -535,75 +613,89 @@ test.describe('Acuity Automation', () => {
 	test.describe.configure({ mode: 'parallel' })
 
 	const slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
+	const slotsByAppointmentType = new Map<string, typeof slots>()
 
 	for (let index = 0; index < slots.length; index++) {
 		const slot = slots[index]
-		test(`Add Acuity Slots: ${slot.Partner_region_zone};${slot.AppointmentID};${slot.URL};${slot.DateOffered};${slot.CalendarName};${slot.TimeOffered};${slot.LinkText};${slot.Availability} @helper`, async ({ browser }, workerInfo) => {
-			test.skip(workerInfo.project.name === 'Mobile Chrome')
+		const appointmentTypeSlots = slotsByAppointmentType.get(slot.AppointmentID) || []
+		appointmentTypeSlots.push(slot)
+		slotsByAppointmentType.set(slot.AppointmentID, appointmentTypeSlots)
+	}
 
-			let page: Page | undefined
-			try {
-				await test.step('Open authenticated Acuity session', async () => {
-					const acuityUser = process.env.ACUITY_USER || ''
-					const acuityPassword = process.env.ACUITY_PASSWORD || ''
+	for (const [appointmentId, appointmentTypeSlots] of slotsByAppointmentType.entries()) {
+		test.describe(`Acuity appointment type ${appointmentId}`, () => {
+			test.describe.configure({ mode: 'serial' })
 
-					page = await loginToAcuityWithRetry(browser, acuityUser, acuityPassword, slot.URL)
-				})
+			for (const slot of appointmentTypeSlots) {
+				test(`Add Acuity Slots: ${slot.Partner_region_zone};${slot.AppointmentID};${slot.URL};${slot.DateOffered};${slot.CalendarName};${slot.TimeOffered};${slot.LinkText};${slot.Availability} @helper`, async ({ browser }, workerInfo) => {
+					test.skip(workerInfo.project.name === 'Mobile Chrome')
 
-				await test.step(`Create Slot on ${slot.DateOffered} - ${slot.TimeOffered}`, async () => {
-					if (!page) {
-						throw new Error('Acuity page was not initialized.')
+					let page: Page | undefined
+					try {
+						const editorUrl = directAcuityEditorUrl(slot.URL)
+						await test.step('Open authenticated Acuity session', async () => {
+							const acuityUser = process.env.ACUITY_USER || ''
+							const acuityPassword = process.env.ACUITY_PASSWORD || ''
+
+							page = await loginToAcuityWithRetry(browser, acuityUser, acuityPassword, editorUrl)
+						})
+
+						await test.step(`Create Slot on ${slot.DateOffered} - ${slot.TimeOffered}`, async () => {
+							if (!page) {
+								throw new Error('Acuity page was not initialized.')
+							}
+
+							//Navigate to Zone
+							await openAcuitySlotPage(page, editorUrl)
+
+							// Start Create Slot
+							const offerClassButton = await waitForOfferClassButton(page, editorUrl)
+							await offerClassButton.first().click()
+							// Select "Another Test Calendar"
+							const calendarSelect = await schedulingLocator(page, 'select[name="calendar"]')
+							await calendarSelect.selectOption({ label: slot.CalendarName })
+							// Date Selector
+							// Select Day of Month
+							const dateInput = await schedulingLocator(page, '#date-input')
+							await dateInput.fill(`${slot.DateOffered}`)
+
+							// Select Time
+							const timeInput = await schedulingLocator(page, '[placeholder="Ex\\. 9\\:00am"]')
+							await timeInput.click()
+							await timeInput.fill(`${slot.TimeOffered}`)
+							// Save Class
+							const saveClassButton = await schedulingText(page, 'Save Class')
+							await Promise.all([
+								page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
+								saveClassButton.click(),
+							])
+
+							//Edit Capacity
+							//Select Slot
+							//Prevent 12PM and 2PM collison
+							const slotLink = await schedulingText(page, `${slot.LinkText}`, { exact: true })
+							await slotLink.click()
+
+							// Click Edit
+							const editButton = await schedulingText(page, 'Edit')
+							await editButton.click()
+
+							// Edit Capacity Value
+							const capacityInput = await schedulingLocator(
+								page,
+								'text=Max number of people for this class >> input[name="group_max"]',
+							)
+							await capacityInput.click()
+							await capacityInput.fill(slot.Availability)
+
+							// Save Slot
+							const saveChangesButton = await schedulingText(page, 'Save Changes')
+							await saveChangesButton.click()
+						})
+					} finally {
+						await closePageContext(page)
 					}
-
-					//Navigate to Zone
-					await openAcuitySlotPage(page, slot.URL)
-
-					// Start Create Slot
-					const offerClassButton = await waitForOfferClassButton(page, slot.URL)
-					await offerClassButton.first().click()
-					// Select "Another Test Calendar"
-					const calendarSelect = await schedulingLocator(page, 'select[name="calendar"]')
-					await calendarSelect.selectOption({ label: slot.CalendarName })
-					// Date Selector
-					// Select Day of Month
-					const dateInput = await schedulingLocator(page, '#date-input')
-					await dateInput.fill(`${slot.DateOffered}`)
-
-					// Select Time
-					const timeInput = await schedulingLocator(page, '[placeholder="Ex\\. 9\\:00am"]')
-					await timeInput.click()
-					await timeInput.fill(`${slot.TimeOffered}`)
-					// Save Class
-					const saveClassButton = await schedulingText(page, 'Save Class')
-					await Promise.all([
-						page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-						saveClassButton.click(),
-					])
-
-					//Edit Capacity
-					//Select Slot
-					//Prevent 12PM and 2PM collison
-					const slotLink = await schedulingText(page, `${slot.LinkText}`, { exact: true })
-					await slotLink.click()
-
-					// Click Edit
-					const editButton = await schedulingText(page, 'Edit')
-					await editButton.click()
-
-					// Edit Capacity Value
-					const capacityInput = await schedulingLocator(
-						page,
-						'text=Max number of people for this class >> input[name="group_max"]',
-					)
-					await capacityInput.click()
-					await capacityInput.fill(slot.Availability)
-
-					// Save Slot
-					const saveChangesButton = await schedulingText(page, 'Save Changes')
-					await saveChangesButton.click()
 				})
-			} finally {
-				await closePageContext(page)
 			}
 		})
 	}
