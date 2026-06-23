@@ -190,10 +190,11 @@ function isRecoverableAcuityEditorRedirect(url: string): boolean {
 			return false
 		}
 
-		return (
-			parsedUrl.pathname === '/appointments.php' ||
-			parsedUrl.pathname.includes('/oauth2/squarespace-attached/callback')
-		)
+		if (parsedUrl.pathname.includes('/oauth2/squarespace-attached/callback')) {
+			return true
+		}
+
+		return parsedUrl.pathname === '/appointments.php' && !parsedUrl.searchParams.get('id')
 	} catch {
 		return false
 	}
@@ -568,9 +569,10 @@ async function loginToAcuityWithRetry(
 }
 
 async function openAcuitySlotPage(page: Page, slotUrl: string): Promise<void> {
-	await page.goto(directAcuityEditorUrl(slotUrl), { waitUntil: 'domcontentloaded' })
+	const editorUrl = directAcuityEditorUrl(slotUrl)
+	await page.goto(editorUrl, { waitUntil: 'domcontentloaded' })
 	await page.waitForLoadState('networkidle', { timeout: 10 * 1000 }).catch(() => undefined)
-	await assertAcuityAccess(page, `Opening Acuity slot ${slotUrl}`)
+	await assertAcuityAccess(page, `Opening Acuity slot ${editorUrl}`)
 }
 
 async function waitForOfferClassButton(page: Page, slotUrl: string): Promise<Locator> {
