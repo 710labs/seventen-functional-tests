@@ -195,13 +195,87 @@ jobs:
           path: |
             playwright-report/
             test-results/
-      - name: Slack Notification
+      - name: Send Slack notification
         if: always()
-        uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON: https://avatars.githubusercontent.com/u/73088225
-          SLACK_MESSAGE: Executed Acuity Slot Helper in Dev. Status-${{ job.status }} Report Url-${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_TITLE: Task Run Status thelist-ca-acuity-slot-helper
-          SLACK_USERNAME: '710 Functional Tests'
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          JOB_STATUS: ${{ job.status }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
+          MODE: ${{ inputs.mode }}
+          SLOT_FILE: ${{ inputs.slot_file }}
+          SLOT_FILE_URL: ${{ inputs.slot_file_url }}
+          WORKERS: ${{ inputs.workers }}
+          SLOT_GREP: ${{ inputs.slot_grep }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
+            echo "::warning::SLACK_WEBHOOK_URL is not set; skipping Slack notification."
+            exit 0
+          fi
+
+          node <<'NODE'
+          const webhookUrl = process.env.SLACK_WEBHOOK_URL
+          const status = process.env.JOB_STATUS || 'unknown'
+          const statusEmoji =
+            status === 'success' ? ':large_green_circle:' :
+            status === 'cancelled' ? ':large_yellow_circle:' :
+            ':red_circle:'
+          const slotSource =
+            process.env.ACUITY_SLOT_SOURCE ||
+            process.env.SLOT_FILE_URL ||
+            process.env.SLOT_FILE ||
+            'unknown'
+          const grep = process.env.SLOT_GREP || 'All rows'
+
+          const message = {
+            text: `Acuity Slot Automation ${status}`,
+            blocks: [
+              {
+                type: 'header',
+                text: {
+                  type: 'plain_text',
+                  text: 'Acuity Slot Automation',
+                  emoji: true,
+                },
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: [
+                    `*Status:* ${statusEmoji} ${status}`,
+                    `*Mode:* ${process.env.MODE || 'unknown'}`,
+                    `*CSV:* ${slotSource}`,
+                    `*Workers:* ${process.env.WORKERS || 'unknown'}`,
+                    `*Target:* ${grep}`,
+                    `*Run:* <${process.env.RUN_URL}|${process.env.WORKFLOW_NAME || 'GitHub Actions'} #${process.env.RUN_ID || ''}>`,
+                  ].join('\n'),
+                },
+              },
+            ],
+          }
+
+          try {
+            const response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(message),
+            })
+
+            if (!response.ok) {
+              const body = await response.text().catch(() => '')
+              console.log(`::warning::Slack notification failed: ${response.status} ${response.statusText} ${body}`)
+              process.exit(0)
+            }
+
+            console.log('Slack notification sent.')
+          } catch (error) {
+            console.log(`::warning::Slack notification error: ${error instanceof Error ? error.message : String(error)}`)
+            process.exit(0)
+          }
+          NODE
