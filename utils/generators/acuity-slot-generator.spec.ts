@@ -17,6 +17,8 @@ const defaultAcuityStorageStateFiles = [
 ]
 const requireStoredAcuityAuth = process.env.ACUITY_REQUIRE_STORAGE_STATE === 'true'
 const acuityEditorNavigationAttempts = 3
+const acuityNavigationTimeoutMs = 30 * 1000
+const acuityModalDismissTimeoutMs = 1500
 
 type AcuityStorageStateFile = {
 	path: string
@@ -200,6 +202,14 @@ function isRecoverableAcuityEditorRedirect(url: string): boolean {
 	}
 }
 
+function absoluteAcuityUrl(href: string, currentUrl: string): string {
+	if (href.startsWith('/appointments.php')) {
+		return new URL(href, 'https://secure.acuityscheduling.com').toString()
+	}
+
+	return new URL(href, currentUrl).toString()
+}
+
 async function failWithPageContext(
 	page: Page,
 	message: string,
@@ -213,6 +223,83 @@ async function failWithPageContext(
 async function pageContextMessage(page: Page): Promise<string> {
 	const title = await page.title().catch(() => 'unavailable')
 	return `Current URL: ${page.url()}. Page title: ${title}.`
+}
+
+async function dismissAcuityInterruptions(page: Page): Promise<void> {
+	await page.keyboard.press('Escape').catch(() => undefined)
+
+	const closeTargets = [
+		'button[aria-label="Close"]',
+		'[aria-label="Close"]',
+		'button:has-text("No thanks")',
+		'button:has-text("Maybe later")',
+		'button:has-text("Not now")',
+		'button:has-text("Dismiss")',
+		'button:has-text("Close")',
+	]
+
+	for (const selector of closeTargets) {
+		const target = page.locator(selector).last()
+		if (await target.isVisible({ timeout: acuityModalDismissTimeoutMs }).catch(() => false)) {
+			await target.click({ timeout: acuityModalDismissTimeoutMs }).catch(() => undefined)
+		}
+	}
+}
+
+async function gotoAcuityPage(page: Page, url: string, context: string): Promise<void> {
+	let lastError: unknown
+
+	for (let attempt = 1; attempt <= acuityEditorNavigationAttempts; attempt++) {
+		try {
+			await page.goto(url, {
+				waitUntil: 'domcontentloaded',
+				timeout: acuityNavigationTimeoutMs,
+			})
+			await page
+				.waitForLoadState('networkidle', { timeout: pageLoadSettleTimeoutMs })
+				.catch(() => undefined)
+			await dismissAcuityInterruptions(page)
+			return
+		} catch (error) {
+			lastError = error
+			if (attempt < acuityEditorNavigationAttempts) {
+				console.log(
+					`${context}: Acuity navigation attempt ${attempt} failed; retrying ${url}. Message: ${loginDiagnostic(error instanceof Error ? error.message : String(error))}`,
+				)
+				await page.goto('about:blank', { timeout: 5 * 1000 }).catch(() => undefined)
+				await page.waitForTimeout(1000).catch(() => undefined)
+			}
+		}
+	}
+
+	await failWithPageContext(page, `${context}: Acuity navigation failed for ${url}.`, lastError)
+}
+
+async function clickAcuityControl(locator: Locator, page: Page, context: string): Promise<void> {
+	await dismissAcuityInterruptions(page)
+	try {
+		await locator.click()
+	} catch (error) {
+		await dismissAcuityInterruptions(page)
+		await locator.evaluate((element) => (element as HTMLElement).click()).catch(async () => {
+			await locator.click({ force: true }).catch(async () => {
+				await failWithPageContext(page, `${context}: Acuity control click failed.`, error)
+			})
+		})
+	}
+}
+
+async function openAcuityAnchor(locator: Locator, page: Page, context: string): Promise<void> {
+	await dismissAcuityInterruptions(page)
+	const href = await locator.getAttribute('href').catch(() => null)
+
+	if (href) {
+		await gotoAcuityPage(page, absoluteAcuityUrl(href, page.url()), context)
+		await assertAcuityAccess(page, context)
+		return
+	}
+
+	await clickAcuityControl(locator, page, context)
 }
 
 async function loginPageMessage(page: Page): Promise<string | null> {
@@ -338,10 +425,7 @@ async function waitForLoginAttempt(page: Page, timeoutMs: number): Promise<strin
 
 async function verifyAcuitySession(page: Page, slotUrl: string): Promise<string | null> {
 	const editorUrl = directAcuityEditorUrl(slotUrl)
-	await page.goto(editorUrl, { waitUntil: 'domcontentloaded' })
-	await page
-		.waitForLoadState('networkidle', { timeout: pageLoadSettleTimeoutMs })
-		.catch(() => undefined)
+	await gotoAcuityPage(page, editorUrl, 'Verifying Acuity session')
 
 	if (isAuthChallengeUrl(page.url())) {
 		await failWithPageContext(
@@ -373,13 +457,10 @@ async function verifyAcuitySession(page: Page, slotUrl: string): Promise<string 
 async function openAcuityLoginEntry(page: Page, slotUrl: string, timeoutMs: number): Promise<void> {
 	await page.goto(directAcuityEditorUrl(slotUrl), {
 		waitUntil: 'domcontentloaded',
-		timeout: timeoutMs,
+		timeout: Math.min(timeoutMs, acuityNavigationTimeoutMs),
 	})
-	await page
-		.waitForLoadState('networkidle', {
-			timeout: Math.min(pageLoadSettleTimeoutMs, timeoutMs),
-		})
-		.catch(() => undefined)
+	await page.waitForLoadState('networkidle', { timeout: pageLoadSettleTimeoutMs }).catch(() => undefined)
+	await dismissAcuityInterruptions(page)
 
 	if (isAuthChallengeUrl(page.url())) {
 		await failWithPageContext(
@@ -406,7 +487,7 @@ async function closePageContext(page?: Page): Promise<void> {
 
 async function pageFromStoredAcuitySession(
 	browser: Browser,
-	verificationSlotUrl: string,
+	_verificationSlotUrl: string,
 ): Promise<Page | null> {
 	const storageStateFile = acuityStorageStateFile()
 	if (!storageStateFile) {
@@ -425,17 +506,9 @@ async function pageFromStoredAcuitySession(
 	try {
 		const context = await browser.newContext({ storageState: storageStateFile.path })
 		page = await context.newPage()
-
-		const sessionProblem = await verifyAcuitySession(page, verificationSlotUrl)
-		if (!sessionProblem) {
-			keepContext = true
-			console.log(`Using stored Acuity auth state from ${storageStateFile.path}.`)
-			return page
-		}
-
-		return storedAcuityAuthUnavailable(
-			`Stored Acuity auth state from ${storageStateFile.path} did not verify. Message: ${loginDiagnostic(sessionProblem)}`,
-		)
+		keepContext = true
+		console.log(`Using stored Acuity auth state from ${storageStateFile.path}.`)
+		return page
 	} catch (error) {
 		if (isStoredAcuityAuthUnavailableError(error)) {
 			throw error
@@ -570,8 +643,7 @@ async function loginToAcuityWithRetry(
 
 async function openAcuitySlotPage(page: Page, slotUrl: string): Promise<void> {
 	const editorUrl = directAcuityEditorUrl(slotUrl)
-	await page.goto(editorUrl, { waitUntil: 'domcontentloaded' })
-	await page.waitForLoadState('networkidle', { timeout: 10 * 1000 }).catch(() => undefined)
+	await gotoAcuityPage(page, editorUrl, 'Opening Acuity slot')
 	await assertAcuityAccess(page, `Opening Acuity slot ${editorUrl}`)
 }
 
@@ -650,7 +722,11 @@ test.describe('Acuity Automation', () => {
 
 							// Start Create Slot
 							const offerClassButton = await waitForOfferClassButton(page, editorUrl)
-							await offerClassButton.first().click()
+							await clickAcuityControl(
+								offerClassButton.first(),
+								page,
+								'Starting Acuity class creation',
+							)
 							// Select "Another Test Calendar"
 							const calendarSelect = await schedulingLocator(page, 'select[name="calendar"]')
 							await calendarSelect.selectOption({ label: slot.CalendarName })
@@ -661,36 +737,44 @@ test.describe('Acuity Automation', () => {
 
 							// Select Time
 							const timeInput = await schedulingLocator(page, '[placeholder="Ex\\. 9\\:00am"]')
-							await timeInput.click()
+							await clickAcuityControl(timeInput, page, 'Focusing Acuity time input')
 							await timeInput.fill(`${slot.TimeOffered}`)
 							// Save Class
 							const saveClassButton = await schedulingText(page, 'Save Class')
 							await Promise.all([
 								page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-								saveClassButton.click(),
+								clickAcuityControl(saveClassButton, page, 'Saving Acuity class'),
 							])
 
 							//Edit Capacity
 							//Select Slot
 							//Prevent 12PM and 2PM collison
 							const slotLink = await schedulingText(page, `${slot.LinkText}`, { exact: true })
-							await slotLink.click()
+							await openAcuityAnchor(
+								slotLink,
+								page,
+								`Opening saved Acuity slot ${slot.LinkText}`,
+							)
 
 							// Click Edit
 							const editButton = await schedulingText(page, 'Edit')
-							await editButton.click()
+							await clickAcuityControl(editButton, page, 'Opening Acuity slot edit form')
 
 							// Edit Capacity Value
 							const capacityInput = await schedulingLocator(
 								page,
 								'text=Max number of people for this class >> input[name="group_max"]',
 							)
-							await capacityInput.click()
+							await clickAcuityControl(capacityInput, page, 'Focusing Acuity capacity input')
 							await capacityInput.fill(slot.Availability)
 
 							// Save Slot
 							const saveChangesButton = await schedulingText(page, 'Save Changes')
-							await saveChangesButton.click()
+							await clickAcuityControl(
+								saveChangesButton,
+								page,
+								'Saving Acuity slot capacity',
+							)
 						})
 					} finally {
 						await closePageContext(page)
