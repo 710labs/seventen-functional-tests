@@ -2,7 +2,6 @@ import { Browser, Locator, Page, test } from '@playwright/test'
 const csvFilePath = process.env.ACUITY_SLOT_FILE || 'utils/delivery-slots.csv'
 let csvToJson = require('convert-csv-to-json')
 const fs = require('fs')
-const { Parser } = require('json2csv')
 
 const schedulingFrameSelector = '[data-test="scheduling"], [data-test="scheduling-iframe"]'
 const offerClassButtonSelector = '#offer-class-btn, [data-testid="offer-class"]'
@@ -535,7 +534,7 @@ async function waitForOfferClassButton(page: Page, slotUrl: string): Promise<Loc
 test.describe('Acuity Automation', () => {
 	test.describe.configure({ mode: 'parallel' })
 
-	let slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
+	const slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
 
 	for (let index = 0; index < slots.length; index++) {
 		const slot = slots[index]
