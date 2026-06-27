@@ -14,11 +14,12 @@ import { faker } from '@faker-js/faker'
 import { coloradoAddressess } from '../../utils/data-generator'
 import { fictionalAreacodes } from '../../utils/data-generator'
 import { writeFileSync } from 'fs'
+import { getSmokeCartItemCount } from '../../utils/smoke-cart-item-count'
 
 test.describe('Basic Acceptance Tests CO', () => {
-	const orderQuanity = 2
+	const cartItemCount = getSmokeCartItemCount()
 	var orderNumber: any
-	var splitOrderNumber: string
+	var splitOrderNumber = ''
 	var cartTotals: any
 
 	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
@@ -72,7 +73,9 @@ test.describe('Basic Acceptance Tests CO', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, 'Pickup', 'medical')
+			await shopPage.addProductsToCart(cartItemCount, mobile, 'Pickup', 'medical', {
+				exactItemCount: true,
+			})
 			cartTotals = await cartPage.verifyCart(address.zipcode)
 		})
 
@@ -95,14 +98,21 @@ test.describe('Basic Acceptance Tests CO', () => {
 			await adminLoginPage.login()
 		})
 		await test.step('Admin Split Order', async () => {
-			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
+			if (cartItemCount <= 1) {
+				console.log(`Skipping split order because SMOKE_CART_ITEM_COUNT=${cartItemCount}`)
+				return
+			}
+
+			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, cartItemCount)
 			//write split order number to file to use for cancel order via API
 			writeFileSync('split_order_id.txt', String(splitOrderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote split_order_id.txt → ${splitOrderNumber}`)
 		})
 		await test.step('Cancel Order', async () => {
 			await editOrderPage.cancelOrder(orderNumber)
-			await editOrderPage.cancelOrder(splitOrderNumber)
+			if (splitOrderNumber) {
+				await editOrderPage.cancelOrder(splitOrderNumber)
+			}
 		})
 	})
 

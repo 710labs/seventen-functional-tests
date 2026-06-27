@@ -8,10 +8,11 @@ import { CartPage } from '../../models/cart-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { faker } from '@faker-js/faker'
 import { appendFileSync, writeFileSync } from 'fs'
+import { getSmokeCartItemCount } from '../../utils/smoke-cart-item-count'
 
 test.describe('Basic Acceptance Tests CA', () => {
 	const zipCode = '90210'
-	const orderQuanity = 2
+	const cartItemCount = getSmokeCartItemCount()
 	var orderNumber: any
 	var cartTotals: any
 
@@ -61,7 +62,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, 'Delivery', 'recreational', {
+			await shopPage.addProductsToCart(cartItemCount, mobile, 'Delivery', 'recreational', {
 				exactItemCount: true,
 			})
 			cartTotals = await cartPage.verifyCart(zipCode)
