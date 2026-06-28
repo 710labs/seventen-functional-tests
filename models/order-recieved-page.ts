@@ -19,9 +19,14 @@ export class OrderReceivedPage {
 		this.orderNumber = this.page.locator('.woocommerce-order-overview__order >> strong')
 	}
 
+	private async waitForOrderReceivedPage() {
+		await expect(this.page).toHaveURL(/order-received/, { timeout: 30_000 })
+		await this.orderNumber.waitFor({ state: 'visible', timeout: 30_000 })
+	}
+
 	async confirmOrderDetail(orderInfo: any = null): Promise<any> {
 		var orderNumber
-		this.page.waitForNavigation()
+		await this.waitForOrderReceivedPage()
 		await test.step('Verify Layout', async () => {
 			await assertFooterLinks(this.page)
 		})
@@ -39,8 +44,7 @@ export class OrderReceivedPage {
 
 	async getOrderNumber(): Promise<any> {
 		var orderNumber
-		this.page.waitForNavigation()
-		await this.orderNumber.waitFor({ state: 'visible' })
+		await this.waitForOrderReceivedPage()
 		orderNumber = await this.orderNumber.innerText()
 		return orderNumber
 	}
