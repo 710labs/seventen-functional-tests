@@ -1,5 +1,23 @@
 name: List - MI - Prod - Smoke Test (old)
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      cart_item_count:
+        description: Number of items to add to cart
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+          - '7'
+          - '8'
+          - '9'
+          - '10'
 jobs:
   smoke-test-prod-mi:
     timeout-minutes: 60
@@ -8,6 +26,7 @@ jobs:
       ENV: prod-mi thelist-mi.710labs.com
       ENV_ID: prod-mi
       EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      SMOKE_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '1' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
@@ -27,6 +46,8 @@ jobs:
       S3_REGION: ${{ secrets.S3_REGION}}
       AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY}}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
+    outputs:
+      order-id: ${{ steps.extract.outputs.orderID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,8 +63,38 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run smoke:test:prod:mi
+      - name: Read order_id.txt
+        if: always()
+        id: extract
+        run: |
+          if [[ -f order_id.txt ]]; then
+            ORDER_ID=$(<order_id.txt)
+            echo "✅ Found Order ID: $ORDER_ID"
+            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  order_id.txt not found; setting empty orderID"
+            echo "orderID=" >> $GITHUB_OUTPUT
+          fi
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
           path: playwright-report/
+  cleanup:
+    name: Cleanup Cancel Test Order
+    needs: smoke-test-prod-mi
+    runs-on: ubuntu-latest
+    if: always()
+    env:
+      WC_CONSUMER_KEY: ${{ secrets.WOO_MI_PROD_KEY }}
+      WC_CONSUMER_SECRET: ${{ secrets.WOO_MI_PROD_SECRET }}
+      BASE_URL: ${{ secrets.BASE_URL_PROD_MI }}
+    steps:
+      - name: Cancel test order via WooCommerce API
+        if: ${{ needs.smoke-test-prod-mi.outputs.order-id != '' }}
+        run: |
+          echo "🛠 Cancelling order ${{ needs.smoke-test-prod-mi.outputs.order-id }}…"
+          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke-test-prod-mi.outputs.order-id }}" \
+            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"status":"cancelled"}'

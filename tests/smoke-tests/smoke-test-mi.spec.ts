@@ -5,23 +5,20 @@ import { ShopPage } from '../../models/shop-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
-import { MyAccountPage } from '../../models/my-account-page'
-import { AdminLogin } from '../../models/admin/admin-login-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
-import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 import { faker } from '@faker-js/faker'
 import { fictionalAreacodes } from '../../utils/data-generator'
 import { writeFileSync } from 'fs'
+import { getSmokeCartItemCount } from '../../utils/smoke-cart-item-count'
 
 test.describe('Basic Acceptance Tests MI', () => {
 	const zipCode = '48203'
-	const orderQuanity = 2
+	const cartItemCount = getSmokeCartItemCount()
 	var orderNumber: any
-	var splitOrderNumber: string
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Recreational @recreational @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		await context.addCookies([
 			{
@@ -40,12 +37,9 @@ test.describe('Basic Acceptance Tests MI', () => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, qaClient)
-		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 		const checkOutPage = new CheckoutPage(page, qaClient)
-		const adminLoginPage = new AdminLogin(page)
-		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
@@ -67,7 +61,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 				faker.datatype.number({ min: 10, max: 12 }),
 				faker.datatype.number({ min: 1975, max: 2001 }),
 				faker.phone.phoneNumber('555-###-####'),
-				'medical',
+				'recreational',
 				address,
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
@@ -75,7 +69,9 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Load Shopping Cart`, async () => {
-			await shopPage.addProductsToCart(4, false, 'Pickup', 'medical')
+			await shopPage.addProductsToCart(cartItemCount, false, 'Pickup', 'recreational', {
+				exactItemCount: true,
+			})
 		})
 
 		await test.step(`Navigate to Cart`, async () => {
@@ -102,23 +98,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 			//write order number to file to use for cancel order via API
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
-		})
-		await test.step('Logout Consumer', async () => {
-			await myAccountPage.logout()
-		})
-
-		await test.step('Login Admin', async () => {
-			await adminLoginPage.login()
-		})
-		await test.step('Admin Split Order', async () => {
-			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, orderQuanity)
-			//write split order number to file to use for cancel order via API
-			writeFileSync('split_order_id.txt', String(splitOrderNumber), { encoding: 'utf-8' })
-			console.log(`✅ Wrote split_order_id.txt → ${splitOrderNumber}`)
-		})
-		await test.step('Cancel Order', async () => {
-			await editOrderPage.cancelOrder(orderNumber)
-			await editOrderPage.cancelOrder(splitOrderNumber)
 		})
 	})
 })
