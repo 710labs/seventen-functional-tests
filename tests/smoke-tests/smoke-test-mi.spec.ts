@@ -22,7 +22,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 	var splitOrderNumber = ''
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Recreational @recreational @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		await context.addCookies([
 			{
@@ -43,7 +43,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		const createAccountPage = new CreateAccountPage(page, qaClient)
 		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
-		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
+		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 		const checkOutPage = new CheckoutPage(page, qaClient)
 		const adminLoginPage = new AdminLogin(page)
 		const editOrderPage = new EditOrderPage(page)
@@ -68,7 +68,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 				faker.datatype.number({ min: 10, max: 12 }),
 				faker.datatype.number({ min: 1975, max: 2001 }),
 				faker.phone.phoneNumber('555-###-####'),
-				'medical',
+				'recreational',
 				address,
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
 				faker.datatype.number({ min: 11111111, max: 99999999 }).toString(),
@@ -76,7 +76,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Load Shopping Cart`, async () => {
-			await shopPage.addProductsToCart(cartItemCount, false, 'Pickup', 'medical', {
+			await shopPage.addProductsToCart(cartItemCount, false, 'Pickup', 'recreational', {
 				exactItemCount: true,
 			})
 		})
