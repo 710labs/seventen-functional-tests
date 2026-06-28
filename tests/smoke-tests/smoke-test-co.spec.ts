@@ -5,10 +5,7 @@ import { ShopPage } from '../../models/shop-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
-import { MyAccountPage } from '../../models/my-account-page'
-import { AdminLogin } from '../../models/admin/admin-login-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
-import { EditOrderPage } from '../../models/admin/edit-order-page'
 import { v4 as uuidv4 } from 'uuid'
 import { faker } from '@faker-js/faker'
 import { coloradoAddressess } from '../../utils/data-generator'
@@ -19,7 +16,6 @@ import { getSmokeCartItemCount } from '../../utils/smoke-cart-item-count'
 test.describe('Basic Acceptance Tests CO', () => {
 	const cartItemCount = getSmokeCartItemCount()
 	var orderNumber: any
-	var splitOrderNumber = ''
 	var cartTotals: any
 
 	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
@@ -41,12 +37,9 @@ test.describe('Basic Acceptance Tests CO', () => {
 		const ageGatePage = new AgeGatePage(page)
 		const listPassword = new ListPasswordPage(page)
 		const createAccountPage = new CreateAccountPage(page, qaClient)
-		const myAccountPage = new MyAccountPage(page)
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 		const checkOutPage = new CheckoutPage(page, qaClient)
-		const adminLoginPage = new AdminLogin(page)
-		const editOrderPage = new EditOrderPage(page)
 		const orderReceived = new OrderReceivedPage(page)
 		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
@@ -89,30 +82,6 @@ test.describe('Basic Acceptance Tests CO', () => {
 			//write order number to file to use for cancel order via API
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
-		})
-		await test.step('Logout Consumer', async () => {
-			await myAccountPage.logout()
-		})
-
-		await test.step('Login Admin', async () => {
-			await adminLoginPage.login()
-		})
-		await test.step('Admin Split Order', async () => {
-			if (cartItemCount <= 1) {
-				console.log(`Skipping split order because SMOKE_CART_ITEM_COUNT=${cartItemCount}`)
-				return
-			}
-
-			splitOrderNumber = await editOrderPage.splitOrder(orderNumber, cartItemCount)
-			//write split order number to file to use for cancel order via API
-			writeFileSync('split_order_id.txt', String(splitOrderNumber), { encoding: 'utf-8' })
-			console.log(`✅ Wrote split_order_id.txt → ${splitOrderNumber}`)
-		})
-		await test.step('Cancel Order', async () => {
-			await editOrderPage.cancelOrder(orderNumber)
-			if (splitOrderNumber) {
-				await editOrderPage.cancelOrder(splitOrderNumber)
-			}
 		})
 	})
 

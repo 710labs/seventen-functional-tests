@@ -29,7 +29,6 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET}}
     outputs:
       order-id: ${{ steps.extract.outputs.orderID }}
-      split-order-id: ${{ steps.extract-split.outputs.splitOrderID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,19 +64,6 @@ jobs:
             # still emit the output key, just blank
             echo "orderID=" >> $GITHUB_OUTPUT
           fi
-      - name: Read split_order_id.txt
-        if: always()
-        id: extract-split
-        run: |
-          if [[ -f split_order_id.txt ]]; then
-            SPLIT_ORDER_ID=$(<split_order_id.txt)
-            echo "✅ Found Split Order ID: $SPLIT_ORDER_ID"
-            echo "splitOrderID=$SPLIT_ORDER_ID" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️  split_order_id.txt not found; setting empty splitOrderID"
-            # still emit the output key, just blank
-            echo "splitOrderID=" >> $GITHUB_OUTPUT
-          fi
   cleanup:
     name: Cleanup Cancel Test Order
     needs: smoke-test-prod-fl
@@ -96,15 +82,6 @@ jobs:
         run: |
           echo "🛠 Cancelling order ${{ needs.smoke-test-prod-fl.outputs.order-id }}…"
           curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke-test-prod-fl.outputs.order-id }}" \
-            -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
-            -H "Content-Type: application/json" \
-            -d '{"status":"cancelled"}'
-      - name: Cancel split order via WooCommerce API
-        # only call if we actually got an ID
-        if: ${{ needs.smoke-test-prod-fl.outputs.split-order-id != '' }}
-        run: |
-          echo "🛠 Cancelling split order ${{ needs.smoke-test-prod-fl.outputs.split-order-id }}…"
-          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.smoke-test-prod-fl.outputs.split-order-id }}" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'
