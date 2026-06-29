@@ -36,8 +36,9 @@ export class AgeGatePage {
 	}
 
 	private async findVisibleAgeGateButton() {
-		const isMichigan = this.page.url().includes('thelist-mi')
-		const ageGateButtons = isMichigan
+		const isMichiganOrFlowery =
+			this.page.url().includes('thelist-mi') || this.page.url().includes('theflowery')
+		const ageGateButtons = isMichiganOrFlowery
 			? [this.page.getByRole('button', { name: /^I qualify$/i })]
 			: [
 					this.page.getByRole('button', {

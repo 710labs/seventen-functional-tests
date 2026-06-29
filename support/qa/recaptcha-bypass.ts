@@ -49,6 +49,7 @@ export function buildRecaptchaBypassCookies(baseURL?: string): Cookie[] {
 
 export function buildVipBypassCookie(baseURL?: string): Cookie | undefined {
 	const url = parseBaseUrl(baseURL)
+	const vipCookieValue = process.env.VIP_COOKIE_VALUE || process.env.ARTILLERY_VIP_COOKIE_VALUE || '3'
 
 	if (!url) {
 		return undefined
@@ -56,7 +57,7 @@ export function buildVipBypassCookie(baseURL?: string): Cookie | undefined {
 
 	return {
 		name: VIP_BYPASS_COOKIE_NAME,
-		value: '3',
+		value: vipCookieValue,
 		domain: url.hostname,
 		path: '/',
 		expires: -1,
