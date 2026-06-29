@@ -10,7 +10,7 @@ This directory contains the self-contained Artillery suite for the manual **Load
 - `config/browser-realqueue.yml`: Playwright browser funnel without `vipChecker`, defaulting to 50 browsers and waiting up to 60 minutes for Queue-It release in the workflow.
 
 Browser scenarios use `flows/funnel.js`. HTTP scenarios use `flows/http.js`.
-Browser funnels add one cart item by default, using the first eligible add-to-cart button in storefront order.
+Browser funnels add cart items using the first eligible add-to-cart buttons in storefront order. The workflow `cart_item_count` input controls how many items each virtual user adds (default `1`, range 1–10).
 
 ## Local Setup
 

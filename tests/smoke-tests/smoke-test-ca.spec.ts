@@ -16,15 +16,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 	var orderNumber: any
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
-		await context.addCookies([
-			{
-				name: 'vipChecker',
-				value: '3',
-				domain: process.env.BASE_URL?.replace('https://', ''),
-				path: '/',
-			},
-		])
+	test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
 		const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'

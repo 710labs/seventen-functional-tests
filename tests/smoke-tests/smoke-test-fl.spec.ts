@@ -15,16 +15,8 @@ test.describe('Medical Customer Checkout Florida', () => {
 	var orderNumber: any
 	const orderQuanity = 6
 
-	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
-		await context.addCookies([
-			{
-				name: 'vipChecker',
-				value: '3',
-				domain: process.env.BASE_URL?.replace('https://', ''),
-				path: '/',
-			},
-		])
 		const zipCode = '32003'
 		const address = '1845 Town Center Blvd, Fleming Island, FL 32003'
 		var fakeFirstName = faker.name.firstName() + '_Test'

@@ -113,6 +113,22 @@ on:
         options:
           - on_demand
           - spot
+      cart_item_count:
+        description: Number of items to add to cart per virtual user
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+          - '7'
+          - '8'
+          - '9'
+          - '10'
 
 concurrency:
   group: drop-simulation-${{ github.event.inputs.env || 'stage' }}
@@ -149,6 +165,7 @@ jobs:
       realqueue_browsers: ${{ steps.resolve.outputs.realqueue_browsers }}
       realqueue_workers: ${{ steps.resolve.outputs.realqueue_workers }}
       realqueue_per_worker: ${{ steps.resolve.outputs.realqueue_per_worker }}
+      cart_item_count: ${{ steps.resolve.outputs.cart_item_count }}
 
     steps:
       - name: Resolve drop simulation plan
@@ -164,6 +181,7 @@ jobs:
           INPUT_PLACE_ORDERS: ${{ github.event.inputs.place_orders || 'true' }}
           INPUT_SCREENSHOTS: ${{ github.event.inputs.screenshots || 'false' }}
           INPUT_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
+          INPUT_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '1' }}
         run: |
           set -euo pipefail
 
@@ -226,6 +244,18 @@ jobs:
             esac
           }
 
+          require_cart_item_count() {
+            local value="$1"
+
+            case "$value" in
+              1|2|3|4|5|6|7|8|9|10) ;;
+              *)
+                echo "cart_item_count must be an integer from 1 to 10. Received: $value" >&2
+                exit 1
+                ;;
+            esac
+          }
+
           ARTILLERY_ENV="${INPUT_ENV//\"/}"
           ARTILLERY_TARGET="${INPUT_TARGET//\"/}"
           ARTILLERY_MODE="${INPUT_MODE//\"/}"
@@ -236,6 +266,7 @@ jobs:
           PLACE_ORDERS="${INPUT_PLACE_ORDERS//\"/}"
           SCREENSHOTS="${INPUT_SCREENSHOTS//\"/}"
           FARGATE_CAPACITY="${INPUT_FARGATE_CAPACITY//\"/}"
+          CART_ITEM_COUNT="${INPUT_CART_ITEM_COUNT//\"/}"
 
           EXPECTED_TARGET="$(resolve_target "$ARTILLERY_ENV")"
 
@@ -271,6 +302,7 @@ jobs:
           require_browser_preset "realqueue_browsers" "$REALQUEUE_BROWSERS"
           require_non_negative_int "queue_wait_minutes" "$QUEUE_WAIT_MINUTES"
           require_queue_wait_preset "$QUEUE_WAIT_MINUTES"
+          require_cart_item_count "$CART_ITEM_COUNT"
 
           QUEUE_WAIT_MS=$((QUEUE_WAIT_MINUTES * 60 * 1000))
 
@@ -353,6 +385,7 @@ jobs:
             echo "realqueue_browsers=$REALQUEUE_BROWSERS"
             echo "realqueue_workers=$REALQUEUE_WORKERS"
             echo "realqueue_per_worker=$REALQUEUE_PER_WORKER"
+            echo "cart_item_count=$CART_ITEM_COUNT"
           } >> "$GITHUB_OUTPUT"
 
           {
@@ -366,6 +399,7 @@ jobs:
             echo "- Realqueue browsers: $REALQUEUE_BROWSERS across $REALQUEUE_WORKERS workers ($REALQUEUE_PER_WORKER each)"
             echo "- Bypass browsers: $BYPASS_BROWSERS across $BYPASS_WORKERS workers ($BYPASS_PER_WORKER each)"
             echo "- Place orders: $PLACE_ORDERS"
+            echo "- Cart items per user: $CART_ITEM_COUNT"
             echo "- Screenshots: $SCREENSHOTS"
             echo "- Fargate capacity: $FARGATE_CAPACITY"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -511,6 +545,7 @@ jobs:
           QUEUE_WAIT_MS: ${{ needs.plan.outputs.queue_wait_ms }}
           PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
           SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
+          CART_ITEM_COUNT: ${{ needs.plan.outputs.cart_item_count }}
           VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
@@ -531,7 +566,7 @@ jobs:
           ARTILLERY_PLACE_ORDERS=$PLACE_ORDERS
           SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_SCREENSHOTS=$SCREENSHOTS
-          ARTILLERY_CART_ITEM_COUNT=1
+          ARTILLERY_CART_ITEM_COUNT=$CART_ITEM_COUNT
           ARTILLERY_QUEUE_WAIT_MS=$QUEUE_WAIT_MS
           EOF
 
@@ -775,6 +810,7 @@ jobs:
           BYPASS_WORKERS: ${{ needs.plan.outputs.bypass_workers }}
           PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
           SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
+          CART_ITEM_COUNT: ${{ needs.plan.outputs.cart_item_count }}
           VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
@@ -795,7 +831,7 @@ jobs:
           ARTILLERY_PLACE_ORDERS=$PLACE_ORDERS
           SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_SCREENSHOTS=$SCREENSHOTS
-          ARTILLERY_CART_ITEM_COUNT=1
+          ARTILLERY_CART_ITEM_COUNT=$CART_ITEM_COUNT
           EOF
 
           echo "config=loadtest/generated/browser-bypass.yml" >> "$GITHUB_OUTPUT"
