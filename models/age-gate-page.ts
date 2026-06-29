@@ -36,10 +36,15 @@ export class AgeGatePage {
 	}
 
 	private async findVisibleAgeGateButton() {
-		const ageGateButtons = [
-			this.page.getByText('I Qualify', { exact: true }),
-			this.page.getByText("I'm over 21 or a qualified patient", { exact: true }),
-		]
+		const isMichigan = this.page.url().includes('thelist-mi')
+		const ageGateButtons = isMichigan
+			? [this.page.getByRole('button', { name: /^I qualify$/i })]
+			: [
+					this.page.getByRole('button', {
+						name: "I'm over 21 or a qualified patient",
+						exact: true,
+					}),
+				]
 
 		for (const ageGateButton of ageGateButtons) {
 			if (await ageGateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -81,6 +86,7 @@ export class AgeGatePage {
 				}
 
 				await ageGateButton.click()
+				await expect(this.page.locator('.age-gate-wrapper')).toBeHidden()
 			} else if (!(await passwordField.isVisible({ timeout: 1000 }).catch(() => false))) {
 				throw new Error(
 					[
