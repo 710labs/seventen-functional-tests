@@ -18,16 +18,8 @@ test.describe('Basic Acceptance Tests MI', () => {
 	var orderNumber: any
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Recreational @recreational @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Recreational @recreational @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
-		await context.addCookies([
-			{
-				name: 'vipChecker',
-				value: '3',
-				domain: process.env.BASE_URL?.replace('https://', ''),
-				path: '/',
-			},
-		])
 
 		const address = '123 Eight Mile Rd, Detroit, MI 48203'
 		var fakeFirstName = faker.name.firstName() + '_Test'

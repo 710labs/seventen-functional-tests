@@ -42,6 +42,22 @@ on:
         options:
           - 'yes'
           - 'no'
+      cart_item_count:
+        description: Number of items to add to cart per virtual user
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+          - '7'
+          - '8'
+          - '9'
+          - '10'
 jobs:
   artillery:
     runs-on: ubuntu-latest
@@ -68,7 +84,7 @@ jobs:
           ARTILLERY_LOAD_SIZE="${{ github.event.inputs.load_size }}"
           ARTILLERY_INCLUDE_VIP_COOKIE="${{ github.event.inputs.include_vip_cookie }}"
           ARTILLERY_710_MODE=ca
-          ARTILLERY_CART_ITEM_COUNT=1
+          ARTILLERY_CART_ITEM_COUNT="${{ github.event.inputs.cart_item_count || '1' }}"
           ARTILLERY_FARGATE_CAPACITY=on_demand
 
           case "$ARTILLERY_ENV" in

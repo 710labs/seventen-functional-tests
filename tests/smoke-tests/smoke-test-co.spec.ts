@@ -18,16 +18,8 @@ test.describe('Basic Acceptance Tests CO', () => {
 	var orderNumber: any
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, context, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
-		await context.addCookies([
-			{
-				name: 'vipChecker',
-				value: '3',
-				domain: process.env.BASE_URL?.replace('https://', ''),
-				path: '/',
-			},
-		])
 		const address = faker.helpers.arrayElement(coloradoAddressess)
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
