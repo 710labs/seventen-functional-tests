@@ -36,16 +36,22 @@ export class LoginPage {
 
 		await test.step('Click Login Button', async () => {
 			await this.loginButton.click()
-			const expectedRoute = options.requireFulfillmentRoute
-				? /^\/#(?:pickup-deliver|pickup|deliver)$/
-				: /^\/(?:#(?:pickup-deliver|pickup|deliver))?$/
+
+			await expect(
+				this.userNameField,
+				`Expected login form to be hidden after signing in. Current URL: ${this.page.url()}`,
+			).toBeHidden({ timeout: 10000 })
+
+			if (!options.requireFulfillmentRoute) {
+				return
+			}
 
 			await expect
 				.poll(() => {
 					const url = new URL(this.page.url())
 					return `${url.pathname}${url.hash}`
 				})
-				.toMatch(expectedRoute)
+				.toMatch(/^\/#(?:pickup-deliver|pickup|deliver)$/)
 		})
 	}
 }
