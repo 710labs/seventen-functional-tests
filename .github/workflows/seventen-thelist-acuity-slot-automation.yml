@@ -12,12 +12,17 @@ on:
           - upload
       slot_file:
         type: string
-        description: Committed CSV path under utils/. Ignored when slot_file_url is set.
+        description: Committed CSV path under utils/. Ignored when slot_csv_text or slot_file_url is set.
         required: false
         default: utils/delivery-slots.csv
+      slot_csv_text:
+        type: string
+        description: Optional raw pasted CSV text. Takes precedence over slot_file_url and slot_file.
+        required: false
+        default: ''
       slot_file_url:
         type: string
-        description: Optional direct HTTPS raw CSV URL. Use only for emergency runs.
+        description: Optional direct HTTPS raw CSV URL. Ignored when slot_csv_text is set.
         required: false
         default: ''
       workers:
@@ -68,6 +73,8 @@ jobs:
       - name: Prepare Acuity slot CSV
         env:
           SLOT_FILE: ${{ inputs.slot_file }}
+          SLOT_CSV_TEXT_PRESENT: ${{ inputs.slot_csv_text != '' }}
+          SLOT_CSV_TEXT_JSON: ${{ toJson(inputs.slot_csv_text) }}
           SLOT_FILE_URL: ${{ inputs.slot_file_url }}
         run: |
           set -euo pipefail
@@ -75,7 +82,21 @@ jobs:
           selected_file=".acuity-input/selected-delivery-slots.csv"
           mkdir -p "$(dirname "$selected_file")"
 
-          if [[ -n "$SLOT_FILE_URL" ]]; then
+          if [[ "$SLOT_CSV_TEXT_PRESENT" == "true" ]]; then
+            SELECTED_FILE="$selected_file" python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          csv_text = json.loads(os.environ["SLOT_CSV_TEXT_JSON"])
+          csv_text = csv_text.replace("\r\n", "\n").replace("\r", "\n")
+          if csv_text and not csv_text.endswith("\n"):
+              csv_text += "\n"
+
+          Path(os.environ["SELECTED_FILE"]).write_text(csv_text, encoding="utf-8")
+          PY
+            echo "ACUITY_SLOT_SOURCE=workflow input slot_csv_text" >> "$GITHUB_ENV"
+          elif [[ -n "$SLOT_FILE_URL" ]]; then
             case "$SLOT_FILE_URL" in
               https://*) ;;
               *)
