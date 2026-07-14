@@ -106,7 +106,7 @@ function toSlack(summary) {
 	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
 	const resultsById = new Map(summary.results.map(result => [result.id, result]))
 	const status = check => emoji[resultsById.get(check.id)?.status] || '❓'
-	const formatSlackTable = (headers, rows) => {
+	const formatMarkdownTable = (headers, rows) => {
 		const allRows = [headers, ...rows].map(row => row.map(value => String(value)))
 		const [headerRow, ...bodyRows] = allRows
 		const widths = headers.map((_, index) => Math.max(...allRows.map(row => row[index].length)))
@@ -181,7 +181,7 @@ function toSlack(summary) {
 		},
 		{
 			type: 'section',
-			text: { type: 'mrkdwn', text: formatSlackTable(['State', ...listEnvironments], listRows) },
+			text: { type: 'mrkdwn', text: formatMarkdownTable(['State', ...listEnvironments], listRows) },
 		},
 		{ type: 'divider' },
 		{
@@ -190,7 +190,7 @@ function toSlack(summary) {
 		},
 		{
 			type: 'section',
-			text: { type: 'mrkdwn', text: formatSlackTable(['Environment', ...liveDimensions], liveRows) },
+			text: { type: 'mrkdwn', text: formatMarkdownTable(['Environment', ...liveDimensions], liveRows) },
 		},
 		{ type: 'divider' },
 		{
@@ -199,7 +199,7 @@ function toSlack(summary) {
 		},
 		{
 			type: 'section',
-			text: { type: 'mrkdwn', text: formatSlackTable(['Application', 'Environment', 'Status'], conciergeRows) },
+			text: { type: 'mrkdwn', text: formatMarkdownTable(['Application', 'Environment', 'Status'], conciergeRows) },
 		},
 	]
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
