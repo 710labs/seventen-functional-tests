@@ -105,6 +105,12 @@
 			"type": "generated-order-pos"
 		},
 		{
+			"id": "live-dev-pos-last-10",
+			"label": "Live / Dev / POS Last 10 Orders",
+			"group": "POS",
+			"type": "last-orders-pos"
+		},
+		{
 			"id": "live-stage-storefront",
 			"label": "Live / Stage / Storefront",
 			"group": "Live",

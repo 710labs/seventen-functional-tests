@@ -3,11 +3,11 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { getCheck, writeResult } = require('./result-utils')
 
-const check = getCheck('live-stage-pos-last-10')
+const check = getCheck(process.argv[2] || 'live-stage-pos-last-10')
 const startedAt = Date.now()
 const baseUrl = (process.env.POS_BASE_URL || '').replace(/\/+$/, '')
 const auth = process.env.POS_AUTH || ''
-const evidenceDirectory = 'health-evidence/live-stage-pos-last-10'
+const evidenceDirectory = path.join('health-evidence', check.id)
 
 const isBlank = value => value === null || value === undefined || String(value).trim() === ''
 

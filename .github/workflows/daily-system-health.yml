@@ -456,13 +456,25 @@ jobs:
         run: exit 1
 
   pos-last-ten:
-    name: Live Stage — POS last 10 orders
+    name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment: live-stage
+    environment: ${{ matrix.environment_name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: live-dev-pos-last-10
+            label: Live Dev — POS last 10 orders
+            environment_name: live-dev
+            environment_key: dev
+          - id: live-stage-pos-last-10
+            label: Live Stage — POS last 10 orders
+            environment_name: live-stage
+            environment_key: stage
     env:
-      POS_BASE_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }}
-      POS_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }}
+      POS_BASE_URL: ${{ matrix.environment_key == 'dev' && secrets.ALWAYS_ON_URL_DEV || secrets.ALWAYS_ON_URL_STAGE }}
+      POS_AUTH: ${{ matrix.environment_key == 'dev' && secrets.LIVE_DEV_QA_AUTH || secrets.LIVE_STAGE_QA_AUTH }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -471,21 +483,21 @@ jobs:
       - name: Check the last 10 orders
         id: health
         continue-on-error: true
-        run: node scripts/health/check-pos-last-orders.js
+        run: node scripts/health/check-pos-last-orders.js ${{ matrix.id }}
       - name: Upload POS evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: health-evidence-live-stage-pos-last-10
-          path: health-evidence/live-stage-pos-last-10
+          name: health-evidence-${{ matrix.id }}
+          path: health-evidence/${{ matrix.id }}
           if-no-files-found: ignore
           retention-days: 7
       - name: Upload POS health result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: health-result-live-stage-pos-last-10
-          path: health-results/live-stage-pos-last-10.json
+          name: health-result-${{ matrix.id }}
+          path: health-results/${{ matrix.id }}.json
           if-no-files-found: warn
           retention-days: 7
       - name: Enforce POS result

@@ -26,9 +26,9 @@ function writeCheck(directory, check, status = 'passed') {
 	)
 }
 
-test('manifest defines the 17 required checks with unique IDs', () => {
-	assert.equal(manifest.checks.length, 17)
-	assert.equal(new Set(manifest.checks.map(check => check.id)).size, 17)
+test('manifest defines the 18 required checks with unique IDs', () => {
+	assert.equal(manifest.checks.length, 18)
+	assert.equal(new Set(manifest.checks.map(check => check.id)).size, 18)
 })
 
 test('aggregate passes only when every expected check reports passed', () => {
@@ -36,9 +36,9 @@ test('aggregate passes only when every expected check reports passed', () => {
 	manifest.checks.forEach(check => writeCheck(directory, check))
 	const summary = aggregate(directory)
 	assert.equal(summary.status, 'passed')
-	assert.equal(summary.totals.passed, 17)
-	assert.match(toMarkdown(summary), /17\/17 passed/)
-	assert.match(toSlack(summary).blocks[0].text.text, /17\/17 passed/)
+	assert.equal(summary.totals.passed, 18)
+	assert.match(toMarkdown(summary), /18\/18 passed/)
+	assert.match(toSlack(summary).blocks[0].text.text, /18\/18 passed/)
 })
 
 test('aggregate treats a missing result as a failure', () => {
@@ -67,7 +67,7 @@ test('aggregate rejects an invalid status rather than treating it as healthy', (
 	assert.equal(summary.results[0].status, 'unknown')
 })
 
-test('Slack uses compact two-column health matrices without individual failure names', () => {
+test('Slack uses native tables with aligned status columns and no individual failure names', () => {
 	const directory = createDirectory()
 	const failedIds = new Set([
 		'list-dev-ca',
@@ -75,6 +75,7 @@ test('Slack uses compact two-column health matrices without individual failure n
 		'list-dev-co',
 		'list-dev-nj',
 		'live-dev-storefront',
+		'live-dev-pos-last-10',
 		'live-stage-storefront',
 		'live-prod-storefront',
 		'concierge-dev',
@@ -84,21 +85,36 @@ test('Slack uses compact two-column health matrices without individual failure n
 	summary.runUrl = 'https://github.com/710labs/seventen-functional-tests/actions/runs/123'
 	const payload = toSlack(summary)
 	const serialized = JSON.stringify(payload)
-	const listMatrix = payload.blocks.find(block => block.fields?.[0]?.text.includes('LIST · DEV'))
-	const liveMatrix = payload.blocks.find(block => block.fields?.[0]?.text.includes('LIVE · DEV'))
-	const liveMatrixIndex = payload.blocks.indexOf(liveMatrix)
-	const miscAppsIndex = payload.blocks.findIndex(block => block.text?.text.includes('MISC. CUSTOMER APPS'))
+	const tables = payload.blocks.filter(block => block.type === 'table')
+	const [listTable, liveTable, miscAppsTable] = tables
+	const values = table => table.rows.map(row => row.map(cell => cell.text))
+	const liveTableIndex = payload.blocks.indexOf(liveTable)
+	const conciergeStoresHeadingIndex = payload.blocks.findIndex(block => block.text?.text.includes('CONCIERGE STORES'))
 	const actions = payload.blocks.find(block => block.type === 'actions')
 
-	assert.equal(listMatrix.fields.length, 2)
-	assert.match(listMatrix.fields[0].text, /CA  ❌/)
-	assert.match(listMatrix.fields[1].text, /CA  ✅/)
-	assert.equal(liveMatrix.fields.length, 3)
-	assert.match(liveMatrix.fields[0].text, /Storefront  ❌/)
-	assert.match(liveMatrix.fields[0].text, /POS verification  ✅/)
-	assert.equal(payload.blocks[liveMatrixIndex + 1].type, 'divider')
-	assert.equal(miscAppsIndex, liveMatrixIndex + 2)
-	assert.match(payload.blocks[miscAppsIndex].text.text, /Concierge Dev  ❌/)
+	assert.equal(tables.length, 3)
+	assert.deepEqual(listTable.column_settings, [{ align: 'left' }, { align: 'center' }, { align: 'center' }])
+	assert.deepEqual(values(listTable), [
+		['State', 'Dev', 'Stage'],
+		['CA', '❌', '✅'],
+		['MI', '❌', '✅'],
+		['CO', '❌', '✅'],
+		['NJ', '❌', '✅'],
+	])
+	assert.deepEqual(values(liveTable), [
+		['Environment', 'Storefront', 'POS verification', 'POS last 10'],
+		['Dev', '❌', '✅', '❌'],
+		['Stage', '❌', '✅', '✅'],
+		['Prod', '❌', '—', '⏭️ need to build check'],
+	])
+	assert.equal(payload.blocks[liveTableIndex + 1].type, 'divider')
+	assert.equal(conciergeStoresHeadingIndex, liveTableIndex + 2)
+	assert.deepEqual(values(miscAppsTable), [
+		['Application', 'Environment', 'Status'],
+		['Concierge', 'Dev', '❌'],
+		['Concierge', 'Prod', '✅'],
+		['Employee', 'Prod', '✅'],
+	])
 	assert.doesNotMatch(serialized, /Synthetic failed/)
 	assert.doesNotMatch(serialized, /details/)
 	assert.equal(actions.elements[0].text.text, 'Open GitHub Action')

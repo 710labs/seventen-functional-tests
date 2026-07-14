@@ -13,7 +13,7 @@ function assert(condition, message) {
 	if (!condition) throw new Error(message)
 }
 
-assert(manifest.checks.length === 17, `Expected 17 health checks, found ${manifest.checks.length}`)
+assert(manifest.checks.length === 18, `Expected 18 health checks, found ${manifest.checks.length}`)
 assert(new Set(manifest.checks.map(check => check.id)).size === manifest.checks.length, 'Health check IDs must be unique')
 
 for (const check of manifest.checks.filter(check => check.type === 'playwright')) {

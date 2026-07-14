@@ -106,9 +106,11 @@ function toSlack(summary) {
 	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
 	const resultsById = new Map(summary.results.map(result => [result.id, result]))
 	const status = id => emoji[resultsById.get(id)?.status] || '❓'
-	const field = (title, rows) => ({
-		type: 'mrkdwn',
-		text: `*${title}*\n${rows.map(([label, id]) => `${label}  ${status(id)}`).join('\n')}`,
+	const tableCell = text => ({ type: 'raw_text', text: String(text) })
+	const table = (headers, rows) => ({
+		type: 'table',
+		column_settings: headers.map((_, index) => ({ align: index === 0 ? 'left' : 'center' })),
+		rows: [headers, ...rows].map(row => row.map(tableCell)),
 	})
 	const failedWithReport = summary.results.find(
 		result => (failureStatuses.has(result.status) || result.status === 'flaky') && result.reportUrl,
@@ -142,49 +144,43 @@ function toSlack(summary) {
 		{ type: 'divider' },
 		{
 			type: 'section',
-			fields: [
-				field('LIST · DEV', [
-					['CA', 'list-dev-ca'],
-					['MI', 'list-dev-mi'],
-					['CO', 'list-dev-co'],
-					['NJ', 'list-dev-nj'],
-				]),
-				field('LIST · STAGE', [
-					['CA', 'list-stage-ca'],
-					['MI', 'list-stage-mi'],
-					['CO', 'list-stage-co'],
-					['NJ', 'list-stage-nj'],
-				]),
-			],
+			text: { type: 'mrkdwn', text: '*LIST*' },
 		},
+		table(
+			['State', 'Dev', 'Stage'],
+			[
+				['CA', status('list-dev-ca'), status('list-stage-ca')],
+				['MI', status('list-dev-mi'), status('list-stage-mi')],
+				['CO', status('list-dev-co'), status('list-stage-co')],
+				['NJ', status('list-dev-nj'), status('list-stage-nj')],
+			],
+		),
 		{ type: 'divider' },
 		{
 			type: 'section',
-			fields: [
-				field('LIVE · DEV', [
-					['Storefront', 'live-dev-storefront'],
-					['POS verification', 'live-dev-pos'],
-				]),
-				field('LIVE · STAGE', [
-					['Storefront', 'live-stage-storefront'],
-					['POS verification', 'live-stage-pos'],
-					['POS last 10', 'live-stage-pos-last-10'],
-				]),
-				field('LIVE · PROD', [['Storefront', 'live-prod-storefront']]),
-			],
+			text: { type: 'mrkdwn', text: '*LIVE*' },
 		},
+		table(
+			['Environment', 'Storefront', 'POS verification', 'POS last 10'],
+			[
+				['Dev', status('live-dev-storefront'), status('live-dev-pos'), status('live-dev-pos-last-10')],
+				['Stage', status('live-stage-storefront'), status('live-stage-pos'), status('live-stage-pos-last-10')],
+				['Prod', status('live-prod-storefront'), '—', '⏭️ need to build check'],
+			],
+		),
 		{ type: 'divider' },
 		{
 			type: 'section',
-			text: {
-				type: 'mrkdwn',
-				text:
-					'*MISC. CUSTOMER APPS*\n' +
-					`Concierge Dev  ${status('concierge-dev')}\n` +
-					`Concierge Prod  ${status('concierge-prod')}\n` +
-					`Employee Prod  ${status('employee-prod')}`,
-			},
+			text: { type: 'mrkdwn', text: '*CONCIERGE STORES*' },
 		},
+		table(
+			['Application', 'Environment', 'Status'],
+			[
+				['Concierge', 'Dev', status('concierge-dev')],
+				['Concierge', 'Prod', status('concierge-prod')],
+				['Employee', 'Prod', status('employee-prod')],
+			],
+		),
 	]
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }
