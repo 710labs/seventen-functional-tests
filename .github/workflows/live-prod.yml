@@ -1,7 +1,5 @@
 name: Live - PROD - No checkout
 on:
-  schedule:
-    - cron: "30 13 * * *"
   workflow_dispatch:
 jobs:
   live-prod-tests:

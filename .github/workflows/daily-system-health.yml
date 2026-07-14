@@ -1,0 +1,548 @@
+name: Daily System Health
+
+on:
+  schedule:
+    - cron: '17 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-system-health
+  cancel-in-progress: false
+
+jobs:
+  list-dev:
+    name: List Dev — all states
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    concurrency:
+      group: thelist-dev-domain-state
+      cancel-in-progress: false
+    env:
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      QA_ENDPOINT: /wp-json/seventen-qa/v1/
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run List Dev health lane
+        id: health
+        continue-on-error: true
+        run: node scripts/health/run-playwright-lane.js list-dev
+      - name: Upload List Dev health results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-list-dev
+          path: health-results/*.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce List Dev result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  list-stage:
+    name: List Stage — all states
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    concurrency:
+      group: thelist-stage-domain-state
+      cancel-in-progress: false
+    env:
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      QA_ENDPOINT: /wp-json/seventen-qa/v1/
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run List Stage health lane
+        id: health
+        continue-on-error: true
+        run: node scripts/health/run-playwright-lane.js list-stage
+      - name: Upload List Stage health results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-list-stage
+          path: health-results/*.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce List Stage result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  live-dev:
+    name: Live Dev — storefront
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      order_ids_json: ${{ steps.orders.outputs.order_ids_json }}
+    env:
+      ENV: live-dev live-dev.710labs.com
+      ENV_ID: live-dev
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_DEV }}
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME }}
+      ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD }}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Clear previous order IDs
+        run: rm -f order_ids.txt
+      - name: Run Live Dev storefront check
+        id: health
+        continue-on-error: true
+        run: node scripts/health/run-playwright-check.js live-dev-storefront
+      - name: Collect generated order IDs
+        id: orders
+        if: always()
+        run: node scripts/health/collect-order-ids.js order_ids.txt
+      - name: Upload Live Dev Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-live-dev-storefront
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Upload Live Dev health result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-live-dev-storefront
+          path: health-results/live-dev-storefront.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce Live Dev storefront result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  live-dev-pos:
+    name: Live Dev — POS verification
+    needs: live-dev
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ORDER_IDS_JSON: ${{ needs.live-dev.outputs.order_ids_json || '[]' }}
+      POS_BASE_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}
+      POS_AUTH: ${{ secrets.LIVE_DEV_QA_AUTH }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Verify generated Live Dev orders
+        id: health
+        continue-on-error: true
+        run: node scripts/health/verify-generated-orders.js live-dev-pos
+      - name: Upload Live Dev POS result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-live-dev-pos
+          path: health-results/live-dev-pos.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce Live Dev POS result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  live-stage:
+    name: Live Stage — storefront
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      order_ids_json: ${{ steps.orders.outputs.order_ids_json }}
+    env:
+      ENV: live-stage live-stage.710labs.com
+      ENV_ID: live-stage
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL_STAGE }}
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME }}
+      ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+      ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD }}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Clear previous order IDs
+        run: rm -f order_ids.txt
+      - name: Run Live Stage storefront check
+        id: health
+        continue-on-error: true
+        run: node scripts/health/run-playwright-check.js live-stage-storefront
+      - name: Collect generated order IDs
+        id: orders
+        if: always()
+        run: node scripts/health/collect-order-ids.js order_ids.txt
+      - name: Upload Live Stage Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-live-stage-storefront
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Upload Live Stage health result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-live-stage-storefront
+          path: health-results/live-stage-storefront.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce Live Stage storefront result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  live-stage-pos:
+    name: Live Stage — POS verification
+    needs: live-stage
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ORDER_IDS_JSON: ${{ needs.live-stage.outputs.order_ids_json || '[]' }}
+      POS_BASE_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }}
+      POS_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Verify generated Live Stage orders
+        id: health
+        continue-on-error: true
+        run: node scripts/health/verify-generated-orders.js live-stage-pos
+      - name: Upload Live Stage POS result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-live-stage-pos
+          path: health-results/live-stage-pos.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce Live Stage POS result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  standalone-smokes:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - id: live-prod-storefront
+            label: Live Prod — storefront
+            environment_name: live-prod live.710labs.com
+            env_id: live-prod
+            base_url: prod
+            qa_endpoint: legacy
+          - id: concierge-dev
+            label: Concierge Dev
+            environment_name: concierge-dev concierge-dev.710labs.com
+            env_id: concierge-dev
+            base_url: dev
+            qa_endpoint: secret
+          - id: concierge-prod
+            label: Concierge Prod
+            environment_name: concierge-prod concierge.710labs.com
+            env_id: concierge-prod
+            base_url: dev
+            qa_endpoint: legacy
+          - id: employee-prod
+            label: Employee Prod
+            environment_name: employee-prod employee-store.710labs.com
+            env_id: employee-prod
+            base_url: dev
+            qa_endpoint: legacy
+    env:
+      ENV: ${{ matrix.environment_name }}
+      ENV_ID: ${{ matrix.env_id }}
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ matrix.base_url == 'prod' && secrets.BASE_URL_PROD_CA || secrets.BASE_URL_DEV }}
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      QA_ENDPOINT: ${{ matrix.qa_endpoint == 'secret' && secrets.QA_ENDPOINT || '/wp-content/plugins/seventen-qa/api/' }}
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      ADD_ADDRESS_BEFORE_CHECKOUT: true
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+      PROD_LIVE_URL: ${{ secrets.PROD_LIVE_URL }}
+      PROD_LIVE_REC_USERNAME: ${{ secrets.PROD_LIVE_REC_USERNAME }}
+      PROD_LIVE_REC_PASSWORD: ${{ secrets.PROD_LIVE_REC_PASSWORD }}
+      CONCIERGE_USER: ${{ secrets.CONCIERGE_USER }}
+      CONCIERGE_PASSWORD: ${{ secrets.CONCIERGE_PASSWORD }}
+      CONCIERGE_URL: ${{ secrets.CONCIERGE_URL_DEV }}
+      CONCIERGE_ADMIN_URL: ${{ secrets.CONCIERGE_ADMIN_URL_DEV }}
+      ADMIN_CONCIERGE_USER: ${{ secrets.ADMIN_CONCIERGE_USER }}
+      ADMIN_CONCIERGE_PASSWORD: ${{ secrets.ADMIN_CONCIERGE_PASSWORD }}
+      PROD_CONCIERGE_URL: ${{ secrets.PROD_CONCIERGE_URL }}
+      PROD_CONCIERGE_USERNAME: ${{ secrets.PROD_CONCIERGE_USERNAME }}
+      PROD_CONCIERGE_PASSWORD: ${{ secrets.PROD_CONCIERGE_PASSWORD }}
+      PROD_EMPLOYEE_URL: ${{ secrets.PROD_EMPLOYEE_URL }}
+      PROD_EMPLOYEE_USERNAME: ${{ secrets.PROD_EMPLOYEE_USERNAME }}
+      PROD_EMPLOYEE_PASSWORD: ${{ secrets.PROD_EMPLOYEE_PASSWORD }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD }}
+      DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run health check
+        id: health
+        continue-on-error: true
+        run: node scripts/health/run-playwright-check.js ${{ matrix.id }}
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.id }}
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Upload health result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-${{ matrix.id }}
+          path: health-results/${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce health result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  pos-last-ten:
+    name: Live Stage — POS last 10 orders
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: live-stage
+    env:
+      POS_BASE_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }}
+      POS_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Check the last 10 orders
+        id: health
+        continue-on-error: true
+        run: node scripts/health/check-pos-last-orders.js
+      - name: Upload POS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-evidence-live-stage-pos-last-10
+          path: health-evidence/live-stage-pos-last-10
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload POS health result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-live-stage-pos-last-10
+          path: health-results/live-stage-pos-last-10.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce POS result
+        if: always() && steps.health.outcome != 'success'
+        run: exit 1
+
+  aggregate:
+    name: Publish Daily System Health
+    needs:
+      - list-dev
+      - list-stage
+      - live-dev
+      - live-dev-pos
+      - live-stage
+      - live-stage-pos
+      - standalone-smokes
+      - pos-last-ten
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Download all check results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: health-result-*
+          path: health-results
+          merge-multiple: true
+      - name: Build system health report
+        run: node scripts/health/aggregate-results.js health-results health-summary.json health-summary.md health-slack.json
+      - name: Publish GitHub summary
+        run: sed -n '1,500p' health-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload consolidated health report
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-system-health-report
+          path: |
+            health-summary.json
+            health-summary.md
+          retention-days: 30
+      - name: Send the single Slack digest
+        id: slack
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: node scripts/health/send-slack.js health-slack.json
+      - name: Enforce final system health
+        if: always()
+        env:
+          SLACK_OUTCOME: ${{ steps.slack.outcome }}
+        run: |
+          node scripts/health/enforce-summary.js health-summary.json
+          if [ "$SLACK_OUTCOME" != "success" ]; then
+            echo "The health report was generated, but Slack delivery failed."
+            exit 1
+          fi

@@ -3,6 +3,8 @@
 	"version": "1.0.0",
 	"description": "",
 	"scripts": {
+		"test:health": "node --test scripts/health/*.test.js",
+		"validate:health": "node scripts/health/validate-configuration.js",
 		"test:local:ca": "playwright test --config=configs/local.config.ts --workers=20 --grep @CA",
 		"test:local:fl": "playwright test --config=configs/local.config.ts --workers=20 --grep @FL",
 		"test:local:mi": "playwright test --config=configs/local.config.ts --workers=20 --grep @MI",

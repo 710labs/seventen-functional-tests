@@ -1,7 +1,6 @@
 name: Employee - Prod - No Checkout
 on:
-  schedule:
-    - cron: "50 13 * * *"
+  workflow_dispatch:
 jobs:
   live-dev-tests:
     timeout-minutes: 60

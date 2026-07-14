@@ -1,7 +1,5 @@
 name: Concierge - Prod - No checkout
 on:
-  schedule:
-    - cron: "40 13 * * *"
   workflow_dispatch:
 jobs:
   live-dev-tests:

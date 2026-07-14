@@ -195,6 +195,27 @@ These will run in headless mode and will execute in a variety of browsers and vi
 - npm run [smoke:test:prod:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml)
 - npm run [helper:acuityslots:dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-dev-acuity-slot-helper.yml)
 
+## Daily System Health
+
+All previously scheduled end-to-end and POS checks run from
+`.github/workflows/daily-system-health.yml` at 10:17 UTC each day. The workflow accounts for
+17 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
+treated as a failure so a cancelled runner or broken setup cannot appear healthy.
+
+The List Dev and List Stage checks remain serial because they switch shared domain state. Other
+independent smoke checks use limited parallelism. Individual Playwright jobs do not receive the
+Slack webhook during this workflow; only the final aggregate job can post to Slack.
+
+The legacy workflows remain available through `workflow_dispatch` for focused reruns and rollback,
+but no longer contain active schedules.
+
+Health aggregation tests:
+
+```bash
+npm run test:health
+npm run validate:health
+```
+
 ## Admin Drop Smoke
 
 The admin-drop smoke suite runs small wp-admin Operations checks from the dedicated admin-drop workflow and Playwright config.
