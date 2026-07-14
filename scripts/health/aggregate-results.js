@@ -147,12 +147,12 @@ function toSlack(summary) {
 			text: { type: 'mrkdwn', text: '*LIST*' },
 		},
 		table(
-			['State', 'Dev', 'Stage'],
+			['State', 'Dev', 'Stage', 'Prod'],
 			[
-				['CA', status('list-dev-ca'), status('list-stage-ca')],
-				['MI', status('list-dev-mi'), status('list-stage-mi')],
-				['CO', status('list-dev-co'), status('list-stage-co')],
-				['NJ', status('list-dev-nj'), status('list-stage-nj')],
+				['CA', status('list-dev-ca'), status('list-stage-ca'), status('list-prod-ca')],
+				['MI', status('list-dev-mi'), status('list-stage-mi'), status('list-prod-mi')],
+				['CO', status('list-dev-co'), status('list-stage-co'), status('list-prod-co')],
+				['NJ', status('list-dev-nj'), status('list-stage-nj'), status('list-prod-nj')],
 			],
 		),
 		{ type: 'divider' },

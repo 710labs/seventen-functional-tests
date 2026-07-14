@@ -26,9 +26,9 @@ function writeCheck(directory, check, status = 'passed') {
 	)
 }
 
-test('manifest defines the 18 required checks with unique IDs', () => {
-	assert.equal(manifest.checks.length, 18)
-	assert.equal(new Set(manifest.checks.map(check => check.id)).size, 18)
+test('manifest defines the 22 required checks with unique IDs', () => {
+	assert.equal(manifest.checks.length, 22)
+	assert.equal(new Set(manifest.checks.map(check => check.id)).size, 22)
 })
 
 test('aggregate passes only when every expected check reports passed', () => {
@@ -36,9 +36,9 @@ test('aggregate passes only when every expected check reports passed', () => {
 	manifest.checks.forEach(check => writeCheck(directory, check))
 	const summary = aggregate(directory)
 	assert.equal(summary.status, 'passed')
-	assert.equal(summary.totals.passed, 18)
-	assert.match(toMarkdown(summary), /18\/18 passed/)
-	assert.match(toSlack(summary).blocks[0].text.text, /18\/18 passed/)
+	assert.equal(summary.totals.passed, 22)
+	assert.match(toMarkdown(summary), /22\/22 passed/)
+	assert.match(toSlack(summary).blocks[0].text.text, /22\/22 passed/)
 })
 
 test('aggregate treats a missing result as a failure', () => {
@@ -74,6 +74,7 @@ test('Slack uses native tables with aligned status columns and no individual fai
 		'list-dev-mi',
 		'list-dev-co',
 		'list-dev-nj',
+		'list-prod-mi',
 		'live-dev-storefront',
 		'live-dev-pos-last-10',
 		'live-stage-storefront',
@@ -93,13 +94,18 @@ test('Slack uses native tables with aligned status columns and no individual fai
 	const actions = payload.blocks.find(block => block.type === 'actions')
 
 	assert.equal(tables.length, 3)
-	assert.deepEqual(listTable.column_settings, [{ align: 'left' }, { align: 'center' }, { align: 'center' }])
+	assert.deepEqual(listTable.column_settings, [
+		{ align: 'left' },
+		{ align: 'center' },
+		{ align: 'center' },
+		{ align: 'center' },
+	])
 	assert.deepEqual(values(listTable), [
-		['State', 'Dev', 'Stage'],
-		['CA', '❌', '✅'],
-		['MI', '❌', '✅'],
-		['CO', '❌', '✅'],
-		['NJ', '❌', '✅'],
+		['State', 'Dev', 'Stage', 'Prod'],
+		['CA', '❌', '✅', '✅'],
+		['MI', '❌', '✅', '❌'],
+		['CO', '❌', '✅', '✅'],
+		['NJ', '❌', '✅', '✅'],
 	])
 	assert.deepEqual(values(liveTable), [
 		['Environment', 'Storefront', 'POS verification', 'POS last 10'],

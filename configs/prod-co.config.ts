@@ -17,6 +17,7 @@ export default defineConfig<TestOptions>({
 	reporter: [
 		['list'],
 		['html'],
+		['../reporters/health/pw-health-json-reporter.ts'],
 		[
 			'playwright-tesults-reporter',
 			{

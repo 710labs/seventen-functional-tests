@@ -90,6 +90,46 @@
 			"command": "ci:test:staging:nj"
 		},
 		{
+			"id": "list-prod-ca",
+			"label": "List / Prod / CA",
+			"group": "List Prod",
+			"type": "playwright",
+			"state": "ca",
+			"envId": "prod-ca",
+			"environment": "prod-ca thelist.710labs.com",
+			"command": "smoke:test:prod:ca"
+		},
+		{
+			"id": "list-prod-mi",
+			"label": "List / Prod / MI",
+			"group": "List Prod",
+			"type": "playwright",
+			"state": "mi",
+			"envId": "prod-mi",
+			"environment": "prod-mi thelist-mi.710labs.com",
+			"command": "smoke:test:prod:mi"
+		},
+		{
+			"id": "list-prod-co",
+			"label": "List / Prod / CO",
+			"group": "List Prod",
+			"type": "playwright",
+			"state": "co",
+			"envId": "prod-co",
+			"environment": "prod-co thelist-co.710labs.com",
+			"command": "smoke:test:prod:co"
+		},
+		{
+			"id": "list-prod-nj",
+			"label": "List / Prod / NJ",
+			"group": "List Prod",
+			"type": "playwright",
+			"state": "nj",
+			"envId": "prod-nj",
+			"environment": "prod-nj thelist-nj.710labs.com",
+			"command": "smoke:test:prod:nj"
+		},
+		{
 			"id": "live-dev-storefront",
 			"label": "Live / Dev / Storefront",
 			"group": "Live",

@@ -199,7 +199,7 @@ These will run in headless mode and will execute in a variety of browsers and vi
 
 All previously scheduled end-to-end and POS checks run from
 `.github/workflows/daily-system-health.yml` at 10:17 UTC each day. The workflow accounts for
-18 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
+22 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
 treated as a failure so a cancelled runner or broken setup cannot appear healthy.
 
 The List Dev and List Stage checks remain serial because they switch shared domain state. Other

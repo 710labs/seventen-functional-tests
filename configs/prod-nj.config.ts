@@ -17,6 +17,7 @@ export default defineConfig<TestOptions>({
 	reporter: [
 		['list'],
 		['html'],
+		['../reporters/health/pw-health-json-reporter.ts'],
 		['../reporters/slack/pw-slack-webhook-reporter.ts'],
 		['../reporters/s3/pw-report-s3-upload.ts'],
 		['@estruyf/github-actions-reporter'],
