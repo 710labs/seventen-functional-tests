@@ -105,12 +105,44 @@ function toSlack(summary) {
 	const failed = summary.totals.expected - passed - flaky
 	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
 	const resultsById = new Map(summary.results.map(result => [result.id, result]))
-	const status = id => emoji[resultsById.get(id)?.status] || '❓'
-	const tableCell = text => ({ type: 'raw_text', text: String(text) })
-	const table = (headers, rows) => ({
-		type: 'table',
-		column_settings: headers.map((_, index) => ({ align: index === 0 ? 'left' : 'center' })),
-		rows: [headers, ...rows].map(row => row.map(tableCell)),
+	const status = check => emoji[resultsById.get(check.id)?.status] || '❓'
+	const formatSlackTable = (headers, rows) => {
+		const allRows = [headers, ...rows].map(row => row.map(value => String(value)))
+		const widths = headers.map((_, index) => Math.max(...allRows.map(row => row[index].length)))
+		const formatRow = row => `| ${row.map((cell, index) => cell.padEnd(widths[index])).join(' | ')} |`
+		return ['```', formatRow(headers), ...rows.map(formatRow), '```'].join('\n')
+	}
+	const listChecks = manifest.checks.filter(check => /^List /i.test(check.group) && check.state)
+	const listStates = [...new Set(listChecks.map(check => check.state.toUpperCase()))]
+	const listEnvironments = [...new Set(listChecks.map(check => check.group.replace(/^List /i, '')))]
+	const listRows = listStates.map(state => [
+		state,
+		...listEnvironments.map(environment => {
+			const check = listChecks.find(
+				candidate => candidate.state.toUpperCase() === state && candidate.group === `List ${environment}`,
+			)
+			return check ? status(check) : '❓'
+		}),
+	])
+	const liveChecks = manifest.checks.filter(check => /^Live \/ /i.test(check.label))
+	const liveEnvironments = [...new Set(liveChecks.map(check => check.label.split(' / ')[1]))]
+	const liveDimensions = [...new Set(liveChecks.map(check => check.label.split(' / ').slice(2).join(' / ')))]
+	const liveRows = liveEnvironments.map(environment => [
+		environment,
+		...liveDimensions.map(dimension => {
+			const check = liveChecks.find(candidate => {
+				const [, candidateEnvironment, ...candidateDimension] = candidate.label.split(' / ')
+				return candidateEnvironment === environment && candidateDimension.join(' / ') === dimension
+			})
+			return check ? status(check) : '❓'
+		}),
+	])
+	const conciergeChecks = manifest.checks.filter(
+		check => !/^List /i.test(check.group) && !/^Live \/ /i.test(check.label) && check.label.includes(' / '),
+	)
+	const conciergeRows = conciergeChecks.map(check => {
+		const [application, environment] = check.label.split(' / ')
+		return [application, environment, status(check)]
 	})
 	const failedWithReport = summary.results.find(
 		result => (failureStatuses.has(result.status) || result.status === 'flaky') && result.reportUrl,
@@ -146,41 +178,28 @@ function toSlack(summary) {
 			type: 'section',
 			text: { type: 'mrkdwn', text: '*LIST*' },
 		},
-		table(
-			['State', 'Dev', 'Stage', 'Prod'],
-			[
-				['CA', status('list-dev-ca'), status('list-stage-ca'), status('list-prod-ca')],
-				['MI', status('list-dev-mi'), status('list-stage-mi'), status('list-prod-mi')],
-				['CO', status('list-dev-co'), status('list-stage-co'), status('list-prod-co')],
-				['NJ', status('list-dev-nj'), status('list-stage-nj'), status('list-prod-nj')],
-			],
-		),
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: formatSlackTable(['State', ...listEnvironments], listRows) },
+		},
 		{ type: 'divider' },
 		{
 			type: 'section',
 			text: { type: 'mrkdwn', text: '*LIVE*' },
 		},
-		table(
-			['Environment', 'Storefront', 'POS verification', 'POS last 10'],
-			[
-				['Dev', status('live-dev-storefront'), status('live-dev-pos'), status('live-dev-pos-last-10')],
-				['Stage', status('live-stage-storefront'), status('live-stage-pos'), status('live-stage-pos-last-10')],
-				['Prod', status('live-prod-storefront'), '—', '⏭️ need to build check'],
-			],
-		),
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: formatSlackTable(['Environment', ...liveDimensions], liveRows) },
+		},
 		{ type: 'divider' },
 		{
 			type: 'section',
 			text: { type: 'mrkdwn', text: '*CONCIERGE STORES*' },
 		},
-		table(
-			['Application', 'Environment', 'Status'],
-			[
-				['Concierge', 'Dev', status('concierge-dev')],
-				['Concierge', 'Prod', status('concierge-prod')],
-				['Employee', 'Prod', status('employee-prod')],
-			],
-		),
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: formatSlackTable(['Application', 'Environment', 'Status'], conciergeRows) },
+		},
 	]
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }

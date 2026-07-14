@@ -67,7 +67,7 @@ test('aggregate rejects an invalid status rather than treating it as healthy', (
 	assert.equal(summary.results[0].status, 'unknown')
 })
 
-test('Slack uses native tables with aligned status columns and no individual failure names', () => {
+test('Slack uses standard blocks with manifest-driven status tables and no individual failure names', () => {
 	const directory = createDirectory()
 	const failedIds = new Set([
 		'list-dev-ca',
@@ -86,41 +86,30 @@ test('Slack uses native tables with aligned status columns and no individual fai
 	summary.runUrl = 'https://github.com/710labs/seventen-functional-tests/actions/runs/123'
 	const payload = toSlack(summary)
 	const serialized = JSON.stringify(payload)
-	const tables = payload.blocks.filter(block => block.type === 'table')
-	const [listTable, liveTable, miscAppsTable] = tables
-	const values = table => table.rows.map(row => row.map(cell => cell.text))
-	const liveTableIndex = payload.blocks.indexOf(liveTable)
+	const listHeadingIndex = payload.blocks.findIndex(block => block.text?.text === '*LIST*')
+	const liveHeadingIndex = payload.blocks.findIndex(block => block.text?.text === '*LIVE*')
+	const liveTableIndex = liveHeadingIndex + 1
 	const conciergeStoresHeadingIndex = payload.blocks.findIndex(block => block.text?.text.includes('CONCIERGE STORES'))
+	const listTable = payload.blocks[listHeadingIndex + 1].text.text
+	const liveTable = payload.blocks[liveHeadingIndex + 1].text.text
+	const miscAppsTable = payload.blocks[conciergeStoresHeadingIndex + 1].text.text
 	const actions = payload.blocks.find(block => block.type === 'actions')
 
-	assert.equal(tables.length, 3)
-	assert.deepEqual(listTable.column_settings, [
-		{ align: 'left' },
-		{ align: 'center' },
-		{ align: 'center' },
-		{ align: 'center' },
-	])
-	assert.deepEqual(values(listTable), [
-		['State', 'Dev', 'Stage', 'Prod'],
-		['CA', '❌', '✅', '✅'],
-		['MI', '❌', '✅', '❌'],
-		['CO', '❌', '✅', '✅'],
-		['NJ', '❌', '✅', '✅'],
-	])
-	assert.deepEqual(values(liveTable), [
-		['Environment', 'Storefront', 'POS verification', 'POS last 10'],
-		['Dev', '❌', '✅', '❌'],
-		['Stage', '❌', '✅', '✅'],
-		['Prod', '❌', '—', '⏭️ need to build check'],
-	])
-	assert.equal(payload.blocks[liveTableIndex + 1].type, 'divider')
+	assert.doesNotMatch(serialized, /"type":"table"/)
+	assert.doesNotMatch(serialized, /"raw_text"/)
+	assert.match(listTable, /\| State \| Dev \| Stage \| Prod \|/)
+	assert.match(listTable, /\| CA\s+\| ❌\s+\| ✅\s+\| ✅\s+\|/)
+	assert.match(listTable, /\| MI\s+\| ❌\s+\| ✅\s+\| ❌\s+\|/)
+	assert.match(liveTable, /\| Environment \| Storefront \| POS Verification \| POS Last 10 Orders \|/)
+	assert.match(liveTable, /\| Dev\s+\| ❌\s+\| ✅\s+\| ❌\s+\|/)
+	assert.match(liveTable, /\| Stage\s+\| ❌\s+\| ✅\s+\| ✅\s+\|/)
+	assert.match(liveTable, /\| Prod\s+\| ❌\s+\| ❓\s+\| ❓\s+\|/)
+	assert.equal(payload.blocks[liveHeadingIndex + 1].type, 'section')
 	assert.equal(conciergeStoresHeadingIndex, liveTableIndex + 2)
-	assert.deepEqual(values(miscAppsTable), [
-		['Application', 'Environment', 'Status'],
-		['Concierge', 'Dev', '❌'],
-		['Concierge', 'Prod', '✅'],
-		['Employee', 'Prod', '✅'],
-	])
+	assert.match(miscAppsTable, /\| Application \| Environment \| Status \|/)
+	assert.match(miscAppsTable, /\| Concierge\s+\| Dev\s+\| ❌\s+\|/)
+	assert.match(miscAppsTable, /\| Concierge\s+\| Prod\s+\| ✅\s+\|/)
+	assert.match(miscAppsTable, /\| Employee\s+\| Prod\s+\| ✅\s+\|/)
 	assert.doesNotMatch(serialized, /Synthetic failed/)
 	assert.doesNotMatch(serialized, /details/)
 	assert.equal(actions.elements[0].text.text, 'Open GitHub Action')
