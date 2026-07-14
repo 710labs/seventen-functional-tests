@@ -10,6 +10,11 @@ type AddProductsToCartOptions = {
 	exactItemCount?: boolean
 }
 
+type AddToCartResult = {
+	added: boolean
+	errorText: string | null
+}
+
 type CartLoadState = {
 	hasCartItem: boolean
 	hasCheckoutButton: boolean
@@ -45,6 +50,13 @@ export type StorefrontCheckoutState = {
 	isEnabled: boolean
 	isReachable: boolean
 	url: string
+}
+
+export type CheckoutReadyCartBuildSummary = {
+	banner: MinimumOrderBannerState
+	checkoutState: StorefrontCheckoutState
+	productsAdded: number
+	subtotal: number
 }
 
 export type MinimumOrderCartBuildStep = {
@@ -134,6 +146,27 @@ export class ShopPage {
 			if (parenthesizedCount) {
 				return Number(parenthesizedCount[1])
 			}
+
+			const plainCount = text.match(/^\s*(\d+)\s*(?:items?)?\s*$/i)
+
+			if (plainCount) {
+				return Number(plainCount[1])
+			}
+
+			for (const attribute of ['data-count', 'data-cart-count']) {
+				const value = await cartLink.getAttribute(attribute).catch(() => null)
+				const parsedValue = Number(value)
+
+				if (value !== null && Number.isFinite(parsedValue)) {
+					return parsedValue
+				}
+			}
+		}
+
+		const cartDrawer = this.page.locator('#cartDrawer')
+
+		if (await cartDrawer.isVisible().catch(() => false)) {
+			return cartDrawer.locator('.cart_item, .woocommerce-cart-form__cart-item').count()
 		}
 
 		return 0
@@ -801,35 +834,88 @@ export class ShopPage {
 		await cartDrawer.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
 	}
 
-	private async waitForAddToCartResult(productName: string) {
+	private async waitForAddToCartResult(
+		productName: string,
+		previousCartCount: number,
+	): Promise<AddToCartResult> {
 		const cartDrawer = this.page.locator('#cartDrawer')
-		const cartDrawerItem = cartDrawer.locator('.cart_item, .woocommerce-cart-form__cart-item').first()
 		const cartDrawerProduct = cartDrawer.getByText(productName, { exact: false }).first()
-		const cartCount = this.page.locator('.wpse-cart-count, .cart-count, .rsp-countdown-content').first()
-		const addNotice = this.page
-			.locator('.woocommerce-message, .wc-block-components-notice-banner, .wpse-snacktoast')
-			.filter({ hasText: /added|cart|bag/i })
-			.first()
+		const notices = this.page.locator(
+			'.woocommerce-error, .woocommerce-message, .wc-block-components-notice-banner, .wpse-snacktoast, [role="alert"]',
+		)
+		const deadline = Date.now() + 10000
 
-		const added = await Promise.race([
-			cartDrawer.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
-			cartDrawerItem.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
-			cartDrawerProduct.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
-			cartCount.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
-			addNotice.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false),
-		])
+		while (Date.now() < deadline) {
+			const noticeCount = await notices.count()
 
-		if (!added) {
-			throw new Error(
-				[
-					`No add-to-cart confirmation appeared after clicking "${productName}".`,
-					`Current URL: ${this.page.url()}`,
-					`Cart drawer visible: ${await cartDrawer.isVisible().catch(() => false)}`,
-					`Cart drawer item visible: ${await cartDrawerItem.isVisible().catch(() => false)}`,
-					`Body preview: ${await this.getBodyPreview()}`,
-				].join('\n'),
-			)
+			for (let index = 0; index < noticeCount; index += 1) {
+				const notice = notices.nth(index)
+
+				if (!(await notice.isVisible().catch(() => false))) {
+					continue
+				}
+
+				const text = ((await notice.textContent().catch(() => '')) || '')
+					.replace(/\s+/g, ' ')
+					.trim()
+
+				if (/cannot add|only\s+\d+\s+left|out of stock|insufficient stock|not available/i.test(text)) {
+					return { added: false, errorText: text }
+				}
+			}
+
+			const currentCartCount = await this.getStorefrontCartItemCount()
+
+			if (
+				currentCartCount > previousCartCount ||
+				(await cartDrawerProduct.isVisible().catch(() => false))
+			) {
+				return { added: true, errorText: null }
+			}
+
+			await this.page.waitForTimeout(250)
 		}
+
+		throw new Error(
+			[
+				`No add-to-cart confirmation appeared after clicking "${productName}".`,
+				`Current URL: ${this.page.url()}`,
+				`Previous cart count: ${previousCartCount}`,
+				`Current cart count: ${await this.getStorefrontCartItemCount()}`,
+				`Cart drawer visible: ${await cartDrawer.isVisible().catch(() => false)}`,
+				`Body preview: ${await this.getBodyPreview()}`,
+			].join('\n'),
+		)
+	}
+
+	private getProductCandidateKey(candidate: StorefrontProductCandidate) {
+		return candidate.sku || `${candidate.name}:${candidate.menuIndex}`
+	}
+
+	private async tryAddStorefrontProduct(
+		candidate: StorefrontProductCandidate,
+		usage: TestUsageType,
+	): Promise<AddToCartResult> {
+		const products = this.getAddableProductCards(usage)
+		const productCard = products.nth(candidate.menuIndex)
+
+		if (!(await productCard.isVisible().catch(() => false))) {
+			return { added: false, errorText: `Product "${candidate.name}" is no longer visible` }
+		}
+
+		const addToCartButton = productCard.locator(storefrontAddToCartSelector).first()
+
+		if (!(await addToCartButton.isVisible().catch(() => false))) {
+			return { added: false, errorText: `Product "${candidate.name}" is no longer addable` }
+		}
+
+		const previousCartCount = await this.getStorefrontCartItemCount()
+		await addToCartButton.scrollIntoViewIfNeeded()
+		await addToCartButton.click({ force: true })
+		await this.acceptCartConflictIfPresent()
+		const result = await this.waitForAddToCartResult(candidate.name, previousCartCount)
+		await this.closeCartDrawerIfPresent()
+		return result
 	}
 
 	async openStorefrontForFulfillment(fulfillment: ShopFulfillment) {
@@ -884,20 +970,11 @@ export class ShopPage {
 
 	async addStorefrontProduct(candidate: StorefrontProductCandidate, usage: TestUsageType = 'recreational') {
 		await test.step(`Add storefront product "${candidate.name}"`, async () => {
-			const products = this.getAddableProductCards(usage)
-			const productCard = products.nth(candidate.menuIndex)
-			await expect(productCard, `Expected product "${candidate.name}" to be addable`).toBeVisible()
+			const result = await this.tryAddStorefrontProduct(candidate, usage)
 
-			const addToCartButton = productCard.locator(storefrontAddToCartSelector).first()
-			await expect(
-				addToCartButton,
-				`Expected product "${candidate.name}" to have an add-to-cart control`,
-			).toBeVisible()
-			await addToCartButton.scrollIntoViewIfNeeded()
-			await addToCartButton.click({ force: true })
-			await this.acceptCartConflictIfPresent()
-			await this.waitForAddToCartResult(candidate.name)
-			await this.closeCartDrawerIfPresent()
+			if (!result.added) {
+				throw new Error(result.errorText || `Unable to add "${candidate.name}" to the cart`)
+			}
 		})
 	}
 
@@ -1248,38 +1325,170 @@ export class ShopPage {
 			await this.ensureFulfillmentSelected(fulfillment)
 		})
 		await test.step('Add Products to Cart', async () => {
-			const targetItemCount = options.exactItemCount
-				? itemCount
-				: itemCount + (await this.randomizeCartItems())
+			const currentItemCount = await this.getStorefrontCartItemCount()
+			const targetItemCount = Math.ceil(
+				options.exactItemCount
+					? Math.max(0, itemCount - currentItemCount)
+					: itemCount + (await this.randomizeCartItems()),
+			)
 			await this.page.waitForSelector(storefrontAddToCartSelector)
-			const products = this.getAddableProductCards(usage)
+			const attemptedProducts = new Set<string>()
+			let productsAdded = 0
+			let attempts = 0
+			const maxAttempts = Math.max(targetItemCount * 4, 12)
+			const rejectionReasons: string[] = []
 
-			for (let i = 0; i < targetItemCount; i++) {
-				if (options.exactItemCount && (await this.getStorefrontCartItemCount()) >= itemCount) {
+			while (productsAdded < targetItemCount && attempts < maxAttempts) {
+				const candidates = await this.getAddableStorefrontProducts(usage)
+				const candidate = candidates.find(
+					product => !attemptedProducts.has(this.getProductCandidateKey(product)),
+				)
+
+				if (!candidate) {
 					break
 				}
 
-				await test.step(`Add Products # ${i + 1}`, async () => {
-					await expect(products.nth(i)).toBeVisible({ timeout: 5000 })
-					var productCard = products.nth(i)
-					var productName = (
-						(await productCard
-							.locator('.woocommerce-loop-product__title, h2, h3, a')
-							.first()
-							.textContent()
-							.catch(() => '')) || `Product #${i + 1}`
-					)
-						.replace(/\s+/g, ' ')
-						.trim()
-					var addToCartButton = productCard.locator(storefrontAddToCartSelector).first()
-					await addToCartButton.click({ force: true })
-					await this.waitForAddToCartResult(productName)
-					await this.closeCartDrawerIfPresent()
+				attempts += 1
+				attemptedProducts.add(this.getProductCandidateKey(candidate))
+
+				await test.step(`Add Product #${productsAdded + 1}: ${candidate.name}`, async () => {
+					const result = await this.tryAddStorefrontProduct(candidate, usage)
+
+					if (result.added) {
+						productsAdded += 1
+						return
+					}
+
+					rejectionReasons.push(`${candidate.name}: ${result.errorText || 'not added'}`)
+					await this.page.goto('/')
+					await this.page.waitForTimeout(750)
+					await this.ensureFulfillmentSelected(fulfillment)
 				})
+			}
+
+			if (productsAdded < targetItemCount) {
+				throw new Error(
+					[
+						`Added ${productsAdded} of ${targetItemCount} requested product(s) after ${attempts} attempt(s).`,
+						...rejectionReasons.slice(-5),
+					].join('\n'),
+				)
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
 			await this.goToCart({ requireItems: true })
+		})
+	}
+
+	async addProductsUntilCheckoutReady(
+		initialItemCount: number,
+		fulfillment: ShopFulfillment = 'Pickup',
+		usage: TestUsageType = 'medical',
+		maxProducts = 8,
+	): Promise<CheckoutReadyCartBuildSummary> {
+		return test.step('Build cart until checkout is enabled', async () => {
+			const initialTarget = Math.max(1, Math.ceil(initialItemCount))
+
+			if (initialTarget > maxProducts) {
+				throw new Error(
+					`Initial cart target ${initialTarget} exceeds the safety cap of ${maxProducts} products.`,
+				)
+			}
+
+			await this.page.goto('/')
+			await this.page.waitForTimeout(1000)
+			await this.ensureFulfillmentSelected(fulfillment)
+
+			const attemptedProducts = new Set<string>()
+			const rejectionReasons: string[] = []
+			let productsAdded = 0
+			let attempts = 0
+			const maxAttempts = Math.max(maxProducts * 4, 16)
+
+			const addNextProduct = async (preferHigherPrice: boolean) => {
+				const availableProducts = await this.getAddableStorefrontProducts(usage)
+				const candidates = preferHigherPrice
+					? availableProducts.sort((left, right) => right.price - left.price)
+					: availableProducts
+				const candidate = candidates.find(
+					product => !attemptedProducts.has(this.getProductCandidateKey(product)),
+				)
+
+				if (!candidate) {
+					attempts = maxAttempts
+					return false
+				}
+
+				attempts += 1
+				attemptedProducts.add(this.getProductCandidateKey(candidate))
+				const result = await this.tryAddStorefrontProduct(candidate, usage)
+
+				if (result.added) {
+					productsAdded += 1
+					return true
+				}
+
+				rejectionReasons.push(`${candidate.name}: ${result.errorText || 'not added'}`)
+				return false
+			}
+
+			while (productsAdded < initialTarget && attempts < maxAttempts) {
+				if (await addNextProduct(false)) {
+					continue
+				}
+
+				await this.page.goto('/')
+				await this.page.waitForTimeout(750)
+				await this.ensureFulfillmentSelected(fulfillment)
+			}
+
+			if (productsAdded < initialTarget) {
+				throw new Error(
+					[
+						`Only ${productsAdded} of ${initialTarget} initial cart product(s) could be added.`,
+						...rejectionReasons.slice(-5),
+					].join('\n'),
+				)
+			}
+
+			while (productsAdded <= maxProducts) {
+				await this.goToCart({ requireItems: true })
+				const checkoutState = await this.getStorefrontCheckoutState()
+				const banner = await this.getMinimumOrderBannerState()
+				const subtotal = this.roundMoney(await this.getCartSubtotalAmount())
+
+				if (checkoutState.isReachable) {
+					return { banner, checkoutState, productsAdded, subtotal }
+				}
+
+				if (productsAdded >= maxProducts || attempts >= maxAttempts) {
+					throw new Error(
+						[
+							`Checkout remained disabled after ${productsAdded} confirmed product(s).`,
+							`Subtotal: $${subtotal.toFixed(2)}.`,
+							`Minimum-order message: ${banner.text || 'none detected'}.`,
+							`Checkout URL: ${checkoutState.url}.`,
+							...rejectionReasons.slice(-5),
+						].join('\n'),
+					)
+				}
+
+				await this.page.goto('/')
+				await this.page.waitForTimeout(750)
+				await this.ensureFulfillmentSelected(fulfillment)
+
+				while (attempts < maxAttempts) {
+					if (await addNextProduct(true)) {
+						break
+					}
+
+					await this.page.goto('/')
+					await this.page.waitForTimeout(750)
+					await this.ensureFulfillmentSelected(fulfillment)
+				}
+			}
+
+			throw new Error('Unable to build a checkout-ready cart within the configured safety limits.')
 		})
 	}
 	async addSameProductToCart(itemCount: number) {
@@ -1325,42 +1534,6 @@ export class ShopPage {
 		fulfillment = 'Pickup',
 		usage: TestUsageType = 'recreational',
 	) {
-		await test.step('Navigate to Shop page', async () => {
-			await this.page.waitForTimeout(3000)
-			await this.page.goto('/')
-			await this.page.waitForTimeout(3000)
-		})
-		await test.step('Select Fulfillment Method', async () => {
-			await this.ensureFulfillmentSelected(fulfillment)
-		})
-		await test.step('Add Products to Cart', async () => {
-			itemCount = itemCount + (await this.randomizeCartItems())
-			await this.page.waitForSelector(storefrontAddToCartSelector)
-			const products = this.getAddableProductCards(usage)
-
-			for (let i = 0; i < itemCount; i++) {
-				await test.step(`Add Products # ${i + 1}`, async () => {
-					await expect(products.nth(i)).toBeVisible({ timeout: 5000 })
-					var productCard = products.nth(i)
-					var productName = (
-						(await productCard
-							.locator('.woocommerce-loop-product__title, h2, h3, a')
-							.first()
-							.textContent()
-							.catch(() => '')) || `Product #${i + 1}`
-					)
-						.replace(/\s+/g, ' ')
-						.trim()
-					var addToCartButton = productCard.locator(storefrontAddToCartSelector).first()
-					await addToCartButton.click({ force: true })
-					await this.waitForAddToCartResult(productName)
-					await this.closeCartDrawerIfPresent()
-				})
-			}
-
-			await this.page.keyboard.press('PageUp')
-			await this.page.waitForTimeout(2000)
-			await this.goToCart({ requireItems: true })
-		})
+		await this.addProductsToCart(itemCount, mobile, fulfillment, usage)
 	}
 }

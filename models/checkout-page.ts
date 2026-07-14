@@ -453,10 +453,7 @@ export class CheckoutPage {
 			await this.selectSlot()
 		})
 
-		await test.step('Submit New Customer Order', async () => {
-			await this.placeOrderButton.waitFor({ state: 'visible' })
-			await this.placeOrderButton.click()
-		})
+		await this.submitOrder()
 
 		return cartTotals
 	}
@@ -487,6 +484,29 @@ export class CheckoutPage {
 				).toBeVisible()
 				await timeSlot.click()
 			}
+		})
+	}
+
+	async submitOrder() {
+		await test.step('Accept pickup commitment and submit order', async () => {
+			const pickupCommitmentCheckbox = this.page
+				.getByRole('checkbox', {
+					name: /I understand my reserved items will be released if not picked up/i,
+				})
+				.first()
+
+			if (await pickupCommitmentCheckbox.isVisible().catch(() => false)) {
+				await expect(pickupCommitmentCheckbox).toBeEnabled()
+				await pickupCommitmentCheckbox.check()
+				await expect(pickupCommitmentCheckbox).toBeChecked()
+			}
+
+			await expect(this.placeOrderButton).toBeVisible()
+			await expect(
+				this.placeOrderButton,
+				'Place order should be enabled after all checkout requirements are complete',
+			).toBeEnabled({ timeout: 15000 })
+			await this.placeOrderButton.click()
 		})
 	}
 
@@ -560,9 +580,7 @@ export class CheckoutPage {
 			cartTotals = await this.verifyCheckoutTotals(zipcode, usageType, productList)
 		}
 
-		await test.step('Submit New Customer Order', async () => {
-			await this.placeOrderButton.click()
-		})
+		await this.submitOrder()
 
 		return cartTotals
 	}
@@ -620,9 +638,7 @@ export class CheckoutPage {
 			// await timeSlot.click()
 		})
 
-		await test.step('Submit New Customer Order', async () => {
-			await this.placeOrderButton.click()
-		})
+		await this.submitOrder()
 
 		return cartTotals
 	}

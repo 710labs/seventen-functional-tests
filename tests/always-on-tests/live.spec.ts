@@ -1,9 +1,10 @@
 import { test, expect, request, APIRequestContext } from '@playwright/test'
 import { HomePageLogin } from '../../models/always-on/login-homepage.ts'
-import { AccountPage } from '../../models/always-on/account-page.ts'
 import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
-import { CheckoutPage } from '../../models/always-on/checkout-page.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
+import { LiveNonProdAccountPage } from '../../models/always-on/live-nonprod-account-page.ts'
+import { LiveNonProdCartFlow } from '../../models/always-on/live-nonprod-cart-flow.ts'
+import { LiveNonProdCheckoutPage } from '../../models/always-on/live-nonprod-checkout-page.ts'
 require('dotenv').config({ path: '.env' })
 import { appendFileSync, writeFileSync } from 'fs'
 
@@ -23,9 +24,10 @@ test.describe('Live Tests', () => {
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
 			const homePageActions = new HomePageActions(page)
-			const checkoutPage = new CheckoutPage(page)
+			const cartFlow = new LiveNonProdCartFlow(page)
+			const checkoutPage = new LiveNonProdCheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
-			const accountPage = new AccountPage(page)
+			const accountPage = new LiveNonProdAccountPage(page)
 			// add adress for new user account
 			await homePageLogin.navigateToURL(page, liveURL)
 			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
@@ -42,13 +44,13 @@ test.describe('Live Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.liveRecAddProductsToCartUntilMinimumMet(page)
+			await cartFlow.addProductsUntilCheckout('rec')
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
 			const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 			const newAddress = '2919 S La Cienega Blvd, Culver City, CA'
-			await checkoutPage.recEnterInfoForCheckoutAndEdit(page, address, newAddress)
+			await checkoutPage.completeRecCheckout(page, address, newAddress)
 			//place order
 			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
@@ -89,9 +91,10 @@ test.describe('Live Tests', () => {
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
 			const homePageActions = new HomePageActions(page)
-			const checkoutPage = new CheckoutPage(page)
+			const cartFlow = new LiveNonProdCartFlow(page)
+			const checkoutPage = new LiveNonProdCheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
-			const accountPage = new AccountPage(page)
+			const accountPage = new LiveNonProdAccountPage(page)
 			// add adress for new user account
 			await homePageLogin.navigateToURL(page, liveURL)
 			await homePageActions.enterAddress(page, 'live', '440 Rodeo Drive Beverly Hills')
@@ -110,12 +113,12 @@ test.describe('Live Tests', () => {
 			// verify that homepage loads again
 			await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 			// add products to cart
-			await homePageActions.liveMedAddProductsToCartUntilMinimumMet(page, 'dev/stage')
+			await cartFlow.addProductsUntilCheckout('med')
 			//await homePageActions.newLiveMedAddProductsToCartUntilMinimumMet(page)
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.newMedEnterInfoForCheckoutAndEdit(page, liveURL, address, newAddress)
+			await checkoutPage.completeMedCheckout(page, address, newAddress)
 			//place order
 			await checkoutPage.placeOrder(page)
 			// verify order confirmation loads
@@ -152,7 +155,7 @@ test.describe('Live Tests', () => {
 	)
 	test('Existing user -- Sign In & Sign Out', { tag: ['@recreational'] }, async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
-		const accountPage = new AccountPage(page)
+		const accountPage = new LiveNonProdAccountPage(page)
 		const homePageActions = new HomePageActions(page)
 		// add adress for new user account
 		await homePageLogin.navigateToURL(page, liveURL)
