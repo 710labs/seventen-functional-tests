@@ -1,7 +1,5 @@
 name: Live - Dev
 on:
-  schedule:
-    - cron: "0 11 * * *"
   workflow_dispatch:
 jobs:
   live-dev-tests:

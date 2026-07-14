@@ -1,0 +1,165 @@
+{
+	"version": 1,
+	"checks": [
+		{
+			"id": "list-dev-ca",
+			"label": "List / Dev / CA",
+			"group": "List Dev",
+			"type": "playwright",
+			"lane": "list-dev",
+			"state": "ca",
+			"envId": "dev-ca",
+			"environment": "dev-ca thelist-710labs.com",
+			"command": "ci:test:dev:ca"
+		},
+		{
+			"id": "list-dev-mi",
+			"label": "List / Dev / MI",
+			"group": "List Dev",
+			"type": "playwright",
+			"lane": "list-dev",
+			"state": "mi",
+			"envId": "dev-mi",
+			"environment": "dev-mi thelist-710labs.com",
+			"command": "ci:test:dev:mi"
+		},
+		{
+			"id": "list-dev-co",
+			"label": "List / Dev / CO",
+			"group": "List Dev",
+			"type": "playwright",
+			"lane": "list-dev",
+			"state": "co",
+			"envId": "dev-co",
+			"environment": "dev-co thelist-710labs.com",
+			"command": "ci:test:dev:co"
+		},
+		{
+			"id": "list-dev-nj",
+			"label": "List / Dev / NJ",
+			"group": "List Dev",
+			"type": "playwright",
+			"lane": "list-dev",
+			"state": "nj",
+			"envId": "dev-nj",
+			"environment": "dev-nj thelist-710labs.com",
+			"command": "ci:test:dev:nj"
+		},
+		{
+			"id": "list-stage-ca",
+			"label": "List / Stage / CA",
+			"group": "List Stage",
+			"type": "playwright",
+			"lane": "list-stage",
+			"state": "ca",
+			"envId": "staging-ca",
+			"environment": "staging-ca thelist-710labs.com",
+			"command": "ci:test:staging:ca"
+		},
+		{
+			"id": "list-stage-mi",
+			"label": "List / Stage / MI",
+			"group": "List Stage",
+			"type": "playwright",
+			"lane": "list-stage",
+			"state": "mi",
+			"envId": "staging-mi",
+			"environment": "staging-mi thelist-710labs.com",
+			"command": "ci:test:staging:mi"
+		},
+		{
+			"id": "list-stage-co",
+			"label": "List / Stage / CO",
+			"group": "List Stage",
+			"type": "playwright",
+			"lane": "list-stage",
+			"state": "co",
+			"envId": "staging-co",
+			"environment": "staging-co thelist-710labs.com",
+			"command": "ci:test:staging:co"
+		},
+		{
+			"id": "list-stage-nj",
+			"label": "List / Stage / NJ",
+			"group": "List Stage",
+			"type": "playwright",
+			"lane": "list-stage",
+			"state": "nj",
+			"envId": "staging-nj",
+			"environment": "staging-nj thelist-710labs.com",
+			"command": "ci:test:staging:nj"
+		},
+		{
+			"id": "live-dev-storefront",
+			"label": "Live / Dev / Storefront",
+			"group": "Live",
+			"type": "playwright",
+			"envId": "live-dev",
+			"environment": "live-dev live-dev.710labs.com",
+			"command": "live:ci:always-on"
+		},
+		{
+			"id": "live-dev-pos",
+			"label": "Live / Dev / POS Verification",
+			"group": "POS",
+			"type": "generated-order-pos"
+		},
+		{
+			"id": "live-stage-storefront",
+			"label": "Live / Stage / Storefront",
+			"group": "Live",
+			"type": "playwright",
+			"envId": "live-stage",
+			"environment": "live-stage live-stage.710labs.com",
+			"command": "live:ci:always-on"
+		},
+		{
+			"id": "live-stage-pos",
+			"label": "Live / Stage / POS Verification",
+			"group": "POS",
+			"type": "generated-order-pos"
+		},
+		{
+			"id": "live-prod-storefront",
+			"label": "Live / Prod / Storefront",
+			"group": "Live",
+			"type": "playwright",
+			"envId": "live-prod",
+			"environment": "live-prod live.710labs.com",
+			"command": "prod-live:smoke:always-on"
+		},
+		{
+			"id": "concierge-dev",
+			"label": "Concierge / Dev",
+			"group": "Concierge",
+			"type": "playwright",
+			"envId": "concierge-dev",
+			"environment": "concierge-dev concierge-dev.710labs.com",
+			"command": "concierge:ci:tests"
+		},
+		{
+			"id": "concierge-prod",
+			"label": "Concierge / Prod",
+			"group": "Concierge",
+			"type": "playwright",
+			"envId": "concierge-prod",
+			"environment": "concierge-prod concierge.710labs.com",
+			"command": "prod-concierge:smoke:always-on"
+		},
+		{
+			"id": "employee-prod",
+			"label": "Employee / Prod",
+			"group": "Employee",
+			"type": "playwright",
+			"envId": "employee-prod",
+			"environment": "employee-prod employee-store.710labs.com",
+			"command": "prod-employee:smoke:always-on"
+		},
+		{
+			"id": "live-stage-pos-last-10",
+			"label": "Live / Stage / POS Last 10 Orders",
+			"group": "POS",
+			"type": "last-orders-pos"
+		}
+	]
+}
