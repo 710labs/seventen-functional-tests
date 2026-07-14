@@ -56,7 +56,7 @@ test('aggregate keeps flaky distinct from failed', () => {
 	const summary = aggregate(directory)
 	assert.equal(summary.status, 'flaky')
 	assert.equal(summary.totals.flaky, 1)
-	assert.match(JSON.stringify(toSlack(summary)), /Failures and warnings/)
+	assert.doesNotMatch(JSON.stringify(toSlack(summary)), /Failures and warnings/)
 })
 
 test('aggregate rejects an invalid status rather than treating it as healthy', () => {
@@ -65,4 +65,38 @@ test('aggregate rejects an invalid status rather than treating it as healthy', (
 	const summary = aggregate(directory)
 	assert.equal(summary.status, 'failed')
 	assert.equal(summary.results[0].status, 'unknown')
+})
+
+test('Slack uses compact two-column health matrices without individual failure names', () => {
+	const directory = createDirectory()
+	const failedIds = new Set([
+		'list-dev-ca',
+		'list-dev-mi',
+		'list-dev-co',
+		'list-dev-nj',
+		'live-dev-storefront',
+		'live-stage-storefront',
+		'live-prod-storefront',
+		'concierge-dev',
+	])
+	manifest.checks.forEach(check => writeCheck(directory, check, failedIds.has(check.id) ? 'failed' : 'passed'))
+	const summary = aggregate(directory)
+	summary.runUrl = 'https://github.com/710labs/seventen-functional-tests/actions/runs/123'
+	const payload = toSlack(summary)
+	const serialized = JSON.stringify(payload)
+	const listMatrix = payload.blocks.find(block => block.fields?.[0]?.text.includes('LIST · DEV'))
+	const liveMatrix = payload.blocks.find(block => block.fields?.[0]?.text.includes('LIVE · DEV'))
+	const actions = payload.blocks.find(block => block.type === 'actions')
+
+	assert.equal(listMatrix.fields.length, 2)
+	assert.match(listMatrix.fields[0].text, /CA  ❌/)
+	assert.match(listMatrix.fields[1].text, /CA  ✅/)
+	assert.equal(liveMatrix.fields.length, 4)
+	assert.match(liveMatrix.fields[0].text, /Storefront  ❌/)
+	assert.match(liveMatrix.fields[0].text, /POS verification  ✅/)
+	assert.doesNotMatch(serialized, /Synthetic failed/)
+	assert.doesNotMatch(serialized, /details/)
+	assert.equal(actions.elements[0].text.text, 'Open GitHub Action')
+	assert.equal(actions.elements[0].url, summary.runUrl)
+	assert.equal(actions.elements[1].text.text, 'Open First Failed Report')
 })

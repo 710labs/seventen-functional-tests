@@ -73,15 +73,6 @@ function aggregate(directory) {
 	}
 }
 
-function resultLink(result) {
-	const url = result.reportUrl || result.runUrl
-	return url ? `<${url}|details>` : null
-}
-
-function truncate(value, limit = 2900) {
-	return value.length <= limit ? value : `${value.slice(0, limit - 16)}\n… truncated`
-}
-
 function markdownCell(value) {
 	return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 }
@@ -113,23 +104,31 @@ function toSlack(summary) {
 	const flaky = summary.totals.flaky || 0
 	const failed = summary.totals.expected - passed - flaky
 	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
-	const grouped = new Map()
-	for (const result of summary.results) {
-		if (!grouped.has(result.group)) grouped.set(result.group, [])
-		grouped.get(result.group).push(result)
+	const resultsById = new Map(summary.results.map(result => [result.id, result]))
+	const status = id => emoji[resultsById.get(id)?.status] || '❓'
+	const field = (title, rows) => ({
+		type: 'mrkdwn',
+		text: `*${title}*\n${rows.map(([label, id]) => `${label}  ${status(id)}`).join('\n')}`,
+	})
+	const failedWithReport = summary.results.find(
+		result => (failureStatuses.has(result.status) || result.status === 'flaky') && result.reportUrl,
+	)
+	const actions = []
+	if (summary.runUrl) {
+		actions.push({
+			type: 'button',
+			text: { type: 'plain_text', text: 'Open GitHub Action', emoji: true },
+			style: 'primary',
+			url: summary.runUrl,
+		})
 	}
-	const statusLines = []
-	for (const [group, results] of grouped) {
-		statusLines.push(`*${group}*`)
-		for (const result of results) {
-			const link = resultLink(result)
-			statusLines.push(`${emoji[result.status] || '❓'} ${result.label}${link ? ` · ${link}` : ''}`)
-		}
+	if (failedWithReport) {
+		actions.push({
+			type: 'button',
+			text: { type: 'plain_text', text: 'Open First Failed Report', emoji: true },
+			url: failedWithReport.reportUrl,
+		})
 	}
-	const failures = summary.results.filter(result => failureStatuses.has(result.status) || result.status === 'flaky')
-	const failureText = failures
-		.flatMap(result => (result.failureSummary?.length ? result.failureSummary.slice(0, 3).map(item => `• *${result.label}:* ${item}`) : [`• *${result.label}:* ${result.status}`]))
-		.join('\n')
 
 	const blocks = [
 		{
@@ -138,11 +137,49 @@ function toSlack(summary) {
 		},
 		{
 			type: 'context',
-			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing · ${flaky} flaky${summary.runUrl ? ` · <${summary.runUrl}|View workflow run>` : ''}` }],
+			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing · ${flaky} flaky` }],
 		},
-		{ type: 'section', text: { type: 'mrkdwn', text: truncate(statusLines.join('\n')) } },
+		{ type: 'divider' },
+		{
+			type: 'section',
+			fields: [
+				field('LIST · DEV', [
+					['CA', 'list-dev-ca'],
+					['MI', 'list-dev-mi'],
+					['CO', 'list-dev-co'],
+					['NJ', 'list-dev-nj'],
+				]),
+				field('LIST · STAGE', [
+					['CA', 'list-stage-ca'],
+					['MI', 'list-stage-mi'],
+					['CO', 'list-stage-co'],
+					['NJ', 'list-stage-nj'],
+				]),
+			],
+		},
+		{ type: 'divider' },
+		{
+			type: 'section',
+			fields: [
+				field('LIVE · DEV', [
+					['Storefront', 'live-dev-storefront'],
+					['POS verification', 'live-dev-pos'],
+				]),
+				field('LIVE · STAGE', [
+					['Storefront', 'live-stage-storefront'],
+					['POS verification', 'live-stage-pos'],
+					['POS last 10', 'live-stage-pos-last-10'],
+				]),
+				field('LIVE · PROD', [['Storefront', 'live-prod-storefront']]),
+				field('CUSTOMER APPS', [
+					['Concierge Dev', 'concierge-dev'],
+					['Concierge Prod', 'concierge-prod'],
+					['Employee Prod', 'employee-prod'],
+				]),
+			],
+		},
 	]
-	if (failureText) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: truncate(`*Failures and warnings*\n${failureText}`) } })
+	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }
 }
 
