@@ -108,9 +108,10 @@ function toSlack(summary) {
 	const status = check => emoji[resultsById.get(check.id)?.status] || '❓'
 	const formatSlackTable = (headers, rows) => {
 		const allRows = [headers, ...rows].map(row => row.map(value => String(value)))
+		const [headerRow, ...bodyRows] = allRows
 		const widths = headers.map((_, index) => Math.max(...allRows.map(row => row[index].length)))
 		const formatRow = row => `| ${row.map((cell, index) => cell.padEnd(widths[index])).join(' | ')} |`
-		return ['```', formatRow(headers), ...rows.map(formatRow), '```'].join('\n')
+		return ['```', formatRow(headerRow), ...bodyRows.map(formatRow), '```'].join('\n')
 	}
 	const listChecks = manifest.checks.filter(check => /^List /i.test(check.group) && check.state)
 	const listStates = [...new Set(listChecks.map(check => check.state.toUpperCase()))]
