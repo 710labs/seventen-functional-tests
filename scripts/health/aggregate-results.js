@@ -171,12 +171,19 @@ function toSlack(summary) {
 					['POS last 10', 'live-stage-pos-last-10'],
 				]),
 				field('LIVE · PROD', [['Storefront', 'live-prod-storefront']]),
-				field('CUSTOMER APPS', [
-					['Concierge Dev', 'concierge-dev'],
-					['Concierge Prod', 'concierge-prod'],
-					['Employee Prod', 'employee-prod'],
-				]),
 			],
+		},
+		{ type: 'divider' },
+		{
+			type: 'section',
+			text: {
+				type: 'mrkdwn',
+				text:
+					'*MISC. CUSTOMER APPS*\n' +
+					`Concierge Dev  ${status('concierge-dev')}\n` +
+					`Concierge Prod  ${status('concierge-prod')}\n` +
+					`Employee Prod  ${status('employee-prod')}`,
+			},
 		},
 	]
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
