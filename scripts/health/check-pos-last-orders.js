@@ -11,6 +11,14 @@ const evidenceDirectory = 'health-evidence/live-stage-pos-last-10'
 
 const isBlank = value => value === null || value === undefined || String(value).trim() === ''
 
+const normalizeOrder = order => ({
+	orderId: order.woocommerceId,
+	instanceId: order.instanceId ?? order.instanceID,
+	instanceName: order.instanceName,
+	instanceType: order.instanceType,
+	externalId: order.externalId ?? order.externalID,
+})
+
 async function main() {
 	if (!baseUrl || !auth) {
 		const missing = [!baseUrl && 'POS_BASE_URL', !auth && 'POS_AUTH'].filter(Boolean)
@@ -22,7 +30,6 @@ async function main() {
 	const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) })
 	const text = await response.text()
 	fs.mkdirSync(evidenceDirectory, { recursive: true })
-	fs.writeFileSync(path.join(evidenceDirectory, 'orders-response.txt'), text)
 	if (!response.ok) throw new Error(`POS API returned HTTP ${response.status}`)
 
 	let body
@@ -31,21 +38,21 @@ async function main() {
 	} catch {
 		throw new Error('POS API response was not valid JSON')
 	}
-	fs.writeFileSync(path.join(evidenceDirectory, 'orders-response.json'), `${JSON.stringify(body, null, 2)}\n`)
 
 	const orders = Array.isArray(body.orders) ? body.orders.slice(0, 10) : []
 	if (!orders.length) throw new Error('POS API returned no orders')
 
+	const sanitized = orders.map(normalizeOrder)
+	fs.writeFileSync(
+		path.join(evidenceDirectory, 'orders-evidence.json'),
+		`${JSON.stringify({ ordersChecked: orders.length, orders: sanitized }, null, 2)}\n`,
+	)
+
 	const failures = orders
 		.map(order => {
-			const fields = {
-				instanceId: order.instanceId ?? order.instanceID,
-				instanceName: order.instanceName,
-				instanceType: order.instanceType,
-				externalId: order.externalId ?? order.externalID,
-			}
+			const { orderId, ...fields } = normalizeOrder(order)
 			return {
-				orderId: order.woocommerceId,
+				orderId,
 				missing: Object.entries(fields).filter(([, value]) => isBlank(value)).map(([field]) => field),
 			}
 		})

@@ -9,6 +9,7 @@ class HealthJsonReporter implements Reporter {
 	private tests = new Map<string, TestCase>()
 
 	onTestEnd(test: TestCase, _result: TestResult) {
+		if (!process.env.HEALTH_RESULT_FILE) return
 		this.tests.set(test.id, test)
 	}
 
