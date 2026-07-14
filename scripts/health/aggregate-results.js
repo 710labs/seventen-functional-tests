@@ -73,15 +73,6 @@ function aggregate(directory) {
 	}
 }
 
-function resultLink(result) {
-	const url = result.reportUrl || result.runUrl
-	return url ? `<${url}|details>` : null
-}
-
-function truncate(value, limit = 2900) {
-	return value.length <= limit ? value : `${value.slice(0, limit - 16)}\n… truncated`
-}
-
 function markdownCell(value) {
 	return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 }
@@ -113,23 +104,66 @@ function toSlack(summary) {
 	const flaky = summary.totals.flaky || 0
 	const failed = summary.totals.expected - passed - flaky
 	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
-	const grouped = new Map()
-	for (const result of summary.results) {
-		if (!grouped.has(result.group)) grouped.set(result.group, [])
-		grouped.get(result.group).push(result)
+	const resultsById = new Map(summary.results.map(result => [result.id, result]))
+	const status = check => emoji[resultsById.get(check.id)?.status] || '❓'
+	const formatMarkdownTable = (headers, rows) => {
+		const allRows = [headers, ...rows].map(row => row.map(value => String(value)))
+		const [headerRow, ...bodyRows] = allRows
+		const widths = headers.map((_, index) => Math.max(...allRows.map(row => row[index].length)))
+		const formatRow = row => `| ${row.map((cell, index) => cell.padEnd(widths[index])).join(' | ')} |`
+		return ['```', formatRow(headerRow), ...bodyRows.map(formatRow), '```'].join('\n')
 	}
-	const statusLines = []
-	for (const [group, results] of grouped) {
-		statusLines.push(`*${group}*`)
-		for (const result of results) {
-			const link = resultLink(result)
-			statusLines.push(`${emoji[result.status] || '❓'} ${result.label}${link ? ` · ${link}` : ''}`)
-		}
+	const listChecks = manifest.checks.filter(check => /^List /i.test(check.group) && check.state)
+	const listStates = [...new Set(listChecks.map(check => check.state.toUpperCase()))]
+	const listEnvironments = [...new Set(listChecks.map(check => check.group.replace(/^List /i, '')))]
+	const listRows = listStates.map(state => [
+		state,
+		...listEnvironments.map(environment => {
+			const check = listChecks.find(
+				candidate => candidate.state.toUpperCase() === state && candidate.group === `List ${environment}`,
+			)
+			return check ? status(check) : '❓'
+		}),
+	])
+	const liveChecks = manifest.checks.filter(check => /^Live \/ /i.test(check.label))
+	const liveEnvironments = [...new Set(liveChecks.map(check => check.label.split(' / ')[1]))]
+	const liveDimensions = [...new Set(liveChecks.map(check => check.label.split(' / ').slice(2).join(' / ')))]
+	const liveRows = liveEnvironments.map(environment => [
+		environment,
+		...liveDimensions.map(dimension => {
+			const check = liveChecks.find(candidate => {
+				const [, candidateEnvironment, ...candidateDimension] = candidate.label.split(' / ')
+				return candidateEnvironment === environment && candidateDimension.join(' / ') === dimension
+			})
+			return check ? status(check) : '❓'
+		}),
+	])
+	const conciergeChecks = manifest.checks.filter(
+		check => !/^List /i.test(check.group) && !/^Live \/ /i.test(check.label) && check.label.includes(' / '),
+	)
+	const conciergeRows = conciergeChecks.map(check => {
+		const [application, environment] = check.label.split(' / ')
+		return [application, environment, status(check)]
+	})
+	const failedWithReport = summary.results.find(
+		result => (failureStatuses.has(result.status) || result.status === 'flaky') && result.reportUrl,
+	)
+	const actions = []
+	if (summary.runUrl) {
+		actions.push({
+			type: 'button',
+			text: { type: 'plain_text', text: 'Open GitHub Action', emoji: true },
+			style: 'primary',
+			url: summary.runUrl,
+		})
 	}
-	const failures = summary.results.filter(result => failureStatuses.has(result.status) || result.status === 'flaky')
-	const failureText = failures
-		.flatMap(result => (result.failureSummary?.length ? result.failureSummary.slice(0, 3).map(item => `• *${result.label}:* ${item}`) : [`• *${result.label}:* ${result.status}`]))
-		.join('\n')
+	if (failedWithReport) {
+		actions.push({
+			type: 'button',
+			text: { type: 'plain_text', text: 'Open First Failed Report', emoji: true },
+			url: failedWithReport.reportUrl,
+		})
+	}
 
 	const blocks = [
 		{
@@ -138,11 +172,37 @@ function toSlack(summary) {
 		},
 		{
 			type: 'context',
-			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing · ${flaky} flaky${summary.runUrl ? ` · <${summary.runUrl}|View workflow run>` : ''}` }],
+			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing · ${flaky} flaky` }],
 		},
-		{ type: 'section', text: { type: 'mrkdwn', text: truncate(statusLines.join('\n')) } },
+		{ type: 'divider' },
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: '*LIST*' },
+		},
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: formatMarkdownTable(['State', ...listEnvironments], listRows) },
+		},
+		{ type: 'divider' },
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: '*LIVE*' },
+		},
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: formatMarkdownTable(['Environment', ...liveDimensions], liveRows) },
+		},
+		{ type: 'divider' },
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: '*CONCIERGE STORES*' },
+		},
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: formatMarkdownTable(['Application', 'Environment', 'Status'], conciergeRows) },
+		},
 	]
-	if (failureText) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: truncate(`*Failures and warnings*\n${failureText}`) } })
+	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }
 }
 

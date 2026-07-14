@@ -129,6 +129,103 @@ jobs:
         if: always() && steps.health.outcome != 'success'
         run: exit 1
 
+  list-prod:
+    name: List Prod — ${{ matrix.state_label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - id: list-prod-ca
+            state_label: CA
+            base_url_secret: BASE_URL_PROD_CA
+            woo_key_secret: WOO_CA_PROD_KEY
+            woo_secret_secret: WOO_CA_PROD_SECRET
+          - id: list-prod-mi
+            state_label: MI
+            base_url_secret: BASE_URL_PROD_MI
+            woo_key_secret: WOO_MI_PROD_KEY
+            woo_secret_secret: WOO_MI_PROD_SECRET
+          - id: list-prod-co
+            state_label: CO
+            base_url_secret: BASE_URL_PROD_CO
+            woo_key_secret: WOO_CO_PROD_KEY
+            woo_secret_secret: WOO_CO_PROD_SECRET
+          - id: list-prod-nj
+            state_label: NJ
+            base_url_secret: BASE_URL_PROD_NJ
+            woo_key_secret: WOO_NJ_PROD_KEY
+            woo_secret_secret: WOO_NJ_PROD_SECRET
+    env:
+      EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
+      SMOKE_CART_ITEM_COUNT: '1'
+      RUN_ID: ${{ github.run_number }}
+      UNIQUE_RUN_ID: ${{ github.run_id }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PW: ${{ secrets.ADMIN_PW }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets[matrix.base_url_secret] }}
+      QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
+      BYPASS_TAX_CALC: true
+      NEXT_VERSION: true
+      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET: ${{ secrets.S3_SECRET }}
+      S3_REGION: ${{ secrets.S3_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Clear previous production order IDs
+        run: rm -f order_id.txt order_ids.txt
+      - name: Run List Prod health check
+        id: health
+        continue-on-error: true
+        run: node scripts/health/run-playwright-check.js ${{ matrix.id }}
+      - name: Cancel production test orders
+        id: cleanup
+        if: always()
+        continue-on-error: true
+        env:
+          WC_CONSUMER_KEY: ${{ secrets[matrix.woo_key_secret] }}
+          WC_CONSUMER_SECRET: ${{ secrets[matrix.woo_secret_secret] }}
+        run: node scripts/health/cleanup-production-orders.js ${{ matrix.id }} order_ids.txt order_id.txt
+      - name: Upload List Prod Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.id }}
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Upload List Prod health result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-${{ matrix.id }}
+          path: health-results/${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce List Prod result and cleanup
+        if: always() && (steps.health.outcome != 'success' || steps.cleanup.outcome != 'success')
+        run: exit 1
+
   live-dev:
     name: Live Dev — storefront
     runs-on: ubuntu-latest
@@ -456,13 +553,25 @@ jobs:
         run: exit 1
 
   pos-last-ten:
-    name: Live Stage — POS last 10 orders
+    name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment: live-stage
+    environment: ${{ matrix.environment_name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: live-dev-pos-last-10
+            label: Live Dev — POS last 10 orders
+            environment_name: live-dev
+            environment_key: dev
+          - id: live-stage-pos-last-10
+            label: Live Stage — POS last 10 orders
+            environment_name: live-stage
+            environment_key: stage
     env:
-      POS_BASE_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }}
-      POS_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }}
+      POS_BASE_URL: ${{ matrix.environment_key == 'dev' && secrets.ALWAYS_ON_URL_DEV || secrets.ALWAYS_ON_URL_STAGE }}
+      POS_AUTH: ${{ matrix.environment_key == 'dev' && secrets.LIVE_DEV_QA_AUTH || secrets.LIVE_STAGE_QA_AUTH }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -471,21 +580,21 @@ jobs:
       - name: Check the last 10 orders
         id: health
         continue-on-error: true
-        run: node scripts/health/check-pos-last-orders.js
+        run: node scripts/health/check-pos-last-orders.js ${{ matrix.id }}
       - name: Upload POS evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: health-evidence-live-stage-pos-last-10
-          path: health-evidence/live-stage-pos-last-10
+          name: health-evidence-${{ matrix.id }}
+          path: health-evidence/${{ matrix.id }}
           if-no-files-found: ignore
           retention-days: 7
       - name: Upload POS health result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: health-result-live-stage-pos-last-10
-          path: health-results/live-stage-pos-last-10.json
+          name: health-result-${{ matrix.id }}
+          path: health-results/${{ matrix.id }}.json
           if-no-files-found: warn
           retention-days: 7
       - name: Enforce POS result
@@ -497,6 +606,7 @@ jobs:
     needs:
       - list-dev
       - list-stage
+      - list-prod
       - live-dev
       - live-dev-pos
       - live-stage

@@ -13,7 +13,7 @@ function assert(condition, message) {
 	if (!condition) throw new Error(message)
 }
 
-assert(manifest.checks.length === 17, `Expected 17 health checks, found ${manifest.checks.length}`)
+assert(manifest.checks.length === 22, `Expected 22 health checks, found ${manifest.checks.length}`)
 assert(new Set(manifest.checks.map(check => check.id)).size === manifest.checks.length, 'Health check IDs must be unique')
 
 for (const check of manifest.checks.filter(check => check.type === 'playwright')) {
@@ -24,6 +24,10 @@ for (const lane of ['list-dev', 'list-stage']) {
 	assert(manifest.checks.filter(check => check.lane === lane).length === 4, `${lane} must contain four state checks`)
 	assert(workflow.includes(`run-playwright-lane.js ${lane}`), `Workflow does not run ${lane}`)
 }
+
+const listProdChecks = manifest.checks.filter(check => check.id.startsWith('list-prod-'))
+assert(listProdChecks.length === 4, `list-prod must contain four state checks, found ${listProdChecks.length}`)
+assert(workflow.includes('list-prod:'), 'Workflow does not define the List Prod matrix')
 
 for (const check of manifest.checks.filter(check => !check.lane)) {
 	assert(workflow.includes(check.id), `Workflow does not reference ${check.id}`)
