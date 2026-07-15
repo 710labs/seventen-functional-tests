@@ -9,6 +9,13 @@ type ProductCandidate = {
 	name: string
 }
 
+type MedicalCardUpdateResponse = {
+	errors?: Record<string, string>
+	message?: string
+	outcome?: string
+	successCloserize?: boolean
+}
+
 const productSelector = 'li.product.type-product'
 const storefrontAddToCartSelector = [
 	'button.fasd_to_cart[data-id][data-instance][data-facility][data-method]',
@@ -62,7 +69,7 @@ export class LiveNonProdCartFlow {
 
 	async addProductsUntilCheckout(userType: LiveUserType) {
 		await test.step(`Build an isolated Live ${userType.toUpperCase()} cart`, async () => {
-			await this.clearTemporaryRegistrationCart()
+			await this.clearTemporaryRegistrationCart(userType)
 			await this.returnToStorefront()
 
 			const attemptedProducts = new Set<string>()
@@ -293,6 +300,14 @@ export class LiveNonProdCartFlow {
 		return false
 	}
 
+	private isLiveDev() {
+		try {
+			return new URL(this.page.url()).hostname.toLowerCase() === 'live-dev.710labs.com'
+		} catch {
+			return false
+		}
+	}
+
 	private async openCartDrawer() {
 		if (await this.cartDrawerIsOpen()) {
 			return true
@@ -341,9 +356,94 @@ export class LiveNonProdCartFlow {
 		}
 	}
 
-	private async clearTemporaryRegistrationCart() {
+	private async clearLiveDevMedicalRegistrationCart() {
+		const cartItems = this.cartDrawer.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
+
+		for (let attempt = 1; attempt <= 20; attempt += 1) {
+			if (!(await this.cartDrawerIsOpen()) && !(await this.openCartDrawer())) {
+				throw new Error('Unable to reopen the Live Dev medical registration cart.')
+			}
+
+			const initialItemCount = await cartItems.count()
+
+			if (initialItemCount === 0) {
+				return
+			}
+
+			const firstItem = cartItems.first()
+			const removeLink = firstItem
+				.locator('td.product-remove .remove, .product-remove a, a.remove')
+				.first()
+			const quantityDownButton = firstItem
+				.locator('button.fasd-quantity-button.fasd-quantity-down')
+				.first()
+			const quantityInput = firstItem.locator('input.qty, input[type="number"]').first()
+			const initialQuantity = Number.parseInt(
+				(await quantityInput.inputValue().catch(() => '1')) || '1',
+				10,
+			)
+			const removalControl = (await removeLink.count()) > 0 ? removeLink : quantityDownButton
+
+			if ((await removalControl.count()) === 0) {
+				const itemText = ((await firstItem.textContent().catch(() => '')) || '')
+					.replace(/\s+/g, ' ')
+					.trim()
+
+				throw new Error(`Live Dev medical registration item had no removal control: ${itemText}`)
+			}
+
+			await removalControl.evaluate((element: HTMLElement) => element.click())
+
+			const cartChanged = await expect
+				.poll(
+					async () => {
+						if (!(await this.cartDrawerIsOpen())) {
+							await this.openCartDrawer()
+						}
+
+						const currentItemCount = await cartItems.count()
+
+						if (currentItemCount < initialItemCount) {
+							return true
+						}
+
+						const currentQuantity = Number.parseInt(
+							(await cartItems
+								.first()
+								.locator('input.qty, input[type="number"]')
+								.first()
+								.inputValue()
+								.catch(() => `${initialQuantity}`)) || `${initialQuantity}`,
+							10,
+						)
+
+						return currentQuantity < initialQuantity
+					},
+					{ timeout: 10000 },
+				)
+				.toBeTruthy()
+				.then(() => true)
+				.catch(() => false)
+
+			if (!cartChanged) {
+				throw new Error(
+					`Live Dev medical registration cart did not change after removal attempt ${attempt}.`,
+				)
+			}
+		}
+
+		throw new Error('Unable to clear the Live Dev medical registration cart after 20 attempts.')
+	}
+
+	private async clearTemporaryRegistrationCart(userType: LiveUserType) {
 		await test.step('Clear the temporary registration cart', async () => {
 			if (!(await this.openCartDrawer())) {
+				return
+			}
+
+			if (userType === 'med' && this.isLiveDev()) {
+				await this.clearLiveDevMedicalRegistrationCart()
+				await this.closeCartDrawer()
 				return
 			}
 
@@ -701,10 +801,89 @@ export class LiveNonProdCartFlow {
 
 		await revealMedicalCardForm()
 		await fillMedicalCardValues()
+
+		const liveDevMedicalCardResponse = this.isLiveDev()
+			? this.page.waitForResponse(
+					async response => {
+						if (
+							response.request().method() !== 'POST' ||
+							!response.url().includes('/wp-admin/admin-ajax.php')
+						) {
+							return false
+						}
+
+						const payload = await response
+							.json()
+							.catch(() => null as MedicalCardUpdateResponse | null)
+
+						return Boolean(
+							payload && (payload.successCloserize !== undefined || payload.errors !== undefined),
+						)
+					},
+					{ timeout: 30000 },
+				)
+			: null
+
 		await medicalCardForm
 			.locator('.fasd-form-submit')
 			.first()
 			.evaluate((element: HTMLElement) => element.click())
+
+		if (liveDevMedicalCardResponse) {
+			const response = await liveDevMedicalCardResponse
+			const payload = (await response.json()) as MedicalCardUpdateResponse
+
+			if (payload.outcome !== 'success') {
+				throw new Error(
+					[
+						'Live Dev rejected the medical-card update.',
+						`Message: ${payload.message || 'none'}`,
+						`Errors: ${JSON.stringify(payload.errors || {})}`,
+					].join('\n'),
+				)
+			}
+
+			if (payload.successCloserize) {
+				await this.waitForCartDrawerState(false, 10000)
+			}
+
+			if (await this.cartDrawerIsOpen()) {
+				await this.closeCartDrawer()
+			}
+
+			if (!(await this.openCartDrawer())) {
+				throw new Error('Unable to reopen the Live Dev cart after saving the medical card.')
+			}
+
+			const activeMedicalOnlyBanner = this.cartDrawer
+				.locator('.wpse-snacktoast.warn-toast')
+				.filter({ hasText: /medical-only product in cart/i })
+				.first()
+			const cartReady = await expect
+				.poll(
+					async () =>
+						(await this.cartDrawerIsOpen()) &&
+						(await this.checkoutButton.isVisible().catch(() => false)) &&
+						!(await this.elementIntersectsViewport(activeMedicalOnlyBanner)),
+					{ timeout: 20000 },
+				)
+				.toBeTruthy()
+				.then(() => true)
+				.catch(() => false)
+
+			if (!cartReady) {
+				throw new Error(
+					[
+						'Live Dev saved the medical card but did not expose checkout.',
+						`Medical banner active: ${await this.elementIntersectsViewport(activeMedicalOnlyBanner)}`,
+						`Checkout visible: ${await this.checkoutButton.isVisible().catch(() => false)}`,
+						`Current URL: ${this.page.url()}`,
+					].join('\n'),
+				)
+			}
+
+			return
+		}
 
 		await expect
 			.poll(
