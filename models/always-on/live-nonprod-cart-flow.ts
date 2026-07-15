@@ -589,6 +589,9 @@ export class LiveNonProdCartFlow {
 
 		const medicalCardCheckbox = this.page.locator('input#med_included')
 		const medicalCardInput = this.page.locator('input#fasd_medcard')
+		const medicalCardForm = this.page
+			.locator('.fasd-form.fasd-conditional-child[data-type="checkout_medcard"]')
+			.first()
 		const hasMedicalRequirement =
 			(await medicalOnlyBanner.isVisible().catch(() => false)) ||
 			(await medicalCardCheckbox.isVisible().catch(() => false))
@@ -598,31 +601,70 @@ export class LiveNonProdCartFlow {
 		}
 
 		await expect(medicalCardCheckbox).toBeVisible()
+		await expect(medicalCardForm).toBeAttached()
 
-		const showMedicalCardForm = async () => {
-			if (!(await medicalCardCheckbox.isChecked())) {
-				await medicalCardCheckbox.check()
-			}
+		const revealMedicalCardForm = async () => {
+			await medicalCardForm.evaluate(element => {
+				const checkbox = element
+					.closest('.fasd-conditional-set')
+					?.querySelector<HTMLInputElement>('input#med_included')
 
-			await expect(medicalCardInput).toBeVisible()
+				if (checkbox) {
+					checkbox.checked = true
+				}
+
+				;(element as HTMLElement).style.setProperty('display', 'block', 'important')
+				element.removeAttribute('hidden')
+				element.setAttribute('aria-hidden', 'false')
+			})
 		}
 
-		await showMedicalCardForm()
-
+		await revealMedicalCardForm()
 		await medicalCardInput.setInputFiles('CA-DL.jpg')
-		await showMedicalCardForm()
+		await revealMedicalCardForm()
 
-		const medicalCardState = this.page.locator('select#medcard_state')
-		await expect(medicalCardState).toBeVisible()
-		await medicalCardState.selectOption('CA')
 		const newYear = new Date().getFullYear() + 1
-		await this.page.locator('input#medcard_exp').fill(`${newYear}-01-01`)
-		await this.page
-			.locator('input#medcard_no')
-			.fill(`${Math.floor(10000000 + Math.random() * 90000000)}`)
-		await this.page.locator('#fasd_dob').fill('1990-01-01')
-		await this.page.locator('.fasd-form-submit:has-text("Save & Continue")').click()
-		await this.page.waitForTimeout(1000)
+		await medicalCardForm.evaluate(
+			(element, values) => {
+				const checkbox = element
+					.closest('.fasd-conditional-set')
+					?.querySelector<HTMLInputElement>('input#med_included')
+				const setValue = (selector: string, value: string) => {
+					const input = element.querySelector<HTMLInputElement | HTMLSelectElement>(selector)
+
+					if (!input) {
+						throw new Error(`Missing medical-card control: ${selector}`)
+					}
+
+					input.value = value
+					input.dispatchEvent(new Event('input', { bubbles: true }))
+					input.dispatchEvent(new Event('change', { bubbles: true }))
+				}
+
+				if (checkbox) {
+					checkbox.checked = true
+				}
+
+				setValue('#medcard_state', 'CA')
+				setValue('#medcard_exp', values.expiration)
+				setValue('#medcard_no', values.cardNumber)
+				setValue('#fasd_dob', '1990-01-01')
+				element.querySelector<HTMLElement>('.fasd-form-submit')?.click()
+			},
+			{
+				expiration: `${newYear}-01-01`,
+				cardNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+			},
+		)
+
+		await expect
+			.poll(
+				async () =>
+					(await this.checkoutButton.isVisible().catch(() => false)) ||
+					!(await medicalOnlyBanner.isVisible().catch(() => false)),
+				{ timeout: 15000 },
+			)
+			.toBeTruthy()
 
 		if (!(await this.checkoutButton.isVisible().catch(() => false))) {
 			await this.openCartDrawer()

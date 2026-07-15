@@ -45,7 +45,37 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 			const suggestion = this.page.locator('.pac-item').first()
 			await expect(suggestion).toBeVisible()
 			await suggestion.click()
+
+			const city = this.page.locator('#fasd_city')
+			const state = this.page.locator('#fasd_state')
+			const postcode = this.page.locator('#fasd_postcode')
+			await expect
+				.poll(
+					async () =>
+						(await city.inputValue().catch(() => '')) &&
+						(await state.inputValue().catch(() => '')) &&
+						(await postcode.inputValue().catch(() => '')),
+					{ timeout: 10000 },
+				)
+				.toBeTruthy()
+
+			for (const input of [city, postcode]) {
+				const value = await input.inputValue()
+				await input.fill('')
+				await input.fill(value)
+				await input.dispatchEvent('change')
+			}
+
+			const stateValue = await state.inputValue()
+			await state.selectOption(stateValue)
+			await state.dispatchEvent('change')
+			await postcode.press('Tab')
 			await this.saveContinueButtonAddress.first().click()
+
+			if (await this.yesChangeAddressButton.isVisible().catch(() => false)) {
+				await this.yesChangeAddressButton.click()
+			}
+
 			await expect(this.displayedAddress.first()).toContainText(newAddress)
 		})
 	}
@@ -84,12 +114,27 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 		const day = dayOptions.find(option => option.value !== previousDayValue) || dayOptions[0]
 		await this.deliveryDayInputField.selectOption({ value: day.value })
 		await expect(this.deliveryDayInputField).toHaveValue(day.value)
-		await this.page.waitForTimeout(500)
+		await this.page.waitForTimeout(1000)
 
-		const timeOptions = await this.waitForValidOptions(this.deliveryTimeInputField)
-		const time = timeOptions.find(option => option.value !== previousTimeValue) || timeOptions[0]
-		await this.deliveryTimeInputField.selectOption({ value: time.value })
-		await expect(this.deliveryTimeInputField).toHaveValue(time.value)
+		let time: SelectOption | undefined
+
+		for (let attempt = 1; attempt <= 4; attempt += 1) {
+			const timeOptions = await this.waitForValidOptions(this.deliveryTimeInputField)
+			time = timeOptions.find(option => option.value !== previousTimeValue) || timeOptions[0]
+			await this.deliveryTimeInputField.selectOption({ value: time.value })
+			await this.page.waitForTimeout(750)
+
+			if ((await this.deliveryTimeInputField.inputValue()) === time.value) {
+				break
+			}
+
+			time = undefined
+			await this.page.waitForTimeout(500)
+		}
+
+		if (!time) {
+			throw new Error(`The Live delivery time selection did not persist for day ${day.value}.`)
+		}
 
 		return { day, time }
 	}
@@ -136,14 +181,15 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 	private async completePersonalInformation(page: Page, isPickup: boolean) {
 		await test.step('Complete required Live personal information', async () => {
 			const saveButtonIndex = isPickup ? 0 : 1
-			const birthday = '01/01/1990'
+			const birthdayValue = '1990-01-01'
+			const displayedBirthday = '01/01/1990'
 			let acceptedPhone = ''
 
 			for (let attempt = 1; attempt <= 5; attempt += 1) {
 				acceptedPhone = this.generatePhoneNumber()
 				await expect(this.phoneInputField).toBeVisible()
 				await this.phoneInputField.fill(acceptedPhone)
-				await this.birthdayInputField.fill(birthday)
+				await this.birthdayInputField.fill(birthdayValue)
 				await page.locator('body').click({ position: { x: 1, y: 1 } })
 				await this.saveContinueButton.nth(saveButtonIndex).click()
 				await page.waitForTimeout(1000)
@@ -162,7 +208,7 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 			expect(await this.normalizePhoneNumber(displayedPhone || '')).toBe(
 				await this.normalizePhoneNumber(acceptedPhone),
 			)
-			await expect(this.displayedBirthday).toHaveText(birthday)
+			await expect(this.displayedBirthday).toHaveText(displayedBirthday)
 		})
 	}
 
@@ -170,13 +216,16 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 		await test.step('Complete required Live identity documents', async () => {
 			const saveButtonIndex = isPickup ? 1 : 2
 			const expirationYear = new Date().getFullYear() + 1
-			const personalExpiration = `04/10/${expirationYear}`
+			const personalExpirationValue = `${expirationYear}-04-10`
+			const displayedPersonalExpiration = `04/10/${expirationYear}`
 
 			await this.page.locator('#fasd_doc').setInputFiles('CA-DL.jpg')
-			await this.idExpirationInput.fill(personalExpiration)
+			await this.idExpirationInput.fill(personalExpirationValue)
 			await this.page.locator('body').click({ position: { x: 1, y: 1 } })
 			await this.saveContinueButton.nth(saveButtonIndex).click()
-			await expect(this.displayedPersonalExp).toContainText(`Exp: ${personalExpiration}`)
+			await expect(this.displayedPersonalExp).toContainText(
+				`Exp: ${displayedPersonalExpiration}`,
+			)
 
 			if (isMedical) {
 				await expect(this.displayedMedicalExp).toContainText(/Exp:/)

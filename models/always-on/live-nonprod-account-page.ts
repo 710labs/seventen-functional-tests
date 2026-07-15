@@ -178,10 +178,59 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await expect(this.signOutButton).toBeVisible()
 	}
 
-	async editPersonalInfo(userType: string) {
+	private async editPersonalInfoOnce(userType: string) {
+		await expect(this.personalInfoHeader).toBeVisible()
+		await expect(this.editPersonalInfoLink).toBeVisible()
+		await this.personalInfoHeader.scrollIntoViewIfNeeded()
+		await this.editPersonalInfoLink.click({ force: true })
+
+		if (!(await this.personalInfoDrawerHeader.isVisible().catch(() => false))) {
+			await this.editPersonalInfoLink.click({ force: true })
+		}
+
+		await expect(this.personalInfoDrawerHeader).toBeVisible()
+		await expect(this.firstNameInput).toBeVisible()
+
+		const currentFirstName = await this.firstNameInput.inputValue()
+		const currentLastName = await this.lastNameInput.inputValue()
+		const newFirstName = `Edited ${currentFirstName}`
+		const newLastName = `Edited ${currentLastName}`
+		const now = new Date()
+		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+			2,
+			'0',
+		)}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(
+			2,
+			'0',
+		)}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(
+			2,
+			'0',
+		)}-${String(now.getMilliseconds()).padStart(3, '0')}`
+		const newEmail = `edited_user_${userType}_${timestamp}@test.com`
+		const newPhone = `555-${Math.floor(1000000 + Math.random() * 9000000)}`
+
+		await this.firstNameInput.fill(newFirstName)
+		await this.lastNameInput.fill(newLastName)
+		await this.emailInput.fill(newEmail)
+		await this.phoneInput.fill(newPhone)
+		await this.birthdayInput.fill('1985-01-02')
+		await this.persInfoUpdateButton.click({ force: true })
+
+		await expect(this.displayedUserFirstName).toHaveText(newFirstName)
+		await expect(this.displayedUserLastName).toHaveText(newLastName)
+		await expect(this.displayedUserEmail).toHaveText(newEmail)
+		await expect(this.displayedUserDOB).toHaveText('01/02/1985')
+		expect(
+			await this.normalizePhoneNumber((await this.displayedUserPhone.textContent()) || ''),
+		).toBe(await this.normalizePhoneNumber(newPhone))
+
+		return newEmail
+	}
+
+	override async editPersonalInfo(userType: string) {
 		for (let attempt = 1; attempt <= 3; attempt += 1) {
 			try {
-				return await super.editPersonalInfo(userType)
+				return await this.editPersonalInfoOnce(userType)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error)
 				const isDetachedElement = /not attached to the DOM|element is detached/i.test(message)
@@ -196,5 +245,39 @@ export class LiveNonProdAccountPage extends AccountPage {
 		}
 
 		throw new Error('Unable to open Live personal information after three attempts.')
+	}
+
+	override async editPhotoId() {
+		await expect(this.photoIdSection).toBeVisible()
+		await expect(this.editPhotoIdLink).toBeVisible()
+		await this.photoIdSection.scrollIntoViewIfNeeded()
+		await this.editPhotoIdLink.click({ force: true })
+		await expect(this.photoDrawerHeader).toBeVisible()
+		await this.uploadIDInput.setInputFiles('CA-DL.jpg')
+
+		const expirationYear = new Date().getFullYear() + 1
+		await this.expirationInput.fill(`${expirationYear}-04-10`)
+		await expect(this.photoIDSaveAndContinueButton).toBeVisible()
+		await this.photoIDSaveAndContinueButton.click({ force: true })
+		await expect(this.dispalyedPhotoIDExp).toHaveText(`Exp: 04/10/${expirationYear}`)
+	}
+
+	override async editMedicalCard() {
+		await expect(this.medicalCardSection).toBeVisible()
+		await expect(this.editMedicalCardLink).toBeVisible()
+		await this.editMedicalCardLink.scrollIntoViewIfNeeded()
+		await this.editMedicalCardLink.click({ force: true })
+		await expect(this.medDrawerHeader).toBeVisible()
+		await this.medCardInput.setInputFiles('Medical-Card.png')
+		await this.medStateDropDown.selectOption('CA')
+
+		const expirationYear = new Date().getFullYear() + 1
+		await this.medExpDateInput.fill(`${expirationYear}-04-10`)
+		await this.page
+			.locator('input#medcard_no')
+			.fill(`${Math.floor(10000000 + Math.random() * 90000000)}`)
+		await expect(this.medSaveAndContinueButton).toBeVisible()
+		await this.medSaveAndContinueButton.click({ force: true })
+		await expect(this.dispalyedMedIDExp).toHaveText(`Exp: 04/10/${expirationYear}`)
 	}
 }
