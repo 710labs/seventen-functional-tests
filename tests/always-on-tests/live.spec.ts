@@ -33,13 +33,19 @@ test.describe('Live Tests', () => {
 	) {
 		const homePageLogin = new HomePageLogin(page)
 		const homePageActions = new LiveNonProdHomePageActions(page)
-		const registrationKey = `${userType}_${flowType}_${Math.random().toString(36).slice(2, 10)}`
+		const registrationKey = `${userType[0]}${flowType[0]}${Math.random()
+			.toString(36)
+			.slice(2, 6)}`
 
 		await homePageLogin.navigateToURL(page, liveURL)
 		await homePageActions.enterAddress(page, 'live', authenticationAddress)
 		await homePageLogin.newTestverifyUserSignInModalAppears(page, liveURL)
 		await homePageActions.addSingleProductToCart(page)
 		await homePageLogin.registerNewUser(page, registrationKey)
+		await expect(
+			homePageLogin.userPopUpContainer,
+			`Live ${userType} ${flowType} registration did not complete`,
+		).toBeHidden({ timeout: 30000 })
 		await homePageActions.goToMainStorePage(page)
 		await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
 
