@@ -31,15 +31,23 @@ export class LiveNonProdCartFlow {
 	readonly cartButton: Locator
 	readonly cartDrawer: Locator
 	readonly checkoutButton: Locator
-	readonly homeButton: Locator
+	readonly storefrontLinks: Locator
 	readonly viewCartButton: Locator
+	private storefrontUrl?: string
 
 	constructor(page: Page) {
 		this.page = page
 		this.cartButton = page.locator('a.wpse-cart-openerize').first()
 		this.cartDrawer = page.locator('#cartDrawer')
 		this.checkoutButton = page.locator('a.checkout-button.button.alt.wc-forward').first()
-		this.homeButton = page.locator('a[rel="home"] h1.site-title')
+		this.storefrontLinks = page.locator(
+			[
+				'.wpse-drawer[data-module="cart-response"] a[href*="/shop/"]',
+				'#cartDrawer a[href*="/shop/"]',
+				'a:has(h1.site-title)[href*="/shop/"]',
+				'main nav a[href*="/shop/"]:has-text("All")',
+			].join(', '),
+		)
 		this.viewCartButton = page
 			.locator(
 				[
@@ -82,8 +90,7 @@ export class LiveNonProdCartFlow {
 
 				if (!result.added) {
 					rejectionReasons.push(`${candidate.name}: ${result.reason}`)
-					await this.page.goto('/')
-					await this.waitForProducts()
+					await this.returnToStorefront()
 					continue
 				}
 
@@ -138,32 +145,34 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async returnToStorefront() {
-		const isProductDetailsPage = await this.page
-			.locator('body.single-product')
+		const currentUrl = new URL(this.page.url())
+		const storefrontPath = currentUrl.pathname.match(/^\/shop\/[^/]+/)
+		const productsAreVisible = await this.page
+			.locator(productSelector)
+			.first()
 			.isVisible()
 			.catch(() => false)
 
-		if (
-			!isProductDetailsPage &&
-			(await this.page.locator(productSelector).first().isVisible().catch(() => false))
-		) {
+		if (storefrontPath && productsAreVisible) {
+			this.storefrontUrl = new URL(`${storefrontPath[0]}/`, currentUrl).href
 			return
 		}
 
-		if (isProductDetailsPage) {
-			await this.page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => null)
+		const linkedStorefrontUrl = await this.storefrontLinks
+			.evaluateAll(links =>
+				links
+					.map(link => (link as HTMLAnchorElement).href)
+					.find(href => new URL(href).pathname.startsWith('/shop/')),
+			)
+			.catch(() => undefined)
+		const storefrontUrl = this.storefrontUrl || linkedStorefrontUrl
 
-			if (await this.page.locator(productSelector).first().isVisible().catch(() => false)) {
-				await this.waitForProducts()
-				return
-			}
+		if (!storefrontUrl) {
+			throw new Error(`Unable to identify the selected Live storefront from ${this.page.url()}`)
 		}
 
-		if (await this.homeButton.isVisible().catch(() => false)) {
-			await this.homeButton.click({ force: true })
-		} else {
-			await this.page.goto('/')
-		}
+		this.storefrontUrl = storefrontUrl
+		await this.page.goto(storefrontUrl, { waitUntil: 'domcontentloaded' })
 
 		await this.waitForProducts()
 	}
@@ -590,22 +599,28 @@ export class LiveNonProdCartFlow {
 
 		await expect(medicalCardCheckbox).toBeVisible()
 
-		if (!(await medicalCardCheckbox.isChecked())) {
-			await medicalCardCheckbox.check()
+		const showMedicalCardForm = async () => {
+			if (!(await medicalCardCheckbox.isChecked())) {
+				await medicalCardCheckbox.check()
+			}
+
+			await expect(medicalCardInput).toBeVisible()
 		}
 
-		if (!(await medicalCardInput.isVisible().catch(() => false))) {
-			return
-		}
+		await showMedicalCardForm()
 
 		await medicalCardInput.setInputFiles('CA-DL.jpg')
-		await this.page.locator('select#medcard_state').selectOption('CA')
+		await showMedicalCardForm()
+
+		const medicalCardState = this.page.locator('select#medcard_state')
+		await expect(medicalCardState).toBeVisible()
+		await medicalCardState.selectOption('CA')
 		const newYear = new Date().getFullYear() + 1
-		await this.page.locator('input#medcard_exp').fill(`01/01/${newYear}`)
+		await this.page.locator('input#medcard_exp').fill(`${newYear}-01-01`)
 		await this.page
 			.locator('input#medcard_no')
 			.fill(`${Math.floor(10000000 + Math.random() * 90000000)}`)
-		await this.page.locator('#fasd_dob').fill('01/01/1990')
+		await this.page.locator('#fasd_dob').fill('1990-01-01')
 		await this.page.locator('.fasd-form-submit:has-text("Save & Continue")').click()
 		await this.page.waitForTimeout(1000)
 
