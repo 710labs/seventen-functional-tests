@@ -179,24 +179,31 @@ export class LiveNonProdCartFlow {
 			return
 		}
 
-		const closeButtons = this.page.locator(
-			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
-		)
-		const closeButtonCount = await closeButtons.count()
+		const drawerCloseButton = this.cartDrawer
+			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
+			.first()
 
-		for (let index = closeButtonCount - 1; index >= 0; index -= 1) {
-			const closeButton = closeButtons.nth(index)
+		if ((await drawerCloseButton.count()) > 0) {
+			await drawerCloseButton.evaluate((element: HTMLElement) => element.click())
+			await this.cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
+		}
 
-			if (await closeButton.isVisible().catch(() => false)) {
-				await closeButton.click({ force: true })
-				await this.cartDrawer.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
-				return
+		if (await this.cartDrawer.isVisible().catch(() => false)) {
+			if ((await this.cartButton.count()) > 0) {
+				await this.cartButton.evaluate((element: HTMLElement) => element.click())
+				await this.cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
 			}
 		}
 
-		if (await this.cartButton.isVisible().catch(() => false)) {
-			await this.cartButton.click({ force: true })
-			await this.cartDrawer.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+		if (await this.cartDrawer.isVisible().catch(() => false)) {
+			throw new Error(
+				[
+					'Unable to close the Live non-production cart drawer.',
+					`Drawer close button found: ${(await drawerCloseButton.count()) > 0}`,
+					`Cart toggle found: ${(await this.cartButton.count()) > 0}`,
+					`Current URL: ${this.page.url()}`,
+				].join('\n'),
+			)
 		}
 	}
 

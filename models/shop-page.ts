@@ -126,6 +126,29 @@ export class ShopPage {
 		return Math.random() * (2 - -2 + -2)
 	}
 
+	private parseStorefrontCartItemCount(text: string) {
+		const normalizedText = text.replace(/\s+/g, ' ').trim()
+		const parenthesizedCount = normalizedText.match(/\((\d+)\)/)
+
+		if (parenthesizedCount) {
+			return Number(parenthesizedCount[1])
+		}
+
+		const labeledCount = normalizedText.match(/\b(?:cart|bag)\s*:?\s*(\d+)\b/i)
+
+		if (labeledCount) {
+			return Number(labeledCount[1])
+		}
+
+		const plainCount = normalizedText.match(/^(\d+)\s*(?:items?)?$/i)
+
+		if (plainCount) {
+			return Number(plainCount[1])
+		}
+
+		return null
+	}
+
 	private async getStorefrontCartItemCount() {
 		const cartLinks = this.page.locator(
 			'a[href*="/cart"], a.cart-contents, .cart-contents, .wpse-cart-count, .cart-count',
@@ -140,17 +163,11 @@ export class ShopPage {
 				continue
 			}
 
-			const text = ((await cartLink.textContent().catch(() => '')) || '').replace(/\s+/g, ' ').trim()
-			const parenthesizedCount = text.match(/\((\d+)\)/)
+			const text = (await cartLink.textContent().catch(() => '')) || ''
+			const textCount = this.parseStorefrontCartItemCount(text)
 
-			if (parenthesizedCount) {
-				return Number(parenthesizedCount[1])
-			}
-
-			const plainCount = text.match(/^\s*(\d+)\s*(?:items?)?\s*$/i)
-
-			if (plainCount) {
-				return Number(plainCount[1])
+			if (textCount !== null) {
+				return textCount
 			}
 
 			for (const attribute of ['data-count', 'data-cart-count']) {
@@ -826,12 +843,30 @@ export class ShopPage {
 			return
 		}
 
-		const closeButton = this.page
-			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
-			.last()
-		await expect(closeButton).toBeVisible()
-		await closeButton.click()
-		await cartDrawer.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+		const closeButtonSelector =
+			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer'
+		const drawerCloseButton = cartDrawer.locator(closeButtonSelector).first()
+		const fallbackCloseButton = this.page.locator(closeButtonSelector).last()
+		const closeButton =
+			(await drawerCloseButton.count()) > 0 ? drawerCloseButton : fallbackCloseButton
+
+		if ((await closeButton.count()) > 0) {
+			await closeButton.evaluate((element: HTMLElement) => element.click())
+			await cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
+		}
+
+		if (await cartDrawer.isVisible().catch(() => false)) {
+			const cartToggle = this.page.locator('a.wpse-cart-openerize').first()
+
+			if ((await cartToggle.count()) > 0) {
+				await cartToggle.evaluate((element: HTMLElement) => element.click())
+				await cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
+			}
+		}
+
+		if (await cartDrawer.isVisible().catch(() => false)) {
+			throw new Error(`Unable to close the storefront cart drawer. Current URL: ${this.page.url()}`)
+		}
 	}
 
 	private async waitForAddToCartResult(
@@ -876,8 +911,9 @@ export class ShopPage {
 			await this.page.waitForTimeout(250)
 		}
 
-		throw new Error(
-			[
+		return {
+			added: false,
+			errorText: [
 				`No add-to-cart confirmation appeared after clicking "${productName}".`,
 				`Current URL: ${this.page.url()}`,
 				`Previous cart count: ${previousCartCount}`,
@@ -885,7 +921,7 @@ export class ShopPage {
 				`Cart drawer visible: ${await cartDrawer.isVisible().catch(() => false)}`,
 				`Body preview: ${await this.getBodyPreview()}`,
 			].join('\n'),
-		)
+		}
 	}
 
 	private getProductCandidateKey(candidate: StorefrontProductCandidate) {
@@ -912,10 +948,13 @@ export class ShopPage {
 		const previousCartCount = await this.getStorefrontCartItemCount()
 		await addToCartButton.scrollIntoViewIfNeeded()
 		await addToCartButton.click({ force: true })
-		await this.acceptCartConflictIfPresent()
-		const result = await this.waitForAddToCartResult(candidate.name, previousCartCount)
-		await this.closeCartDrawerIfPresent()
-		return result
+
+		try {
+			await this.acceptCartConflictIfPresent()
+			return await this.waitForAddToCartResult(candidate.name, previousCartCount)
+		} finally {
+			await this.closeCartDrawerIfPresent()
+		}
 	}
 
 	async openStorefrontForFulfillment(fulfillment: ShopFulfillment) {
