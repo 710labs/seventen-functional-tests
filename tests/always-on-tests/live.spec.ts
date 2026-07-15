@@ -1,10 +1,10 @@
 import { test, expect, request, APIRequestContext } from '@playwright/test'
 import { HomePageLogin } from '../../models/always-on/login-homepage.ts'
-import { HomePageActions } from '../../models/always-on/homepage-actions.ts'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation.ts'
 import { LiveNonProdAccountPage } from '../../models/always-on/live-nonprod-account-page.ts'
 import { LiveNonProdCartFlow } from '../../models/always-on/live-nonprod-cart-flow.ts'
 import { LiveNonProdCheckoutPage } from '../../models/always-on/live-nonprod-checkout-page.ts'
+import { LiveNonProdHomePageActions } from '../../models/always-on/live-nonprod-homepage-actions.ts'
 require('dotenv').config({ path: '.env' })
 import { appendFileSync, writeFileSync } from 'fs'
 
@@ -23,7 +23,7 @@ test.describe('Live Tests', () => {
 		{ tag: ['@recreational'] },
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
-			const homePageActions = new HomePageActions(page)
+			const homePageActions = new LiveNonProdHomePageActions(page)
 			const cartFlow = new LiveNonProdCartFlow(page)
 			const checkoutPage = new LiveNonProdCheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
@@ -90,7 +90,7 @@ test.describe('Live Tests', () => {
 		{ tag: ['@medical'] },
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
-			const homePageActions = new HomePageActions(page)
+			const homePageActions = new LiveNonProdHomePageActions(page)
 			const cartFlow = new LiveNonProdCartFlow(page)
 			const checkoutPage = new LiveNonProdCheckoutPage(page)
 			const orderConfirmation = new OrderConfirmationPage(page)
@@ -156,7 +156,7 @@ test.describe('Live Tests', () => {
 	test('Existing user -- Sign In & Sign Out', { tag: ['@recreational'] }, async ({ page }) => {
 		const homePageLogin = new HomePageLogin(page)
 		const accountPage = new LiveNonProdAccountPage(page)
-		const homePageActions = new HomePageActions(page)
+		const homePageActions = new LiveNonProdHomePageActions(page)
 		// add adress for new user account
 		await homePageLogin.navigateToURL(page, liveURL)
 		// Verify that store homepage loads

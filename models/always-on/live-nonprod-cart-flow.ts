@@ -158,6 +158,54 @@ export class LiveNonProdCartFlow {
 		await this.waitForProducts()
 	}
 
+	private parseCartItemCount(values: Array<string | null | undefined>) {
+		for (const value of values) {
+			if (!value) {
+				continue
+			}
+
+			const normalizedValue = value.replace(/\s+/g, ' ').trim()
+			const countMatch =
+				normalizedValue.match(/\((\d+)\)/) ||
+				normalizedValue.match(/\b(?:cart|bag)\D{0,12}(\d+)\b/i) ||
+				normalizedValue.match(/^(\d+)\s*(?:items?)?$/i)
+
+			if (countMatch) {
+				return Number.parseInt(countMatch[1], 10)
+			}
+		}
+
+		return null
+	}
+
+	private async cartItemCount() {
+		const cartToggles = this.page.locator('a.wpse-cart-openerize')
+		const cartToggleCount = await cartToggles.count()
+
+		for (let index = 0; index < cartToggleCount; index += 1) {
+			const values = await cartToggles
+				.nth(index)
+				.evaluate(element => [
+					element.textContent,
+					element.getAttribute('aria-label'),
+					element.getAttribute('title'),
+					element.getAttribute('data-count'),
+					element.getAttribute('data-cart-count'),
+					element.getAttribute('data-item-count'),
+				])
+				.catch(() => [])
+			const parsedCount = this.parseCartItemCount(values)
+
+			if (parsedCount !== null) {
+				return parsedCount
+			}
+		}
+
+		return this.cartDrawer
+			.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
+			.count()
+	}
+
 	private async elementIntersectsViewport(locator: Locator) {
 		if ((await locator.count()) === 0) {
 			return false
@@ -320,45 +368,47 @@ export class LiveNonProdCartFlow {
 	private async readCandidates(): Promise<ProductCandidate[]> {
 		await this.waitForProducts()
 		const products = this.page.locator(productSelector)
-		const count = await products.count()
-		const candidates: ProductCandidate[] = []
 
-		for (let index = 0; index < count; index += 1) {
-			const product = products.nth(index)
-			const name = (
-				(await product
-					.locator('.woocommerce-loop-product__title, h2, h3')
-					.first()
-					.textContent()
-					.catch(() => '')) || ''
-			)
-				.replace(/\s+/g, ' ')
-				.trim()
+		return products.evaluateAll(
+			(nodes, selectors) => {
+				const candidates: ProductCandidate[] = []
 
-			if (!name) {
-				continue
-			}
+				for (let index = 0; index < nodes.length; index += 1) {
+					const product = nodes[index]
+					const name =
+						product
+							.querySelector(selectors.title)
+							?.textContent?.replace(/\s+/g, ' ')
+							.trim() || ''
+					const addControl = product.querySelector(selectors.addControl)
+					const productLink = product.querySelector<HTMLAnchorElement>(selectors.productLink)
 
-			const addControl = product.locator(storefrontAddToCartSelector).first()
-			const productLink = product.locator('.woocommerce-loop-product__link').first()
+					if (!name || (!addControl && !productLink)) {
+						continue
+					}
 
-			if (
-				!(await addControl.isVisible().catch(() => false)) &&
-				!(await productLink.isVisible().catch(() => false))
-			) {
-				continue
-			}
+					const sku =
+						addControl?.getAttribute('data-product_sku') ||
+						addControl?.getAttribute('data-id')
+					const productUrl = productLink?.getAttribute('href')
 
-			const sku =
-				(await addControl.getAttribute('data-product_sku').catch(() => null)) ||
-				(await addControl.getAttribute('data-id').catch(() => null))
-			const productUrl = await productLink.getAttribute('href').catch(() => null)
-			const isMedical = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
+					candidates.push({
+						index,
+						isMedical: Boolean(product.querySelector(selectors.medicalBadge)),
+						key: sku || productUrl || name,
+						name,
+					})
+				}
 
-			candidates.push({ index, isMedical, key: sku || productUrl || name, name })
-		}
-
-		return candidates
+				return candidates
+			},
+			{
+				addControl: storefrontAddToCartSelector,
+				medicalBadge: '.wpse-metabadge.med-metabadge',
+				productLink: '.woocommerce-loop-product__link',
+				title: '.woocommerce-loop-product__title, h2, h3',
+			},
+		)
 	}
 
 	private async findNextCandidate(
@@ -404,6 +454,8 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async addCandidate(candidate: ProductCandidate) {
+		const initialCartCount = await this.cartItemCount()
+
 		if (!(await this.clickCandidate(candidate))) {
 			return { added: false, reason: 'No usable add-to-cart control was found' }
 		}
@@ -455,12 +507,24 @@ export class LiveNonProdCartFlow {
 				}
 			}
 
+			const currentCartCount = await this.cartItemCount()
+
+			if (currentCartCount > initialCartCount) {
+				return { added: true, reason: '' }
+			}
+
 			await this.page.waitForTimeout(250)
 		}
 
+		const finalCartCount = await this.cartItemCount()
+
 		return {
 			added: false,
-			reason: `No cart confirmation appeared within 15 seconds at ${this.page.url()}`,
+			reason: [
+				'No cart confirmation appeared within 15 seconds.',
+				`Cart count before: ${initialCartCount}; after: ${finalCartCount}.`,
+				`Current URL: ${this.page.url()}`,
+			].join(' '),
 		}
 	}
 

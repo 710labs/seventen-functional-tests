@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { expect, Page } from '@playwright/test'
 import { AccountPage } from './account-page'
 
 export class LiveNonProdAccountPage extends AccountPage {
@@ -77,6 +77,21 @@ export class LiveNonProdAccountPage extends AccountPage {
 		return null
 	}
 
+	private async getActiveAccountLink() {
+		const accountLinks = this.page.locator('a[href*="/my-account"]')
+		const accountLinkCount = await accountLinks.count()
+
+		for (let index = 0; index < accountLinkCount; index += 1) {
+			const accountLink = accountLinks.nth(index)
+
+			if (await this.elementIntersectsViewport(accountLink)) {
+				return accountLink
+			}
+		}
+
+		return null
+	}
+
 	private async dismissBlockingStorefrontOverlay() {
 		await this.page.waitForLoadState('domcontentloaded').catch(() => {})
 		await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
@@ -124,7 +139,43 @@ export class LiveNonProdAccountPage extends AccountPage {
 
 	async goToAccountPage() {
 		await this.dismissBlockingStorefrontOverlay()
-		await super.goToAccountPage()
+
+		if (!(await this.signOutButton.isVisible().catch(() => false))) {
+			const accountLink = await this.getActiveAccountLink()
+
+			if (!accountLink) {
+				throw new Error(
+					`No active account link was available for Live non-production account navigation. Current URL: ${this.page.url()}`,
+				)
+			}
+
+			const accountHref = await accountLink.getAttribute('href')
+			await accountLink.evaluate((element: HTMLAnchorElement) => element.click())
+
+			const navigationDeadline = Date.now() + 10000
+			let accountPageAppeared = false
+
+			while (Date.now() < navigationDeadline) {
+				accountPageAppeared =
+					(await this.signOutButton.isVisible().catch(() => false)) ||
+					/\/my-account(?:\/|$|\?)/.test(this.page.url())
+
+				if (accountPageAppeared) {
+					break
+				}
+
+				await this.page.waitForTimeout(100)
+			}
+
+			if (!accountPageAppeared && accountHref) {
+				await this.page.goto(new URL(accountHref, this.page.url()).toString())
+			}
+		}
+
+		await this.page.waitForLoadState('domcontentloaded').catch(() => {})
+		await expect(this.pageTitleSelector).toBeVisible()
+		await expect(this.accountButtonNav).toBeVisible()
+		await expect(this.signOutButton).toBeVisible()
 	}
 
 	async editPersonalInfo(userType: string) {
