@@ -12,6 +12,7 @@ on:
           - stage
           - dev
           - prod-ca
+          - prod-nj
       target:
         type: choice
         description: Target URL
@@ -21,6 +22,7 @@ on:
           - https://thelist-stage.710labs.com
           - https://thelist-dev.710labs.com
           - https://thelist.710labs.com
+          - https://thelist-nj.710labs.com
       mode:
         type: choice
         description: Simulation mode
@@ -190,6 +192,7 @@ jobs:
               dev) echo "https://thelist-dev.710labs.com" ;;
               stage) echo "https://thelist-stage.710labs.com" ;;
               prod-ca) echo "https://thelist.710labs.com" ;;
+              prod-nj) echo "https://thelist-nj.710labs.com" ;;
               *) echo "Unsupported env: $1" >&2; exit 1 ;;
             esac
           }

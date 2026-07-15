@@ -1,6 +1,6 @@
 # Load Test - Drop Simulation
 
-This directory contains the self-contained Artillery suite for the manual **Load Test- Drop Simulation** GitHub Action. It is built for The List dev, stage, and CA prod environments and uses AWS Fargate for generated load.
+This directory contains the self-contained Artillery suite for the manual **Load Test- Drop Simulation** GitHub Action. It is built for The List dev, stage, CA prod, and NJ prod environments and uses AWS Fargate for generated load.
 
 ## What Runs
 
@@ -51,7 +51,7 @@ npm --prefix loadtest exec -- artillery run loadtest/generated/browser-bypass.lo
 
 Run **Load Test- Drop Simulation** manually from GitHub Actions.
 
-- `env`: `stage`, `dev`, or `prod-ca`.
+- `env`: `stage`, `dev`, `prod-ca`, or `prod-nj`.
 - `target`: must match the selected environment URL.
 - `mode`: `flip`, `entry-only`, `bypass-only`, `realqueue-only`, `http-funnel`, or `dry`.
 - `bypass_browsers`: total bypass browser concurrency; default `100`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
@@ -62,7 +62,7 @@ Run **Load Test- Drop Simulation** manually from GitHub Actions.
 - `screenshots`: default `false`; enable only for small debugging runs.
 - `fargate_capacity`: `on_demand` or `spot`.
 
-`prod-ca` targets the live production site at `https://thelist.710labs.com`. For production verification runs, prefer `mode=dry` or `place_orders=false` unless production order placement is intentional.
+`prod-ca` targets the live production site at `https://thelist.710labs.com`, and `prod-nj` targets `https://thelist-nj.710labs.com`. For production verification runs, prefer `mode=dry` or `place_orders=false` unless production order placement is intentional.
 
 The workflow derives exact 10-browser Fargate workers for presets above 10, so the default 100 bypass browsers become 10 workers and the default 50 realqueue browsers become 5 workers.
 
