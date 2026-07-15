@@ -181,11 +181,10 @@ export class LiveNonProdAccountPage extends AccountPage {
 	private async editPersonalInfoOnce(userType: string) {
 		await expect(this.personalInfoHeader).toBeVisible()
 		await expect(this.editPersonalInfoLink).toBeVisible()
-		await this.personalInfoHeader.scrollIntoViewIfNeeded()
-		await this.editPersonalInfoLink.click({ force: true })
+		await this.editPersonalInfoLink.evaluate((element: HTMLElement) => element.click())
 
 		if (!(await this.personalInfoDrawerHeader.isVisible().catch(() => false))) {
-			await this.editPersonalInfoLink.click({ force: true })
+			await this.editPersonalInfoLink.evaluate((element: HTMLElement) => element.click())
 		}
 
 		await expect(this.personalInfoDrawerHeader).toBeVisible()
@@ -233,14 +232,17 @@ export class LiveNonProdAccountPage extends AccountPage {
 				return await this.editPersonalInfoOnce(userType)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error)
-				const isDetachedElement = /not attached to the DOM|element is detached/i.test(message)
-				const drawerWasOpened = await this.personalInfoDrawerHeader.isVisible().catch(() => false)
+				const isTransientDomError =
+					/not attached to the DOM|element is detached|cannot find context with specified id|execution context was destroyed/i.test(
+						message,
+					)
 
-				if (!isDetachedElement || drawerWasOpened || attempt === 3) {
+				if (!isTransientDomError || attempt === 3) {
 					throw error
 				}
 
-				await this.page.waitForTimeout(500)
+				await this.page.reload({ waitUntil: 'domcontentloaded' })
+				await expect(this.personalInfoHeader).toBeVisible()
 			}
 		}
 
@@ -250,8 +252,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 	override async editPhotoId() {
 		await expect(this.photoIdSection).toBeVisible()
 		await expect(this.editPhotoIdLink).toBeVisible()
-		await this.photoIdSection.scrollIntoViewIfNeeded()
-		await this.editPhotoIdLink.click({ force: true })
+		await this.editPhotoIdLink.evaluate((element: HTMLElement) => element.click())
 		await expect(this.photoDrawerHeader).toBeVisible()
 		await this.uploadIDInput.setInputFiles('CA-DL.jpg')
 
@@ -265,8 +266,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 	override async editMedicalCard() {
 		await expect(this.medicalCardSection).toBeVisible()
 		await expect(this.editMedicalCardLink).toBeVisible()
-		await this.editMedicalCardLink.scrollIntoViewIfNeeded()
-		await this.editMedicalCardLink.click({ force: true })
+		await this.editMedicalCardLink.evaluate((element: HTMLElement) => element.click())
 		await expect(this.medDrawerHeader).toBeVisible()
 		await this.medCardInput.setInputFiles('Medical-Card.png')
 		await this.medStateDropDown.selectOption('CA')
@@ -284,7 +284,6 @@ export class LiveNonProdAccountPage extends AccountPage {
 	override async editPassword(currentPassword: string, newPassword: string) {
 		await expect(this.passwordSection).toBeVisible()
 		await expect(this.editPasswordLink).toBeVisible()
-		await this.passwordSection.scrollIntoViewIfNeeded()
 		await this.editPasswordLink.evaluate((element: HTMLElement) => element.click())
 		await expect(this.passwordDrawerHeader).toBeVisible()
 		await this.currentPasswordInput.fill(currentPassword)

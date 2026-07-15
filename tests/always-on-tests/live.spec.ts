@@ -46,8 +46,10 @@ test.describe('Live Tests', () => {
 			homePageLogin.userPopUpContainer,
 			`Live ${userType} ${flowType} registration did not complete`,
 		).toBeHidden({ timeout: 30000 })
-		await homePageActions.goToMainStorePage(page)
-		await homePageLogin.liveVerifyShopLoadsAfterSignIn(page)
+		await homePageLogin.navigateToURL(page, liveURL)
+		await expect(homePageLogin.userPopUpContainer).toBeHidden()
+		await expect(homePageLogin.accountButtonNav).toBeVisible()
+		await expect(homePageLogin.cartButtonNav).toBeVisible()
 
 		return { homePageActions, homePageLogin }
 	}
