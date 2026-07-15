@@ -46,6 +46,7 @@ export class LiveNonProdCartFlow {
 					'#cartDrawer a.button.wpse-cart-openerize[href="/cart"][data-module="cart"]',
 					'#cartDrawer a:has-text("View cart and checkout")',
 					'#cartDrawer a:has-text("View Cart")',
+					'.wpse-drawer[data-module="cart-response"] a[href="/cart"]:has-text("View Cart")',
 				].join(', '),
 			)
 			.first()
@@ -147,6 +148,15 @@ export class LiveNonProdCartFlow {
 			(await this.page.locator(productSelector).first().isVisible().catch(() => false))
 		) {
 			return
+		}
+
+		if (isProductDetailsPage) {
+			await this.page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => null)
+
+			if (await this.page.locator(productSelector).first().isVisible().catch(() => false)) {
+				await this.waitForProducts()
+				return
+			}
 		}
 
 		if (await this.homeButton.isVisible().catch(() => false)) {
@@ -555,7 +565,7 @@ export class LiveNonProdCartFlow {
 		}
 
 		await expect(this.viewCartButton).toBeVisible()
-		await this.viewCartButton.click()
+		await this.viewCartButton.evaluate((element: HTMLAnchorElement) => element.click())
 		await this.page
 			.locator('h6:has-text("Your cart from"), h1:has-text("Cart"), .checkout-button')
 			.first()
