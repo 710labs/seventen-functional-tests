@@ -11,13 +11,11 @@ test.describe('PROD Live Tests', () => {
 	test.describe.configure({ mode: 'parallel' })
 	var apiContext: APIRequestContext
 	const prodLiveURL = process.env.PROD_LIVE_URL || ''
-	const prodLiveUsername = process.env.PROD_LIVE_REC_USERNAME || ''
-	const prodLivePassword = process.env.PROD_LIVE_REC_PASSWORD || ''
-	const NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
+	const newUserPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 
 	console.log(`------- \n URL being tested: ${prodLiveURL} -------- \n `)
 	test(
-		'Prod Live check - EXISTING REC User - Happy Path test - Sign In, Add Products to Cart, but DO NOT CHECKOUT',
+		'Prod Live check - NEW REC User - Happy Path test - Register, Add Products to Cart, but DO NOT CHECKOUT',
 		{ tag: ['@recreational'] },
 		async ({ page }) => {
 			const homePageLogin = new HomePageLogin(page)
@@ -38,13 +36,8 @@ test.describe('PROD Live Tests', () => {
 			// Verify that store homepage loads
 			await homePageLogin.newTestverifyUserSignInModalAppears(page, prodLiveURL)
 			await homePageActions.addSingleProductToCart(page)
-			// Login Existing Prod User
-			await homePageLogin.loginExistingUser(
-				page,
-				'wrongpassword',
-				prodLiveUsername,
-				prodLivePassword,
-			)
+			// Register a unique production test user
+			await homePageLogin.registerNewUser(page, 'rec', newUserPassword)
 			// go to main store page
 			await homePageActions.goToMainStorePage(page)
 			// clear items from user cart
@@ -62,7 +55,7 @@ test.describe('PROD Live Tests', () => {
 			// verify that checkout page loads
 			await checkoutPage.verifyCheckoutPageLoads(page)
 			// enter in user info on checkoutpage
-			await checkoutPage.recExistingCheckoutAndEdit(page, address, newAddress)
+			await checkoutPage.recEnterInfoForCheckoutAndEdit(page, address, newAddress)
 			//
 			// CANT HAVE PLACE ORDER // CLICK SUBMIT BUTTON SINCE THIS IS FOR PROD
 			//

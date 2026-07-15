@@ -151,7 +151,11 @@ export class HomePageLogin {
 			await this.signInButton.click()
 		})
 	}
-	async registerNewUser(page: Page, userType: string) {
+	async registerNewUser(page: Page, userType: string, password = this.alwaysOnPassword) {
+		if (!password) {
+			throw new Error('A password is required to register a new user')
+		}
+
 		const now = new Date()
 		// Construct the timestamp string with date and time
 		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -163,7 +167,7 @@ export class HomePageLogin {
 		).padStart(3, '0')}`
 
 		// enter a unique test email for test user
-		const newEmail = `test_auto_${userType}_${timestamp}@test.com`
+		const newEmail = `test_710_automation_${userType}_${timestamp}@test.com`
 		console.log(`\n New user email ---> ${newEmail} \n`)
 		await test.step('Enter new user email and continue to register user screen', async () => {
 			// enter email in field and click Continue button
@@ -176,17 +180,17 @@ export class HomePageLogin {
 			await this.passwordFieldPopUp.waitFor({ state: 'visible' })
 			await expect(this.passwordFieldPopUp).toBeVisible()
 			await this.passwordFieldPopUp.click()
-			await this.passwordFieldPopUp.fill(this.alwaysOnPassword)
+			await this.passwordFieldPopUp.fill(password)
 		})
 		await test.step('Enter new user First Name, Last Name, and Zip Code', async () => {
 			// enter in First Name
 			await expect(this.firstNameField).toBeVisible()
 			await this.firstNameField.click()
-			await this.firstNameField.fill(`Test User ${timestamp}`)
+			await this.firstNameField.fill(`Test_710_${timestamp}`)
 			// enter in Last Name
 			await expect(this.lastNameField).toBeVisible()
 			await this.lastNameField.click()
-			await this.lastNameField.fill(`Test User ${timestamp}`)
+			await this.lastNameField.fill(`Test_710_${timestamp}`)
 			// enter in Zip Code only if visible; otherwise continue forward
 			if (await this.zipCodeField.isVisible()) {
 				await this.zipCodeField.click()
