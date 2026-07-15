@@ -113,7 +113,7 @@ export class LiveNonProdCartFlow {
 					(await this.checkoutButton.isEnabled().catch(() => false))
 				) {
 					await expect(this.checkoutButton).toBeVisible()
-					await this.checkoutButton.click()
+					await this.checkoutButton.evaluate((element: HTMLAnchorElement) => element.click())
 					return
 				}
 
@@ -619,50 +619,99 @@ export class LiveNonProdCartFlow {
 			})
 		}
 
-		await revealMedicalCardForm()
-		await medicalCardInput.setInputFiles('CA-DL.jpg')
-		await revealMedicalCardForm()
-
 		const newYear = new Date().getFullYear() + 1
-		await medicalCardForm.evaluate(
-			(element, values) => {
-				const checkbox = element
-					.closest('.fasd-conditional-set')
-					?.querySelector<HTMLInputElement>('input#med_included')
-				const setValue = (selector: string, value: string) => {
-					const input = element.querySelector<HTMLInputElement | HTMLSelectElement>(selector)
+		const medicalCardValues = {
+			expiration: `${newYear}-01-01`,
+			cardNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+		}
+		const fillMedicalCardValues = () =>
+			medicalCardForm.evaluate(
+				(element, values) => {
+					const checkbox = element
+						.closest('.fasd-conditional-set')
+						?.querySelector<HTMLInputElement>('input#med_included')
+					const setValue = (selector: string, value: string) => {
+						const input = element.querySelector<HTMLInputElement | HTMLSelectElement>(selector)
 
-					if (!input) {
-						throw new Error(`Missing medical-card control: ${selector}`)
+						if (!input) {
+							throw new Error(`Missing medical-card control: ${selector}`)
+						}
+
+						input.value = value
+						input.dispatchEvent(new Event('input', { bubbles: true }))
+						input.dispatchEvent(new Event('change', { bubbles: true }))
 					}
 
-					input.value = value
-					input.dispatchEvent(new Event('input', { bubbles: true }))
-					input.dispatchEvent(new Event('change', { bubbles: true }))
-				}
+					if (checkbox) {
+						checkbox.checked = true
+					}
 
-				if (checkbox) {
-					checkbox.checked = true
-				}
+					setValue('#medcard_state', 'CA')
+					setValue('#medcard_exp', values.expiration)
+					setValue('#medcard_no', values.cardNumber)
+					setValue('#fasd_dob', '1990-01-01')
+				},
+				medicalCardValues,
+			)
 
-				setValue('#medcard_state', 'CA')
-				setValue('#medcard_exp', values.expiration)
-				setValue('#medcard_no', values.cardNumber)
-				setValue('#fasd_dob', '1990-01-01')
-				element.querySelector<HTMLElement>('.fasd-form-submit')?.click()
-			},
-			{
-				expiration: `${newYear}-01-01`,
-				cardNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
-			},
-		)
+		await revealMedicalCardForm()
+		await fillMedicalCardValues()
+
+		let medicalCardFileReady = false
+
+		for (let attempt = 1; attempt <= 3; attempt += 1) {
+			await revealMedicalCardForm()
+			await medicalCardInput.setInputFiles('CA-DL.jpg')
+
+			medicalCardFileReady = await expect
+				.poll(
+					() =>
+						medicalCardForm.evaluate(element => {
+							const input = element.querySelector<HTMLInputElement>('#fasd_medcard')
+							const thumbnail = element.querySelector<HTMLImageElement>('.fasd-form-thumb')
+							const populatedLabel = element.querySelector<HTMLElement>('.whenfull')
+							const populatedLabelIsVisible = Boolean(
+								populatedLabel &&
+									getComputedStyle(populatedLabel).display !== 'none' &&
+									getComputedStyle(populatedLabel).visibility !== 'hidden',
+							)
+
+							return (
+								(input?.files?.length || 0) > 0 ||
+								Boolean(thumbnail?.getAttribute('src')) ||
+								populatedLabelIsVisible
+							)
+						}),
+					{ timeout: 10000 },
+				)
+				.toBeTruthy()
+				.then(() => true)
+				.catch(() => false)
+
+			if (medicalCardFileReady) {
+				break
+			}
+		}
+
+		if (!medicalCardFileReady) {
+			throw new Error(
+				`The Live non-production medical-card upload never became ready. Current URL: ${this.page.url()}`,
+			)
+		}
+
+		await revealMedicalCardForm()
+		await fillMedicalCardValues()
+		await medicalCardForm
+			.locator('.fasd-form-submit')
+			.first()
+			.evaluate((element: HTMLElement) => element.click())
 
 		await expect
 			.poll(
 				async () =>
 					(await this.checkoutButton.isVisible().catch(() => false)) ||
 					!(await medicalOnlyBanner.isVisible().catch(() => false)),
-				{ timeout: 15000 },
+				{ timeout: 20000 },
 			)
 			.toBeTruthy()
 

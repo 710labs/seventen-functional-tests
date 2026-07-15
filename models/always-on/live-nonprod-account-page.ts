@@ -214,7 +214,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await this.emailInput.fill(newEmail)
 		await this.phoneInput.fill(newPhone)
 		await this.birthdayInput.fill('1985-01-02')
-		await this.persInfoUpdateButton.click({ force: true })
+		await this.persInfoUpdateButton.evaluate((element: HTMLElement) => element.click())
 
 		await expect(this.displayedUserFirstName).toHaveText(newFirstName)
 		await expect(this.displayedUserLastName).toHaveText(newLastName)
@@ -258,7 +258,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 		const expirationYear = new Date().getFullYear() + 1
 		await this.expirationInput.fill(`${expirationYear}-04-10`)
 		await expect(this.photoIDSaveAndContinueButton).toBeVisible()
-		await this.photoIDSaveAndContinueButton.click({ force: true })
+		await this.photoIDSaveAndContinueButton.evaluate((element: HTMLElement) => element.click())
 		await expect(this.dispalyedPhotoIDExp).toHaveText(`Exp: 04/10/${expirationYear}`)
 	}
 
@@ -277,7 +277,20 @@ export class LiveNonProdAccountPage extends AccountPage {
 			.locator('input#medcard_no')
 			.fill(`${Math.floor(10000000 + Math.random() * 90000000)}`)
 		await expect(this.medSaveAndContinueButton).toBeVisible()
-		await this.medSaveAndContinueButton.click({ force: true })
+		await this.medSaveAndContinueButton.evaluate((element: HTMLElement) => element.click())
 		await expect(this.dispalyedMedIDExp).toHaveText(`Exp: 04/10/${expirationYear}`)
+	}
+
+	override async editPassword(currentPassword: string, newPassword: string) {
+		await expect(this.passwordSection).toBeVisible()
+		await expect(this.editPasswordLink).toBeVisible()
+		await this.passwordSection.scrollIntoViewIfNeeded()
+		await this.editPasswordLink.evaluate((element: HTMLElement) => element.click())
+		await expect(this.passwordDrawerHeader).toBeVisible()
+		await this.currentPasswordInput.fill(currentPassword)
+		await this.newPasswordInput.fill(newPassword)
+		await expect(this.changePasswordButton).toBeVisible()
+		await this.changePasswordButton.evaluate((element: HTMLElement) => element.click())
+		await this.page.waitForTimeout(1000)
 	}
 }
