@@ -13,7 +13,8 @@ export class LiveNonProdAccountPage extends AccountPage {
 		const cartDrawer = this.page.locator('#cartDrawer')
 
 		if (await cartDrawer.isVisible().catch(() => false)) {
-			const drawerCloseButton = cartDrawer
+			const cartDrawerContainer = this.page.locator('.wpse-drawer[data-module="cart"]')
+			const drawerCloseButton = cartDrawerContainer
 				.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
 				.first()
 

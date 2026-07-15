@@ -179,7 +179,8 @@ export class LiveNonProdCartFlow {
 			return
 		}
 
-		const drawerCloseButton = this.cartDrawer
+		const cartDrawerContainer = this.page.locator('.wpse-drawer[data-module="cart"]')
+		const drawerCloseButton = cartDrawerContainer
 			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
 			.first()
 
