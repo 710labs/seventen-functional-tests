@@ -6,13 +6,82 @@ export class LiveNonProdAccountPage extends AccountPage {
 		super(page)
 	}
 
+	private async elementIntersectsViewport(locator: ReturnType<Page['locator']>) {
+		if ((await locator.count()) === 0) {
+			return false
+		}
+
+		return locator
+			.evaluate(element => {
+				const rect = element.getBoundingClientRect()
+				return (
+					rect.width > 0 &&
+					rect.height > 0 &&
+					rect.left < window.innerWidth &&
+					rect.right > 0 &&
+					rect.top < window.innerHeight &&
+					rect.bottom > 0
+				)
+			})
+			.catch(() => false)
+	}
+
+	private async cartDrawerIsOpen() {
+		return this.elementIntersectsViewport(
+			this.page.locator('.wpse-drawer[data-module="cart"]'),
+		)
+	}
+
+	private async waitForCartDrawerState(isOpen: boolean, timeout = 5000) {
+		const deadline = Date.now() + timeout
+
+		while (Date.now() < deadline) {
+			if ((await this.cartDrawerIsOpen()) === isOpen) {
+				return true
+			}
+
+			await this.page.waitForTimeout(100)
+		}
+
+		return (await this.cartDrawerIsOpen()) === isOpen
+	}
+
+	private async clickActiveCartToggle() {
+		const cartToggles = this.page.locator('a.wpse-cart-openerize')
+		const cartToggleCount = await cartToggles.count()
+
+		for (let index = 0; index < cartToggleCount; index += 1) {
+			const cartToggle = cartToggles.nth(index)
+
+			if (await this.elementIntersectsViewport(cartToggle)) {
+				await cartToggle.evaluate((element: HTMLElement) => element.click())
+				return true
+			}
+		}
+
+		return false
+	}
+
+	private async getBlockingScrim() {
+		const scrims = this.page.locator('.wpse-scrim-front')
+		const scrimCount = await scrims.count()
+
+		for (let index = 0; index < scrimCount; index += 1) {
+			const scrim = scrims.nth(index)
+
+			if (await this.elementIntersectsViewport(scrim)) {
+				return scrim
+			}
+		}
+
+		return null
+	}
+
 	private async dismissBlockingStorefrontOverlay() {
 		await this.page.waitForLoadState('domcontentloaded').catch(() => {})
 		await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
-		const cartDrawer = this.page.locator('#cartDrawer')
-
-		if (await cartDrawer.isVisible().catch(() => false)) {
+		if (await this.cartDrawerIsOpen()) {
 			const cartDrawerContainer = this.page.locator('.wpse-drawer[data-module="cart"]')
 			const drawerCloseButton = cartDrawerContainer
 				.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
@@ -20,38 +89,33 @@ export class LiveNonProdAccountPage extends AccountPage {
 
 			if ((await drawerCloseButton.count()) > 0) {
 				await drawerCloseButton.evaluate((element: HTMLElement) => element.click())
-				await cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
+				await this.waitForCartDrawerState(false)
 			}
 
-			if (await cartDrawer.isVisible().catch(() => false)) {
-				const cartToggle = this.page.locator('a.wpse-cart-openerize').first()
-
-				if ((await cartToggle.count()) > 0) {
-					await cartToggle.evaluate((element: HTMLElement) => element.click())
-					await cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
-				}
+			if ((await this.cartDrawerIsOpen()) && (await this.clickActiveCartToggle())) {
+				await this.waitForCartDrawerState(false)
 			}
 
-			if (await cartDrawer.isVisible().catch(() => false)) {
+			if (await this.cartDrawerIsOpen()) {
 				throw new Error(
 					`Unable to close the Live non-production cart drawer before account navigation. Current URL: ${this.page.url()}`,
 				)
 			}
 		}
 
-		const visibleScrim = this.page.locator('.wpse-scrim-front:visible').first()
+		const visibleScrim = await this.getBlockingScrim()
 
-		if ((await visibleScrim.count()) > 0) {
+		if (visibleScrim) {
 			await visibleScrim.evaluate((element: HTMLElement) => element.click())
 			await this.page.waitForTimeout(500)
 		}
 
-		if ((await this.page.locator('.wpse-scrim-front:visible').count()) > 0) {
+		if (await this.getBlockingScrim()) {
 			await this.page.keyboard.press('Escape')
 			await this.page.waitForTimeout(500)
 		}
 
-		if ((await this.page.locator('.wpse-scrim-front:visible').count()) > 0) {
+		if (await this.getBlockingScrim()) {
 			throw new Error(
 				`A storefront scrim is still blocking Live non-production account navigation. Current URL: ${this.page.url()}`,
 			)

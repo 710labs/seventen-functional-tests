@@ -158,24 +158,88 @@ export class LiveNonProdCartFlow {
 		await this.waitForProducts()
 	}
 
-	private async openCartDrawer() {
-		if (await this.cartDrawer.isVisible().catch(() => false)) {
-			return true
-		}
-
-		if (!(await this.cartButton.isVisible().catch(() => false))) {
+	private async elementIntersectsViewport(locator: Locator) {
+		if ((await locator.count()) === 0) {
 			return false
 		}
 
-		await this.cartButton.click({ force: true })
-		return this.cartDrawer
-			.waitFor({ state: 'visible', timeout: 10000 })
-			.then(() => true)
+		return locator
+			.evaluate(element => {
+				const rect = element.getBoundingClientRect()
+				return (
+					rect.width > 0 &&
+					rect.height > 0 &&
+					rect.left < window.innerWidth &&
+					rect.right > 0 &&
+					rect.top < window.innerHeight &&
+					rect.bottom > 0
+				)
+			})
 			.catch(() => false)
 	}
 
+	private async cartDrawerIsOpen() {
+		return this.elementIntersectsViewport(
+			this.page.locator('.wpse-drawer[data-module="cart"]'),
+		)
+	}
+
+	private async waitForViewportIntersection(
+		locator: Locator,
+		intersectsViewport: boolean,
+		timeout = 10000,
+	) {
+		const deadline = Date.now() + timeout
+
+		while (Date.now() < deadline) {
+			if ((await this.elementIntersectsViewport(locator)) === intersectsViewport) {
+				return true
+			}
+
+			await this.page.waitForTimeout(100)
+		}
+
+		return (await this.elementIntersectsViewport(locator)) === intersectsViewport
+	}
+
+	private async waitForCartDrawerState(isOpen: boolean, timeout = 10000) {
+		return this.waitForViewportIntersection(
+			this.page.locator('.wpse-drawer[data-module="cart"]'),
+			isOpen,
+			timeout,
+		)
+	}
+
+	private async clickActiveCartToggle() {
+		const cartToggles = this.page.locator('a.wpse-cart-openerize')
+		const cartToggleCount = await cartToggles.count()
+
+		for (let index = 0; index < cartToggleCount; index += 1) {
+			const cartToggle = cartToggles.nth(index)
+
+			if (await this.elementIntersectsViewport(cartToggle)) {
+				await cartToggle.evaluate((element: HTMLElement) => element.click())
+				return true
+			}
+		}
+
+		return false
+	}
+
+	private async openCartDrawer() {
+		if (await this.cartDrawerIsOpen()) {
+			return true
+		}
+
+		if (!(await this.clickActiveCartToggle())) {
+			return false
+		}
+
+		return this.waitForCartDrawerState(true)
+	}
+
 	private async closeCartDrawer() {
-		if (!(await this.cartDrawer.isVisible().catch(() => false))) {
+		if (!(await this.cartDrawerIsOpen())) {
 			return
 		}
 
@@ -186,22 +250,24 @@ export class LiveNonProdCartFlow {
 
 		if ((await drawerCloseButton.count()) > 0) {
 			await drawerCloseButton.evaluate((element: HTMLElement) => element.click())
-			await this.cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
-		}
 
-		if (await this.cartDrawer.isVisible().catch(() => false)) {
-			if ((await this.cartButton.count()) > 0) {
-				await this.cartButton.evaluate((element: HTMLElement) => element.click())
-				await this.cartDrawer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
+			if (await this.waitForCartDrawerState(false, 5000)) {
+				return
 			}
 		}
 
-		if (await this.cartDrawer.isVisible().catch(() => false)) {
+		if (await this.clickActiveCartToggle()) {
+			if (await this.waitForCartDrawerState(false, 5000)) {
+				return
+			}
+		}
+
+		if (await this.cartDrawerIsOpen()) {
 			throw new Error(
 				[
 					'Unable to close the Live non-production cart drawer.',
 					`Drawer close button found: ${(await drawerCloseButton.count()) > 0}`,
-					`Cart toggle found: ${(await this.cartButton.count()) > 0}`,
+					`Cart toggle found: ${(await this.page.locator('a.wpse-cart-openerize').count()) > 0}`,
 					`Current URL: ${this.page.url()}`,
 				].join('\n'),
 			)
@@ -226,7 +292,7 @@ export class LiveNonProdCartFlow {
 				await removeButton.evaluate((element: HTMLElement) => element.click())
 				await this.page.waitForTimeout(500)
 
-				if (!(await this.cartDrawer.isVisible().catch(() => false))) {
+				if (!(await this.cartDrawerIsOpen())) {
 					await this.openCartDrawer()
 				}
 			}
@@ -349,13 +415,17 @@ export class LiveNonProdCartFlow {
 		const deadline = Date.now() + 15000
 
 		while (Date.now() < deadline) {
-			if (await conflictModal.isVisible().catch(() => false)) {
+			if (await this.elementIntersectsViewport(conflictModal)) {
 				const startNewCartButton = conflictModal.getByRole('button', {
 					name: /start a new cart/i,
 				})
 				await expect(startNewCartButton).toBeVisible()
-				await startNewCartButton.click()
-				await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+				await startNewCartButton.evaluate((element: HTMLElement) => element.click())
+
+				if (!(await this.waitForViewportIntersection(conflictModal, false))) {
+					throw new Error(`The Live cart-conflict drawer remained open at ${this.page.url()}`)
+				}
+
 				continue
 			}
 
@@ -377,7 +447,7 @@ export class LiveNonProdCartFlow {
 				}
 			}
 
-			if (await this.cartDrawer.isVisible().catch(() => false)) {
+			if (await this.cartDrawerIsOpen()) {
 				const cartProduct = this.cartDrawer.getByText(candidate.name, { exact: false }).first()
 
 				if (await cartProduct.isVisible().catch(() => false)) {
@@ -416,11 +486,10 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async openCartPageFromDrawer() {
-		if (!(await this.cartDrawer.isVisible().catch(() => false))) {
-			await this.openCartDrawer()
+		if (!(await this.cartDrawerIsOpen()) && !(await this.openCartDrawer())) {
+			throw new Error(`Unable to open the Live cart drawer at ${this.page.url()}`)
 		}
 
-		await expect(this.cartDrawer).toBeVisible()
 		await expect(this.viewCartButton).toBeVisible()
 		await this.viewCartButton.click()
 		await this.page
