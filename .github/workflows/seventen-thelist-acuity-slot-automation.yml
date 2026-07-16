@@ -12,19 +12,8 @@ on:
           - upload
       slot_file:
         type: string
-        description: Committed CSV path under utils/. Ignored when slot_csv_text or slot_file_url is set.
-        required: false
-        default: utils/delivery-slots.csv
-      slot_csv_text:
-        type: string
-        description: Optional raw pasted CSV text. Takes precedence over slot_file_url and slot_file.
-        required: false
-        default: ''
-      slot_file_url:
-        type: string
-        description: Optional direct HTTPS raw CSV URL. Ignored when slot_csv_text is set.
-        required: false
-        default: ''
+        description: 'CSV filename committed under acuity-slots/. Example: delivery-slots-mi-july.csv'
+        required: true
       workers:
         type: choice
         description: Playwright workers for upload mode. Values above 1 require ACUITY_STORAGE_STATE_B64.
@@ -35,11 +24,6 @@ on:
           - '2'
           - '3'
           - '4'
-      slot_grep:
-        type: string
-        description: Optional regex to target a specific slot after Acuity Automation.
-        required: false
-        default: ''
 concurrency:
   group: acuity-slot-automation
   cancel-in-progress: false
@@ -73,61 +57,45 @@ jobs:
       - name: Prepare Acuity slot CSV
         env:
           SLOT_FILE: ${{ inputs.slot_file }}
-          SLOT_CSV_TEXT_PRESENT: ${{ inputs.slot_csv_text != '' }}
-          SLOT_CSV_TEXT_JSON: ${{ toJson(inputs.slot_csv_text) }}
-          SLOT_FILE_URL: ${{ inputs.slot_file_url }}
         run: |
           set -euo pipefail
 
           selected_file=".acuity-input/selected-delivery-slots.csv"
           mkdir -p "$(dirname "$selected_file")"
 
-          if [[ "$SLOT_CSV_TEXT_PRESENT" == "true" ]]; then
-            SELECTED_FILE="$selected_file" python3 <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          csv_text = json.loads(os.environ["SLOT_CSV_TEXT_JSON"])
-          csv_text = csv_text.replace("\r\n", "\n").replace("\r", "\n")
-          if csv_text and not csv_text.endswith("\n"):
-              csv_text += "\n"
-
-          Path(os.environ["SELECTED_FILE"]).write_text(csv_text, encoding="utf-8")
-          PY
-            echo "ACUITY_SLOT_SOURCE=workflow input slot_csv_text" >> "$GITHUB_ENV"
-          elif [[ -n "$SLOT_FILE_URL" ]]; then
-            case "$SLOT_FILE_URL" in
-              https://*) ;;
-              *)
-                echo "::error::slot_file_url must be a direct HTTPS URL to raw CSV bytes."
-                exit 1
-                ;;
-            esac
-
-            curl --proto '=https' --tlsv1.2 --fail --location --show-error --silent \
-              --retry 3 --retry-all-errors --max-time 60 \
-              --output "$selected_file" "$SLOT_FILE_URL"
-            echo "ACUITY_SLOT_SOURCE=$SLOT_FILE_URL" >> "$GITHUB_ENV"
-          else
-            SLOT_FILE="${SLOT_FILE:-utils/delivery-slots.csv}"
-            case "$SLOT_FILE" in
-              utils/*.csv) ;;
-              *)
-                echo "::error::slot_file must be a CSV file under utils/."
-                exit 1
-                ;;
-            esac
-
-            if [[ "$SLOT_FILE" == *".."* ]]; then
-              echo "::error::slot_file must not contain path traversal."
-              exit 1
-            fi
-
-            cp "$SLOT_FILE" "$selected_file"
-            echo "ACUITY_SLOT_SOURCE=$SLOT_FILE" >> "$GITHUB_ENV"
+          if [[ -z "${SLOT_FILE:-}" ]]; then
+            echo "::error::slot_file is required. Enter a CSV filename committed under acuity-slots/."
+            exit 1
           fi
 
+          case "$SLOT_FILE" in
+            acuity-slots/*.csv)
+              slot_name="${SLOT_FILE#acuity-slots/}"
+              ;;
+            *.csv)
+              slot_name="$SLOT_FILE"
+              ;;
+            *)
+              echo "::error::slot_file must be a .csv filename under acuity-slots/."
+              exit 1
+              ;;
+          esac
+
+          if [[ "$slot_name" == *"/"* || "$slot_name" == *".."* || "$slot_name" == .* ]]; then
+            echo "::error::slot_file must be a plain CSV filename in acuity-slots/."
+            exit 1
+          fi
+
+          slot_path="acuity-slots/$slot_name"
+          if [[ ! -f "$slot_path" ]]; then
+            echo "::error::Acuity slot CSV does not exist: $slot_path"
+            echo "Available acuity-slots CSV files:"
+            find acuity-slots -maxdepth 1 -type f -name '*.csv' -print | sort || true
+            exit 1
+          fi
+
+          cp "$slot_path" "$selected_file"
+          echo "ACUITY_SLOT_SOURCE=$slot_path" >> "$GITHUB_ENV"
           echo "ACUITY_SLOT_FILE=$selected_file" >> "$GITHUB_ENV"
       - name: Validate Acuity slot CSV
         env:
@@ -181,17 +149,11 @@ jobs:
       - name: Run Playwright tests
         if: inputs.mode == 'upload'
         env:
-          SLOT_GREP: ${{ inputs.slot_grep }}
           WORKERS: ${{ inputs.workers }}
           ACUITY_HEADLESS: 'true'
           ACUITY_UPLOAD_CI_ARTIFACTS: 'true'
         run: |
           set -euo pipefail
-
-          grep_pattern="Acuity Automation"
-          if [[ -n "$SLOT_GREP" ]]; then
-            grep_pattern="Acuity Automation.*$SLOT_GREP"
-          fi
 
           if [[ "$WORKERS" != "1" ]]; then
             if [[ -z "${ACUITY_STORAGE_STATE_FILE:-}" ]]; then
@@ -203,7 +165,7 @@ jobs:
           fi
 
           npx playwright test \
-            --grep "$grep_pattern" \
+            --grep "Acuity Automation" \
             --config=configs/automation.config.ts \
             --project="Desktop Chrome" \
             --workers="$WORKERS" \
@@ -226,9 +188,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           MODE: ${{ inputs.mode }}
           SLOT_FILE: ${{ inputs.slot_file }}
-          SLOT_FILE_URL: ${{ inputs.slot_file_url }}
           WORKERS: ${{ inputs.workers }}
-          SLOT_GREP: ${{ inputs.slot_grep }}
         run: |
           set -euo pipefail
 
@@ -246,10 +206,8 @@ jobs:
             ':red_circle:'
           const slotSource =
             process.env.ACUITY_SLOT_SOURCE ||
-            process.env.SLOT_FILE_URL ||
             process.env.SLOT_FILE ||
             'unknown'
-          const grep = process.env.SLOT_GREP || 'All rows'
 
           const message = {
             text: `Acuity Slot Automation ${status}`,
@@ -271,7 +229,6 @@ jobs:
                     `*Mode:* ${process.env.MODE || 'unknown'}`,
                     `*CSV:* ${slotSource}`,
                     `*Workers:* ${process.env.WORKERS || 'unknown'}`,
-                    `*Target:* ${grep}`,
                     `*Run:* <${process.env.RUN_URL}|${process.env.WORKFLOW_NAME || 'GitHub Actions'} #${process.env.RUN_ID || ''}>`,
                   ].join('\n'),
                 },
