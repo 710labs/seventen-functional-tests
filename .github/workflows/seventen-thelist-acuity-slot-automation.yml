@@ -16,7 +16,7 @@ on:
         required: true
       workers:
         type: choice
-        description: Playwright workers for upload mode. Values above 1 require ACUITY_STORAGE_STATE_B64.
+        description: Playwright workers for upload mode.
         required: true
         default: '3'
         options:
@@ -108,44 +108,31 @@ jobs:
           name: acuity-selected-delivery-slots
           path: .acuity-input/selected-delivery-slots.csv
           if-no-files-found: ignore
-      - name: Prepare Acuity auth state
-        if: inputs.mode == 'upload'
-        run: |
-          set -euo pipefail
-
-          if [[ -n "${ACUITY_STORAGE_STATE_B64:-}" ]]; then
-            mkdir -p .auth
-            printf '%s' "$ACUITY_STORAGE_STATE_B64" | base64 --decode > .auth/acuity-storage-state.json
-            echo "ACUITY_STORAGE_STATE_FILE=.auth/acuity-storage-state.json" >> "$GITHUB_ENV"
-            echo "Using Acuity storage state from ACUITY_STORAGE_STATE_B64."
-          else
-            echo "No ACUITY_STORAGE_STATE_B64 secret found; falling back to Acuity username/password login."
-          fi
-      - name: Verify Acuity credentials
-        if: inputs.mode == 'upload'
-        run: |
-          set -euo pipefail
-
-          if [[ -n "${ACUITY_STORAGE_STATE_FILE:-}" ]]; then
-            echo "Acuity storage state is configured. ACUITY_USER and ACUITY_PASSWORD are fallback credentials only."
-            exit 0
-          fi
-
-          missing=()
-          if [[ -z "${ACUITY_USER:-}" ]]; then
-            missing+=("ACUITY_USER")
-          fi
-          if [[ -z "${ACUITY_PASSWORD:-}" ]]; then
-            missing+=("ACUITY_PASSWORD")
-          fi
-
-          if (( ${#missing[@]} > 0 )); then
-            echo "::error::Missing required Acuity secret(s): ${missing[*]}. Add them as repository or environment secrets before running upload mode."
-            exit 1
-          fi
       - name: Install Playwright
         if: inputs.mode == 'upload'
         run: npx playwright install --with-deps chromium
+      - name: Prepare Acuity auth state
+        if: inputs.mode == 'upload'
+        env:
+          ACUITY_HEADLESS: 'true'
+          ACUITY_STORAGE_STATE_FILE: .auth/acuity-storage-state.json
+        run: |
+          set -euo pipefail
+
+          mkdir -p .auth
+
+          if [[ -n "${ACUITY_USER:-}" && -n "${ACUITY_PASSWORD:-}" ]]; then
+            node scripts/create-acuity-storage-state.js
+            echo "ACUITY_STORAGE_STATE_FILE=.auth/acuity-storage-state.json" >> "$GITHUB_ENV"
+            echo "Generated fresh Acuity storage state from ACUITY_USER and ACUITY_PASSWORD."
+          elif [[ -n "${ACUITY_STORAGE_STATE_B64:-}" ]]; then
+            printf '%s' "$ACUITY_STORAGE_STATE_B64" | base64 --decode > .auth/acuity-storage-state.json
+            echo "ACUITY_STORAGE_STATE_FILE=.auth/acuity-storage-state.json" >> "$GITHUB_ENV"
+            echo "Using fallback Acuity storage state from ACUITY_STORAGE_STATE_B64."
+          else
+            echo "::error::Missing Acuity auth. Set ACUITY_USER and ACUITY_PASSWORD secrets, or provide fallback ACUITY_STORAGE_STATE_B64."
+            exit 1
+          fi
       - name: Run Playwright tests
         if: inputs.mode == 'upload'
         env:
@@ -155,14 +142,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$WORKERS" != "1" ]]; then
-            if [[ -z "${ACUITY_STORAGE_STATE_FILE:-}" ]]; then
-              echo "::error::Multiple Acuity workers require ACUITY_STORAGE_STATE_B64 so workers do not run concurrent Squarespace login automation."
-              exit 1
-            fi
-
-            export ACUITY_REQUIRE_STORAGE_STATE=true
+          if [[ -z "${ACUITY_STORAGE_STATE_FILE:-}" ]]; then
+            echo "::error::Acuity storage state was not prepared."
+            exit 1
           fi
+
+          export ACUITY_REQUIRE_STORAGE_STATE=true
 
           npx playwright test \
             --grep "Acuity Automation" \
