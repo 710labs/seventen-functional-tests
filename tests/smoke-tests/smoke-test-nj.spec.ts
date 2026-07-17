@@ -33,8 +33,6 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 		const checkOutPage = new CheckoutPage(page, qaClient)
 		const orderReceived = new OrderReceivedPage(page)
-		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
-
 		await test.step('Pass Age Gate', async () => {
 			await ageGatePage.passAgeGate()
 		})
@@ -58,9 +56,7 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(cartItemCount, mobile, 'Pickup', 'medical', {
-				exactItemCount: true,
-			})
+			await shopPage.addProductsUntilCheckoutReady(cartItemCount, 'Pickup', 'medical')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 

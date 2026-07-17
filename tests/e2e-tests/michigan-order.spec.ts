@@ -66,7 +66,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 			})
 
 			await test.step(`Complete Order`, async () => {
-				await checkOutPage.placeOrderButton.click()
+				await checkOutPage.submitOrder()
 			})
 		},
 	)
@@ -125,7 +125,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 			})
 
 			await test.step(`Complete Order`, async () => {
-				await checkOutPage.placeOrderButton.click()
+				await checkOutPage.submitOrder()
 			})
 		},
 	)
