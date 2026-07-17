@@ -15,6 +15,15 @@ const pageLoadSettleTimeoutMs = 10 * 1000
 const loginTypingDelayMs = 75
 const acuityNavigationTimeoutMs = 30 * 1000
 const outputPath = process.env.ACUITY_STORAGE_STATE_FILE || '.auth/acuity-storage-state.json'
+const authArtifactDir = process.env.ACUITY_AUTH_ARTIFACT_DIR || path.join('test-results', 'acuity-auth')
+const captureAuthArtifacts =
+	['1', 'true', 'yes'].includes(
+		String(process.env.ACUITY_AUTH_DEBUG_ARTIFACTS || '').toLowerCase(),
+	) || process.env.CI === 'true'
+const captureAuthTraces = ['1', 'true', 'yes'].includes(
+	String(process.env.ACUITY_AUTH_TRACE || '').toLowerCase(),
+)
+const authVideoSize = { width: 1280, height: 720 }
 
 function fail(message) {
 	console.error(message)
@@ -41,6 +50,154 @@ function remainingMs(deadline) {
 
 function diagnostic(message) {
 	return String(message).replace(/\s+/g, ' ').trim().slice(0, 300)
+}
+
+function escapeHtml(value) {
+	return String(value)
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}
+
+function artifactRelativePath(filePath) {
+	return path.relative(authArtifactDir, filePath).split(path.sep).join('/')
+}
+
+function safeFileSegment(value) {
+	return String(value)
+		.toLowerCase()
+		.replace(/[^a-z0-9-]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 80)
+}
+
+function prepareAuthArtifactDir() {
+	if (!captureAuthArtifacts) {
+		return
+	}
+
+	fs.rmSync(authArtifactDir, { recursive: true, force: true })
+	fs.mkdirSync(authArtifactDir, { recursive: true })
+}
+
+function createAttemptRecord(attempt) {
+	const attemptId = String(attempt).padStart(2, '0')
+	const attemptDir = path.join(authArtifactDir, `attempt-${attemptId}`)
+
+	if (captureAuthArtifacts) {
+		fs.mkdirSync(attemptDir, { recursive: true })
+	}
+
+	return {
+		attempt,
+		attemptDir,
+		bodyTextPath: null,
+		htmlPath: null,
+		pageContext: null,
+		problem: null,
+		screenshotPath: null,
+		status: 'started',
+		title: null,
+		tracePath: null,
+		traceStarted: false,
+		url: null,
+		videoPaths: [],
+	}
+}
+
+function writeAuthDebugReport(attemptRecords, summary) {
+	if (!captureAuthArtifacts) {
+		return
+	}
+
+	fs.mkdirSync(authArtifactDir, { recursive: true })
+
+	const serializableRecords = attemptRecords.map(({ attemptDir, traceStarted, ...record }) => record)
+	fs.writeFileSync(
+		path.join(authArtifactDir, 'attempts.json'),
+		JSON.stringify({ summary, attempts: serializableRecords }, null, 2),
+	)
+
+	const rows = serializableRecords
+		.map(record => {
+			const links = []
+			if (record.screenshotPath) {
+				links.push(`<a href="${escapeHtml(record.screenshotPath)}">screenshot</a>`)
+			}
+			for (const videoPath of record.videoPaths) {
+				links.push(`<a href="${escapeHtml(videoPath)}">video</a>`)
+			}
+			if (record.tracePath) {
+				links.push(`<a href="${escapeHtml(record.tracePath)}">trace</a>`)
+			}
+			if (record.htmlPath) {
+				links.push(`<a href="${escapeHtml(record.htmlPath)}">html</a>`)
+			}
+			if (record.bodyTextPath) {
+				links.push(`<a href="${escapeHtml(record.bodyTextPath)}">text</a>`)
+			}
+
+			const videoEmbeds = record.videoPaths
+				.map(
+					videoPath =>
+						`<video src="${escapeHtml(videoPath)}" controls preload="metadata"></video>`,
+				)
+				.join('')
+
+			return `
+				<tr>
+					<td>${record.attempt}</td>
+					<td>${escapeHtml(record.status)}</td>
+					<td>${escapeHtml(record.url || '')}</td>
+					<td>${escapeHtml(record.title || '')}</td>
+					<td>${escapeHtml(record.problem || '')}</td>
+					<td>${links.join(' | ')}</td>
+				</tr>
+				${videoEmbeds ? `<tr><td colspan="6">${videoEmbeds}</td></tr>` : ''}
+			`
+		})
+		.join('\n')
+
+	fs.writeFileSync(
+		path.join(authArtifactDir, 'index.html'),
+		`<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Acuity Auth Debug Report</title>
+	<style>
+		body { color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 24px; }
+		code, pre { background: #f3f4f6; border-radius: 4px; padding: 2px 4px; }
+		table { border-collapse: collapse; width: 100%; }
+		th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
+		th { background: #f9fafb; }
+		video { display: block; margin: 8px 0; max-width: 960px; width: 100%; }
+	</style>
+</head>
+<body>
+	<h1>Acuity Auth Debug Report</h1>
+	<p><strong>Status:</strong> ${escapeHtml(summary.status || 'unknown')}</p>
+	<p><strong>Verification URL:</strong> <code>${escapeHtml(summary.verifyUrl || '')}</code></p>
+	${summary.message ? `<p><strong>Message:</strong> ${escapeHtml(summary.message)}</p>` : ''}
+	<table>
+		<thead>
+			<tr>
+				<th>Attempt</th>
+				<th>Status</th>
+				<th>URL</th>
+				<th>Title</th>
+				<th>Problem</th>
+				<th>Artifacts</th>
+			</tr>
+		</thead>
+		<tbody>${rows}</tbody>
+	</table>
+</body>
+</html>
+`,
+	)
 }
 
 function isSquarespaceLoginUrl(url) {
@@ -153,6 +310,78 @@ async function schedulingLocator(page, selector) {
 async function pageContextMessage(page) {
 	const title = await page.title().catch(() => 'unavailable')
 	return `Current URL: ${page.url()}. Page title: ${title}.`
+}
+
+async function captureAttemptPageArtifacts(page, record, label) {
+	if (!captureAuthArtifacts) {
+		return
+	}
+
+	const safeLabel = safeFileSegment(label) || 'page'
+	record.url = page.url()
+	record.title = await page.title().catch(() => 'unavailable')
+	record.pageContext = await pageContextMessage(page).catch(() => null)
+
+	const screenshotPath = path.join(record.attemptDir, `${safeLabel}.png`)
+	if (
+		await page
+			.screenshot({ path: screenshotPath, fullPage: true, timeout: 5000 })
+			.then(() => true)
+			.catch(() => false)
+	) {
+		record.screenshotPath = artifactRelativePath(screenshotPath)
+	}
+
+	const htmlPath = path.join(record.attemptDir, `${safeLabel}.html`)
+	const html = await page.content().catch(() => null)
+	if (html !== null) {
+		fs.writeFileSync(htmlPath, html)
+		record.htmlPath = artifactRelativePath(htmlPath)
+	}
+
+	const bodyTextPath = path.join(record.attemptDir, `${safeLabel}.txt`)
+	const bodyText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => null)
+	if (bodyText !== null) {
+		fs.writeFileSync(bodyTextPath, bodyText)
+		record.bodyTextPath = artifactRelativePath(bodyTextPath)
+	}
+}
+
+async function closeContextWithArtifacts(context, page, record, reportSummary) {
+	if (!captureAuthArtifacts) {
+		await context.close().catch(() => undefined)
+		return
+	}
+
+	await captureAttemptPageArtifacts(page, record, record.status)
+
+	if (record.traceStarted) {
+		const tracePath = path.join(record.attemptDir, 'trace.zip')
+		if (
+			await context.tracing
+				.stop({ path: tracePath })
+				.then(() => true)
+				.catch(() => false)
+		) {
+			record.tracePath = artifactRelativePath(tracePath)
+		}
+	}
+
+	const videos = context
+		.pages()
+		.map(currentPage => currentPage.video())
+		.filter(Boolean)
+
+	await context.close().catch(() => undefined)
+
+	for (const video of videos) {
+		const videoPath = await video.path().catch(() => null)
+		if (videoPath && fs.existsSync(videoPath)) {
+			record.videoPaths.push(artifactRelativePath(videoPath))
+		}
+	}
+
+	writeAuthDebugReport(reportSummary.attemptRecords, reportSummary.summary)
 }
 
 async function failWithPageContext(page, message, cause) {
@@ -315,6 +544,8 @@ async function createStorageState() {
 		fail('Missing ACUITY_USER or ACUITY_PASSWORD.')
 	}
 
+	prepareAuthArtifactDir()
+
 	const verifyUrl = verificationUrl()
 	const retryTimeoutMs = loginRetryTimeoutMs()
 	const maxAttempts = loginMaxAttempts()
@@ -322,6 +553,7 @@ async function createStorageState() {
 	let attempts = 0
 	let lastProblem = 'No login problem was captured.'
 	let lastPageContext = 'No page context was captured.'
+	const attemptRecords = []
 
 	const browser = await chromium.launch({
 		headless: process.env.ACUITY_HEADLESS !== 'false',
@@ -330,14 +562,27 @@ async function createStorageState() {
 	try {
 		while (attempts < maxAttempts && remainingMs(deadline) > 0) {
 			attempts += 1
-			const context = await browser.newContext({
+			const attemptRecord = createAttemptRecord(attempts)
+			attemptRecords.push(attemptRecord)
+			const contextOptions = {
 				storageState: {
 					cookies: [],
 					origins: [],
 				},
-			})
+			}
+			if (captureAuthArtifacts) {
+				contextOptions.recordVideo = {
+					dir: attemptRecord.attemptDir,
+					size: authVideoSize,
+				}
+			}
+
+			const context = await browser.newContext(contextOptions)
+			if (captureAuthArtifacts && captureAuthTraces) {
+				await context.tracing.start({ screenshots: true, snapshots: true, sources: true })
+				attemptRecord.traceStarted = true
+			}
 			const page = await context.newPage()
-			let keepContext = false
 
 			try {
 				await gotoAcuityPage(page, verifyUrl, 'Opening Acuity login entry')
@@ -351,6 +596,8 @@ async function createStorageState() {
 					if (loginProblem) {
 						lastProblem = loginProblem
 						lastPageContext = await pageContextMessage(page)
+						attemptRecord.status = 'login-rejected'
+						attemptRecord.problem = loginProblem
 						console.log(
 							`Acuity auth attempt ${attempts} was rejected; retrying while time remains. Message: ${diagnostic(loginProblem)}`,
 						)
@@ -362,19 +609,23 @@ async function createStorageState() {
 				if (!sessionProblem) {
 					fs.mkdirSync(path.dirname(outputPath), { recursive: true })
 					await context.storageState({ path: outputPath })
-					keepContext = true
+					attemptRecord.status = 'success'
 					console.log(`Acuity auth state created after ${attempts} attempt(s): ${outputPath}`)
 					return
 				}
 
 				lastProblem = sessionProblem
 				lastPageContext = await pageContextMessage(page)
+				attemptRecord.status = 'not-verified'
+				attemptRecord.problem = sessionProblem
 				console.log(
 					`Acuity auth attempt ${attempts} did not verify; retrying while time remains. Message: ${diagnostic(sessionProblem)}`,
 				)
 			} catch (error) {
 				lastProblem = error instanceof Error ? error.message : String(error)
 				lastPageContext = await pageContextMessage(page).catch(() => lastPageContext)
+				attemptRecord.status = isAuthChallengeMessage(lastProblem) ? 'hard-failure' : 'error'
+				attemptRecord.problem = lastProblem
 				if (isAuthChallengeMessage(lastProblem)) {
 					throw error
 				}
@@ -382,18 +633,27 @@ async function createStorageState() {
 					`Acuity auth attempt ${attempts} failed; retrying while time remains. Message: ${diagnostic(lastProblem)}`,
 				)
 			} finally {
-				if (!keepContext) {
-					await context.close().catch(() => undefined)
-				}
+				await closeContextWithArtifacts(context, page, attemptRecord, {
+					attemptRecords,
+					summary: {
+						message: attemptRecord.problem,
+						status: attemptRecord.status,
+						verifyUrl,
+					},
+				})
 			}
 		}
 	} finally {
 		await browser.close().catch(() => undefined)
 	}
 
-	fail(
-		`Acuity auth state was not created after ${attempts}/${maxAttempts} attempt(s) within ${retryTimeoutMs}ms. Last page context: ${lastPageContext} Last problem: ${lastProblem}`,
-	)
+	const finalMessage = `Acuity auth state was not created after ${attempts}/${maxAttempts} attempt(s) within ${retryTimeoutMs}ms. Last page context: ${lastPageContext} Last problem: ${lastProblem}`
+	writeAuthDebugReport(attemptRecords, {
+		message: finalMessage,
+		status: 'failed',
+		verifyUrl,
+	})
+	fail(finalMessage)
 }
 
 createStorageState().catch(error => {

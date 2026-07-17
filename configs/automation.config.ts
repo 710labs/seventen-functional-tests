@@ -41,7 +41,7 @@ const config: PlaywrightTestConfig = {
 			slowMo: 200,
 		},
 		trace: captureAcuityFailureArtifacts ? 'retain-on-failure' : 'off',
-		video: 'off',
+		video: captureAcuityFailureArtifacts ? 'retain-on-failure' : 'off',
 		screenshot: captureAcuityFailureArtifacts ? 'only-on-failure' : 'off',
 	},
 	projects: [

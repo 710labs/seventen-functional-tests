@@ -115,6 +115,8 @@ jobs:
         if: inputs.mode == 'upload'
         env:
           ACUITY_HEADLESS: 'true'
+          ACUITY_AUTH_DEBUG_ARTIFACTS: 'true'
+          ACUITY_AUTH_ARTIFACT_DIR: test-results/acuity-auth
           ACUITY_STORAGE_STATE_FILE: .auth/acuity-storage-state.json
         run: |
           set -euo pipefail
@@ -156,13 +158,16 @@ jobs:
             --workers="$WORKERS" \
             --trace=retain-on-failure \
             --reporter=list,html
-      - uses: actions/upload-artifact@v4
+      - name: Upload Acuity failure artifacts
+        uses: actions/upload-artifact@v4
         if: failure() && inputs.mode == 'upload'
         with:
-          name: playwright-failure-artifacts
+          name: acuity-playwright-failure-artifacts
           path: |
             playwright-report/
             test-results/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Send Slack notification
         if: always()
         env:
