@@ -6,6 +6,14 @@ export class LiveNonProdAccountPage extends AccountPage {
 		super(page)
 	}
 
+	private isLiveDev() {
+		try {
+			return new URL(this.page.url()).hostname.toLowerCase() === 'live-dev.710labs.com'
+		} catch {
+			return false
+		}
+	}
+
 	private async elementIntersectsViewport(locator: ReturnType<Page['locator']>) {
 		if ((await locator.count()) === 0) {
 			return false
@@ -291,5 +299,12 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await expect(this.changePasswordButton).toBeVisible()
 		await this.changePasswordButton.evaluate((element: HTMLElement) => element.click())
 		await this.page.waitForTimeout(1000)
+
+		if (this.isLiveDev()) {
+			await this.page.reload({ waitUntil: 'domcontentloaded' })
+			await expect(this.pageTitleSelector).toBeVisible()
+			await expect(this.signOutButton).toBeVisible()
+			await expect(this.signOutButton).toHaveAttribute('href', /_wpnonce=/)
+		}
 	}
 }
