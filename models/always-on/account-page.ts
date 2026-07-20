@@ -13,7 +13,6 @@ export class AccountPage {
 	readonly page: Page
 	readonly pageTitleSelector: Locator
 	readonly accountButtonNav: Locator
-	readonly signOutButton: Locator
 	readonly signOutLink: Locator
 	// Orders
 	readonly ordersSection: Locator
@@ -89,7 +88,7 @@ export class AccountPage {
 		this.NEWalwaysOnPassword = process.env.NEW_ALWAYS_ON_PASSWORD || ''
 		this.pageTitleSelector = page.locator('span.site-header-group')
 		this.accountButtonNav = page.locator('.icon.icon-account').first()
-		this.signOutButton = page.locator('a:has-text("Sign out")')
+		this.signOutLink = page.getByRole('link', { name: 'Sign out', exact: true })
 		// Order History
 		this.ordersSection = page.locator('#orders')
 		this.orderHistoryHeader = page.locator('h3:has-text("Order history")')
@@ -172,7 +171,7 @@ export class AccountPage {
 		// Verify Account button is visible
 		await expect(this.accountButtonNav).toBeVisible()
 		// Verify Sign Out link is visible and clickable
-		await expect(this.signOutButton).toBeVisible()
+		await expect(this.signOutLink).toBeVisible()
 	}
 	async verifyAccountPageElements(userType: string, noOrders: boolean, currentPassword: string, newPassword: string) {
 		await this.page.waitForTimeout(2000)
@@ -197,10 +196,16 @@ export class AccountPage {
 	async logOut(page: Page) {
 		await test.step('Log out User', async () => {
 			await this.goToAccountPage()
-			// verify that sign out button appears
-			await this.signOutButton.waitFor({ state: 'visible' })
-			await expect(this.signOutButton).toBeVisible()
-			await this.signOutButton.click()
+			const baseUrl = (process.env.BASE_URL || new URL(page.url()).origin).replace(/\/$/, '')
+			const expectedShopUrl = `${baseUrl}/shop`
+
+			await this.signOutLink.waitFor({ state: 'visible' })
+			await expect(this.signOutLink).toBeVisible()
+			await Promise.all([
+				page.waitForURL(expectedShopUrl),
+				this.signOutLink.click(),
+			])
+			await expect(page).toHaveURL(expectedShopUrl)
 		})
 	}
 	async navigateToOrders() {

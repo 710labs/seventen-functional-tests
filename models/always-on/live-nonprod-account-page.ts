@@ -140,7 +140,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 	async goToAccountPage() {
 		await this.dismissBlockingStorefrontOverlay()
 
-		if (!(await this.signOutButton.isVisible().catch(() => false))) {
+		if (!(await this.signOutLink.isVisible().catch(() => false))) {
 			const accountLink = await this.getActiveAccountLink()
 
 			if (!accountLink) {
@@ -157,7 +157,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 
 			while (Date.now() < navigationDeadline) {
 				accountPageAppeared =
-					(await this.signOutButton.isVisible().catch(() => false)) ||
+					(await this.signOutLink.isVisible().catch(() => false)) ||
 					/\/my-account(?:\/|$|\?)/.test(this.page.url())
 
 				if (accountPageAppeared) {
@@ -175,7 +175,7 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await this.page.waitForLoadState('domcontentloaded').catch(() => {})
 		await expect(this.pageTitleSelector).toBeVisible()
 		await expect(this.accountButtonNav).toBeVisible()
-		await expect(this.signOutButton).toBeVisible()
+		await expect(this.signOutLink).toBeVisible()
 	}
 
 	private async editPersonalInfoOnce(userType: string) {

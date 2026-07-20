@@ -22,3 +22,4 @@ loadtest/reports/
 loadtest/screenshots/
 loadtest/debug-screenshots/
 loadtest/**/*.generated.*
+output/
