@@ -303,8 +303,8 @@ export class LiveNonProdAccountPage extends AccountPage {
 		if (this.isLiveDev()) {
 			await this.page.reload({ waitUntil: 'domcontentloaded' })
 			await expect(this.pageTitleSelector).toBeVisible()
-			await expect(this.signOutButton).toBeVisible()
-			await expect(this.signOutButton).toHaveAttribute('href', /_wpnonce=/)
+			await expect(this.signOutLink).toBeVisible()
+			await expect(this.signOutLink).toHaveAttribute('href', /_wpnonce=/)
 		}
 	}
 }
