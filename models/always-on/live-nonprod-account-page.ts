@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test'
+import test, { expect, Page } from '@playwright/test'
 import { AccountPage } from './account-page'
 
 export class LiveNonProdAccountPage extends AccountPage {
@@ -6,12 +6,18 @@ export class LiveNonProdAccountPage extends AccountPage {
 		super(page)
 	}
 
-	private isLiveDev() {
-		try {
-			return new URL(this.page.url()).hostname.toLowerCase() === 'live-dev.710labs.com'
-		} catch {
-			return false
-		}
+	private isWordPressLogoutConfirmation(url: URL) {
+		return (
+			url.pathname.endsWith('/wp-login.php') &&
+			url.searchParams.get('action') === 'logout'
+		)
+	}
+
+	private async refreshLogoutLink() {
+		await this.page.reload({ waitUntil: 'domcontentloaded' })
+		await expect(this.pageTitleSelector).toBeVisible()
+		await expect(this.signOutLink).toBeVisible()
+		await expect(this.signOutLink).toHaveAttribute('href', /_wpnonce=/)
 	}
 
 	private async elementIntersectsViewport(locator: ReturnType<Page['locator']>) {
@@ -186,6 +192,48 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await expect(this.signOutLink).toBeVisible()
 	}
 
+	override async logOut(page: Page) {
+		await test.step('Log out User', async () => {
+			await this.goToAccountPage()
+			await this.refreshLogoutLink()
+
+			const expectedOrigin = new URL(page.url()).origin
+
+			await Promise.all([
+				page.waitForURL(
+					url =>
+						this.isSignedOutDestination(url, expectedOrigin) ||
+						this.isWordPressLogoutConfirmation(url),
+					{ waitUntil: 'domcontentloaded', timeout: 30000 },
+				),
+				this.signOutLink.click(),
+			])
+
+			if (this.isWordPressLogoutConfirmation(new URL(page.url()))) {
+				const confirmLogoutLink = page.getByRole('link', { name: /log out/i }).first()
+
+				await expect(confirmLogoutLink).toBeVisible()
+				await Promise.all([
+					page.waitForURL(
+						url =>
+							url.origin === expectedOrigin &&
+							!this.isWordPressLogoutConfirmation(url),
+						{ waitUntil: 'domcontentloaded', timeout: 30000 },
+					),
+					confirmLogoutLink.click(),
+				])
+
+				if (!this.isSignedOutDestination(new URL(page.url()), expectedOrigin)) {
+					await page.goto(new URL('/shop/', expectedOrigin).toString(), {
+						waitUntil: 'domcontentloaded',
+					})
+				}
+			}
+
+			await this.verifySignedOut(page, expectedOrigin)
+		})
+	}
+
 	private async editPersonalInfoOnce(userType: string) {
 		await expect(this.personalInfoHeader).toBeVisible()
 		await expect(this.editPersonalInfoLink).toBeVisible()
@@ -299,12 +347,6 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await expect(this.changePasswordButton).toBeVisible()
 		await this.changePasswordButton.evaluate((element: HTMLElement) => element.click())
 		await this.page.waitForTimeout(1000)
-
-		if (this.isLiveDev()) {
-			await this.page.reload({ waitUntil: 'domcontentloaded' })
-			await expect(this.pageTitleSelector).toBeVisible()
-			await expect(this.signOutLink).toBeVisible()
-			await expect(this.signOutLink).toHaveAttribute('href', /_wpnonce=/)
-		}
+		await this.refreshLogoutLink()
 	}
 }

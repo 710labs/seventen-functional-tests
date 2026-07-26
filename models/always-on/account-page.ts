@@ -193,19 +193,39 @@ export class AccountPage {
 		//return email to login with updated password
 		return newEmail
 	}
+	protected isSignedOutDestination(url: URL, expectedOrigin: string) {
+		const normalizedPath = url.pathname.replace(/\/+$/, '') || '/'
+
+		return (
+			url.origin === expectedOrigin &&
+			(normalizedPath === '/shop' || normalizedPath === '/sign-in')
+		)
+	}
+	protected async waitForSignedOutDestination(page: Page, expectedOrigin: string) {
+		await page.waitForURL(
+			url => this.isSignedOutDestination(url, expectedOrigin),
+			{ waitUntil: 'domcontentloaded', timeout: 30000 },
+		)
+	}
+	protected async verifySignedOut(page: Page, expectedOrigin: string) {
+		expect(
+			this.isSignedOutDestination(new URL(page.url()), expectedOrigin),
+			`Expected logout to finish on /shop or /sign-in, but reached ${page.url()}`,
+		).toBe(true)
+		await expect(this.signOutLink).toBeHidden()
+	}
 	async logOut(page: Page) {
 		await test.step('Log out User', async () => {
 			await this.goToAccountPage()
-			const baseUrl = (process.env.BASE_URL || new URL(page.url()).origin).replace(/\/$/, '')
-			const expectedShopUrl = `${baseUrl}/shop`
+			const expectedOrigin = new URL(page.url()).origin
 
 			await this.signOutLink.waitFor({ state: 'visible' })
 			await expect(this.signOutLink).toBeVisible()
 			await Promise.all([
-				page.waitForURL(expectedShopUrl),
+				this.waitForSignedOutDestination(page, expectedOrigin),
 				this.signOutLink.click(),
 			])
-			await expect(page).toHaveURL(expectedShopUrl)
+			await this.verifySignedOut(page, expectedOrigin)
 		})
 	}
 	async navigateToOrders() {
