@@ -3,10 +3,24 @@ import test, { expect, Locator, Page } from '@playwright/test'
 type LiveUserType = 'rec' | 'med'
 
 type ProductCandidate = {
+	facility: string | null
+	fulfillmentMethod: string | null
 	index: number
 	isMedical: boolean
 	key: string
 	name: string
+	storefrontUrl: string | null
+}
+
+type AddControlContext = {
+	facility: string | null
+	fulfillmentMethod: string | null
+	storefrontUrl: string | null
+}
+
+type ClickCandidateResult = {
+	clicked: boolean
+	reason: string
 }
 
 type MedicalCardUpdateResponse = {
@@ -18,7 +32,6 @@ type MedicalCardUpdateResponse = {
 
 type AddCandidateResult = {
 	added: boolean
-	cartResetDetected: boolean
 	reason: string
 }
 
@@ -48,8 +61,9 @@ export class LiveNonProdCartFlow {
 	readonly cartButton: Locator
 	readonly cartDrawer: Locator
 	readonly checkoutButton: Locator
-	readonly storefrontLinks: Locator
 	readonly viewCartButton: Locator
+	private lockedFacility?: string
+	private lockedFulfillmentMethod?: string
 	private storefrontUrl?: string
 
 	constructor(page: Page) {
@@ -57,14 +71,6 @@ export class LiveNonProdCartFlow {
 		this.cartButton = page.locator('a.wpse-cart-openerize').first()
 		this.cartDrawer = page.locator('#cartDrawer')
 		this.checkoutButton = page.locator('a.checkout-button.button.alt.wc-forward').first()
-		this.storefrontLinks = page.locator(
-			[
-				'.wpse-drawer[data-module="cart-response"] a[href*="/shop/"]',
-				'#cartDrawer a[href*="/shop/"]',
-				'a:has(h1.site-title)[href*="/shop/"]',
-				'main nav a[href*="/shop/"]:has-text("All")',
-			].join(', '),
-		)
 		this.viewCartButton = page
 			.locator(
 				[
@@ -103,11 +109,6 @@ export class LiveNonProdCartFlow {
 
 				productAttemptCounts.set(candidate.key, (productAttemptCounts.get(candidate.key) || 0) + 1)
 				const result = await this.addCandidate(candidate)
-
-				if (result.cartResetDetected) {
-					productAttemptCounts.clear()
-					medicalProductAdded = false
-				}
 
 				if (!result.added) {
 					rejectionReasons.push(`${candidate.name}: ${result.reason}`)
@@ -165,37 +166,99 @@ export class LiveNonProdCartFlow {
 		await this.page.waitForLoadState('networkidle').catch(() => {})
 	}
 
+	private normalizeExactStorefrontUrl(rawUrl: string | null | undefined) {
+		if (!rawUrl) {
+			return null
+		}
+
+		try {
+			const url = new URL(rawUrl, this.page.url())
+			const storefrontMatch = url.pathname.match(/^\/shop\/([^/]+)\/?$/)
+
+			if (!storefrontMatch) {
+				return null
+			}
+
+			url.pathname = `/shop/${storefrontMatch[1]}/`
+			url.search = ''
+			url.hash = ''
+			return url.href
+		} catch {
+			return null
+		}
+	}
+
+	private async lockSelectedStorefront() {
+		if (this.storefrontUrl) {
+			return
+		}
+
+		const activeCartDrawer = await this.getActiveCartDrawer()
+		const storefrontLinkScopes = [
+			activeCartDrawer,
+			this.cartDrawer,
+			this.page.locator('.wpse-drawer[data-module="cart-response"]'),
+		].filter((scope): scope is Locator => Boolean(scope))
+		const observedLinks: string[] = []
+
+		for (const scope of storefrontLinkScopes) {
+			const hrefs = await scope
+				.locator('a[href*="/shop/"]')
+				.evaluateAll(links => links.map(link => (link as HTMLAnchorElement).href))
+				.catch(() => [])
+
+			for (const href of hrefs) {
+				observedLinks.push(href)
+				const exactStorefrontUrl = this.normalizeExactStorefrontUrl(href)
+
+				if (exactStorefrontUrl) {
+					this.storefrontUrl = exactStorefrontUrl
+					return
+				}
+			}
+		}
+
+		throw new Error(
+			[
+				'Unable to lock the Live non-production cart to an exact dispensary storefront.',
+				`Observed cart storefront links: ${observedLinks.join(', ') || 'none'}.`,
+				`Current URL: ${this.page.url()}`,
+			].join('\n'),
+		)
+	}
+
 	private async returnToStorefront() {
+		if (!this.storefrontUrl) {
+			throw new Error(
+				`No exact Live dispensary storefront was locked before returning from ${this.page.url()}`,
+			)
+		}
+
 		const currentUrl = new URL(this.page.url())
-		const storefrontPath = currentUrl.pathname.match(/^\/shop\/[^/]+/)
+		const currentStorefrontUrl = this.normalizeExactStorefrontUrl(currentUrl.href)
 		const productsAreVisible = await this.page
 			.locator(productSelector)
 			.first()
 			.isVisible()
 			.catch(() => false)
 
-		if (storefrontPath && productsAreVisible) {
-			this.storefrontUrl = new URL(`${storefrontPath[0]}/`, currentUrl).href
+		if (currentStorefrontUrl === this.storefrontUrl && productsAreVisible) {
 			return
 		}
 
-		const linkedStorefrontUrl = await this.storefrontLinks
-			.evaluateAll(links =>
-				links
-					.map(link => (link as HTMLAnchorElement).href)
-					.find(href => new URL(href).pathname.startsWith('/shop/')),
-			)
-			.catch(() => undefined)
-		const storefrontUrl = this.storefrontUrl || linkedStorefrontUrl
-
-		if (!storefrontUrl) {
-			throw new Error(`Unable to identify the selected Live storefront from ${this.page.url()}`)
-		}
-
-		this.storefrontUrl = storefrontUrl
-		await this.page.goto(storefrontUrl, { waitUntil: 'domcontentloaded' })
+		await this.page.goto(this.storefrontUrl, { waitUntil: 'domcontentloaded' })
 
 		await this.waitForProducts()
+
+		if (this.normalizeExactStorefrontUrl(this.page.url()) !== this.storefrontUrl) {
+			throw new Error(
+				[
+					'Live non-production navigation left the locked dispensary storefront.',
+					`Expected storefront: ${this.storefrontUrl}.`,
+					`Current URL: ${this.page.url()}`,
+				].join('\n'),
+			)
+		}
 	}
 
 	private parseCartItemCount(values: Array<string | null | undefined>) {
@@ -501,8 +564,12 @@ export class LiveNonProdCartFlow {
 	private async clearTemporaryRegistrationCart(userType: LiveUserType) {
 		await test.step('Clear the temporary registration cart', async () => {
 			if (!(await this.openCartDrawer())) {
-				return
+				throw new Error(
+					`Unable to open the temporary Live registration cart at ${this.page.url()}`,
+				)
 			}
+
+			await this.lockSelectedStorefront()
 
 			if (userType === 'med' && this.isLiveDev()) {
 				await this.clearLiveDevMedicalRegistrationCart()
@@ -573,12 +640,20 @@ export class LiveNonProdCartFlow {
 						addControl?.getAttribute('data-product_sku') ||
 						addControl?.getAttribute('data-id')
 					const productUrl = productLink?.getAttribute('href')
+					const methodElement = product.querySelector<HTMLElement>('[data-method]')
+					const storeLink = product.querySelector<HTMLAnchorElement>('a[href*="/shop/"]')
 
 					candidates.push({
+						facility: addControl?.getAttribute('data-facility') || null,
+						fulfillmentMethod:
+							addControl?.getAttribute('data-method') ||
+							methodElement?.getAttribute('data-method') ||
+							null,
 						index,
 						isMedical: Boolean(product.querySelector(selectors.medicalBadge)),
 						key: sku || productUrl || name,
 						name,
+						storefrontUrl: storeLink?.href || null,
 					})
 				}
 
@@ -600,6 +675,24 @@ export class LiveNonProdCartFlow {
 	) {
 		const candidates = await this.readCandidates()
 		const eligibleCandidates = candidates.filter(candidate => {
+			const candidateStorefrontUrl = this.normalizeExactStorefrontUrl(candidate.storefrontUrl)
+
+			if (candidateStorefrontUrl && candidateStorefrontUrl !== this.storefrontUrl) {
+				return false
+			}
+
+			if (this.lockedFacility && candidate.facility && candidate.facility !== this.lockedFacility) {
+				return false
+			}
+
+			if (
+				this.lockedFulfillmentMethod &&
+				candidate.fulfillmentMethod &&
+				candidate.fulfillmentMethod !== this.lockedFulfillmentMethod
+			) {
+				return false
+			}
+
 			if (userType === 'rec') {
 				return !candidate.isMedical
 			}
@@ -613,27 +706,133 @@ export class LiveNonProdCartFlow {
 		)
 	}
 
-	private async clickCandidate(candidate: ProductCandidate) {
-		const product = this.page.locator(productSelector).nth(candidate.index)
-		const addControl = product.locator(storefrontAddToCartSelector).first()
+	private async readAddControlContext(addControl: Locator): Promise<AddControlContext> {
+		return addControl.evaluate(element => {
+			const storeContainer = element.closest(
+				'li.live-inventory-summary, .live-inventory-summary',
+			)
+			const storeLink =
+				storeContainer?.querySelector<HTMLAnchorElement>('a[href*="/shop/"]') ||
+				element
+					.closest('#productSellers, li.product.type-product')
+					?.querySelector<HTMLAnchorElement>('a[href*="/shop/"]')
 
-		if (await addControl.isVisible().catch(() => false)) {
-			await addControl.scrollIntoViewIfNeeded()
-			await addControl.click({ force: true })
-			return true
+			return {
+				facility: element.getAttribute('data-facility'),
+				fulfillmentMethod: element.getAttribute('data-method'),
+				storefrontUrl: storeLink?.href || null,
+			}
+		})
+	}
+
+	private contextMismatchReason(context: AddControlContext) {
+		const controlStorefrontUrl = this.normalizeExactStorefrontUrl(context.storefrontUrl)
+
+		if (controlStorefrontUrl && controlStorefrontUrl !== this.storefrontUrl) {
+			return `storefront ${controlStorefrontUrl} does not match locked storefront ${this.storefrontUrl}`
+		}
+
+		if (!context.facility || !context.fulfillmentMethod) {
+			return 'add-to-cart control did not expose data-facility and data-method'
+		}
+
+		if (this.lockedFacility && context.facility !== this.lockedFacility) {
+			return `facility ${context.facility} does not match locked facility ${this.lockedFacility}`
+		}
+
+		if (
+			this.lockedFulfillmentMethod &&
+			context.fulfillmentMethod !== this.lockedFulfillmentMethod
+		) {
+			return [
+				`fulfillment method ${context.fulfillmentMethod}`,
+				`does not match locked method ${this.lockedFulfillmentMethod}`,
+			].join(' ')
+		}
+
+		return null
+	}
+
+	private lockAddControlContext(context: AddControlContext) {
+		if (!context.facility || !context.fulfillmentMethod) {
+			throw new Error('Cannot lock an incomplete Live add-to-cart control context.')
+		}
+
+		this.lockedFacility ||= context.facility
+		this.lockedFulfillmentMethod ||= context.fulfillmentMethod
+	}
+
+	private async selectMatchingAddControl(addControls: Locator) {
+		const addControlCount = await addControls.count()
+		const mismatchReasons: string[] = []
+
+		for (let index = 0; index < addControlCount; index += 1) {
+			const addControl = addControls.nth(index)
+
+			if (!(await addControl.isVisible().catch(() => false))) {
+				continue
+			}
+
+			const context = await this.readAddControlContext(addControl)
+			const mismatchReason = this.contextMismatchReason(context)
+
+			if (mismatchReason) {
+				mismatchReasons.push(mismatchReason)
+				continue
+			}
+
+			this.lockAddControlContext(context)
+			return { addControl, mismatchReasons }
+		}
+
+		return { addControl: null, mismatchReasons }
+	}
+
+	private async clickCandidate(candidate: ProductCandidate): Promise<ClickCandidateResult> {
+		const product = this.page.locator(productSelector).nth(candidate.index)
+		const storefrontSelection = await this.selectMatchingAddControl(
+			product.locator(storefrontAddToCartSelector),
+		)
+
+		if (storefrontSelection.addControl) {
+			await storefrontSelection.addControl.scrollIntoViewIfNeeded()
+			await storefrontSelection.addControl.click({ force: true })
+			return { clicked: true, reason: '' }
 		}
 
 		const productLink = product.locator('.woocommerce-loop-product__link').first()
 
 		if (!(await productLink.isVisible().catch(() => false))) {
-			return false
+			return {
+				clicked: false,
+				reason:
+					storefrontSelection.mismatchReasons.join('; ') ||
+					'No usable product link or matching add-to-cart control was found',
+			}
 		}
 
 		await productLink.click()
-		const productPageAddButton = this.page.locator(productPageAddToCartSelector).first()
-		await productPageAddButton.waitFor({ state: 'visible', timeout: 10000 })
-		await productPageAddButton.click({ force: true })
-		return true
+		await this.page
+			.locator(productPageAddToCartSelector)
+			.first()
+			.waitFor({ state: 'visible', timeout: 10000 })
+
+		const productPageSelection = await this.selectMatchingAddControl(
+			this.page.locator(productPageAddToCartSelector),
+		)
+
+		if (!productPageSelection.addControl) {
+			return {
+				clicked: false,
+				reason: [
+					`No product-page add control matched ${this.storefrontUrl}.`,
+					...productPageSelection.mismatchReasons,
+				].join(' '),
+			}
+		}
+
+		await productPageSelection.addControl.click({ force: true })
+		return { clicked: true, reason: '' }
 	}
 
 	private async drawerContainsProduct(productName: string) {
@@ -653,12 +852,12 @@ export class LiveNonProdCartFlow {
 
 	private async addCandidate(candidate: ProductCandidate): Promise<AddCandidateResult> {
 		const initialCartCount = await this.cartItemCount()
+		const clickResult = await this.clickCandidate(candidate)
 
-		if (!(await this.clickCandidate(candidate))) {
+		if (!clickResult.clicked) {
 			return {
 				added: false,
-				cartResetDetected: false,
-				reason: 'No usable add-to-cart control was found',
+				reason: clickResult.reason,
 			}
 		}
 
@@ -670,17 +869,56 @@ export class LiveNonProdCartFlow {
 
 		while (Date.now() < deadline) {
 			if (await this.elementIntersectsViewport(conflictModal)) {
-				const startNewCartButton = conflictModal.getByRole('button', {
-					name: /start a new cart/i,
+				const keepCartButton = conflictModal.getByRole('button', {
+					name: /keep my cart/i,
 				})
-				await expect(startNewCartButton).toBeVisible()
-				await startNewCartButton.evaluate((element: HTMLElement) => element.click())
+				const closeConflictButton = conflictModal
+					.locator('button.wpse-button-close.wpse-closerizer')
+					.first()
+				const dismissControl =
+					(await keepCartButton.isVisible().catch(() => false))
+						? keepCartButton
+						: closeConflictButton
+
+				if (!(await dismissControl.isVisible().catch(() => false))) {
+					throw new Error(
+						[
+							'Live non-production encountered a cross-store cart conflict without a safe dismissal control.',
+							`Locked storefront: ${this.storefrontUrl}.`,
+							`Locked facility: ${this.lockedFacility || 'none'}.`,
+							`Locked method: ${this.lockedFulfillmentMethod || 'none'}.`,
+							`Candidate: ${candidate.name}.`,
+							`Current URL: ${this.page.url()}`,
+						].join('\n'),
+					)
+				}
+
+				await dismissControl.evaluate((element: HTMLElement) => element.click())
 
 				if (!(await this.waitForViewportIntersection(conflictModal, false))) {
 					throw new Error(`The Live cart-conflict drawer remained open at ${this.page.url()}`)
 				}
 
-				continue
+				const preservedCartCount = await this.cartItemCount()
+
+				if (preservedCartCount < initialCartCount) {
+					throw new Error(
+						[
+							`Live cart count decreased from ${initialCartCount} to ${preservedCartCount}`,
+							'while preserving the locked dispensary cart.',
+						].join(' '),
+					)
+				}
+
+				return {
+					added: false,
+					reason: [
+						'Candidate triggered a cross-store cart conflict; the existing cart was preserved.',
+						`Locked storefront: ${this.storefrontUrl}.`,
+						`Locked facility: ${this.lockedFacility || 'none'}.`,
+						`Locked method: ${this.lockedFulfillmentMethod || 'none'}.`,
+					].join(' '),
+				}
 			}
 
 			const noticeCount = await notices.count()
@@ -697,23 +935,35 @@ export class LiveNonProdCartFlow {
 					.trim()
 
 				if (/cannot add|only\s+\d+\s+left|out of stock|insufficient stock|not available/i.test(text)) {
-					return { added: false, cartResetDetected: false, reason: text }
+					return { added: false, reason: text }
 				}
 			}
 
 			const currentCartCount = await this.cartItemCount()
 			const cartContainsCandidate = await this.drawerContainsProduct(candidate.name)
 
+			if (currentCartCount < initialCartCount) {
+				throw new Error(
+					[
+						'Live cart count unexpectedly decreased while adding within the locked dispensary.',
+						`Candidate: ${candidate.name}.`,
+						`Cart count before: ${initialCartCount}; after: ${currentCartCount}.`,
+						`Locked storefront: ${this.storefrontUrl}.`,
+						`Locked facility: ${this.lockedFacility || 'none'}.`,
+						`Locked method: ${this.lockedFulfillmentMethod || 'none'}.`,
+					].join('\n'),
+				)
+			}
+
 			if (cartContainsCandidate) {
 				return {
 					added: true,
-					cartResetDetected: currentCartCount < initialCartCount,
 					reason: '',
 				}
 			}
 
 			if (currentCartCount > initialCartCount) {
-				return { added: true, cartResetDetected: false, reason: '' }
+				return { added: true, reason: '' }
 			}
 
 			await this.page.waitForTimeout(250)
@@ -721,13 +971,23 @@ export class LiveNonProdCartFlow {
 
 		const finalCartCount = await this.cartItemCount()
 
+		if (finalCartCount < initialCartCount) {
+			throw new Error(
+				[
+					`Live cart count unexpectedly decreased from ${initialCartCount} to ${finalCartCount}`,
+					`at ${this.storefrontUrl}`,
+				].join(' '),
+			)
+		}
+
 		return {
 			added: false,
-			cartResetDetected: finalCartCount < initialCartCount,
 			reason: [
 				'No cart confirmation appeared within 15 seconds.',
 				`Cart count before: ${initialCartCount}; after: ${finalCartCount}.`,
-				`Cart reset detected: ${finalCartCount < initialCartCount}.`,
+				`Locked storefront: ${this.storefrontUrl}.`,
+				`Locked facility: ${this.lockedFacility || 'none'}.`,
+				`Locked method: ${this.lockedFulfillmentMethod || 'none'}.`,
 				`Current URL: ${this.page.url()}`,
 			].join(' '),
 		}
