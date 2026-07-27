@@ -16,7 +16,17 @@ type MedicalCardUpdateResponse = {
 	successCloserize?: boolean
 }
 
+type AddCandidateResult = {
+	added: boolean
+	cartResetDetected: boolean
+	reason: string
+}
+
 const productSelector = 'li.product.type-product'
+const cartDrawerSelector = [
+	'.wpse-drawer[data-module="cart"]',
+	'.wpse-drawer[data-module="cart-response"]',
+].join(', ')
 const storefrontAddToCartSelector = [
 	'button.fasd_to_cart[data-id][data-instance][data-facility][data-method]',
 	'button.product_type_simple.fasd_to_cart.ajax_groove',
@@ -64,7 +74,6 @@ export class LiveNonProdCartFlow {
 					'.wpse-drawer[data-module="cart-response"] a[href="/cart"]:has-text("View Cart")',
 				].join(', '),
 			)
-			.first()
 	}
 
 	async addProductsUntilCheckout(userType: LiveUserType) {
@@ -72,14 +81,14 @@ export class LiveNonProdCartFlow {
 			await this.clearTemporaryRegistrationCart(userType)
 			await this.returnToStorefront()
 
-			const attemptedProducts = new Set<string>()
+			const productAttemptCounts = new Map<string, number>()
 			const rejectionReasons: string[] = []
 			let medicalProductAdded = false
 
 			for (let attempt = 1; attempt <= 24; attempt += 1) {
 				const candidate = await this.findNextCandidate(
 					userType,
-					attemptedProducts,
+					productAttemptCounts,
 					medicalProductAdded,
 				)
 
@@ -92,8 +101,13 @@ export class LiveNonProdCartFlow {
 					)
 				}
 
-				attemptedProducts.add(candidate.key)
+				productAttemptCounts.set(candidate.key, (productAttemptCounts.get(candidate.key) || 0) + 1)
 				const result = await this.addCandidate(candidate)
+
+				if (result.cartResetDetected) {
+					productAttemptCounts.clear()
+					medicalProductAdded = false
+				}
 
 				if (!result.added) {
 					rejectionReasons.push(`${candidate.name}: ${result.reason}`)
@@ -207,10 +221,11 @@ export class LiveNonProdCartFlow {
 	private async cartItemCount() {
 		const cartToggles = this.page.locator('a.wpse-cart-openerize')
 		const cartToggleCount = await cartToggles.count()
+		const fallbackCounts: number[] = []
 
 		for (let index = 0; index < cartToggleCount; index += 1) {
-			const values = await cartToggles
-				.nth(index)
+			const cartToggle = cartToggles.nth(index)
+			const values = await cartToggle
 				.evaluate(element => [
 					element.textContent,
 					element.getAttribute('aria-label'),
@@ -223,8 +238,16 @@ export class LiveNonProdCartFlow {
 			const parsedCount = this.parseCartItemCount(values)
 
 			if (parsedCount !== null) {
-				return parsedCount
+				if (await cartToggle.isVisible().catch(() => false)) {
+					return parsedCount
+				}
+
+				fallbackCounts.push(parsedCount)
 			}
+		}
+
+		if (fallbackCounts.length > 0) {
+			return Math.max(...fallbackCounts)
 		}
 
 		return this.cartDrawer
@@ -252,10 +275,23 @@ export class LiveNonProdCartFlow {
 			.catch(() => false)
 	}
 
+	private async getActiveCartDrawer() {
+		const cartDrawers = this.page.locator(cartDrawerSelector)
+		const cartDrawerCount = await cartDrawers.count()
+
+		for (let index = 0; index < cartDrawerCount; index += 1) {
+			const cartDrawer = cartDrawers.nth(index)
+
+			if (await this.elementIntersectsViewport(cartDrawer)) {
+				return cartDrawer
+			}
+		}
+
+		return null
+	}
+
 	private async cartDrawerIsOpen() {
-		return this.elementIntersectsViewport(
-			this.page.locator('.wpse-drawer[data-module="cart"]'),
-		)
+		return Boolean(await this.getActiveCartDrawer())
 	}
 
 	private async waitForViewportIntersection(
@@ -277,11 +313,17 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async waitForCartDrawerState(isOpen: boolean, timeout = 10000) {
-		return this.waitForViewportIntersection(
-			this.page.locator('.wpse-drawer[data-module="cart"]'),
-			isOpen,
-			timeout,
-		)
+		const deadline = Date.now() + timeout
+
+		while (Date.now() < deadline) {
+			if ((await this.cartDrawerIsOpen()) === isOpen) {
+				return true
+			}
+
+			await this.page.waitForTimeout(100)
+		}
+
+		return (await this.cartDrawerIsOpen()) === isOpen
 	}
 
 	private async clickActiveCartToggle() {
@@ -321,12 +363,13 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async closeCartDrawer() {
-		if (!(await this.cartDrawerIsOpen())) {
+		const activeCartDrawer = await this.getActiveCartDrawer()
+
+		if (!activeCartDrawer) {
 			return
 		}
 
-		const cartDrawerContainer = this.page.locator('.wpse-drawer[data-module="cart"]')
-		const drawerCloseButton = cartDrawerContainer
+		const drawerCloseButton = activeCartDrawer
 			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
 			.first()
 
@@ -345,11 +388,31 @@ export class LiveNonProdCartFlow {
 		}
 
 		if (await this.cartDrawerIsOpen()) {
+			const activeModules = await this.page
+				.locator(cartDrawerSelector)
+				.evaluateAll(drawers =>
+					drawers
+						.filter(drawer => {
+							const rect = drawer.getBoundingClientRect()
+							return (
+								rect.width > 0 &&
+								rect.height > 0 &&
+								rect.left < window.innerWidth &&
+								rect.right > 0 &&
+								rect.top < window.innerHeight &&
+								rect.bottom > 0
+							)
+						})
+						.map(drawer => drawer.getAttribute('data-module') || 'unknown'),
+				)
+				.catch(() => [])
+
 			throw new Error(
 				[
 					'Unable to close the Live non-production cart drawer.',
 					`Drawer close button found: ${(await drawerCloseButton.count()) > 0}`,
 					`Cart toggle found: ${(await this.page.locator('a.wpse-cart-openerize').count()) > 0}`,
+					`Active drawer modules: ${activeModules.join(', ') || 'none'}`,
 					`Current URL: ${this.page.url()}`,
 				].join('\n'),
 			)
@@ -532,21 +595,22 @@ export class LiveNonProdCartFlow {
 
 	private async findNextCandidate(
 		userType: LiveUserType,
-		attemptedProducts: Set<string>,
+		productAttemptCounts: Map<string, number>,
 		medicalProductAdded: boolean,
 	) {
 		const candidates = await this.readCandidates()
-		return candidates.find(candidate => {
-			if (attemptedProducts.has(candidate.key)) {
-				return false
-			}
-
+		const eligibleCandidates = candidates.filter(candidate => {
 			if (userType === 'rec') {
 				return !candidate.isMedical
 			}
 
 			return medicalProductAdded || candidate.isMedical
 		})
+
+		return (
+			eligibleCandidates.find(candidate => !productAttemptCounts.has(candidate.key)) ||
+			eligibleCandidates.find(candidate => (productAttemptCounts.get(candidate.key) || 0) < 2)
+		)
 	}
 
 	private async clickCandidate(candidate: ProductCandidate) {
@@ -572,11 +636,30 @@ export class LiveNonProdCartFlow {
 		return true
 	}
 
-	private async addCandidate(candidate: ProductCandidate) {
+	private async drawerContainsProduct(productName: string) {
+		const matchingProducts = this.page
+			.locator(cartDrawerSelector)
+			.getByText(productName, { exact: false })
+		const matchingProductCount = await matchingProducts.count()
+
+		for (let index = 0; index < matchingProductCount; index += 1) {
+			if (await matchingProducts.nth(index).isVisible().catch(() => false)) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	private async addCandidate(candidate: ProductCandidate): Promise<AddCandidateResult> {
 		const initialCartCount = await this.cartItemCount()
 
 		if (!(await this.clickCandidate(candidate))) {
-			return { added: false, reason: 'No usable add-to-cart control was found' }
+			return {
+				added: false,
+				cartResetDetected: false,
+				reason: 'No usable add-to-cart control was found',
+			}
 		}
 
 		const conflictModal = this.page.locator('.wpse-drawer[data-module="cart-conflict"]')
@@ -614,22 +697,23 @@ export class LiveNonProdCartFlow {
 					.trim()
 
 				if (/cannot add|only\s+\d+\s+left|out of stock|insufficient stock|not available/i.test(text)) {
-					return { added: false, reason: text }
-				}
-			}
-
-			if (await this.cartDrawerIsOpen()) {
-				const cartProduct = this.cartDrawer.getByText(candidate.name, { exact: false }).first()
-
-				if (await cartProduct.isVisible().catch(() => false)) {
-					return { added: true, reason: '' }
+					return { added: false, cartResetDetected: false, reason: text }
 				}
 			}
 
 			const currentCartCount = await this.cartItemCount()
+			const cartContainsCandidate = await this.drawerContainsProduct(candidate.name)
+
+			if (cartContainsCandidate) {
+				return {
+					added: true,
+					cartResetDetected: currentCartCount < initialCartCount,
+					reason: '',
+				}
+			}
 
 			if (currentCartCount > initialCartCount) {
-				return { added: true, reason: '' }
+				return { added: true, cartResetDetected: false, reason: '' }
 			}
 
 			await this.page.waitForTimeout(250)
@@ -639,9 +723,11 @@ export class LiveNonProdCartFlow {
 
 		return {
 			added: false,
+			cartResetDetected: finalCartCount < initialCartCount,
 			reason: [
 				'No cart confirmation appeared within 15 seconds.',
 				`Cart count before: ${initialCartCount}; after: ${finalCartCount}.`,
+				`Cart reset detected: ${finalCartCount < initialCartCount}.`,
 				`Current URL: ${this.page.url()}`,
 			].join(' '),
 		}
@@ -673,8 +759,25 @@ export class LiveNonProdCartFlow {
 			throw new Error(`Unable to open the Live cart drawer at ${this.page.url()}`)
 		}
 
-		await expect(this.viewCartButton).toBeVisible()
-		await this.viewCartButton.evaluate((element: HTMLAnchorElement) => element.click())
+		const viewCartButtonCount = await this.viewCartButton.count()
+		let activeViewCartButton: Locator | null = null
+
+		for (let index = 0; index < viewCartButtonCount; index += 1) {
+			const viewCartButton = this.viewCartButton.nth(index)
+
+			if (await viewCartButton.isVisible().catch(() => false)) {
+				activeViewCartButton = viewCartButton
+				break
+			}
+		}
+
+		if (!activeViewCartButton) {
+			throw new Error(
+				`No visible View Cart control was available in the active Live drawer at ${this.page.url()}`,
+			)
+		}
+
+		await activeViewCartButton.evaluate((element: HTMLAnchorElement) => element.click())
 		await this.page
 			.locator('h6:has-text("Your cart from"), h1:has-text("Cart"), .checkout-button')
 			.first()
@@ -802,100 +905,120 @@ export class LiveNonProdCartFlow {
 		await revealMedicalCardForm()
 		await fillMedicalCardValues()
 
-		const liveDevMedicalCardResponse = this.isLiveDev()
-			? this.page.waitForResponse(
-					async response => {
-						if (
-							response.request().method() !== 'POST' ||
-							!response.url().includes('/wp-admin/admin-ajax.php')
-						) {
-							return false
-						}
+		const medicalCardResponsePromise = this.page
+			.waitForResponse(
+				async response => {
+					if (
+						response.request().method() !== 'POST' ||
+						!response.url().includes('/wp-admin/admin-ajax.php')
+					) {
+						return false
+					}
 
-						const payload = await response
-							.json()
-							.catch(() => null as MedicalCardUpdateResponse | null)
+					const payload = await response
+						.json()
+						.catch(() => null as MedicalCardUpdateResponse | null)
 
-						return Boolean(
-							payload && (payload.successCloserize !== undefined || payload.errors !== undefined),
-						)
-					},
-					{ timeout: 30000 },
-				)
-			: null
+					return Boolean(
+						payload &&
+							(payload.outcome !== undefined ||
+								payload.successCloserize !== undefined ||
+								payload.errors !== undefined),
+					)
+				},
+				{ timeout: 30000 },
+			)
+			.catch(() => null)
 
 		await medicalCardForm
 			.locator('.fasd-form-submit')
 			.first()
 			.evaluate((element: HTMLElement) => element.click())
 
-		if (liveDevMedicalCardResponse) {
-			const response = await liveDevMedicalCardResponse
-			const payload = (await response.json()) as MedicalCardUpdateResponse
+		const medicalCardResponse = await medicalCardResponsePromise
+		const medicalCardPayload = medicalCardResponse
+			? ((await medicalCardResponse.json()) as MedicalCardUpdateResponse)
+			: null
 
-			if (payload.outcome !== 'success') {
-				throw new Error(
-					[
-						'Live Dev rejected the medical-card update.',
-						`Message: ${payload.message || 'none'}`,
-						`Errors: ${JSON.stringify(payload.errors || {})}`,
-					].join('\n'),
-				)
-			}
-
-			if (payload.successCloserize) {
-				await this.waitForCartDrawerState(false, 10000)
-			}
-
-			if (await this.cartDrawerIsOpen()) {
-				await this.closeCartDrawer()
-			}
-
-			if (!(await this.openCartDrawer())) {
-				throw new Error('Unable to reopen the Live Dev cart after saving the medical card.')
-			}
-
-			const activeMedicalOnlyBanner = this.cartDrawer
-				.locator('.wpse-snacktoast.warn-toast')
-				.filter({ hasText: /medical-only product in cart/i })
-				.first()
-			const cartReady = await expect
-				.poll(
-					async () =>
-						(await this.cartDrawerIsOpen()) &&
-						(await this.checkoutButton.isVisible().catch(() => false)) &&
-						!(await this.elementIntersectsViewport(activeMedicalOnlyBanner)),
-					{ timeout: 20000 },
-				)
-				.toBeTruthy()
-				.then(() => true)
-				.catch(() => false)
-
-			if (!cartReady) {
-				throw new Error(
-					[
-						'Live Dev saved the medical card but did not expose checkout.',
-						`Medical banner active: ${await this.elementIntersectsViewport(activeMedicalOnlyBanner)}`,
-						`Checkout visible: ${await this.checkoutButton.isVisible().catch(() => false)}`,
-						`Current URL: ${this.page.url()}`,
-					].join('\n'),
-				)
-			}
-
-			return
+		if (
+			medicalCardPayload?.outcome !== undefined &&
+			medicalCardPayload.outcome !== 'success'
+		) {
+			throw new Error(
+				[
+					'Live non-production rejected the medical-card update.',
+					`Message: ${medicalCardPayload.message || 'none'}`,
+					`Errors: ${JSON.stringify(medicalCardPayload.errors || {})}`,
+				].join('\n'),
+			)
 		}
 
-		await expect
+		if (medicalCardPayload?.successCloserize) {
+			await this.waitForCartDrawerState(false, 10000)
+		}
+
+		const medicalBanners = this.page
+			.locator('.wpse-snacktoast.warn-toast')
+			.filter({ hasText: /medical-only product in cart/i })
+		const medicalBannerIsActive = async () => {
+			const medicalBannerCount = await medicalBanners.count()
+
+			for (let index = 0; index < medicalBannerCount; index += 1) {
+				if (await this.elementIntersectsViewport(medicalBanners.nth(index))) {
+					return true
+				}
+			}
+
+			return false
+		}
+		const checkoutIsReady = async () =>
+			(await this.checkoutButton.isVisible().catch(() => false)) &&
+			(await this.checkoutButton.isEnabled().catch(() => false))
+		const saveWasAccepted = medicalCardPayload?.outcome === 'success'
+		const medicalUpdateSettled = await expect
 			.poll(
 				async () =>
-					(await this.checkoutButton.isVisible().catch(() => false)) ||
-					!(await medicalOnlyBanner.isVisible().catch(() => false)),
+					(await checkoutIsReady()) ||
+					(saveWasAccepted && !(await medicalBannerIsActive())),
 				{ timeout: 20000 },
 			)
 			.toBeTruthy()
+			.then(() => true)
+			.catch(() => false)
 
-		if (!(await this.checkoutButton.isVisible().catch(() => false))) {
-			await this.openCartDrawer()
+		if (!medicalUpdateSettled) {
+			throw new Error(
+				[
+					'Live non-production saved the medical card but did not expose a checkout-ready cart.',
+					`Medical response received: ${Boolean(medicalCardResponse)}.`,
+					`Medical response outcome: ${medicalCardPayload?.outcome || 'none'}.`,
+					`Medical banner active: ${await medicalBannerIsActive()}.`,
+					`Checkout visible: ${await this.checkoutButton.isVisible().catch(() => false)}.`,
+					`Checkout enabled: ${await this.checkoutButton.isEnabled().catch(() => false)}.`,
+					`Cart count: ${await this.cartItemCount()}.`,
+					`Current URL: ${this.page.url()}`,
+				].join('\n'),
+			)
+		}
+
+		if (await this.cartDrawerIsOpen()) {
+			await this.closeCartDrawer()
+		}
+
+		if (!(await checkoutIsReady())) {
+			await this.openCartPageFromDrawer()
+		}
+
+		if (!(await checkoutIsReady())) {
+			throw new Error(
+				[
+					'Live non-production medical cart settled without an enabled checkout control.',
+					`Medical response outcome: ${medicalCardPayload?.outcome || 'none'}.`,
+					`Medical banner active: ${await medicalBannerIsActive()}.`,
+					`Cart count: ${await this.cartItemCount()}.`,
+					`Current URL: ${this.page.url()}`,
+				].join('\n'),
+			)
 		}
 	}
 }

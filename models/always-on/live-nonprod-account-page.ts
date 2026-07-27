@@ -1,5 +1,10 @@
-import test, { expect, Page } from '@playwright/test'
+import test, { expect, Locator, Page } from '@playwright/test'
 import { AccountPage } from './account-page'
+
+const cartDrawerSelector = [
+	'.wpse-drawer[data-module="cart"]',
+	'.wpse-drawer[data-module="cart-response"]',
+].join(', ')
 
 export class LiveNonProdAccountPage extends AccountPage {
 	constructor(page: Page) {
@@ -40,10 +45,23 @@ export class LiveNonProdAccountPage extends AccountPage {
 			.catch(() => false)
 	}
 
+	private async getActiveCartDrawer() {
+		const cartDrawers = this.page.locator(cartDrawerSelector)
+		const cartDrawerCount = await cartDrawers.count()
+
+		for (let index = 0; index < cartDrawerCount; index += 1) {
+			const cartDrawer = cartDrawers.nth(index)
+
+			if (await this.elementIntersectsViewport(cartDrawer)) {
+				return cartDrawer
+			}
+		}
+
+		return null
+	}
+
 	private async cartDrawerIsOpen() {
-		return this.elementIntersectsViewport(
-			this.page.locator('.wpse-drawer[data-module="cart"]'),
-		)
+		return Boolean(await this.getActiveCartDrawer())
 	}
 
 	private async waitForCartDrawerState(isOpen: boolean, timeout = 5000) {
@@ -110,9 +128,10 @@ export class LiveNonProdAccountPage extends AccountPage {
 		await this.page.waitForLoadState('domcontentloaded').catch(() => {})
 		await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
-		if (await this.cartDrawerIsOpen()) {
-			const cartDrawerContainer = this.page.locator('.wpse-drawer[data-module="cart"]')
-			const drawerCloseButton = cartDrawerContainer
+		const activeCartDrawer = await this.getActiveCartDrawer()
+
+		if (activeCartDrawer) {
+			const drawerCloseButton = activeCartDrawer
 				.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
 				.first()
 
@@ -234,6 +253,21 @@ export class LiveNonProdAccountPage extends AccountPage {
 		})
 	}
 
+	private async getActiveDrawerContaining(content: Locator) {
+		const matchingDrawers = this.page.locator('.wpse-drawer').filter({ has: content })
+		const matchingDrawerCount = await matchingDrawers.count()
+
+		for (let index = 0; index < matchingDrawerCount; index += 1) {
+			const matchingDrawer = matchingDrawers.nth(index)
+
+			if (await this.elementIntersectsViewport(matchingDrawer)) {
+				return matchingDrawer
+			}
+		}
+
+		return matchingDrawerCount > 0 ? matchingDrawers.first() : null
+	}
+
 	private async editPersonalInfoOnce(userType: string) {
 		await expect(this.personalInfoHeader).toBeVisible()
 		await expect(this.editPersonalInfoLink).toBeVisible()
@@ -244,10 +278,24 @@ export class LiveNonProdAccountPage extends AccountPage {
 		}
 
 		await expect(this.personalInfoDrawerHeader).toBeVisible()
-		await expect(this.firstNameInput).toBeVisible()
+		const personalInfoDrawer = await this.getActiveDrawerContaining(this.personalInfoDrawerHeader)
 
-		const currentFirstName = await this.firstNameInput.inputValue()
-		const currentLastName = await this.lastNameInput.inputValue()
+		if (!personalInfoDrawer) {
+			throw new Error('The Live personal-information drawer did not become available.')
+		}
+
+		const firstNameInput = personalInfoDrawer.locator('input#fasd_fname')
+		const lastNameInput = personalInfoDrawer.locator('input#fasd_lname')
+		const emailInput = personalInfoDrawer.locator('input#fasd_email')
+		const phoneInput = personalInfoDrawer.locator('input#fasd_phone')
+		const birthdayInput = personalInfoDrawer.locator('input#fasd_dob').first()
+		const updateButton = personalInfoDrawer
+			.locator('a.wpse-button-primary.fasd-form-submit')
+			.first()
+		await expect(firstNameInput).toBeVisible()
+
+		const currentFirstName = await firstNameInput.inputValue()
+		const currentLastName = await lastNameInput.inputValue()
 		const newFirstName = `Edited ${currentFirstName}`
 		const newLastName = `Edited ${currentLastName}`
 		const now = new Date()
@@ -264,36 +312,90 @@ export class LiveNonProdAccountPage extends AccountPage {
 		const newEmail = `edited_user_${userType}_${timestamp}@test.com`
 		const newPhone = `555-${Math.floor(1000000 + Math.random() * 9000000)}`
 
-		await this.firstNameInput.fill(newFirstName)
-		await this.lastNameInput.fill(newLastName)
-		await this.emailInput.fill(newEmail)
-		await this.phoneInput.fill(newPhone)
-		await this.birthdayInput.fill('1985-01-02')
-		await this.persInfoUpdateButton.evaluate((element: HTMLElement) => element.click())
+		await firstNameInput.fill(newFirstName)
+		await lastNameInput.fill(newLastName)
+		await emailInput.fill(newEmail)
+		await phoneInput.fill(newPhone)
+		await birthdayInput.fill('1985-01-02')
+		await expect(updateButton).toBeVisible()
+		await updateButton.evaluate((element: HTMLElement) => element.click())
 
-		await expect(this.displayedUserFirstName).toHaveText(newFirstName)
-		await expect(this.displayedUserLastName).toHaveText(newLastName)
-		await expect(this.displayedUserEmail).toHaveText(newEmail)
-		await expect(this.displayedUserDOB).toHaveText('01/02/1985')
-		expect(
-			await this.normalizePhoneNumber((await this.displayedUserPhone.textContent()) || ''),
-		).toBe(await this.normalizePhoneNumber(newPhone))
+		const saveTransitionSettled = await expect
+			.poll(
+				async () =>
+					!(await this.elementIntersectsViewport(personalInfoDrawer)) ||
+					((await this.displayedUserFirstName.textContent().catch(() => '')) || '').trim() ===
+						newFirstName,
+				{ timeout: 20000 },
+			)
+			.toBeTruthy()
+			.then(() => true)
+			.catch(() => false)
+
+		await this.page.reload({ waitUntil: 'domcontentloaded' })
+		await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+		await expect(this.personalInfoHeader).toBeVisible()
+
+		const displayedFirstName = (
+			(await this.displayedUserFirstName.textContent().catch(() => '')) || ''
+		).trim()
+		const displayedLastName = (
+			(await this.displayedUserLastName.textContent().catch(() => '')) || ''
+		).trim()
+		const displayedEmail = (
+			(await this.displayedUserEmail.textContent().catch(() => '')) || ''
+		).trim()
+		const displayedDob = (
+			(await this.displayedUserDOB.textContent().catch(() => '')) || ''
+		).trim()
+		const displayedPhone = await this.normalizePhoneNumber(
+			(await this.displayedUserPhone.textContent().catch(() => '')) || '',
+		)
+		const expectedPhone = await this.normalizePhoneNumber(newPhone)
+		const persisted =
+			displayedFirstName === newFirstName &&
+			displayedLastName === newLastName &&
+			displayedEmail === newEmail &&
+			displayedDob === '01/02/1985' &&
+			displayedPhone === expectedPhone
+
+		if (!persisted) {
+			throw new Error(
+				[
+					'Live personal information did not persist after save.',
+					`Save transition settled: ${saveTransitionSettled}.`,
+					`Expected first name: ${newFirstName}; received: ${displayedFirstName || 'empty'}.`,
+					`Expected last name: ${newLastName}; received: ${displayedLastName || 'empty'}.`,
+					`Expected email: ${newEmail}; received: ${displayedEmail || 'empty'}.`,
+					`Expected DOB: 01/02/1985; received: ${displayedDob || 'empty'}.`,
+					`Expected phone: ${expectedPhone}; received: ${displayedPhone || 'empty'}.`,
+					`Current URL: ${this.page.url()}`,
+				].join('\n'),
+			)
+		}
 
 		return newEmail
 	}
 
 	override async editPersonalInfo(userType: string) {
+		let persistenceRetries = 0
+
 		for (let attempt = 1; attempt <= 3; attempt += 1) {
 			try {
 				return await this.editPersonalInfoOnce(userType)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error)
+				const isPersistenceError = /Live personal information did not persist after save/i.test(
+					message,
+				)
 				const isTransientDomError =
 					/not attached to the DOM|element is detached|cannot find context with specified id|execution context was destroyed/i.test(
 						message,
 					)
 
-				if (!isTransientDomError || attempt === 3) {
+				if (isPersistenceError && persistenceRetries < 1) {
+					persistenceRetries += 1
+				} else if (!isTransientDomError || attempt === 3) {
 					throw error
 				}
 

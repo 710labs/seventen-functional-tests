@@ -229,6 +229,18 @@ export class ShopPage {
 		return baseUrl.includes('thelist.theflowery.co') || /(^|-)fl($|-)/.test(envId)
 	}
 
+	private isListDevEnvironment() {
+		const baseUrl = (process.env.BASE_URL ?? this.baseUrl ?? '').toLowerCase()
+		const envId = (process.env.ENV_ID ?? '').toLowerCase()
+		const currentUrl = this.page.url().toLowerCase()
+
+		return (
+			baseUrl.includes('thelist-dev.710labs.com') ||
+			currentUrl.includes('thelist-dev.710labs.com') ||
+			/^dev-(?:ca|mi|co|nj)$/.test(envId)
+		)
+	}
+
 	private getFulfillmentPath(fulfillment: string) {
 		if (fulfillment.toLowerCase() === 'pickup') {
 			return '/#pickup'
@@ -1370,10 +1382,14 @@ export class ShopPage {
 					? Math.max(0, itemCount - currentItemCount)
 					: itemCount + (await this.randomizeCartItems()),
 			)
+			const minimumItemCount = options.exactItemCount
+				? targetItemCount
+				: Math.max(0, Math.ceil(itemCount))
 			await this.page.waitForSelector(storefrontAddToCartSelector)
 			const attemptedProducts = new Set<string>()
 			let productsAdded = 0
 			let attempts = 0
+			let inventoryExhausted = false
 			const maxAttempts = Math.max(targetItemCount * 4, 12)
 			const rejectionReasons: string[] = []
 
@@ -1384,6 +1400,7 @@ export class ShopPage {
 				)
 
 				if (!candidate) {
+					inventoryExhausted = true
 					break
 				}
 
@@ -1406,12 +1423,32 @@ export class ShopPage {
 			}
 
 			if (productsAdded < targetItemCount) {
-				throw new Error(
-					[
-						`Added ${productsAdded} of ${targetItemCount} requested product(s) after ${attempts} attempt(s).`,
-						...rejectionReasons.slice(-5),
-					].join('\n'),
-				)
+				const listDevMinimumWasMet =
+					this.isListDevEnvironment() &&
+					!options.exactItemCount &&
+					inventoryExhausted &&
+					productsAdded >= minimumItemCount
+
+				if (listDevMinimumWasMet) {
+					console.warn(
+						[
+							`List Dev inventory was exhausted after confirming ${productsAdded} product(s).`,
+							`Continuing because the required minimum of ${minimumItemCount} was met; the randomized stretch target was ${targetItemCount}.`,
+							`Unique candidates attempted: ${attemptedProducts.size}.`,
+							`Rejected candidates: ${rejectionReasons.length}.`,
+						].join(' '),
+					)
+				} else {
+					throw new Error(
+						[
+							`Added ${productsAdded} of ${targetItemCount} requested product(s) after ${attempts} attempt(s).`,
+							`Required minimum: ${minimumItemCount}.`,
+							`Unique candidates attempted: ${attemptedProducts.size}.`,
+							`Inventory exhausted: ${inventoryExhausted}.`,
+							...rejectionReasons.slice(-5),
+						].join('\n'),
+					)
+				}
 			}
 			await this.page.keyboard.press('PageUp')
 			await this.page.waitForTimeout(2000)
