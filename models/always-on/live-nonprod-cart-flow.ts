@@ -60,7 +60,6 @@ export class LiveNonProdCartFlow {
 	readonly page: Page
 	readonly cartButton: Locator
 	readonly cartDrawer: Locator
-	readonly checkoutButton: Locator
 	readonly viewCartButton: Locator
 	private lockedFacility?: string
 	private lockedFulfillmentMethod?: string
@@ -70,7 +69,6 @@ export class LiveNonProdCartFlow {
 		this.page = page
 		this.cartButton = page.locator('a.wpse-cart-openerize').first()
 		this.cartDrawer = page.locator('#cartDrawer')
-		this.checkoutButton = page.locator('a.checkout-button.button.alt.wc-forward').first()
 		this.viewCartButton = page
 			.locator(
 				[
@@ -130,12 +128,10 @@ export class LiveNonProdCartFlow {
 					await this.provideMedicalCardIfRequired()
 				}
 
-				if (
-					(await this.checkoutButton.isVisible().catch(() => false)) &&
-					(await this.checkoutButton.isEnabled().catch(() => false))
-				) {
-					await expect(this.checkoutButton).toBeVisible()
-					await this.checkoutButton.evaluate((element: HTMLAnchorElement) => element.click())
+				const activeCheckoutButton = await this.waitForActiveCheckoutButton()
+
+				if (activeCheckoutButton) {
+					await activeCheckoutButton.click()
 					return
 				}
 
@@ -351,6 +347,66 @@ export class LiveNonProdCartFlow {
 		}
 
 		return null
+	}
+
+	private async getActiveCheckoutButton() {
+		const cartDrawers = this.page.locator(cartDrawerSelector)
+		const cartDrawerCount = await cartDrawers.count()
+
+		for (let drawerIndex = 0; drawerIndex < cartDrawerCount; drawerIndex += 1) {
+			const cartDrawer = cartDrawers.nth(drawerIndex)
+
+			if (!(await this.elementIntersectsViewport(cartDrawer))) {
+				continue
+			}
+
+			const checkoutButtons = cartDrawer.locator(
+				[
+					'a.checkout-button.button.alt.wc-forward',
+					'a[href*="/checkout"]:has-text("Checkout")',
+					'button:has-text("Checkout")',
+				].join(', '),
+			)
+			const checkoutButtonCount = await checkoutButtons.count()
+
+			for (let buttonIndex = 0; buttonIndex < checkoutButtonCount; buttonIndex += 1) {
+				const checkoutButton = checkoutButtons.nth(buttonIndex)
+
+				if (
+					!(await this.elementIntersectsViewport(checkoutButton)) ||
+					!(await checkoutButton.isEnabled().catch(() => false))
+				) {
+					continue
+				}
+
+				const isClickable = await checkoutButton
+					.click({ trial: true, timeout: 1000 })
+					.then(() => true)
+					.catch(() => false)
+
+				if (isClickable) {
+					return checkoutButton
+				}
+			}
+		}
+
+		return null
+	}
+
+	private async waitForActiveCheckoutButton(timeout = 10000) {
+		const deadline = Date.now() + timeout
+
+		while (Date.now() < deadline) {
+			const checkoutButton = await this.getActiveCheckoutButton()
+
+			if (checkoutButton) {
+				return checkoutButton
+			}
+
+			await this.page.waitForTimeout(100)
+		}
+
+		return this.getActiveCheckoutButton()
 	}
 
 	private async cartDrawerIsOpen() {
@@ -1231,48 +1287,23 @@ export class LiveNonProdCartFlow {
 
 			return false
 		}
-		const checkoutIsReady = async () =>
-			(await this.checkoutButton.isVisible().catch(() => false)) &&
-			(await this.checkoutButton.isEnabled().catch(() => false))
-		const saveWasAccepted = medicalCardPayload?.outcome === 'success'
-		const medicalUpdateSettled = await expect
-			.poll(
-				async () =>
-					(await checkoutIsReady()) ||
-					(saveWasAccepted && !(await medicalBannerIsActive())),
-				{ timeout: 20000 },
-			)
-			.toBeTruthy()
-			.then(() => true)
-			.catch(() => false)
+		let activeCheckoutButton = await this.waitForActiveCheckoutButton(20000)
 
-		if (!medicalUpdateSettled) {
+		if (!activeCheckoutButton) {
+			if (await this.cartDrawerIsOpen()) {
+				await this.closeCartDrawer()
+			}
+
+			if (await this.openCartDrawer()) {
+				activeCheckoutButton = await this.waitForActiveCheckoutButton()
+			}
+		}
+
+		if (!activeCheckoutButton) {
 			throw new Error(
 				[
-					'Live non-production saved the medical card but did not expose a checkout-ready cart.',
+					'Live non-production medical cart did not expose a clickable Checkout control in the active cart drawer.',
 					`Medical response received: ${Boolean(medicalCardResponse)}.`,
-					`Medical response outcome: ${medicalCardPayload?.outcome || 'none'}.`,
-					`Medical banner active: ${await medicalBannerIsActive()}.`,
-					`Checkout visible: ${await this.checkoutButton.isVisible().catch(() => false)}.`,
-					`Checkout enabled: ${await this.checkoutButton.isEnabled().catch(() => false)}.`,
-					`Cart count: ${await this.cartItemCount()}.`,
-					`Current URL: ${this.page.url()}`,
-				].join('\n'),
-			)
-		}
-
-		if (await this.cartDrawerIsOpen()) {
-			await this.closeCartDrawer()
-		}
-
-		if (!(await checkoutIsReady())) {
-			await this.openCartPageFromDrawer()
-		}
-
-		if (!(await checkoutIsReady())) {
-			throw new Error(
-				[
-					'Live non-production medical cart settled without an enabled checkout control.',
 					`Medical response outcome: ${medicalCardPayload?.outcome || 'none'}.`,
 					`Medical banner active: ${await medicalBannerIsActive()}.`,
 					`Cart count: ${await this.cartItemCount()}.`,
