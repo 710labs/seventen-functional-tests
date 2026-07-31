@@ -184,32 +184,105 @@ export class LiveNonProdCartFlow {
 		}
 	}
 
+	private async waitForActiveCartStorefront(timeout = 15000) {
+		const deadline = Date.now() + timeout
+		const observedLinks = new Set<string>()
+		let drawerState = 'No active cart drawer was detected.'
+
+		while (Date.now() < deadline) {
+			const activeCartDrawer = await this.getActiveCartDrawer()
+
+			if (!activeCartDrawer) {
+				drawerState = 'No active cart drawer was detected.'
+				await this.page.waitForTimeout(100)
+				continue
+			}
+
+			const snapshot = await activeCartDrawer
+				.evaluate(drawer => {
+					const hrefs = Array.from(
+						drawer.querySelectorAll<HTMLAnchorElement>('a[href*="/shop/"]'),
+					).map(link => link.href)
+					const text = (drawer.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 300)
+					const loadingIndicatorIsVisible = Array.from(
+						drawer.querySelectorAll<HTMLElement>(
+							'[aria-busy="true"], [aria-label*="loading" i], .loading, .loader, .spinner',
+						),
+					).some(element => {
+						const rect = element.getBoundingClientRect()
+						return rect.width > 0 && rect.height > 0
+					})
+
+					return {
+						ariaBusy: drawer.getAttribute('aria-busy'),
+						hrefs,
+						loadingIndicatorIsVisible,
+						module: drawer.getAttribute('data-module') || 'unknown',
+						text,
+					}
+				})
+				.catch(() => null)
+
+			if (!snapshot) {
+				drawerState = 'The active cart drawer detached while its content was loading.'
+				await this.page.waitForTimeout(100)
+				continue
+			}
+
+			for (const href of snapshot.hrefs) {
+				observedLinks.add(href)
+				const exactStorefrontUrl = this.normalizeExactStorefrontUrl(href)
+
+				if (exactStorefrontUrl) {
+					return {
+						drawerState: `module=${snapshot.module}; aria-busy=${snapshot.ariaBusy || 'false'}; loading-indicator=${snapshot.loadingIndicatorIsVisible}; text=${snapshot.text || 'none'}`,
+						observedLinks: [...observedLinks],
+						storefrontUrl: exactStorefrontUrl,
+					}
+				}
+			}
+
+			drawerState = `module=${snapshot.module}; aria-busy=${snapshot.ariaBusy || 'false'}; loading-indicator=${snapshot.loadingIndicatorIsVisible}; text=${snapshot.text || 'none'}`
+			await this.page.waitForTimeout(100)
+		}
+
+		return {
+			drawerState,
+			observedLinks: [...observedLinks],
+			storefrontUrl: null,
+		}
+	}
+
 	private async lockSelectedStorefront() {
 		if (this.storefrontUrl) {
 			return
 		}
 
-		const activeCartDrawer = await this.getActiveCartDrawer()
-		const storefrontLinkScopes = [
-			activeCartDrawer,
-			this.cartDrawer,
-			this.page.locator('.wpse-drawer[data-module="cart-response"]'),
-		].filter((scope): scope is Locator => Boolean(scope))
-		const observedLinks: string[] = []
+		const observedLinks = new Set<string>()
+		const drawerStates: string[] = []
+		let recoveryError: string | null = null
 
-		for (const scope of storefrontLinkScopes) {
-			const hrefs = await scope
-				.locator('a[href*="/shop/"]')
-				.evaluateAll(links => links.map(link => (link as HTMLAnchorElement).href))
-				.catch(() => [])
+		for (let attempt = 1; attempt <= 2; attempt += 1) {
+			const observation = await this.waitForActiveCartStorefront()
 
-			for (const href of hrefs) {
-				observedLinks.push(href)
-				const exactStorefrontUrl = this.normalizeExactStorefrontUrl(href)
+			observation.observedLinks.forEach(href => observedLinks.add(href))
+			drawerStates.push(`Attempt ${attempt}: ${observation.drawerState}`)
 
-				if (exactStorefrontUrl) {
-					this.storefrontUrl = exactStorefrontUrl
-					return
+			if (observation.storefrontUrl) {
+				this.storefrontUrl = observation.storefrontUrl
+				return
+			}
+
+			if (attempt === 1) {
+				try {
+					await this.closeCartDrawer()
+
+					if (!(await this.openCartDrawer())) {
+						throw new Error('The cart drawer did not reopen.')
+					}
+				} catch (error) {
+					recoveryError = error instanceof Error ? error.message : String(error)
+					break
 				}
 			}
 		}
@@ -217,7 +290,9 @@ export class LiveNonProdCartFlow {
 		throw new Error(
 			[
 				'Unable to lock the Live non-production cart to an exact dispensary storefront.',
-				`Observed cart storefront links: ${observedLinks.join(', ') || 'none'}.`,
+				`Observed active-cart storefront links: ${[...observedLinks].join(', ') || 'none'}.`,
+				...drawerStates,
+				...(recoveryError ? [`Drawer recovery failed: ${recoveryError}`] : []),
 				`Current URL: ${this.page.url()}`,
 			].join('\n'),
 		)
