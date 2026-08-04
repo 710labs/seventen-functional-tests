@@ -16,9 +16,13 @@ const { DRIVER_LICENSE_FILES, MED_CARD_FILES } = require('../../artillery/image-
 type Storefront = 'thelist' | 'live'
 type UploadResult = {
 	documentType: 'Photo ID' | 'Medical Card'
+	error?: string
 	filename: string
+	status: 'failed' | 'passed'
 	storefront: Storefront
 }
+
+type UploadAttempt = Omit<UploadResult, 'error' | 'status'>
 
 type LiveDocument = {
 	documentType: UploadResult['documentType']
@@ -93,7 +97,15 @@ function fixtureContentType(filename: string) {
 	return 'image/jpeg'
 }
 
-async function attachSuccessfulUpload(
+function formatError(error: unknown) {
+	if (error instanceof Error) {
+		return error.stack || error.message
+	}
+
+	return String(error)
+}
+
+async function attachUploadEvidence(
 	page: Page,
 	testInfo: TestInfo,
 	result: UploadResult,
@@ -104,10 +116,69 @@ async function attachSuccessfulUpload(
 		contentType: fixtureContentType(result.filename),
 		path: fixturePath(result.filename),
 	})
-	await testInfo.attach(`${attachmentPrefix} - success screenshot`, {
+	await testInfo.attach(`${attachmentPrefix} - ${result.status} screenshot`, {
 		body: await page.screenshot({ fullPage: true }),
 		contentType: 'image/png',
 	})
+
+	if (result.error) {
+		await testInfo.attach(`${attachmentPrefix} - failure details`, {
+			body: Buffer.from(result.error),
+			contentType: 'text/plain',
+		})
+	}
+}
+
+async function runUploadAttempt(
+	page: Page,
+	testInfo: TestInfo,
+	results: UploadResult[],
+	attempt: UploadAttempt,
+	upload: () => Promise<void>,
+	recover?: () => Promise<void>,
+) {
+	let uploadError: unknown = null
+
+	try {
+		await test.step(
+			`${attempt.storefront === 'live' ? 'Live' : 'The List'} ${attempt.documentType}: ${attempt.filename}`,
+			upload,
+		)
+	} catch (error) {
+		uploadError = error
+	}
+
+	const result: UploadResult = {
+		...attempt,
+		status: uploadError ? 'failed' : 'passed',
+		...(uploadError ? { error: formatError(uploadError) } : {}),
+	}
+	results.push(result)
+
+	try {
+		await attachUploadEvidence(page, testInfo, result)
+	} catch (evidenceError) {
+		result.status = 'failed'
+		result.error = [
+			result.error,
+			`Unable to attach complete report evidence: ${formatError(evidenceError)}`,
+		]
+			.filter(Boolean)
+			.join('\n')
+	}
+
+	if (uploadError && recover) {
+		try {
+			await test.step(`Recover after ${attempt.filename}`, recover)
+		} catch (recoveryError) {
+			result.error = [
+				result.error,
+				`Recovery failed: ${formatError(recoveryError)}`,
+			]
+				.filter(Boolean)
+				.join('\n')
+		}
+	}
 }
 
 async function visibleLocator(locator: Locator) {
@@ -147,16 +218,17 @@ async function runTheListUploadCheck(
 	})
 
 	for (const filename of DRIVER_LICENSE_FILES) {
-		await test.step(`The List Photo ID: ${filename}`, async () => {
-			await createAccountPage.uploadPersonalDocumentFixture(fixturePath(filename))
-			const result: UploadResult = {
+		await runUploadAttempt(
+			page,
+			testInfo,
+			results,
+			{
 				documentType: 'Photo ID',
 				filename,
 				storefront: 'thelist',
-			}
-			results.push(result)
-			await attachSuccessfulUpload(page, testInfo, result)
-		})
+			},
+			() => createAccountPage.uploadPersonalDocumentFixture(fixturePath(filename)),
+		)
 	}
 }
 
@@ -286,16 +358,23 @@ async function runLiveDocumentMatrix(
 	for (let index = 0; index < filenames.length; index += 1) {
 		const filename = filenames[index]
 
-		await test.step(`Live ${document.documentType}: ${filename}`, async () => {
-			await uploadLiveDocument(page, document, filename, startDay + index)
-			const result: UploadResult = {
+		await runUploadAttempt(
+			page,
+			testInfo,
+			results,
+			{
 				documentType: document.documentType,
 				filename,
 				storefront: 'live',
-			}
-			results.push(result)
-			await attachSuccessfulUpload(page, testInfo, result)
-		})
+			},
+			() => uploadLiveDocument(page, document, filename, startDay + index),
+			async () => {
+				await page.reload({ waitUntil: 'domcontentloaded' })
+				await expect(page.locator(document.editLinkSelector).first()).toBeVisible({
+					timeout: 30000,
+				})
+			},
+		)
 	}
 }
 
@@ -350,5 +429,24 @@ test(`Storefront image uploads - ${storefront}`, async ({ page }, testInfo) => {
 		contentType: 'application/json',
 	})
 
-	expect(results).toHaveLength(storefront === 'live' ? 6 : 3)
+	const expectedAttemptCount = storefront === 'live' ? 6 : 3
+	const failures = results.filter(result => result.status === 'failed')
+
+	if (results.length !== expectedAttemptCount || failures.length > 0) {
+		const failureSummary = failures.length
+			? failures
+					.map(
+						failure =>
+							`- ${failure.documentType} ${failure.filename}: ${failure.error || 'Unknown failure'}`,
+					)
+					.join('\n')
+			: '- No individual upload failure was captured.'
+
+		throw new Error(
+			[
+				`Storefront image-upload matrix failed after attempting ${results.length}/${expectedAttemptCount} fixtures.`,
+				failureSummary,
+			].join('\n'),
+		)
+	}
 })
