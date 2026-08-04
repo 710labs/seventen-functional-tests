@@ -45,8 +45,9 @@
 		"helper:possync_orders": "npx playwright test -g \"POS Order Generator\" --config=configs/pos-sync.config.ts --workers=10",
 		"load:ca:dev": "npx artillery run artillery/artillery-ca-single-phase.yml",
 		"load:ca:stage:debug": "cross-env ARTILLERY_TARGET=https://thelist-stage.710labs.com ARTILLERY_CART_ITEM_COUNT=4 ARTILLERY_DEBUG_SCREENSHOTS=true npx artillery run artillery/artillery-ca-stage-debug.yml",
-		"load:thelist:image-uploads": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-image-uploads.yml",
-		"load:live:image-uploads": "cross-env ARTILLERY_TARGET=https://live-dev.710labs.com ARTILLERY_INCLUDE_VIP_COOKIE=false npx artillery run artillery/artillery-live-image-uploads.yml",
+		"test:image-uploads": "npx playwright test --config=configs/image-upload.config.ts --workers=1",
+		"test:image-uploads:thelist": "cross-env IMAGE_UPLOAD_STOREFRONT=thelist IMAGE_UPLOAD_TARGET=https://thelist-dev.710labs.com npx playwright test --config=configs/image-upload.config.ts --workers=1",
+		"test:image-uploads:live": "cross-env IMAGE_UPLOAD_STOREFRONT=live IMAGE_UPLOAD_TARGET=https://live-dev.710labs.com npx playwright test --config=configs/image-upload.config.ts --workers=1",
 		"load:thelist:url-hit": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-url-hit.yml"
 	},
 	"repository": {

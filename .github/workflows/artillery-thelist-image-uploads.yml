@@ -18,175 +18,117 @@ on:
         options:
           - dev
           - stage
+
 jobs:
-  artillery:
+  image-upload-check:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.env }}
 
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22.13.0'
-
-      - name: Set environment variables based on inputs
-        run: |
-          echo "ARTILLERY_STOREFRONT=${{ github.event.inputs.storefront }}" >> $GITHUB_ENV
-          echo "ARTILLERY_ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
+          cache: 'npm'
 
       - name: Derive and validate storefront target
         run: |
-          case "$ARTILLERY_STOREFRONT:$ARTILLERY_ENV" in
+          case "${{ github.event.inputs.storefront }}:${{ github.event.inputs.env }}" in
             thelist:dev)
-              ARTILLERY_TARGET="https://thelist-dev.710labs.com"
-              ARTILLERY_CONFIG="artillery/artillery-thelist-image-uploads.yml"
-              ARTILLERY_PROCESSOR="artillery/artillery-thelist-image-uploads-scripts.js"
-              ARTILLERY_INCLUDE_VIP_COOKIE="true"
+              IMAGE_UPLOAD_TARGET="https://thelist-dev.710labs.com"
               ;;
             thelist:stage)
-              ARTILLERY_TARGET="https://thelist-stage.710labs.com"
-              ARTILLERY_CONFIG="artillery/artillery-thelist-image-uploads.yml"
-              ARTILLERY_PROCESSOR="artillery/artillery-thelist-image-uploads-scripts.js"
-              ARTILLERY_INCLUDE_VIP_COOKIE="true"
+              IMAGE_UPLOAD_TARGET="https://thelist-stage.710labs.com"
               ;;
             live:dev)
-              ARTILLERY_TARGET="https://live-dev.710labs.com"
-              ARTILLERY_CONFIG="artillery/artillery-live-image-uploads.yml"
-              ARTILLERY_PROCESSOR="artillery/artillery-live-image-uploads-scripts.js"
-              ARTILLERY_INCLUDE_VIP_COOKIE="false"
+              IMAGE_UPLOAD_TARGET="https://live-dev.710labs.com"
               ;;
             live:stage)
-              ARTILLERY_TARGET="https://live-stage.710labs.com"
-              ARTILLERY_CONFIG="artillery/artillery-live-image-uploads.yml"
-              ARTILLERY_PROCESSOR="artillery/artillery-live-image-uploads-scripts.js"
-              ARTILLERY_INCLUDE_VIP_COOKIE="false"
+              IMAGE_UPLOAD_TARGET="https://live-stage.710labs.com"
               ;;
             *)
-              echo "Unsupported image-upload target: storefront=$ARTILLERY_STOREFRONT env=$ARTILLERY_ENV" >&2
+              echo "Unsupported image-upload target." >&2
               exit 1
               ;;
           esac
 
-          echo "ARTILLERY_TARGET=$ARTILLERY_TARGET" >> $GITHUB_ENV
-          echo "ARTILLERY_CONFIG=$ARTILLERY_CONFIG" >> $GITHUB_ENV
-          echo "ARTILLERY_PROCESSOR=$ARTILLERY_PROCESSOR" >> $GITHUB_ENV
-          echo "ARTILLERY_INCLUDE_VIP_COOKIE=$ARTILLERY_INCLUDE_VIP_COOKIE" >> $GITHUB_ENV
-
-      - name: Show selected upload check
-        run: |
-          echo "Storefront: $ARTILLERY_STOREFRONT"
-          echo "Environment: $ARTILLERY_ENV"
-          echo "Target: $ARTILLERY_TARGET"
-          echo "Virtual users: 1"
-          sed -n '1,20p' "$ARTILLERY_CONFIG"
-
-      - name: Verify Artillery dependencies
-        run: |
-          test -f "$ARTILLERY_CONFIG"
-          test -f artillery/qa-cookies.js
-          test -f artillery/image-upload-fixtures.js
-          test -f "$ARTILLERY_PROCESSOR"
-          test -f artillery/CA-DL.heic
-          test -f artillery/CA-DL.jpg
-          test -f artillery/CA-DL.png
-          test -f artillery/Medical-Card.heic
-          test -f artillery/Medical-Card.jpeg
-          test -f artillery/Medical-Card.png
+          echo "IMAGE_UPLOAD_STOREFRONT=${{ github.event.inputs.storefront }}" >> "$GITHUB_ENV"
+          echo "IMAGE_UPLOAD_ENV=${{ github.event.inputs.env }}" >> "$GITHUB_ENV"
+          echo "IMAGE_UPLOAD_TARGET=$IMAGE_UPLOAD_TARGET" >> "$GITHUB_ENV"
 
       - name: Verify required secrets
         env:
-          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
-          ARTILLERY_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+          IMAGE_UPLOAD_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          IMAGE_UPLOAD_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
         run: |
           if [ -z "$RECAPTCHA_BYPASS" ]; then
-            echo "Missing required secret: RECAPTCHA_BYPASS for environment '${{ github.event.inputs.env }}'" >&2
+            echo "Missing required secret: RECAPTCHA_BYPASS" >&2
             exit 1
           fi
 
-          case "$ARTILLERY_STOREFRONT" in
-            thelist)
-              if [ -z "$ARTILLERY_LIST_PASSWORD" ]; then
-                echo "Missing required secret: ARTILLERY_LIST_PASSWORD for environment '$ARTILLERY_ENV'" >&2
-                exit 1
-              fi
-              ;;
-            live)
-              if [ -z "$ARTILLERY_LIVE_PASSWORD" ]; then
-                echo "Missing required secret: ALWAYS_ON_PASSWORD for environment '$ARTILLERY_ENV'" >&2
-                exit 1
-              fi
-              ;;
-            *)
-              echo "Unsupported storefront while validating secrets: $ARTILLERY_STOREFRONT" >&2
-              exit 1
-              ;;
-          esac
+          if [ "$IMAGE_UPLOAD_STOREFRONT" = "thelist" ] && [ -z "$IMAGE_UPLOAD_LIST_PASSWORD" ]; then
+            echo "Missing required secret: ARTILLERY_LIST_PASSWORD" >&2
+            exit 1
+          fi
 
-      - name: Create Fargate worker dotenv
+          if [ "$IMAGE_UPLOAD_STOREFRONT" = "live" ] && [ -z "$IMAGE_UPLOAD_LIVE_PASSWORD" ]; then
+            echo "Missing required secret: ALWAYS_ON_PASSWORD" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright upload check
         env:
-          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
-          ARTILLERY_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+          CI: 'true'
+          IMAGE_UPLOAD_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          IMAGE_UPLOAD_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
-        run: |
-          FARGATE_DOTENV="artillery/artillery-${ARTILLERY_STOREFRONT}-image-uploads.fargate.env"
+        run: npm run test:image-uploads
 
-          {
-            echo "RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS"
-            echo "ARTILLERY_TARGET=$ARTILLERY_TARGET"
-            echo "ARTILLERY_INCLUDE_VIP_COOKIE=$ARTILLERY_INCLUDE_VIP_COOKIE"
-
-            if [ "$ARTILLERY_STOREFRONT" = "thelist" ]; then
-              echo "ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD"
-            else
-              echo "ARTILLERY_LIVE_PASSWORD=$ARTILLERY_LIVE_PASSWORD"
-            fi
-          } > "$FARGATE_DOTENV"
-
-          echo "ARTILLERY_FARGATE_DOTENV=$FARGATE_DOTENV" >> $GITHUB_ENV
-
-      - name: Verify Fargate worker dotenv
-        run: |
-          test -f "$ARTILLERY_FARGATE_DOTENV"
-
-      - name: Prepare Artillery report path
-        id: artillery_report
-        run: |
-          mkdir -p artillery-reports
-          REPORT_PATH="artillery-reports/${ARTILLERY_STOREFRONT}-image-uploads-${{ github.run_id }}.json"
-          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
-          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Execute upload check on AWS
-        uses: artilleryio/action-cli@v1
-        with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 4 --memory 8 --dotenv ${{ env.ARTILLERY_FARGATE_DOTENV }} ${{ env.ARTILLERY_CONFIG }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/${{ github.event.inputs.storefront }}-image-uploads/1-user
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
-          ARTILLERY_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
-          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
-
-      - name: Summarize Artillery report
-        if: always()
-        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
-
-      - name: Upload Artillery reports
+      - name: Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: artillery-${{ github.event.inputs.storefront }}-image-uploads-report
-          path: artillery-reports
-          if-no-files-found: ignore
+          name: playwright-${{ github.event.inputs.storefront }}-${{ github.event.inputs.env }}-image-upload-report
+          path: playwright-report/image-upload
+          if-no-files-found: warn
+          retention-days: 14
 
-      - name: Slack notifications
+      - name: Upload traces, videos, and failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ github.event.inputs.storefront }}-${{ github.event.inputs.env }}-image-upload-evidence
+          path: test-results/image-upload
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Add report instructions to summary
+        if: always()
+        run: |
+          {
+            echo "### Storefront image-upload check"
+            echo
+            echo "- Storefront: $IMAGE_UPLOAD_STOREFRONT"
+            echo "- Environment: $IMAGE_UPLOAD_ENV"
+            echo "- Target: $IMAGE_UPLOAD_TARGET"
+            echo "- Download the Playwright HTML report artifact to view every uploaded fixture and success screenshot."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Slack notification
         if: always()
         uses: 8398a7/action-slack@v3.15.1
         with:
@@ -201,11 +143,8 @@ jobs:
                   `Status: ${{ job.status }}`,
                   `Storefront: ${{ github.event.inputs.storefront }}`,
                   `Environment: ${{ github.event.inputs.env }}`,
-                  `Target: ${{ env.ARTILLERY_TARGET }}`,
-                  'Virtual users: 1',
-                  '',
-                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
-                  '',
+                  'Runner: Playwright (1 worker)',
+                  'HTML report: available in the workflow artifacts',
                   `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
                 ].join('\n'),
               }]

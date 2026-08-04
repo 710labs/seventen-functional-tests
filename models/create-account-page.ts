@@ -1,5 +1,6 @@
 import test, { expect, Locator, Page } from '@playwright/test'
 import { faker } from '@faker-js/faker'
+import path from 'path'
 import { fictionalAreacodes } from '../utils/data-generator'
 import { QAClient } from '../support/qa/client'
 import { getUsageLabel, isMedicalUsage, type TestUsageType } from '../utils/usage-types'
@@ -15,6 +16,16 @@ type RegistrationSubmitSnapshot = {
 	billingState: RegistrationFieldSnapshot
 	billingZip: RegistrationFieldSnapshot
 	bodyPreview: string
+}
+
+export type PersonalDocumentUploadProfile = {
+	address: string
+	email: string
+	firstName: string
+	lastName: string
+	password: string
+	state: string
+	zipCode: string
 }
 
 const personalDocInputSelector = 'input[name="svntn_core_personal_doc"]'
@@ -56,11 +67,11 @@ export class CreateAccountPage {
 	readonly defaultAddress: string
 	readonly phoneNumber: Locator
 	apiUser: any
-	qaClient: QAClient
+	qaClient?: QAClient
 
 	//svntn_core_pxp_month
 
-	constructor(page: Page, qaClient: QAClient) {
+	constructor(page: Page, qaClient?: QAClient) {
 		;(this.page = page),
 			(this.qaClient = qaClient),
 			(this.userNameField = page.locator('input[name="email"]'))
@@ -140,6 +151,7 @@ export class CreateAccountPage {
 		driversLicenseInput: Locator,
 		fileName: string,
 	) {
+		const expectedFilename = path.basename(fileName)
 		const [driversLicenseChooser] = await Promise.all([
 			this.page.waitForEvent('filechooser'),
 			driversLicenseInput.click(),
@@ -159,7 +171,7 @@ export class CreateAccountPage {
 					Array.from(input.files || []).some(file => file.name === filename)
 				)
 			},
-			{ selector: personalDocInputSelector, filename: fileName },
+			{ selector: personalDocInputSelector, filename: expectedFilename },
 		)
 	}
 
@@ -561,8 +573,14 @@ export class CreateAccountPage {
 	}
 
 	async createApi(usage: TestUsageType, userType: string): Promise<any> {
+		const qaClient = this.qaClient
+
+		if (!qaClient) {
+			throw new Error('QAClient is required to create an account through the QA API.')
+		}
+
 		await test.step('Create Client via API', async () => {
-			this.apiUser = await this.qaClient.createUser({
+			this.apiUser = await qaClient.createUser({
 				user_role: 'customer',
 				user_usage: usage,
 				user_vintage: userType,
@@ -570,6 +588,41 @@ export class CreateAccountPage {
 		})
 
 		return this.apiUser
+	}
+
+	async reachPersonalDocumentUpload(profile: PersonalDocumentUploadProfile) {
+		this.assertSupportedUsageForState('recreational', profile.state)
+
+		await test.step('Open The List registration', async () => {
+			await this.page.getByText('create an account', { exact: false }).click()
+			await expect(this.page).toHaveURL(/\/register\/?$/)
+		})
+
+		await test.step('Enter The List account information', async () => {
+			await this.userNameField.fill(profile.email)
+			await this.passwordField.fill(profile.password)
+			await this.firstName.fill(profile.firstName)
+			await this.lastName.fill(profile.lastName)
+			await this.birthMonth.selectOption('12')
+			await this.birthDay.selectOption('16')
+			await this.birthYear.selectOption('1988')
+			await this.selectResolvedBillingAddress(
+				profile.address,
+				profile.state,
+				profile.zipCode,
+			)
+			await this.phoneNumber.fill(
+				`555-${Math.floor(1000000 + Math.random() * 9000000)}`,
+			)
+		})
+
+		await this.submitNewCustomerForm(profile.state, profile.zipCode)
+		await this.selectRegistrationUsageType('recreational')
+		await expect(this.page.locator(personalDocInputSelector).first()).toBeAttached()
+	}
+
+	async uploadPersonalDocumentFixture(filePath: string) {
+		await this.uploadPersonalDocument(filePath)
 	}
 
 	async create(

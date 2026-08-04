@@ -376,20 +376,22 @@ Notes:
 - Slack notifications include final Artillery JSON report stats for VUsers, top errors, and session length when a report is available.
 - Local load runs can still start without `RECAPTCHA_BYPASS`, but the scripts will warn and skip the recaptcha bypass cookie. Preferred local usage: `RECAPTCHA_BYPASS=<secret> ARTILLERY_LIST_PASSWORD=<password> npm run load:ca:dev`.
 
-### Storefront Image Uploads
+## Storefront Image Uploads
 
 Use the manual [Storefront - Image Upload Check](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist-image-uploads.yml) workflow to exercise document uploads on The List or Live. Select only `storefront` (`thelist` or `live`) and `env` (`dev` or `stage`). The target is derived from those choices, so Live production cannot be targeted.
 
-The check always runs exactly one virtual user on one Fargate worker. Its Artillery phase uses `arrivalCount: 1` and `maxVusers: 1`; there are no arrival-rate, duration, worker-count, or other load-shaping inputs.
+The capability check runs as one Playwright test with one worker. It does not use Artillery, Fargate, arrival rates, or other load-shaping controls. The separate upload rate-limit workflow remains on Artillery because that scenario intentionally sends repeated paced uploads.
 
 The List retains its existing registration upload flow and actively cycles Photo ID files in HEIC, JPG, and PNG formats. Live creates a unique test account, opens My Account, and saves all Photo ID and Medical Card HEIC/JPEG/PNG fixtures. Live stops after account-document validation and does not proceed to checkout or create an order.
 
-Required secrets are selected by storefront: The List uses `ARTILLERY_LIST_PASSWORD`, Live maps `ALWAYS_ON_PASSWORD` to `ARTILLERY_LIVE_PASSWORD`, and both require `RECAPTCHA_BYPASS`. The List keeps the VIP queue-bypass cookie enabled; Live disables that List-only cookie.
+Every successful format adds the uploaded fixture and a post-save screenshot to the Playwright HTML report. Failed attempts retain Playwright trace, video, and screenshot evidence. GitHub Actions uploads the HTML report and raw failure evidence as artifacts for 14 days.
+
+Required secrets are selected by storefront: The List maps `ARTILLERY_LIST_PASSWORD` to `IMAGE_UPLOAD_LIST_PASSWORD`, Live maps `ALWAYS_ON_PASSWORD` to `IMAGE_UPLOAD_LIVE_PASSWORD`, and both require `RECAPTCHA_BYPASS`.
 
 For a local Live dev run, provide the password and reCAPTCHA bypass in the environment:
 
 ```bash
-ARTILLERY_LIVE_PASSWORD=<password> RECAPTCHA_BYPASS=<secret> npm run load:live:image-uploads
+IMAGE_UPLOAD_LIVE_PASSWORD=<password> RECAPTCHA_BYPASS=<secret> npm run test:image-uploads:live
 ```
 
 ## Test Tools
