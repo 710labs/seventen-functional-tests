@@ -273,6 +273,7 @@ jobs:
         run: |
           test -f "$ARTILLERY_CONFIG"
           test -f artillery/qa-cookies.js
+          test -f artillery/image-upload-fixtures.js
           test -f artillery/artillery-thelist-image-uploads-scripts.js
           test -f artillery/CA-DL.heic
           test -f artillery/CA-DL.jpg

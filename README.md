@@ -376,6 +376,19 @@ Notes:
 - Slack notifications include final Artillery JSON report stats for VUsers, top errors, and session length when a report is available.
 - Local load runs can still start without `RECAPTCHA_BYPASS`, but the scripts will warn and skip the recaptcha bypass cookie. Preferred local usage: `RECAPTCHA_BYPASS=<secret> ARTILLERY_LIST_PASSWORD=<password> npm run load:ca:dev`.
 
+### Storefront Image Uploads
+
+Use the manual [Load Tests - Storefront Image Uploads](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist-image-uploads.yml) workflow to exercise document uploads on The List or Live. The workflow supports only `dev` and `stage`; it derives the target from the selected `storefront` and `env`, so Live production cannot be targeted.
+
+The List retains its existing registration upload flow and actively cycles Photo ID files in HEIC, JPG, and PNG formats. Live creates a unique test account, opens My Account, and saves all Photo ID and Medical Card HEIC/JPEG/PNG fixtures. Live stops after account-document validation and does not proceed to checkout or create an order.
+
+Required secrets are selected by storefront: The List uses `ARTILLERY_LIST_PASSWORD`, Live maps `ALWAYS_ON_PASSWORD` to `ARTILLERY_LIVE_PASSWORD`, and both require `RECAPTCHA_BYPASS`. The List keeps the VIP queue-bypass cookie enabled; Live disables that List-only cookie.
+
+For a local Live dev run, provide the password and reCAPTCHA bypass in the environment:
+
+```bash
+ARTILLERY_LIVE_PASSWORD=<password> RECAPTCHA_BYPASS=<secret> npm run load:live:image-uploads
+```
 
 ## Test Tools
 ### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)

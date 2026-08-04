@@ -6,8 +6,11 @@ config:
     - CA-DL.jpg
     - CA-DL.png
     - CA-DL.heic
+    - Medical-Card.jpeg
+    - Medical-Card.png
+    - Medical-Card.heic
   phases:
-    - duration: 1
+    - duration: 60
       arrivalRate: 1
       maxVusers: 1
   engines:
@@ -20,7 +23,7 @@ config:
         viewport:
           width: 1280
           height: 720
-  processor: './artillery-thelist-image-uploads-scripts.js'
+  processor: './artillery-live-image-uploads-scripts.js'
 scenarios:
   - engine: playwright
-    testFunction: 'TheListImageUploadRateLimit'
+    testFunction: 'LiveImageUploads'

@@ -1,8 +1,6 @@
 const path = require('path')
 const { addQaCookies } = require('./qa-cookies')
-
-const DRIVER_LICENSE_FILES = ['CA-DL.heic', 'CA-DL.jpg', 'CA-DL.png']
-const MED_CARD_FILES = ['Medical-Card.heic', 'Medical-Card.jpeg', 'Medical-Card.png']
+const { DRIVER_LICENSE_FILES, MED_CARD_FILES } = require('./image-upload-fixtures')
 const DEFAULT_TARGET = 'https://thelist-dev.710labs.com'
 const DEFAULT_UPLOAD_SUCCESS_TIMEOUT_MS = 15000
 const DEFAULT_RATE_LIMIT_UPLOAD_ATTEMPTS = 70
