@@ -163,7 +163,6 @@ async function runTheListUploadCheck(
 async function registerLiveUser(page: Page) {
 	const homePageLogin = new HomePageLogin(page)
 	const homePageActions = new LiveNonProdHomePageActions(page)
-	const uniqueSuffix = `${Date.now()}${Math.random().toString(36).slice(2, 8)}`
 
 	await homePageLogin.navigateToURL(page, target)
 	await homePageActions.enterAddress(page, 'live', liveAuthenticationAddress)
@@ -171,7 +170,7 @@ async function registerLiveUser(page: Page) {
 	await homePageActions.addSingleProductToCart(page)
 	await homePageLogin.registerNewUser(
 		page,
-		`image-upload-${uniqueSuffix}`,
+		'image',
 		requiredSecret('IMAGE_UPLOAD_LIVE_PASSWORD'),
 	)
 	await expect(homePageLogin.userPopUpContainer).toBeHidden({ timeout: 30000 })

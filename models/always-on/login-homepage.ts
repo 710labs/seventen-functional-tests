@@ -166,8 +166,21 @@ export class HomePageLogin {
 			now.getMilliseconds(),
 		).padStart(3, '0')}`
 
-		// enter a unique test email for test user
-		const newEmail = `test_710_automation_${userType}_${timestamp}@test.com`
+		// Live uses the full email as the username and rejects values over 60 characters.
+		// The timestamp already guarantees uniqueness, so keep the caller-provided label
+		// only as long as the remaining username space allows.
+		const emailPrefix = 'test_710_automation_'
+		const emailSuffix = `_${timestamp}@test.com`
+		const maxUserTypeLength = 60 - emailPrefix.length - emailSuffix.length
+		const safeUserType = userType
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			.slice(0, maxUserTypeLength)
+
+		if (!safeUserType) {
+			throw new Error('A non-empty user type is required to register a new user')
+		}
+
+		const newEmail = `${emailPrefix}${safeUserType}${emailSuffix}`
 		console.log(`\n New user email ---> ${newEmail} \n`)
 		await test.step('Enter new user email and continue to register user screen', async () => {
 			// enter email in field and click Continue button
