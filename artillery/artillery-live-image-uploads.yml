@@ -10,8 +10,8 @@ config:
     - Medical-Card.png
     - Medical-Card.heic
   phases:
-    - duration: 60
-      arrivalRate: 1
+    - duration: 1
+      arrivalCount: 1
       maxVusers: 1
   engines:
     playwright:

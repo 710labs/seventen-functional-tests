@@ -378,7 +378,9 @@ Notes:
 
 ### Storefront Image Uploads
 
-Use the manual [Load Tests - Storefront Image Uploads](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist-image-uploads.yml) workflow to exercise document uploads on The List or Live. The workflow supports only `dev` and `stage`; it derives the target from the selected `storefront` and `env`, so Live production cannot be targeted.
+Use the manual [Storefront - Image Upload Check](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-thelist-image-uploads.yml) workflow to exercise document uploads on The List or Live. Select only `storefront` (`thelist` or `live`) and `env` (`dev` or `stage`). The target is derived from those choices, so Live production cannot be targeted.
+
+The check always runs exactly one virtual user on one Fargate worker. Its Artillery phase uses `arrivalCount: 1` and `maxVusers: 1`; there are no arrival-rate, duration, worker-count, or other load-shaping inputs.
 
 The List retains its existing registration upload flow and actively cycles Photo ID files in HEIC, JPG, and PNG formats. Live creates a unique test account, opens My Account, and saves all Photo ID and Medical Card HEIC/JPEG/PNG fixtures. Live stops after account-document validation and does not proceed to checkout or create an order.
 
