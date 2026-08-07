@@ -402,6 +402,8 @@ The Live limiter test creates one account and runs one browser virtual user on o
 
 Because the exact Live limiter response has not yet been confirmed, `assert_rate_limit` defaults to `false` for the first discovery run. Discovery output includes sanitized response status, `outcome`, `message`, `errors`, and visible form error text for every attempt. After confirming the Live limiter signature, rerun with `assert_rate_limit=true`; in assertion mode the scenario fails if no recognized limiter response occurs or if unrelated error responses are returned.
 
+The workflow also verifies the Artillery report after execution. It fails unless the single VU completes without errors and every requested upload attempt produces an accepted, rate-limited, or unexpected-error classification. Setup failures include a `[LIVE_SETUP_FAILURE:<stage>]` marker with the active URL and relevant drawer, modal, and product state.
+
 For a local Live dev discovery run, provide the Live password and reCAPTCHA bypass:
 
 ```bash

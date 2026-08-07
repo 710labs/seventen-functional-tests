@@ -145,6 +145,71 @@ async function clickVisible(locator, timeoutMs = DEFAULT_TIMEOUT_MS) {
 	return visibleLocator
 }
 
+function errorMessage(error) {
+	return error instanceof Error ? error.message : String(error)
+}
+
+async function getSetupDiagnostics(page) {
+	return {
+		accountLinks: await page.locator(ACCOUNT_LINK_SELECTOR).count().catch(() => -1),
+		authModalVisible: await page
+			.locator(AUTH_MODAL_SELECTOR)
+			.isVisible()
+			.catch(() => false),
+		cartDrawerVisible: await getVisibleLocator(page.locator(CART_DRAWER_SELECTOR))
+			.then(Boolean)
+			.catch(() => false),
+		fulfillmentDrawerVisible: await page
+			.locator('div.wpse-drawer[data-module="fulfillment"]')
+			.isVisible()
+			.catch(() => false),
+		pageTitle: normalizeText(await page.title().catch(() => '')),
+		productCount: await page.locator(PRODUCT_SELECTOR).count().catch(() => -1),
+		url: page.url(),
+	}
+}
+
+async function runSetupStage(page, stage, action) {
+	console.log(`[LIVE_SETUP_START] ${JSON.stringify({ stage, url: page.url() })}`)
+
+	try {
+		const result = await action()
+		console.log(`[LIVE_SETUP_OK] ${JSON.stringify({ stage, url: page.url() })}`)
+		return result
+	} catch (error) {
+		const diagnostics = await getSetupDiagnostics(page)
+		const failure = {
+			diagnostics,
+			error: normalizeText(errorMessage(error)),
+			stage,
+		}
+
+		console.error(`[LIVE_SETUP_FAILURE] ${JSON.stringify(failure)}`)
+		throw new Error(`[LIVE_SETUP_FAILURE:${stage}] ${JSON.stringify(failure)}`)
+	}
+}
+
+async function waitForEnabled(locator, timeoutMs = 10000) {
+	const deadline = Date.now() + timeoutMs
+
+	while (Date.now() < deadline) {
+		const enabled = await locator
+			.evaluate(element => {
+				const control = element
+				return !control.disabled && control.getAttribute('aria-disabled') !== 'true'
+			})
+			.catch(() => false)
+
+		if (enabled) {
+			return
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 100))
+	}
+
+	throw new Error(`Timed out waiting for an enabled control matching ${locator}`)
+}
+
 async function enterLiveAddress(page) {
 	await clickVisible(page.locator('a.wpse-button-storenav.wpse-openerize'))
 
@@ -168,7 +233,8 @@ async function enterLiveAddress(page) {
 		.locator('button.wpse-button-primary.fasd-form-submit')
 		.first()
 	await submitButton.waitFor({ state: 'visible' })
-	await submitButton.click()
+	await waitForEnabled(submitButton)
+	await submitButton.evaluate(element => element.click())
 	await page.waitForLoadState('domcontentloaded').catch(() => {})
 	await page.locator(PRODUCT_SELECTOR).first().waitFor({ state: 'visible', timeout: 20000 })
 }
@@ -180,7 +246,9 @@ async function addNonMedicalProduct(page) {
 
 	const productCount = await products.count()
 
-	for (let index = 0; index < productCount; index += 1) {
+	const startIndex = productCount > 1 ? 1 : 0
+
+	for (let index = startIndex; index < productCount; index += 1) {
 		const product = products.nth(index)
 		const isMedicalOnly =
 			(await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
@@ -189,17 +257,17 @@ async function addNonMedicalProduct(page) {
 			continue
 		}
 
-		const productLink = product
-			.locator('.woocommerce-loop-product__link, img.wp-post-image, img')
-			.first()
+		const productLink = product.locator('.woocommerce-loop-product__link').first()
 
 		await productLink.waitFor({ state: 'visible' })
-		await productLink.click()
+		await productLink.scrollIntoViewIfNeeded()
+		await productLink.evaluate(element => element.click())
 		await page.waitForLoadState('domcontentloaded').catch(() => {})
 
 		const addToCartButton = page.getByRole('button', { name: /add to cart/i }).first()
 		await addToCartButton.waitFor({ state: 'visible', timeout: 15000 })
-		await addToCartButton.click({ force: true })
+		await waitForEnabled(addToCartButton)
+		await addToCartButton.evaluate(element => element.click())
 		await page.locator(AUTH_MODAL_SELECTOR).waitFor({ state: 'visible', timeout: 15000 })
 		return
 	}
@@ -212,7 +280,10 @@ async function registerLiveUser(page, user) {
 	await authModal.waitFor({ state: 'visible' })
 
 	await authModal.locator('#fasd_email').fill(user.email)
-	await authModal.locator('button:has-text("Continue")').click()
+	const continueButton = authModal.locator('button:has-text("Continue")').first()
+	await continueButton.waitFor({ state: 'visible' })
+	await waitForEnabled(continueButton)
+	await continueButton.evaluate(element => element.click())
 
 	const passwordInput = authModal.locator('input.fasd-form-value#password')
 	await passwordInput.waitFor({ state: 'visible' })
@@ -225,8 +296,19 @@ async function registerLiveUser(page, user) {
 		await zipInput.fill(user.zip)
 	}
 
-	await authModal.locator('input.fasd-form-value#reg_dob').fill(user.dob)
-	await authModal.locator('button:has-text("Create Account")').click()
+	const dobInput = authModal.locator('input.fasd-form-value#reg_dob')
+	const createAccountButton = authModal.locator('button:has-text("Create Account")').first()
+	const underageDate = new Date()
+	underageDate.setFullYear(underageDate.getFullYear() - 18)
+
+	await dobInput.fill(underageDate.toISOString().split('T')[0])
+	await createAccountButton.waitFor({ state: 'visible' })
+	await waitForEnabled(createAccountButton)
+	await createAccountButton.evaluate(element => element.click())
+	await authModal.locator('#reg_dob_error').waitFor({ state: 'visible', timeout: 10000 })
+	await dobInput.fill(user.dob)
+	await waitForEnabled(createAccountButton)
+	await createAccountButton.evaluate(element => element.click())
 	await authModal.waitFor({ state: 'hidden', timeout: DEFAULT_TIMEOUT_MS })
 }
 
@@ -492,18 +574,24 @@ async function LiveImageUploadRateLimit(page, vuContext, events, test) {
 	await addQaCookies(page, target)
 
 	await step('Live: Select Store and Reach Registration', async () => {
-		await page.goto(target)
-		await page.locator('span.site-header-group').waitFor({ state: 'visible', timeout: 20000 })
-		await enterLiveAddress(page)
-		await addNonMedicalProduct(page)
+		await runSetupStage(page, 'open_storefront', async () => {
+			await page.goto(target)
+			await page
+				.locator('span.site-header-group')
+				.waitFor({ state: 'visible', timeout: 20000 })
+		})
+		await runSetupStage(page, 'enter_address', () => enterLiveAddress(page))
+		await runSetupStage(page, 'open_product_and_trigger_registration', () =>
+			addNonMedicalProduct(page),
+		)
 	})
 
 	await step('Live: Register Test Account', async () => {
-		await registerLiveUser(page, user)
+		await runSetupStage(page, 'register_account', () => registerLiveUser(page, user))
 	})
 
 	await step('Live: Open My Account', async () => {
-		await goToAccountPage(page, target)
+		await runSetupStage(page, 'open_my_account', () => goToAccountPage(page, target))
 	})
 
 	const loopStartedAt = Date.now()
@@ -525,7 +613,22 @@ async function LiveImageUploadRateLimit(page, vuContext, events, test) {
 				await page.waitForTimeout(waitMs)
 			}
 
-			const result = await attemptLivePhotoIdUpload(page, filename, expirationDay)
+			let result
+
+			try {
+				result = await attemptLivePhotoIdUpload(page, filename, expirationDay)
+			} catch (error) {
+				const failure = {
+					attemptNumber,
+					diagnostics: await getSetupDiagnostics(page),
+					error: normalizeText(errorMessage(error)),
+					filename,
+				}
+
+				console.error(`[LIVE_UPLOAD_ATTEMPT_FAILURE] ${JSON.stringify(failure)}`)
+				throw new Error(`[LIVE_UPLOAD_ATTEMPT_FAILURE:${attemptNumber}] ${JSON.stringify(failure)}`)
+			}
+
 			const elapsedSinceLoopStartMs = Date.now() - loopStartedAt
 
 			if (events && typeof events.emit === 'function') {

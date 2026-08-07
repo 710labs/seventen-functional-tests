@@ -181,6 +181,10 @@ jobs:
         if: always()
         run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
 
+      - name: Assert Live rate-limit scenario completed
+        if: always()
+        run: node scripts/assert-live-image-upload-rate-limit-report.js "$ARTILLERY_REPORT_JSON" "$ARTILLERY_UPLOAD_ATTEMPTS"
+
       - name: Upload Artillery reports
         if: always()
         uses: actions/upload-artifact@v4
