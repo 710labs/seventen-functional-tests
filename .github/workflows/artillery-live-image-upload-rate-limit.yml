@@ -1,0 +1,219 @@
+name: Load Tests - Live Image Upload Rate Limit
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        description: 'Live environment'
+        required: true
+        default: dev
+        options:
+          - dev
+          - stage
+      upload_attempts:
+        description: 'Photo ID upload attempts for the same Live account'
+        required: false
+        default: '70'
+      window_seconds:
+        description: 'Window over which to pace the upload attempts'
+        required: false
+        default: '300'
+      assert_rate_limit:
+        type: choice
+        description: 'Fail if no recognized limiter response is observed (use false for discovery)'
+        required: true
+        default: 'false'
+        options:
+          - 'false'
+          - 'true'
+      fargate_capacity:
+        type: choice
+        description: 'Fargate capacity'
+        required: true
+        default: on_demand
+        options:
+          - on_demand
+          - spot
+
+jobs:
+  artillery:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Derive and validate Live rate-limit inputs
+        env:
+          INPUT_ASSERT_RATE_LIMIT: ${{ github.event.inputs.assert_rate_limit || 'false' }}
+          INPUT_ENV: ${{ github.event.inputs.env }}
+          INPUT_FARGATE_CAPACITY: ${{ github.event.inputs.fargate_capacity || 'on_demand' }}
+          INPUT_UPLOAD_ATTEMPTS: ${{ github.event.inputs.upload_attempts || '70' }}
+          INPUT_WINDOW_SECONDS: ${{ github.event.inputs.window_seconds || '300' }}
+        run: |
+          case "$INPUT_ENV" in
+            dev)
+              ARTILLERY_TARGET="https://live-dev.710labs.com"
+              ;;
+            stage)
+              ARTILLERY_TARGET="https://live-stage.710labs.com"
+              ;;
+            *)
+              echo "Unsupported Live image-upload environment: $INPUT_ENV" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$INPUT_UPLOAD_ATTEMPTS" in
+            ''|*[!0-9]*)
+              echo "upload_attempts must be a positive integer." >&2
+              exit 1
+              ;;
+          esac
+
+          case "$INPUT_WINDOW_SECONDS" in
+            ''|*[!0-9]*)
+              echo "window_seconds must be a positive integer." >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "$INPUT_UPLOAD_ATTEMPTS" -lt 1 ] || [ "$INPUT_UPLOAD_ATTEMPTS" -gt 500 ]; then
+            echo "upload_attempts must be between 1 and 500." >&2
+            exit 1
+          fi
+
+          if [ "$INPUT_WINDOW_SECONDS" -lt 1 ] || [ "$INPUT_WINDOW_SECONDS" -gt 3600 ]; then
+            echo "window_seconds must be between 1 and 3600." >&2
+            exit 1
+          fi
+
+          if [ "$INPUT_FARGATE_CAPACITY" = "spot" ]; then
+            ARTILLERY_FARGATE_SPOT_FLAG="--spot"
+          else
+            ARTILLERY_FARGATE_SPOT_FLAG=""
+          fi
+
+          echo "ARTILLERY_ASSERT_RATE_LIMIT=$INPUT_ASSERT_RATE_LIMIT" >> "$GITHUB_ENV"
+          echo "ARTILLERY_ENV=$INPUT_ENV" >> "$GITHUB_ENV"
+          echo "ARTILLERY_FARGATE_SPOT_FLAG=$ARTILLERY_FARGATE_SPOT_FLAG" >> "$GITHUB_ENV"
+          echo "ARTILLERY_TARGET=$ARTILLERY_TARGET" >> "$GITHUB_ENV"
+          echo "ARTILLERY_UPLOAD_ATTEMPTS=$INPUT_UPLOAD_ATTEMPTS" >> "$GITHUB_ENV"
+          echo "ARTILLERY_WINDOW_SECONDS=$INPUT_WINDOW_SECONDS" >> "$GITHUB_ENV"
+
+      - name: Show Live limiter configuration
+        run: |
+          echo "Target: $ARTILLERY_TARGET"
+          echo "Topology: 1 account, 1 virtual user, 1 Fargate worker"
+          echo "Photo ID attempts/window: $ARTILLERY_UPLOAD_ATTEMPTS / $ARTILLERY_WINDOW_SECONDS seconds"
+          echo "Assert recognized rate limit: $ARTILLERY_ASSERT_RATE_LIMIT"
+
+      - name: Verify Artillery dependencies
+        run: |
+          test -f artillery/artillery-live-image-upload-rate-limit.yml
+          test -f artillery/artillery-live-image-upload-rate-limit-scripts.js
+          test -f artillery/qa-cookies.js
+          test -f artillery/image-upload-fixtures.js
+          test -f artillery/CA-DL.heic
+          test -f artillery/CA-DL.jpg
+          test -f artillery/CA-DL.png
+
+      - name: Verify required secrets
+        env:
+          ARTILLERY_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          if [ -z "$ARTILLERY_LIVE_PASSWORD" ]; then
+            echo "Missing required secret: ALWAYS_ON_PASSWORD for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+
+          if [ -z "$RECAPTCHA_BYPASS" ]; then
+            echo "Missing required secret: RECAPTCHA_BYPASS for environment '${{ github.event.inputs.env }}'" >&2
+            exit 1
+          fi
+
+      - name: Create Fargate worker dotenv
+        env:
+          ARTILLERY_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          cat > artillery/artillery-live-image-upload-rate-limit.fargate.env <<EOF
+          ARTILLERY_ASSERT_RATE_LIMIT=$ARTILLERY_ASSERT_RATE_LIMIT
+          ARTILLERY_INCLUDE_VIP_COOKIE=false
+          ARTILLERY_LIVE_PASSWORD=$ARTILLERY_LIVE_PASSWORD
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          ARTILLERY_UPLOAD_ATTEMPTS=$ARTILLERY_UPLOAD_ATTEMPTS
+          ARTILLERY_WINDOW_SECONDS=$ARTILLERY_WINDOW_SECONDS
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
+          EOF
+
+      - name: Prepare Artillery report path
+        id: artillery_report
+        run: |
+          mkdir -p artillery-reports
+          REPORT_PATH="artillery-reports/live-image-upload-rate-limit-${{ github.run_id }}.json"
+          echo "ARTILLERY_REPORT_JSON=$REPORT_PATH" >> "$GITHUB_ENV"
+          echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Execute Live image upload rate-limit test on AWS
+        uses: artilleryio/action-cli@v1
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 4 --memory 8 ${{ env.ARTILLERY_FARGATE_SPOT_FLAG }} --dotenv artillery/artillery-live-image-upload-rate-limit.fargate.env artillery/artillery-live-image-upload-rate-limit.yml --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/live-image-upload-rate-limit/one-account/${{ github.event.inputs.upload_attempts || '70' }}attempts/${{ github.event.inputs.window_seconds || '300' }}seconds-window/${{ github.event.inputs.assert_rate_limit || 'false' }}-assert
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          ARTILLERY_LIVE_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+
+      - name: Summarize Artillery report
+        if: always()
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artillery-live-image-upload-rate-limit-report
+          path: artillery-reports
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Slack notifications
+        if: always()
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                title: 'Artillery Load Test - Live Image Upload Rate Limit',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ github.event.inputs.env }}`,
+                  `Target: ${process.env.ARTILLERY_TARGET}`,
+                  `Topology: 1 account / 1 VU / 1 worker`,
+                  `Upload attempts/window: ${{ github.event.inputs.upload_attempts || '70' }} / ${{ github.event.inputs.window_seconds || '300' }} seconds`,
+                  `Assert rate limit: ${{ github.event.inputs.assert_rate_limit || 'false' }}`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

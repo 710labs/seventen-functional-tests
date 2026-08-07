@@ -394,6 +394,20 @@ For a local Live dev run, provide the password and reCAPTCHA bypass in the envir
 IMAGE_UPLOAD_LIVE_PASSWORD=<password> RECAPTCHA_BYPASS=<secret> npm run test:image-uploads:live
 ```
 
+### Live Image Upload Rate Limit
+
+Use the manual [Load Tests - Live Image Upload Rate Limit](https://github.com/710labs/seventen-functional-tests/actions/workflows/artillery-live-image-upload-rate-limit.yml) workflow to exercise repeated Photo ID uploads against Live dev or stage. This is separate from both the ordinary storefront upload capability check and The List rate-limit workflow.
+
+The Live limiter test creates one account and runs one browser virtual user on one Fargate worker. By default it cycles the HEIC, JPG, and PNG Photo ID fixtures for 70 upload attempts over 300 seconds. Each attempt submits the My Account document form and classifies the `admin-ajax.php` response as accepted, rate limited, or an unexpected error.
+
+Because the exact Live limiter response has not yet been confirmed, `assert_rate_limit` defaults to `false` for the first discovery run. Discovery output includes sanitized response status, `outcome`, `message`, `errors`, and visible form error text for every attempt. After confirming the Live limiter signature, rerun with `assert_rate_limit=true`; in assertion mode the scenario fails if no recognized limiter response occurs or if unrelated error responses are returned.
+
+For a local Live dev discovery run, provide the Live password and reCAPTCHA bypass:
+
+```bash
+ARTILLERY_LIVE_PASSWORD=<password> RECAPTCHA_BYPASS=<secret> npm run load:live:image-upload-rate-limit
+```
+
 ## Test Tools
 ### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)
 Postman collection with examples of endpoints used for grabbing data used in test assertions.
