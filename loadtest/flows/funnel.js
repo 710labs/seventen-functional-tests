@@ -764,7 +764,7 @@ async function clickIfVisible(locator, timeoutMs = 1000) {
 	return true
 }
 
-async function submitListPasswordIfPresent(page) {
+async function submitListPasswordIfPresent(page, timeoutMs = DEFAULT_READY_WAIT_MS) {
 	const passwordField = page.locator('input[name="post_password"]').first()
 	const visible = await passwordField.isVisible().catch(() => false)
 
@@ -780,8 +780,28 @@ async function submitListPasswordIfPresent(page) {
 
 	await passwordField.click()
 	await passwordField.fill(password)
-	await page.locator('text=enter site').click()
-	await page.waitForLoadState('domcontentloaded').catch(() => {})
+	await passwordField.press('Enter')
+
+	const createAccountLink = page.getByText(/create an account/i).first()
+
+	try {
+		await Promise.all([
+			passwordField.waitFor({ state: 'hidden', timeout: timeoutMs }),
+			createAccountLink.waitFor({ state: 'visible', timeout: timeoutMs }),
+		])
+	} catch (error) {
+		const passwordStillVisible = await passwordField.isVisible().catch(() => false)
+
+		throw new Error(
+			[
+				`List password submission was not accepted within ${Math.round(timeoutMs / 1000)} seconds.`,
+				`Password field still visible: ${passwordStillVisible}`,
+				`Current URL: ${page.url()}`,
+				'Verify that ARTILLERY_LIST_PASSWORD matches the production storefront password.',
+				`Body preview: ${await getBodyPreview(page)}`,
+			].join('\n'),
+		)
+	}
 }
 
 async function passAgeGateIfPresent(page) {
@@ -1020,8 +1040,7 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 	})
 
 	await measuredStep(events, step, 'list_password', 'Enter List Password', async () => {
-		await submitListPasswordIfPresent(page)
-		await page.waitForLoadState('domcontentloaded').catch(() => {})
+		await submitListPasswordIfPresent(page, readyWaitMs)
 		await waitForStorefrontReady(page, readyWaitMs)
 	})
 
