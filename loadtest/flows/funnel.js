@@ -18,6 +18,7 @@ const BILLING_STATE_SELECTOR = 'select[name="billing_state"], input[name="billin
 const BILLING_ZIP_SELECTOR = 'input[name="billing_postcode"], #billing_postcode'
 const DL_INPUT_SELECTOR = 'input[name="svntn_core_personal_doc"]'
 const DL_NUMBER_SELECTOR = 'input#svntn_pno'
+const ELIGIBILITY_SUBMIT_SELECTOR = 'input#svntn_core_eligibility_post'
 const DL_SUCCESS_SELECTOR = [
 	'div.eligibilityInput:has(input#svntn_core_personal_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel',
 	'div.eligibilityInput:has(input[name="svntn_core_personal_doc"]) span.unsealLabel.unsealSuccess',
@@ -778,7 +779,6 @@ async function submitListPasswordIfPresent(page, timeoutMs = DEFAULT_READY_WAIT_
 		throw new Error('ARTILLERY_LIST_PASSWORD must be set when the private-store password gate is visible.')
 	}
 
-	await passwordField.click()
 	await passwordField.fill(password)
 	await passwordField.press('Enter')
 
@@ -805,12 +805,16 @@ async function submitListPasswordIfPresent(page, timeoutMs = DEFAULT_READY_WAIT_
 }
 
 async function passAgeGateIfPresent(page) {
+	const ageGateButton = isMichiganTarget(page.url())
+		? page.getByRole('button', { name: /^i qualify$/i }).first()
+		: page.getByRole('button', { name: /over 21|qualified patient/i }).first()
 	const accepted = await clickIfVisible(
-		page.getByRole('button', { name: /over 21|qualified patient/i }).first(),
+		ageGateButton,
 		3000,
 	)
 
 	if (accepted) {
+		await page.locator('.age-gate-wrapper').first().waitFor({ state: 'hidden', timeout: 10000 })
 		await page.waitForLoadState('domcontentloaded').catch(() => {})
 	}
 }
@@ -860,7 +864,10 @@ async function createAccount(page, target, user, step) {
 			await waitForLocatorEnabled(page, documentNumberInput, 'Michigan ID number')
 			await documentNumberInput.fill(user.documentNumber)
 		}
-		await page.getByRole('button', { name: /register/i }).click()
+		const eligibilitySubmit = page.locator(ELIGIBILITY_SUBMIT_SELECTOR).first()
+		await eligibilitySubmit.waitFor({ state: 'visible', timeout: 10000 })
+		await waitForLocatorEnabled(page, eligibilitySubmit, 'Eligibility Register button')
+		await eligibilitySubmit.click()
 		await page.waitForTimeout(5000)
 		await captureScreenshot(page, 'after-register')
 	})
@@ -1041,6 +1048,7 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 
 	await measuredStep(events, step, 'list_password', 'Enter List Password', async () => {
 		await submitListPasswordIfPresent(page, readyWaitMs)
+		await passAgeGateIfPresent(page)
 		await waitForStorefrontReady(page, readyWaitMs)
 	})
 
