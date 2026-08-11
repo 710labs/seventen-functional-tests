@@ -17,6 +17,7 @@ const REGISTRATION_ADDRESS_SELECTOR = 'input[name="billing_address_1"]'
 const BILLING_STATE_SELECTOR = 'select[name="billing_state"], input[name="billing_state"], #billing_state'
 const BILLING_ZIP_SELECTOR = 'input[name="billing_postcode"], #billing_postcode'
 const DL_INPUT_SELECTOR = 'input[name="svntn_core_personal_doc"]'
+const DL_NUMBER_SELECTOR = 'input#svntn_pno'
 const DL_SUCCESS_SELECTOR = [
 	'div.eligibilityInput:has(input#svntn_core_personal_doc) span.unsealLabel.unsealSuccess.wcse-reactive--plabel',
 	'div.eligibilityInput:has(input[name="svntn_core_personal_doc"]) span.unsealLabel.unsealSuccess',
@@ -187,6 +188,10 @@ function randomNumber() {
 	return Math.floor(Math.random() * 900000) + 100000
 }
 
+function randomDocumentNumber() {
+	return String(Math.floor(Math.random() * 90000000) + 10000000)
+}
+
 function randomPhoneNumber() {
 	const middlePart = String(Math.floor(Math.random() * 1000)).padStart(3, '0')
 	const lastPart = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
@@ -208,6 +213,14 @@ function getTarget(vuContext) {
 		process.env.TARGET ||
 		DEFAULT_TARGET
 	)
+}
+
+function isMichiganTarget(target) {
+	try {
+		return new URL(target).hostname.toLowerCase() === 'thelist-mi.710labs.com'
+	} catch (error) {
+		return false
+	}
 }
 
 function getCartCount() {
@@ -821,6 +834,12 @@ async function createAccount(page, target, user, step) {
 		await page.locator('select[name="svntn_core_pxp_month"]').selectOption('12')
 		await page.locator('select[name="svntn_core_pxp_day"]').selectOption('16')
 		await page.locator('select[name="svntn_core_pxp_year"]').selectOption(`${new Date().getFullYear() + 1}`)
+		if (isMichiganTarget(target)) {
+			const documentNumberInput = page.locator(DL_NUMBER_SELECTOR).first()
+			await documentNumberInput.waitFor({ state: 'visible', timeout: 10000 })
+			await waitForLocatorEnabled(page, documentNumberInput, 'Michigan ID number')
+			await documentNumberInput.fill(user.documentNumber)
+		}
 		await page.getByRole('button', { name: /register/i }).click()
 		await page.waitForTimeout(5000)
 		await captureScreenshot(page, 'after-register')
@@ -958,6 +977,7 @@ function buildUser() {
 		email,
 		password: email,
 		phone: randomPhoneNumber(),
+		documentNumber: randomDocumentNumber(),
 		usageType: getUsageType(),
 		fulfillmentType: getFulfillmentType(),
 	}
