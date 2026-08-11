@@ -12,6 +12,7 @@ on:
           - stage
           - dev
           - prod-ca
+          - prod-co
           - prod-mi
           - prod-nj
       target:
@@ -23,6 +24,7 @@ on:
           - https://thelist-stage.710labs.com
           - https://thelist-dev.710labs.com
           - https://thelist.710labs.com
+          - https://thelist-co.710labs.com
           - https://thelist-mi.710labs.com
           - https://thelist-nj.710labs.com
       mode:
@@ -194,6 +196,7 @@ jobs:
               dev) echo "https://thelist-dev.710labs.com" ;;
               stage) echo "https://thelist-stage.710labs.com" ;;
               prod-ca) echo "https://thelist.710labs.com" ;;
+              prod-co) echo "https://thelist-co.710labs.com" ;;
               prod-mi) echo "https://thelist-mi.710labs.com" ;;
               prod-nj) echo "https://thelist-nj.710labs.com" ;;
               *) echo "Unsupported env: $1" >&2; exit 1 ;;
