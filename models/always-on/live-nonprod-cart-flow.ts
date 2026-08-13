@@ -1,5 +1,4 @@
 import test, { expect, Locator, Page } from '@playwright/test'
-import { selectFirstAvailableProductPortion } from './product-portions.ts'
 
 type LiveUserType = 'rec' | 'med'
 
@@ -928,11 +927,6 @@ export class LiveNonProdCartFlow {
 
 		if (storefrontSelection.addControl) {
 			await storefrontSelection.addControl.scrollIntoViewIfNeeded()
-			await selectFirstAvailableProductPortion(
-				this.page,
-				storefrontSelection.addControl,
-				candidate.name,
-			)
 			await storefrontSelection.addControl.click({ force: true })
 			return { clicked: true, reason: '' }
 		}
@@ -968,11 +962,6 @@ export class LiveNonProdCartFlow {
 			}
 		}
 
-		await selectFirstAvailableProductPortion(
-			this.page,
-			productPageSelection.addControl,
-			candidate.name,
-		)
 		await productPageSelection.addControl.click({ force: true })
 		return { clicked: true, reason: '' }
 	}

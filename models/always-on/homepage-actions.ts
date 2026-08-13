@@ -1,6 +1,5 @@
 require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
-import { selectFirstAvailableProductPortion } from './product-portions.ts'
 const fs = require('fs')
 const path = require('path')
 
@@ -111,7 +110,6 @@ async function clickProductDetailsAddToCartButton(
 
 		const addToCart = page.locator(productPageAddToCartSelector).first()
 		await addToCart.waitFor({ state: 'visible', timeout: 10000 })
-		await selectFirstAvailableProductPortion(page, addToCart, normalizedProductName)
 		await centerLocatorInViewport(addToCart)
 		await page.waitForTimeout(300)
 		await addToCart.click({ timeout: 10000 })
@@ -1172,7 +1170,6 @@ export class HomePageActions {
 				// await this.productPageAddToCartButton.nth(0).click()
 				const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
 				await addToCart.waitFor({ state: 'visible' })
-				await selectFirstAvailableProductPortion(page, addToCart, productName)
 				// wait for it to appear...
 				await expect(addToCart).toBeVisible()
 				// …and click it
@@ -1357,7 +1354,6 @@ export class HomePageActions {
 				// await this.productPageAddToCartButton.nth(0).click()
 				const addToCart = page.getByRole('button', { name: /^add to cart$/i }).first()
 				await addToCart.waitFor({ state: 'visible' })
-				await selectFirstAvailableProductPortion(page, addToCart, productName)
 				// wait for it to appear...
 				await expect(addToCart).toBeVisible()
 				// …and click it
@@ -1629,11 +1625,6 @@ export class HomePageActions {
 
 		// Wait and click "Add to Cart" on the product details page
 		await this.productPageAddToCartButton.nth(0).waitFor({ state: 'visible' })
-		await selectFirstAvailableProductPortion(
-			page,
-			this.productPageAddToCartButton.nth(0),
-			productName,
-		)
 		await this.productPageAddToCartButton.nth(0).click()
 
 		// Wait for the cart drawer
@@ -1832,7 +1823,6 @@ export class HomePageActions {
 			const addToCart = page.getByRole('button', { name: /add to cart/i }).first()
 			// wait for it to appear...
 			await expect(addToCart).toBeVisible()
-			await selectFirstAvailableProductPortion(page, addToCart, productName)
 			// …and click it
 			await addToCart.click({ force: true })
 
