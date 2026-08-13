@@ -63,31 +63,6 @@ async function centerLocatorInViewport(locator: Locator) {
 	})
 }
 
-async function clickAddressSubmitButton(submitAddressButton: Locator) {
-	await submitAddressButton.evaluate((element: HTMLElement) => {
-		element.scrollIntoView({ block: 'center', inline: 'center' })
-	})
-
-	const isInsideViewport = await submitAddressButton.evaluate((element: HTMLElement) => {
-		const rect = element.getBoundingClientRect()
-
-		return (
-			rect.top >= 0 &&
-			rect.left >= 0 &&
-			rect.bottom <= window.innerHeight &&
-			rect.right <= window.innerWidth
-		)
-	})
-
-	if (isInsideViewport) {
-		await submitAddressButton.click()
-		return
-	}
-
-	console.log('Address submit button is outside the viewport. Using DOM click fallback.')
-	await submitAddressButton.evaluate((element: HTMLButtonElement) => element.click())
-}
-
 async function clickStorefrontAddToCartButton(
 	page: Page,
 	product: Locator,
@@ -332,9 +307,14 @@ export class HomePageActions {
 	async submitAddress(page: Page) {
 		await this.page.waitForTimeout(1500)
 		await expect(this.submitAddressButton).toBeVisible()
-		await clickAddressSubmitButton(this.submitAddressButton)
-		await page.waitForTimeout(2000)
-		await page.waitForLoadState('load')
+		// Submitting address may trigger a full page navigation/reload (e.g. store switch).
+		// We wrap the click with waitForLoadState to handle the navigation gracefully
+		// and prevent a "Target page, context or browser has been closed" error.
+		await Promise.all([
+			this.page.waitForLoadState('load'),
+			this.submitAddressButton.click(),
+		])
+		await this.page.waitForTimeout(2000)
 	}
 	async enterAddress(page: Page, storeType: string, addressParam: string) {
 		await test.step('Click address button', async () => {
