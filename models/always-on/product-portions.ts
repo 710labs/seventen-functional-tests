@@ -30,7 +30,7 @@ export async function selectFirstAvailableDeliFlowerPortion(
 
 	if (availablePortionCount === 0) {
 		throw new Error(
-			`Deli Flower product "${productName.trim()}" has no enabled Half or Ounce portions.`,
+			`Deli Flower product "${productName.trim()}" has no enabled weight portions.`,
 		)
 	}
 
@@ -39,15 +39,18 @@ export async function selectFirstAvailableDeliFlowerPortion(
 	)
 	const portion =
 		(await checkedPortion.count()) > 0 ? checkedPortion.first() : availablePortions.first()
+	const portionLabel = portion.locator('xpath=ancestor::label[1]')
 
 	if (!(await portion.isChecked())) {
-		await portion.check({ force: true })
+		await expect(portionLabel).toBeVisible()
+		await portionLabel.click()
 	}
 
+	await expect(portion).toBeChecked()
 	await expect(addToCartControl).toBeEnabled({ timeout: 5000 })
 
 	const weightLabel =
-		(await portion.locator('xpath=ancestor::label[1]').textContent())?.trim() ||
+		(await portionLabel.textContent())?.trim() ||
 		(await portion.getAttribute('data-weight-label')) ||
 		(await portion.getAttribute('value')) ||
 		'first available portion'
