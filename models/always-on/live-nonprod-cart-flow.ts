@@ -1,8 +1,10 @@
 import test, { expect, Locator, Page } from '@playwright/test'
+import { selectFirstAvailableDeliFlowerPortion } from './product-portions.ts'
 
 type LiveUserType = 'rec' | 'med'
 
 type ProductCandidate = {
+	category: string
 	facility: string | null
 	fulfillmentMethod: string | null
 	index: number
@@ -760,6 +762,11 @@ export class LiveNonProdCartFlow {
 							.querySelector(selectors.title)
 							?.textContent?.replace(/\s+/g, ' ')
 							.trim() || ''
+					const category =
+						product
+							.querySelector(selectors.category)
+							?.textContent?.replace(/\s+/g, ' ')
+							.trim() || ''
 					const addControl = product.querySelector(selectors.addControl)
 					const productLink = product.querySelector<HTMLAnchorElement>(selectors.productLink)
 
@@ -775,6 +782,7 @@ export class LiveNonProdCartFlow {
 					const storeLink = product.querySelector<HTMLAnchorElement>('a[href*="/shop/"]')
 
 					candidates.push({
+						category,
 						facility: addControl?.getAttribute('data-facility') || null,
 						fulfillmentMethod:
 							addControl?.getAttribute('data-method') ||
@@ -792,6 +800,7 @@ export class LiveNonProdCartFlow {
 			},
 			{
 				addControl: storefrontAddToCartSelector,
+				category: '.product-subheading',
 				medicalBadge: '.wpse-metabadge.med-metabadge',
 				productLink: '.woocommerce-loop-product__link',
 				title: '.woocommerce-loop-product__title, h2, h3',
@@ -927,6 +936,12 @@ export class LiveNonProdCartFlow {
 
 		if (storefrontSelection.addControl) {
 			await storefrontSelection.addControl.scrollIntoViewIfNeeded()
+			await selectFirstAvailableDeliFlowerPortion(
+				this.page,
+				storefrontSelection.addControl,
+				candidate.category,
+				candidate.name,
+			)
 			await storefrontSelection.addControl.click({ force: true })
 			return { clicked: true, reason: '' }
 		}
@@ -962,6 +977,12 @@ export class LiveNonProdCartFlow {
 			}
 		}
 
+		await selectFirstAvailableDeliFlowerPortion(
+			this.page,
+			productPageSelection.addControl,
+			candidate.category,
+			candidate.name,
+		)
 		await productPageSelection.addControl.click({ force: true })
 		return { clicked: true, reason: '' }
 	}

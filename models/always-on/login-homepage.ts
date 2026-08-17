@@ -63,7 +63,9 @@ export class HomePageLogin {
 		// Shop by Category
 		this.shopByCategoryTitle = page.locator('h1.shop-category-head:has-text("Shop by Category")')
 		this.concentratesCard = page.locator('li.wpse-category-button:has-text("Concentrates")')
-		this.flowerCard = page.locator('li.wpse-category-button:has-text("Flower")')
+		this.flowerCard = page
+			.locator('li.wpse-category-button')
+			.filter({ hasText: /^\s*Flower\s*$/ })
 	}
 
 	async navigateToURL(page: Page, URLparam: string) {

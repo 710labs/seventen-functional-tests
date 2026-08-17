@@ -1,5 +1,6 @@
 require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
+import { selectFirstAvailableDeliFlowerPortion } from './product-portions.ts'
 const fs = require('fs')
 const path = require('path')
 
@@ -1809,6 +1810,8 @@ export class HomePageActions {
 
 			// Found a suitable product, proceed to add it
 			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
+			const productCategory =
+				(await product.locator('.product-subheading').first().textContent())?.trim() || ''
 			// Broaden selector to any image or link in the product tile
 			const productClickInto = product.locator('.woocommerce-loop-product__link, img.wp-post-image, img').first()
 
@@ -1823,6 +1826,12 @@ export class HomePageActions {
 			const addToCart = page.getByRole('button', { name: /add to cart/i }).first()
 			// wait for it to appear...
 			await expect(addToCart).toBeVisible()
+			await selectFirstAvailableDeliFlowerPortion(
+				page,
+				addToCart,
+				productCategory,
+				productName,
+			)
 			// …and click it
 			await addToCart.click({ force: true })
 
