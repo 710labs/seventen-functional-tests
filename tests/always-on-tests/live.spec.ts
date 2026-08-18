@@ -46,6 +46,11 @@ test.describe('Live Tests', () => {
 			homePageLogin.userPopUpContainer,
 			`Live ${userType} ${flowType} registration did not complete`,
 		).toBeHidden({ timeout: 30000 })
+
+		if (flowType === 'order') {
+			await homePageActions.addCurrentProductToCartAfterRegistration(page)
+		}
+
 		await homePageLogin.navigateToURL(page, liveURL)
 		await expect(homePageLogin.userPopUpContainer).toBeHidden()
 		await expect(homePageLogin.accountButtonNav).toBeVisible()
@@ -61,7 +66,7 @@ test.describe('Live Tests', () => {
 		const checkoutPage = new LiveNonProdCheckoutPage(page)
 		const orderConfirmation = new OrderConfirmationPage(page)
 
-		await cartFlow.addProductsUntilCheckout(userType)
+		const { medicalProductAdded } = await cartFlow.addProductsUntilCheckout(userType)
 		await checkoutPage.verifyCheckoutPageLoads(page)
 
 		if (userType === 'med') {
@@ -69,6 +74,7 @@ test.describe('Live Tests', () => {
 				page,
 				checkoutAddress,
 				medicalCheckoutAddress,
+				medicalProductAdded,
 			)
 		} else {
 			await checkoutPage.completeRecCheckout(

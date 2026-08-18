@@ -1,5 +1,6 @@
 import { expect, Page } from '@playwright/test'
 import { HomePageActions } from './homepage-actions.ts'
+import { selectFirstAvailableDeliFlowerPortion } from './product-portions.ts'
 
 const liveAuthenticationAddress = '440 Rodeo Drive Beverly Hills'
 const liveProductSelector = 'li.product.type-product'
@@ -44,5 +45,35 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 		}
 
 		await super.addSingleProductToCart(page)
+	}
+
+	async addCurrentProductToCartAfterRegistration(page: Page) {
+		const productSummary = page.locator('.summary.entry-summary').first()
+		await expect(productSummary).toBeVisible()
+
+		const productName =
+			(await productSummary.locator('h1.product_title, h1.entry-title').first().textContent())
+				?.replace(/\s+/g, ' ')
+				.trim() || 'current product'
+		const productCategory =
+			(await productSummary.locator('.product-subheading').first().textContent())
+				?.replace(/\s+/g, ' ')
+				.trim() || ''
+		const addToCart = productSummary
+			.getByRole('button', { name: /^add to cart$/i })
+			.first()
+
+		await expect(addToCart).toBeVisible()
+		await selectFirstAvailableDeliFlowerPortion(
+			page,
+			addToCart,
+			productCategory,
+			productName,
+		)
+		await addToCart.click()
+		await this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 })
+		await expect(this.cartDrawerContainer).not.toContainText(/nothing in your bag/i)
+
+		console.log(`Re-added product "${productName}" after registration.`)
 	}
 }

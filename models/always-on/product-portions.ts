@@ -30,24 +30,29 @@ export async function selectFirstAvailableDeliFlowerPortion(
 
 	if (availablePortionCount === 0) {
 		throw new Error(
-			`Deli Flower product "${productName.trim()}" has no enabled Half or Ounce portions.`,
+			`Deli Flower product "${productName.trim()}" has no enabled weight portions.`,
 		)
 	}
 
-	const checkedPortion = page.locator(
-		`input.fasd-portion-radio[name="${escapedPortionGroup}"]:checked:not(:disabled)`,
-	)
-	const portion =
-		(await checkedPortion.count()) > 0 ? checkedPortion.first() : availablePortions.first()
+	let portionIndex = 0
 
-	if (!(await portion.isChecked())) {
-		await portion.check({ force: true })
+	for (let index = 0; index < availablePortionCount; index += 1) {
+		if (!(await availablePortions.nth(index).isChecked())) {
+			portionIndex = index
+			break
+		}
 	}
 
+	const portion = availablePortions.nth(portionIndex)
+	const portionLabel = portion.locator('xpath=ancestor::label[1]')
+
+	await expect(portionLabel).toBeVisible()
+	await portionLabel.click()
+	await expect(portion).toBeChecked()
 	await expect(addToCartControl).toBeEnabled({ timeout: 5000 })
 
 	const weightLabel =
-		(await portion.locator('xpath=ancestor::label[1]').textContent())?.trim() ||
+		(await portionLabel.textContent())?.trim() ||
 		(await portion.getAttribute('data-weight-label')) ||
 		(await portion.getAttribute('value')) ||
 		'first available portion'

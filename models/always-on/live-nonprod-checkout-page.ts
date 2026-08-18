@@ -11,22 +11,27 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 		await this.completeCheckout(page, address, newAddress, false)
 	}
 
-	async completeMedCheckout(page: Page, address: string, newAddress: string) {
-		await this.completeCheckout(page, address, newAddress, true)
+	async completeMedCheckout(
+		page: Page,
+		address: string,
+		newAddress: string,
+		medicalProductAdded: boolean,
+	) {
+		await this.completeCheckout(page, address, newAddress, medicalProductAdded)
 	}
 
 	private async completeCheckout(
 		page: Page,
 		address: string,
 		newAddress: string,
-		isMedical: boolean,
+		requiresMedicalDocument: boolean,
 	) {
 		const isPickup = await this.pickUpLocationTitle.isVisible().catch(() => false)
 
 		await this.editDeliveryAddress(address, newAddress, isPickup)
 		await this.selectAndVerifyAppointment(isPickup)
 		await this.completePersonalInformation(page, isPickup)
-		await this.completeDocuments(isPickup, isMedical)
+		await this.completeDocuments(isPickup, requiresMedicalDocument)
 		await this.completePayment(isPickup)
 	}
 
@@ -212,7 +217,7 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 		})
 	}
 
-	private async completeDocuments(isPickup: boolean, isMedical: boolean) {
+	private async completeDocuments(isPickup: boolean, requiresMedicalDocument: boolean) {
 		await test.step('Complete required Live identity documents', async () => {
 			const saveButtonIndex = isPickup ? 1 : 2
 			const expirationYear = new Date().getFullYear() + 1
@@ -227,7 +232,7 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 				`Exp: ${displayedPersonalExpiration}`,
 			)
 
-			if (isMedical) {
+			if (requiresMedicalDocument) {
 				await expect(this.displayedMedicalExp).toContainText(/Exp:/)
 			}
 		})
