@@ -34,18 +34,20 @@ export async function selectFirstAvailableDeliFlowerPortion(
 		)
 	}
 
-	const checkedPortion = page.locator(
-		`input.fasd-portion-radio[name="${escapedPortionGroup}"]:checked:not(:disabled)`,
-	)
-	const portion =
-		(await checkedPortion.count()) > 0 ? checkedPortion.first() : availablePortions.first()
-	const portionLabel = portion.locator('xpath=ancestor::label[1]')
+	let portionIndex = 0
 
-	if (!(await portion.isChecked())) {
-		await expect(portionLabel).toBeVisible()
-		await portionLabel.click()
+	for (let index = 0; index < availablePortionCount; index += 1) {
+		if (!(await availablePortions.nth(index).isChecked())) {
+			portionIndex = index
+			break
+		}
 	}
 
+	const portion = availablePortions.nth(portionIndex)
+	const portionLabel = portion.locator('xpath=ancestor::label[1]')
+
+	await expect(portionLabel).toBeVisible()
+	await portionLabel.click()
 	await expect(portion).toBeChecked()
 	await expect(addToCartControl).toBeEnabled({ timeout: 5000 })
 
