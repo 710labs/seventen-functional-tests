@@ -112,7 +112,7 @@ export class LiveNonProdCartFlow {
 	}
 
 	async addProductsUntilCheckout(userType: LiveUserType) {
-		await test.step(`Build an isolated Live ${userType.toUpperCase()} cart`, async () => {
+		return test.step(`Build an isolated Live ${userType.toUpperCase()} cart`, async () => {
 			await this.clearTemporaryRegistrationCart(userType)
 			await this.returnToStorefront()
 
@@ -163,7 +163,7 @@ export class LiveNonProdCartFlow {
 
 				if (activeCheckoutButton) {
 					await activeCheckoutButton.click()
-					return
+					return { medicalProductAdded }
 				}
 
 				const addMoreItems = this.page.getByRole('link', { name: /add more items/i }).first()

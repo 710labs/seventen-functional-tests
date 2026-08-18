@@ -66,7 +66,7 @@ test.describe('Live Tests', () => {
 		const checkoutPage = new LiveNonProdCheckoutPage(page)
 		const orderConfirmation = new OrderConfirmationPage(page)
 
-		await cartFlow.addProductsUntilCheckout(userType)
+		const { medicalProductAdded } = await cartFlow.addProductsUntilCheckout(userType)
 		await checkoutPage.verifyCheckoutPageLoads(page)
 
 		if (userType === 'med') {
@@ -74,6 +74,7 @@ test.describe('Live Tests', () => {
 				page,
 				checkoutAddress,
 				medicalCheckoutAddress,
+				medicalProductAdded,
 			)
 		} else {
 			await checkoutPage.completeRecCheckout(
