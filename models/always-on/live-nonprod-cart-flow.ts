@@ -3,7 +3,7 @@ import { selectFirstAvailableDeliFlowerPortion } from './product-portions.ts'
 
 type LiveUserType = 'rec' | 'med'
 
-type ProductCandidate = {
+export type ProductCandidate = {
 	category: string
 	facility: string | null
 	fulfillmentMethod: string | null
@@ -35,6 +35,35 @@ type MedicalCardUpdateResponse = {
 type AddCandidateResult = {
 	added: boolean
 	reason: string
+}
+
+export function selectNextLiveProductCandidate(
+	candidates: ProductCandidate[],
+	userType: LiveUserType,
+	productAttemptCounts: Map<string, number>,
+	medicalProductAdded: boolean,
+) {
+	const selectWithinAttemptLimit = (candidatePool: ProductCandidate[]) =>
+		candidatePool.find(candidate => !productAttemptCounts.has(candidate.key)) ||
+		candidatePool.find(candidate => (productAttemptCounts.get(candidate.key) || 0) < 2)
+
+	if (userType === 'rec') {
+		return selectWithinAttemptLimit(candidates.filter(candidate => !candidate.isMedical))
+	}
+
+	if (medicalProductAdded) {
+		return selectWithinAttemptLimit(candidates)
+	}
+
+	const medicalCandidate = selectWithinAttemptLimit(
+		candidates.filter(candidate => candidate.isMedical),
+	)
+
+	if (medicalCandidate) {
+		return medicalCandidate
+	}
+
+	return selectWithinAttemptLimit(candidates.filter(candidate => !candidate.isMedical))
 }
 
 const productSelector = 'li.product.type-product'
@@ -833,17 +862,22 @@ export class LiveNonProdCartFlow {
 				return false
 			}
 
-			if (userType === 'rec') {
-				return !candidate.isMedical
-			}
-
-			return medicalProductAdded || candidate.isMedical
+			return true
 		})
-
-		return (
-			eligibleCandidates.find(candidate => !productAttemptCounts.has(candidate.key)) ||
-			eligibleCandidates.find(candidate => (productAttemptCounts.get(candidate.key) || 0) < 2)
+		const candidate = selectNextLiveProductCandidate(
+			eligibleCandidates,
+			userType,
+			productAttemptCounts,
+			medicalProductAdded,
 		)
+
+		if (userType === 'med' && !medicalProductAdded && candidate && !candidate.isMedical) {
+			console.log(
+				'No available medical-only products remain; continuing the MED order with recreational inventory.',
+			)
+		}
+
+		return candidate
 	}
 
 	private async readAddControlContext(addControl: Locator): Promise<AddControlContext> {
