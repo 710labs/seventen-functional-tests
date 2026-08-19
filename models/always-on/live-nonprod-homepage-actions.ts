@@ -55,10 +55,6 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 			(await productSummary.locator('h1.product_title, h1.entry-title').first().textContent())
 				?.replace(/\s+/g, ' ')
 				.trim() || 'current product'
-		const productCategory =
-			(await productSummary.locator('.product-subheading').first().textContent())
-				?.replace(/\s+/g, ' ')
-				.trim() || ''
 		const addToCart = productSummary
 			.getByRole('button', { name: /^add to cart$/i })
 			.first()
@@ -67,7 +63,6 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 		await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			productCategory,
 			productName,
 		)
 		await addToCart.click()

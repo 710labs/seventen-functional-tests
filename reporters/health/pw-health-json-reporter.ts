@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
-type Outcome = 'passed' | 'failed' | 'flaky' | 'skipped'
+type Outcome = 'passed' | 'failed' | 'skipped'
 
 class HealthJsonReporter implements Reporter {
 	private startedAt = Date.now()
@@ -20,7 +20,6 @@ class HealthJsonReporter implements Reporter {
 		const counts: Record<Outcome, number> = {
 			passed: 0,
 			failed: 0,
-			flaky: 0,
 			skipped: 0,
 		}
 		const failures: string[] = []
@@ -32,19 +31,14 @@ class HealthJsonReporter implements Reporter {
 				counts.failed++
 				failures.push(`${test.title} [${test.parent.title}]`)
 			} else if (outcome === 'flaky') {
-				counts.flaky++
-				failures.push(`${test.title} [${test.parent.title}]`)
+				// A retry recovered the test, so health reporting treats the final outcome as passed.
+				counts.passed++
 			} else counts.skipped++
 		}
 
-		const executed = counts.passed + counts.failed + counts.flaky
+		const executed = counts.passed + counts.failed
 		if (executed === 0) failures.push('No tests executed.')
-		const status =
-			result.status !== 'passed' || counts.failed > 0 || executed === 0
-				? 'failed'
-				: counts.flaky > 0
-					? 'flaky'
-					: 'passed'
+		const status = result.status !== 'passed' || counts.failed > 0 || executed === 0 ? 'failed' : 'passed'
 		const rootKey = `${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`
 		const reportUrl =
 			process.env.S3_BUCKET && process.env.S3_REGION

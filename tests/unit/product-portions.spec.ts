@@ -43,7 +43,6 @@ test.describe('Deli Flower product portions', () => {
 		const selectedPortion = await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			'Deli Flower',
 			'Z',
 		)
 
@@ -62,7 +61,6 @@ test.describe('Deli Flower product portions', () => {
 		const selectedPortion = await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			'Deli Flower',
 			'Z',
 		)
 
@@ -83,7 +81,6 @@ test.describe('Deli Flower product portions', () => {
 		const selectedPortion = await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			'Deli Flower',
 			'Z',
 		)
 
@@ -92,20 +89,19 @@ test.describe('Deli Flower product portions', () => {
 		await expect(addToCart).toBeEnabled()
 	})
 
-	test('does not select a portion for other product categories', async ({ page }) => {
-		await setPortionMarkup(page)
+	test('does not select a portion when the product has no portion group', async ({ page }) => {
+		await page.setContent('<button>Add to cart</button>')
 		const addToCart = page.getByRole('button', { name: 'Add to cart' })
 
 		expect(
 			await selectFirstAvailableDeliFlowerPortion(
 				page,
 				addToCart,
-				'Flower',
 				'Rambutan #11',
 			),
 		).toBeNull()
-		await expect(page.getByRole('radio').first()).not.toBeChecked()
-		await expect(addToCart).toBeDisabled()
+		await expect(page.getByRole('radio')).toHaveCount(0)
+		await expect(addToCart).toBeEnabled()
 	})
 })
 
