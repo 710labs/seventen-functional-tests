@@ -191,7 +191,13 @@ export class HomePageActions {
 		this.closeCartButtonGeneric = page.locator(
 			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
 		)
-		this.minimumNotMetLabel = page.locator('div.wpse-snacktoast').first()
+		this.minimumNotMetLabel = page
+			.locator('div.wpse-snacktoast:visible')
+			.filter({
+				hasText:
+					/(?:order|pickup|delivery) minimum (?:is )?not met|add\s+\$?\d+(?:\.\d+)?(?:\s+to check out|\s+or\b)/i,
+			})
+			.first()
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.productPageAddToCartButton = page.locator('button.wpse-button-primary.fasd_to_cart')
 		this.cartContinueShoppingButton = page.locator('a:has-text("Add more items")')
@@ -1122,9 +1128,9 @@ export class HomePageActions {
 
 	async liveRecAddProductsToCartUntilMinimumMet(page: Page) {
 		// Get all the products on the page
-		const products = await page.locator(
-			'li.product.type-product.product-type-simple.status-publish',
-		)
+		const products = page
+			.locator('li.product.type-product.product-type-simple.status-publish')
+			.filter({ has: page.locator('.woocommerce-loop-product__title') })
 
 		let i = 5
 		let firstProductAdded = false // Track if the first product has been added

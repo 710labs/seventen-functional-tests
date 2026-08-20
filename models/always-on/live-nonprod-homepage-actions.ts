@@ -55,6 +55,19 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 			(await productSummary.locator('h1.product_title, h1.entry-title').first().textContent())
 				?.replace(/\s+/g, ' ')
 				.trim() || 'current product'
+		const cartButtonText =
+			(await this.cartButtonNav.count()) > 0
+				? ((await this.cartButtonNav.textContent()) || '').replace(/\s+/g, ' ').trim()
+				: ''
+		const cartItemCount = Number(cartButtonText.match(/\b\d+\b/)?.[0] || 0)
+
+		if (cartItemCount > 0) {
+			console.log(
+				`Cart retained ${cartItemCount} item(s) after registration; skipping the product re-add.`,
+			)
+			return
+		}
+
 		const addToCart = productSummary
 			.getByRole('button', { name: /^add to cart$/i })
 			.first()
