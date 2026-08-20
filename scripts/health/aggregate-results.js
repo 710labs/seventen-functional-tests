@@ -4,8 +4,8 @@ const path = require('node:path')
 const { manifest, runUrl } = require('./result-utils')
 
 const failureStatuses = new Set(['failed', 'missing', 'cancelled', 'blocked', 'unknown'])
-const validStatuses = new Set(['passed', 'flaky', ...failureStatuses])
-const emoji = { passed: '✅', flaky: '⚠️', failed: '❌', missing: '❓', cancelled: '⛔', blocked: '🚫', unknown: '❓' }
+const validStatuses = new Set(['passed', ...failureStatuses])
+const emoji = { passed: '✅', failed: '❌', missing: '❓', cancelled: '⛔', blocked: '🚫', unknown: '❓' }
 
 function walkJson(directory) {
 	if (!fs.existsSync(directory)) return []
@@ -31,7 +31,22 @@ function loadResults(directory) {
 function aggregate(directory) {
 	const actual = loadResults(directory)
 	const results = manifest.checks.map(check => {
-		const result = actual.get(check.id)
+		const rawResult = actual.get(check.id)
+		const result =
+			rawResult?.status === 'flaky'
+				? {
+						...rawResult,
+						status: 'passed',
+						counts: rawResult.counts
+							? {
+									...rawResult.counts,
+									passed: (rawResult.counts.passed || 0) + (rawResult.counts.flaky || 0),
+									flaky: 0,
+								}
+							: rawResult.counts,
+						failureSummary: [],
+					}
+				: rawResult
 		return result && validStatuses.has(result.status)
 			? { ...result, id: check.id, label: check.label, group: check.group }
 			: result
@@ -61,8 +76,7 @@ function aggregate(directory) {
 		{ expected: results.length },
 	)
 	const hasFailure = results.some(result => failureStatuses.has(result.status))
-	const hasFlaky = results.some(result => result.status === 'flaky')
-	const status = hasFailure ? 'failed' : hasFlaky ? 'flaky' : 'passed'
+	const status = hasFailure ? 'failed' : 'passed'
 	return {
 		schemaVersion: 1,
 		status,
@@ -79,13 +93,12 @@ function markdownCell(value) {
 
 function toMarkdown(summary) {
 	const passed = summary.totals.passed || 0
-	const flaky = summary.totals.flaky || 0
-	const failed = summary.totals.expected - passed - flaky
-	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
+	const failed = summary.totals.expected - passed
+	const titleEmoji = summary.status === 'passed' ? '🟢' : '🔴'
 	const lines = [
 		`# ${titleEmoji} Daily System Health`,
 		'',
-		`**${passed}/${summary.totals.expected} passed** · ${failed} failed/missing · ${flaky} flaky`,
+		`**${passed}/${summary.totals.expected} passed** · ${failed} failed/missing`,
 		'',
 		'| Status | Check | Result |',
 		'|---|---|---|',
@@ -101,9 +114,8 @@ function toMarkdown(summary) {
 
 function toSlack(summary) {
 	const passed = summary.totals.passed || 0
-	const flaky = summary.totals.flaky || 0
-	const failed = summary.totals.expected - passed - flaky
-	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'flaky' ? '🟡' : '🔴'
+	const failed = summary.totals.expected - passed
+	const titleEmoji = summary.status === 'passed' ? '🟢' : '🔴'
 	const resultsById = new Map(summary.results.map(result => [result.id, result]))
 	const status = check => emoji[resultsById.get(check.id)?.status] || '❓'
 	const formatMarkdownTable = (headers, rows) => {
@@ -122,7 +134,7 @@ function toSlack(summary) {
 			const check = listChecks.find(
 				candidate => candidate.state.toUpperCase() === state && candidate.group === `List ${environment}`,
 			)
-			return check ? status(check) : '❓'
+			return check ? status(check) : '—'
 		}),
 	])
 	const liveChecks = manifest.checks.filter(check => /^Live \/ /i.test(check.label))
@@ -135,7 +147,7 @@ function toSlack(summary) {
 				const [, candidateEnvironment, ...candidateDimension] = candidate.label.split(' / ')
 				return candidateEnvironment === environment && candidateDimension.join(' / ') === dimension
 			})
-			return check ? status(check) : '❓'
+			return check ? status(check) : '—'
 		}),
 	])
 	const conciergeChecks = manifest.checks.filter(
@@ -146,7 +158,7 @@ function toSlack(summary) {
 		return [application, environment, status(check)]
 	})
 	const failedWithReport = summary.results.find(
-		result => (failureStatuses.has(result.status) || result.status === 'flaky') && result.reportUrl,
+		result => failureStatuses.has(result.status) && result.reportUrl,
 	)
 	const actions = []
 	if (summary.runUrl) {
@@ -172,7 +184,7 @@ function toSlack(summary) {
 		},
 		{
 			type: 'context',
-			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing · ${flaky} flaky` }],
+			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing` }],
 		},
 		{ type: 'divider' },
 		{

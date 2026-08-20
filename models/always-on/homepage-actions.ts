@@ -191,7 +191,13 @@ export class HomePageActions {
 		this.closeCartButtonGeneric = page.locator(
 			'button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer',
 		)
-		this.minimumNotMetLabel = page.locator('div.wpse-snacktoast').first()
+		this.minimumNotMetLabel = page
+			.locator('div.wpse-snacktoast:visible')
+			.filter({
+				hasText:
+					/(?:order|pickup|delivery) minimum (?:is )?not met|add\s+\$?\d+(?:\.\d+)?(?:\s+to check out|\s+or\b)/i,
+			})
+			.first()
 		this.continueToCheckoutButton = page.locator('a.checkout-button.button.alt.wc-forward')
 		this.productPageAddToCartButton = page.locator('button.wpse-button-primary.fasd_to_cart')
 		this.cartContinueShoppingButton = page.locator('a:has-text("Add more items")')
@@ -1122,9 +1128,9 @@ export class HomePageActions {
 
 	async liveRecAddProductsToCartUntilMinimumMet(page: Page) {
 		// Get all the products on the page
-		const products = await page.locator(
-			'li.product.type-product.product-type-simple.status-publish',
-		)
+		const products = page
+			.locator('li.product.type-product.product-type-simple.status-publish')
+			.filter({ has: page.locator('.woocommerce-loop-product__title') })
 
 		let i = 5
 		let firstProductAdded = false // Track if the first product has been added
@@ -1795,41 +1801,51 @@ export class HomePageActions {
 
 		// Loop through products to find one without "Medical Only" tag
 		while (i < productCount) {
-			// Get the current product
 			const product = products.nth(i)
+			const candidate = await product.evaluate(
+				(card, index) => ({
+					href:
+						card.querySelector<HTMLAnchorElement>('a.woocommerce-loop-product__link')
+							?.href || null,
+					isMedical: Boolean(card.querySelector('.wpse-metabadge.med-metabadge')),
+					name:
+						card
+							.querySelector('.woocommerce-loop-product__title')
+							?.textContent?.replace(/\s+/g, ' ')
+							.trim() || `product at index ${index}`,
+				}),
+				i,
+			)
 
-			// Check if the product has the "Medical Only" badge
-			const hasMedicalOnlyTag = (await product.locator('.wpse-metabadge.med-metabadge').count()) > 0
-
-			if (hasMedicalOnlyTag) {
-				const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-				console.log(`Skipping product "${productName}" (index ${i}) due to "Medical Only" tag.`)
+			if (candidate.isMedical) {
+				console.log(`Skipping product "${candidate.name}" (index ${i}) due to "Medical Only" tag.`)
 				i++
 				continue // Skip to next product
 			}
 
-			// Found a suitable product, proceed to add it
-			const productName = await product.locator('.woocommerce-loop-product__title').innerText()
-			const productCategory =
-				(await product.locator('.product-subheading').first().textContent())?.trim() || ''
-			// Broaden selector to any image or link in the product tile
-			const productClickInto = product.locator('.woocommerce-loop-product__link, img.wp-post-image, img').first()
+			if (!candidate.href) {
+				console.log(`Skipping product "${candidate.name}" (index ${i}) because it has no product URL.`)
+				i++
+				continue
+			}
 
-			console.log(`Adding product "${productName}" (index ${i}) to cart`)
-
-			await expect(productClickInto).toBeVisible()
-			await productClickInto.click()
-			// Short wait for product page to load (3s is fine here as it's a click-into)
-			await page.waitForTimeout(3000)
+			console.log(`Adding product "${candidate.name}" (index ${i}) to cart`)
+			await page.goto(candidate.href, { waitUntil: 'domcontentloaded' })
 
 			// grabs the first visible button whose name is "Add to cart" (case-insensitive)
 			const addToCart = page.getByRole('button', { name: /add to cart/i }).first()
 			// wait for it to appear...
 			await expect(addToCart).toBeVisible()
+			const productName =
+				(await page
+					.locator('h1.product_title, h1.entry-title')
+					.first()
+					.textContent())
+					?.replace(/\s+/g, ' ')
+					.trim() || candidate.name
 			await selectFirstAvailableDeliFlowerPortion(
 				page,
 				addToCart,
-				productCategory,
 				productName,
 			)
 			// …and click it

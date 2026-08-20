@@ -200,7 +200,10 @@ These will run in headless mode and will execute in a variety of browsers and vi
 All previously scheduled end-to-end and POS checks run from
 `.github/workflows/daily-system-health.yml` at 10:17 UTC each day. The workflow accounts for
 22 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
-treated as a failure so a cancelled runner or broken setup cannot appear healthy.
+treated as a failure so a cancelled runner or broken setup cannot appear healthy. A test that
+succeeds on retry is counted as passed and appears green. The question mark is reserved for a
+configured check whose result is missing or unrecognized; a dash means no check is configured for
+that table cell.
 
 The List Dev and List Stage checks remain serial because they switch shared domain state. Other
 independent smoke checks use limited parallelism. Individual Playwright jobs do not receive the

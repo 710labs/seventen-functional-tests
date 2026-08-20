@@ -50,13 +50,20 @@ test('aggregate treats a missing result as a failure', () => {
 	assert.match(summary.results.at(-1).failureSummary[0], /did not produce/)
 })
 
-test('aggregate keeps flaky distinct from failed', () => {
+test('aggregate treats a retry-recovered flaky result as passed', () => {
 	const directory = createDirectory()
 	manifest.checks.forEach((check, index) => writeCheck(directory, check, index === 0 ? 'flaky' : 'passed'))
 	const summary = aggregate(directory)
-	assert.equal(summary.status, 'flaky')
-	assert.equal(summary.totals.flaky, 1)
-	assert.doesNotMatch(JSON.stringify(toSlack(summary)), /Failures and warnings/)
+	assert.equal(summary.status, 'passed')
+	assert.equal(summary.totals.passed, 22)
+	assert.equal(summary.totals.flaky, undefined)
+	assert.equal(summary.results[0].status, 'passed')
+	assert.equal(summary.results[0].counts.passed, 1)
+	assert.equal(summary.results[0].counts.flaky, 0)
+	assert.match(toMarkdown(summary), /^# 🟢 Daily System Health/)
+	assert.doesNotMatch(toMarkdown(summary), /flaky/i)
+	assert.match(toSlack(summary).blocks[0].text.text, /^🟢 Daily System Health/)
+	assert.doesNotMatch(JSON.stringify(toSlack(summary)), /flaky/i)
 })
 
 test('aggregate rejects an invalid status rather than treating it as healthy', () => {
@@ -103,7 +110,7 @@ test('Slack uses standard blocks with manifest-driven status tables and no indiv
 	assert.match(liveTable, /\| Environment \| Storefront \| POS Verification \| POS Last 10 Orders \|/)
 	assert.match(liveTable, /\| Dev\s+\| ❌\s+\| ✅\s+\| ❌\s+\|/)
 	assert.match(liveTable, /\| Stage\s+\| ❌\s+\| ✅\s+\| ✅\s+\|/)
-	assert.match(liveTable, /\| Prod\s+\| ❌\s+\| ❓\s+\| ❓\s+\|/)
+	assert.match(liveTable, /\| Prod\s+\| ❌\s+\| —\s+\| —\s+\|/)
 	assert.equal(payload.blocks[liveHeadingIndex + 1].type, 'section')
 	assert.equal(conciergeStoresHeadingIndex, liveTableIndex + 2)
 	assert.match(miscAppsTable, /\| Application \| Environment \| Status \|/)

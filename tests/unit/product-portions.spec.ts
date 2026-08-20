@@ -43,7 +43,6 @@ test.describe('Deli Flower product portions', () => {
 		const selectedPortion = await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			'Deli Flower',
 			'Z',
 		)
 
@@ -62,7 +61,6 @@ test.describe('Deli Flower product portions', () => {
 		const selectedPortion = await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			'Deli Flower',
 			'Z',
 		)
 
@@ -83,7 +81,6 @@ test.describe('Deli Flower product portions', () => {
 		const selectedPortion = await selectFirstAvailableDeliFlowerPortion(
 			page,
 			addToCart,
-			'Deli Flower',
 			'Z',
 		)
 
@@ -92,25 +89,25 @@ test.describe('Deli Flower product portions', () => {
 		await expect(addToCart).toBeEnabled()
 	})
 
-	test('does not select a portion for other product categories', async ({ page }) => {
-		await setPortionMarkup(page)
+	test('does not select a portion when the product has no portion group', async ({ page }) => {
+		await page.setContent('<button>Add to cart</button>')
 		const addToCart = page.getByRole('button', { name: 'Add to cart' })
 
 		expect(
 			await selectFirstAvailableDeliFlowerPortion(
 				page,
 				addToCart,
-				'Flower',
 				'Rambutan #11',
 			),
 		).toBeNull()
-		await expect(page.getByRole('radio').first()).not.toBeChecked()
-		await expect(addToCart).toBeDisabled()
+		await expect(page.getByRole('radio')).toHaveCount(0)
+		await expect(addToCart).toBeEnabled()
 	})
 })
 
 test('re-adds the current Deli Flower product after registration', async ({ page }) => {
 	await page.setContent(`
+		<a class="wpse-cart-openerize">View cart</a>
 		<div class="summary entry-summary">
 			<h1 class="product_title entry-title">Z</h1>
 			<p class="product-subheading">Deli Flower</p>
@@ -158,4 +155,45 @@ test('re-adds the current Deli Flower product after registration', async ({ page
 	await expect(page.getByRole('button', { name: 'Add to cart' })).toBeEnabled()
 	await expect(page.locator('#cartDrawer')).toBeVisible()
 	await expect(page.locator('#cartDrawer')).toContainText('Z')
+})
+
+test('does not re-add the product when the cart survives registration', async ({ page }) => {
+	await page.setContent(`
+		<a class="wpse-cart-openerize">View cart <span>1</span></a>
+		<div class="summary entry-summary">
+			<h1 class="product_title entry-title">Z</h1>
+			<fieldset data-portion-group="portionId_pickup_80534_8_1">
+				<label>
+					<input
+						type="radio"
+						class="fasd-portion-radio"
+						name="portionId_pickup_80534_8_1"
+						data-weight-label="28g"
+					/>
+					Ounce
+				</label>
+			</fieldset>
+			<button data-portion-group="portionId_pickup_80534_8_1" disabled>Add to cart</button>
+		</div>
+		<div class="wpse-drawer" data-module="cart-response">
+			<p>Z</p>
+		</div>
+		<script>
+			window.addClicks = 0
+			document.querySelector('button').addEventListener('click', () => {
+				window.addClicks += 1
+			})
+		</script>
+	`)
+
+	const homePageActions = new LiveNonProdHomePageActions(page)
+	await homePageActions.addCurrentProductToCartAfterRegistration(page)
+
+	await expect(page.getByRole('radio')).not.toBeChecked()
+	expect(
+		await page.evaluate(
+			() => (window as typeof window & { addClicks: number }).addClicks,
+		),
+	).toBe(0)
+	await expect(page.locator('.wpse-drawer[data-module="cart-response"]')).toContainText('Z')
 })

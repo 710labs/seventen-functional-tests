@@ -973,7 +973,6 @@ export class LiveNonProdCartFlow {
 			await selectFirstAvailableDeliFlowerPortion(
 				this.page,
 				storefrontSelection.addControl,
-				candidate.category,
 				candidate.name,
 			)
 			await storefrontSelection.addControl.click({ force: true })
@@ -1014,7 +1013,6 @@ export class LiveNonProdCartFlow {
 		await selectFirstAvailableDeliFlowerPortion(
 			this.page,
 			productPageSelection.addControl,
-			candidate.category,
 			candidate.name,
 		)
 		await productPageSelection.addControl.click({ force: true })

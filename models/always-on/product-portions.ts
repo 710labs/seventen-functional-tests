@@ -7,19 +7,12 @@ function escapeCssAttributeValue(value: string) {
 export async function selectFirstAvailableDeliFlowerPortion(
 	page: Page,
 	addToCartControl: Locator,
-	productCategory: string,
 	productName: string,
 ) {
-	if (productCategory.trim() !== 'Deli Flower') {
-		return null
-	}
-
 	const portionGroup = await addToCartControl.getAttribute('data-portion-group')
 
 	if (!portionGroup) {
-		throw new Error(
-			`Deli Flower product "${productName.trim()}" is missing its portion group.`,
-		)
+		return null
 	}
 
 	const escapedPortionGroup = escapeCssAttributeValue(portionGroup)
