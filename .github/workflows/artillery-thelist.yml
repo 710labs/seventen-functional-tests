@@ -489,7 +489,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute load tests on AWS
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.31
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ steps.resolve_load_preset.outputs.fargate_workers }} --cpu ${{ steps.resolve_load_preset.outputs.fargate_cpu }} --memory ${{ steps.resolve_load_preset.outputs.fargate_memory }} --dotenv artillery/artillery.fargate.env ${{ steps.prepare_artillery_config.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ steps.resolve_load_preset.outputs.env }}/${{ steps.resolve_load_preset.outputs.load_pattern }}/preset-${{ steps.resolve_load_preset.outputs.load_size }}/${{ steps.resolve_load_preset.outputs.total_topology_tag }}/${{ steps.resolve_load_preset.outputs.per_worker_topology_tag }}/${{ steps.resolve_load_preset.outputs.duration }}seconds/${{ steps.resolve_load_preset.outputs.fargate_workers }}workers/${{ steps.resolve_load_preset.outputs.fargate_cpu }}cpu-${{ steps.resolve_load_preset.outputs.fargate_memory }}gb-per-worker/total-${{ steps.resolve_load_preset.outputs.total_fargate_cpu }}cpu-${{ steps.resolve_load_preset.outputs.total_fargate_memory }}gb/${{ steps.resolve_load_preset.outputs.fargate_capacity }}
         env:

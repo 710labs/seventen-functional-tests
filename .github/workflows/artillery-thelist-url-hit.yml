@@ -122,7 +122,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute load tests on AWS
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.31
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --dotenv artillery/artillery-thelist-url-hit.fargate.env ${{ env.ARTILLERY_CONFIG }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/thelist-url-hit/${{ github.event.inputs.virtual_users }}VU/${{ github.event.inputs.duration }}seconds
         env:

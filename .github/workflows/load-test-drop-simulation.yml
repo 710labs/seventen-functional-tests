@@ -591,7 +591,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute realqueue browsers on AWS Fargate
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.32
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.realqueue_workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/realqueue/${{ needs.plan.outputs.realqueue_browsers }}browsers/${{ needs.plan.outputs.realqueue_workers }}workers/queuewait-${{ needs.plan.outputs.queue_wait_minutes }}m/gate-${{ needs.plan.outputs.gate_tag }}/orders-${{ needs.plan.outputs.place_orders }}/${{ needs.plan.outputs.fargate_capacity }}
         env:
@@ -718,7 +718,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute HTTP entry on AWS Fargate
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.32
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 1 --memory 2 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/http-entry/gate-${{ needs.plan.outputs.gate_tag }}/${{ needs.plan.outputs.fargate_capacity }}
         env:
@@ -855,7 +855,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute bypass browsers on AWS Fargate
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.32
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.bypass_workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/bypass/${{ needs.plan.outputs.bypass_browsers }}browsers/${{ needs.plan.outputs.bypass_workers }}workers/gate-${{ needs.plan.outputs.gate_tag }}/orders-${{ needs.plan.outputs.place_orders }}/${{ needs.plan.outputs.fargate_capacity }}
         env:
@@ -990,7 +990,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute HTTP funnel on AWS Fargate
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.32
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 2 --memory 4 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv ${{ steps.prepare_artillery.outputs.dotenv }} --packages loadtest/package.json ${{ steps.prepare_artillery.outputs.config }} --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/http-funnel/gate-${{ needs.plan.outputs.gate_tag }}/${{ needs.plan.outputs.fargate_capacity }}
         env:

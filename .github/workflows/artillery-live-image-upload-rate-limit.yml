@@ -168,7 +168,7 @@ jobs:
           echo "path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Execute Live image upload rate-limit test on AWS
-        uses: artilleryio/action-cli@v1
+        uses: artilleryio/action-cli@v2.0.31
         with:
           command: run-fargate --region ${{ secrets.S3_REGION }} --count 1 --cpu 4 --memory 8 ${{ env.ARTILLERY_FARGATE_SPOT_FLAG }} --dotenv artillery/artillery-live-image-upload-rate-limit.fargate.env artillery/artillery-live-image-upload-rate-limit.yml --output ${{ steps.artillery_report.outputs.path }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ github.event.inputs.env }}/live-image-upload-rate-limit/one-account/${{ github.event.inputs.upload_attempts || '70' }}attempts/${{ github.event.inputs.window_seconds || '300' }}seconds-window/${{ github.event.inputs.assert_rate_limit || 'false' }}-assert
         env:
