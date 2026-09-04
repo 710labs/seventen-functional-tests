@@ -971,6 +971,88 @@ async function selectAcuitySlot(page) {
 	await page.locator('#svntnAcuityTimeChoices >> .acuityChoice').first().click()
 }
 
+async function acceptPickupCommitment(page) {
+	const pickupCommitment = page.locator('#pickup_commitment').first()
+	const visible = await pickupCommitment
+		.waitFor({ state: 'visible', timeout: 2000 })
+		.then(() => true)
+		.catch(() => false)
+
+	if (!visible) {
+		return false
+	}
+
+	await waitForLocatorEnabled(page, pickupCommitment, 'Pickup commitment checkbox', 30000)
+
+	if (!(await pickupCommitment.isChecked())) {
+		await pickupCommitment.check()
+	}
+
+	if (!(await pickupCommitment.isChecked())) {
+		throw new Error('Pickup commitment checkbox should be checked before placing the order.')
+	}
+
+	return true
+}
+
+async function waitForCheckoutReadyToSubmit(page, placeOrderButton, timeoutMs = 60000) {
+	const deadline = Date.now() + timeoutMs
+	let idleSince = 0
+
+	while (Date.now() < deadline) {
+		const visible = await placeOrderButton.isVisible().catch(() => false)
+		const enabled = await placeOrderButton.isEnabled().catch(() => false)
+		const visibleOverlayCount = await page
+			.locator('.blockUI.blockOverlay:visible')
+			.count()
+			.catch(() => 1)
+
+		if (visible && enabled && visibleOverlayCount === 0) {
+			await placeOrderButton
+				.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'center' }))
+				.catch(() => {})
+
+			const receivesPointerEvents = await placeOrderButton
+				.evaluate(button => {
+					const box = button.getBoundingClientRect()
+					const target = document.elementFromPoint(
+						box.left + box.width / 2,
+						box.top + box.height / 2,
+					)
+
+					return target === button || button.contains(target)
+				})
+				.catch(() => false)
+
+			if (receivesPointerEvents) {
+				if (!idleSince) {
+					idleSince = Date.now()
+				} else if (Date.now() - idleSince >= 500) {
+					return
+				}
+			} else {
+				idleSince = 0
+			}
+		} else {
+			idleSince = 0
+		}
+
+		await page.waitForTimeout(100)
+	}
+
+	throw new Error(
+		'The Place order button remained blocked by checkout updates or another page element.',
+	)
+}
+
+function isCheckoutSubmissionUrl(value) {
+	try {
+		return new URL(value).searchParams.get('wc-ajax') === 'checkout'
+	} catch (error) {
+		return false
+	}
+}
+
 async function checkout(page, step) {
 	await step('Select Acuity Slot', async () => {
 		await selectAcuitySlot(page)
@@ -987,8 +1069,29 @@ async function checkout(page, step) {
 			return
 		}
 
-		await placeOrderButton.click()
-		await page.waitForLoadState('domcontentloaded').catch(() => {})
+		await acceptPickupCommitment(page)
+		await waitForCheckoutReadyToSubmit(page, placeOrderButton)
+
+		const [checkoutResponse] = await Promise.all([
+			page.waitForResponse(response => isCheckoutSubmissionUrl(response.url()), {
+				timeout: 60000,
+			}),
+			placeOrderButton.click({ timeout: 60000 }),
+		])
+		const checkoutResult = await checkoutResponse.json().catch(() => null)
+
+		if (
+			!checkoutResponse.ok() ||
+			(checkoutResult?.result && checkoutResult.result !== 'success')
+		) {
+			throw new Error(
+				`Checkout submission failed with HTTP ${checkoutResponse.status()}${
+					checkoutResult?.result ? ` and result ${checkoutResult.result}` : ''
+				}.`,
+			)
+		}
+
+		await page.waitForURL(/\/checkout\/order-received\//, { timeout: 60000 })
 		await captureScreenshot(page, 'after-place-order')
 	})
 }
@@ -1083,8 +1186,11 @@ async function storeFunnelRealQueue(page, vuContext, events, test) {
 module.exports = {
 	RECAPTCHA_BYPASS_COOKIE_NAME,
 	VIP_CHECKER_COOKIE_NAME,
+	acceptPickupCommitment,
 	buildCookies,
+	isCheckoutSubmissionUrl,
 	runFunnel,
 	storeFunnelBypass,
 	storeFunnelRealQueue,
+	waitForCheckoutReadyToSubmit,
 }
