@@ -115,7 +115,7 @@ jobs:
         if: inputs.mode == 'upload'
         env:
           ACUITY_HEADLESS: 'true'
-          ACUITY_LOGIN_METHOD: squarespace
+          ACUITY_LOGIN_METHOD: ${{ vars.ACUITY_LOGIN_METHOD || secrets.ACUITY_LOGIN_METHOD || 'squarespace' }}
           ACUITY_AUTH_DEBUG_ARTIFACTS: 'true'
           ACUITY_AUTH_ARTIFACT_DIR: test-results/acuity-auth
           ACUITY_STORAGE_STATE_FILE: .auth/acuity-storage-state.json

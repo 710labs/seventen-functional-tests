@@ -163,7 +163,7 @@ QA_ENDPOINT=/wp-json/seventen-qa/v1/ (fixed REST namespace; not a secret)
 RECAPTCHA_BYPASS: Optional shared secret for the `qa_wf_captcha_bypass` cookie used to bypass Wordfence reCAPTCHA in QA automation.
 ACUITY_USER:Used to automate creating acuity schedule slots. 
 ACUITY_PASSWORD:Used to automate creating acuity schedule slots. 
-ACUITY_LOGIN_METHOD:Optional Acuity login-provider choice. Defaults to `squarespace`; use `acuity` only for a legacy Acuity login.
+ACUITY_LOGIN_METHOD: Optional Acuity login-provider choice. Configure it as a GitHub Actions repository variable (preferred) or secret. Defaults to `squarespace`; use `acuity` only for a legacy Acuity login.
 ```
 via Command Line 
 ```powershell
