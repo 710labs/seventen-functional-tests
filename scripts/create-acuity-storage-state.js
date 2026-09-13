@@ -14,9 +14,12 @@ const loginAttemptSettleTimeoutMs = 15 * 1000
 const pageLoadSettleTimeoutMs = 10 * 1000
 const loginTypingDelayMs = 75
 const acuityNavigationTimeoutMs = 30 * 1000
-const acuityAuthFlowMaxSteps = 8
+const acuityAuthFlowMaxSteps = 12
 const acuityAuthStateTimeoutMs = 1500
 const defaultAcuityLoginMethod = 'squarespace'
+const acuityAccountName = '710 Labs'
+const acuityAccountDomain = 'https://710labs.as.me/'
+const acuityAccountWebsiteId = '61329f74039b125588bb305f'
 const outputPath = process.env.ACUITY_STORAGE_STATE_FILE || '.auth/acuity-storage-state.json'
 const authArtifactDir = process.env.ACUITY_AUTH_ARTIFACT_DIR || path.join('test-results', 'acuity-auth')
 const captureAuthArtifacts =
@@ -53,6 +56,26 @@ function remainingMs(deadline) {
 
 function diagnostic(message) {
 	return String(message).replace(/\s+/g, ' ').trim().slice(0, 300)
+}
+
+function normalizedPageText(value) {
+	return String(value).replace(/\s+/g, ' ').trim()
+}
+
+function isLoggedOutNoticeText(value) {
+	const normalizedText = normalizedPageText(value)
+	return /we(?:'|’)ve logged you out due to inactivity|automatically logged out after a period of inactivity/i.test(
+		normalizedText,
+	)
+}
+
+function isOptionalEmailVerificationText(value) {
+	const normalizedText = normalizedPageText(value)
+	return /verify your email address/i.test(normalizedText)
+}
+
+function isAcuityAccountSelectionText(value) {
+	return /select an account to continue/i.test(normalizedPageText(value))
 }
 
 function escapeHtml(value) {
@@ -420,6 +443,10 @@ async function dismissAcuityInterruptions(page) {
 	await page.keyboard.press('Escape').catch(() => undefined)
 
 	for (const selector of [
+		'[role="alert"] button[aria-label="Close"]',
+		'.alert button.close',
+		'.alert [data-dismiss="alert"]',
+		'[class*="notice"] button[aria-label="Close"]',
 		'button[aria-label="Close"]',
 		'[aria-label="Close"]',
 		'button:has-text("No thanks")',
@@ -433,6 +460,13 @@ async function dismissAcuityInterruptions(page) {
 			await target.click({ timeout: 1500 }).catch(() => undefined)
 		}
 	}
+}
+
+async function pageBodyText(page, timeoutMs = 2000) {
+	return page
+		.locator('body')
+		.innerText({ timeout: timeoutMs })
+		.catch(() => '')
 }
 
 async function gotoAcuityPage(page, url, context) {
@@ -665,6 +699,71 @@ async function continueWithConfiguredLoginMethod(page, timeoutMs) {
 	return selectedMethod
 }
 
+async function skipOptionalEmailVerification(page, timeoutMs) {
+	const bodyText = await pageBodyText(page, Math.min(timeoutMs, 2000))
+	if (!isOptionalEmailVerificationText(bodyText)) {
+		return false
+	}
+
+	const skipButton = await firstVisibleLocator(
+		[
+			page.getByRole('button', { name: /^skip$/i }),
+			page.getByRole('link', { name: /^skip$/i }),
+			page.locator('[role="button"]:has-text("SKIP")'),
+			page.locator('button:has-text("SKIP"), a:has-text("SKIP")'),
+			page.getByText(/^skip$/i),
+		],
+		Math.min(timeoutMs, acuityAuthStateTimeoutMs),
+	)
+	if (!skipButton) {
+		throw new Error(
+			'Squarespace displayed the optional email-verification screen but did not expose its Skip control.',
+		)
+	}
+
+	console.log('Skipping optional Squarespace email verification.')
+	await skipButton.click({ timeout: timeoutMs })
+	await waitForAuthTransition(page, timeoutMs)
+	return true
+}
+
+async function selectAcuityAccount(page, timeoutMs) {
+	const bodyText = await pageBodyText(page, Math.min(timeoutMs, 2000))
+	if (!isAcuityAccountSelectionText(bodyText)) {
+		return false
+	}
+
+	const accountNamePattern = new RegExp(`^${acuityAccountName}$`, 'i')
+	const accountNameLocator = page
+		.locator('.scheduling-instance__card-name')
+		.filter({ hasText: accountNamePattern })
+	const accountCard = await firstVisibleLocator(
+		[
+			page.locator(
+				`.scheduling-instance__card[onclick*="website_id=${acuityAccountWebsiteId}"]`,
+			),
+			page.getByRole('button', { name: /710 Labs/i }),
+			page.locator('.scheduling-instance__card').filter({ has: accountNameLocator }),
+		],
+		Math.min(timeoutMs, acuityAuthStateTimeoutMs),
+	)
+
+	if (!accountCard) {
+		const availableAccounts = await page
+			.locator('.scheduling-instance__card-name')
+			.allTextContents()
+			.catch(() => [])
+		throw new Error(
+			`Acuity displayed its account chooser, but the ${acuityAccountName} account (${acuityAccountDomain}) was not available. Available accounts: ${availableAccounts.join(', ') || 'none detected'}.`,
+		)
+	}
+
+	console.log(`Selecting the ${acuityAccountName} Acuity account (${acuityAccountDomain}).`)
+	await accountCard.click({ timeout: timeoutMs })
+	await waitForAuthTransition(page, timeoutMs)
+	return true
+}
+
 async function isAcuityEditorReady(page, timeoutMs = acuityAuthStateTimeoutMs) {
 	const offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
 	return offerClassButton
@@ -674,20 +773,26 @@ async function isAcuityEditorReady(page, timeoutMs = acuityAuthStateTimeoutMs) {
 }
 
 async function authPageDescription(page) {
-	const bodyText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => '')
-	const normalizedText = bodyText.replace(/\s+/g, ' ').trim()
+	const bodyText = await pageBodyText(page)
+	const normalizedText = normalizedPageText(bodyText)
 
-	if (isSquarespaceLoginUrl(page.url())) {
-		return 'Squarespace login page'
+	if (isOptionalEmailVerificationText(normalizedText)) {
+		return 'optional Squarespace email-verification page'
 	}
-	if (/automatically logged out after a period of inactivity/i.test(normalizedText)) {
+	if (isAcuityAccountSelectionText(normalizedText)) {
+		return 'Acuity account-selection page'
+	}
+	if (isLoggedOutNoticeText(normalizedText)) {
 		return 'expired Acuity session page'
+	}
+	if (/continue with squarespace|continue with acuity scheduling/i.test(normalizedText)) {
+		return 'Acuity login-method choice page'
 	}
 	if (/log in to acuity scheduling/i.test(normalizedText)) {
 		return 'Acuity login page'
 	}
-	if (/continue with squarespace|continue with acuity scheduling/i.test(normalizedText)) {
-		return 'Acuity login-method choice page'
+	if (isSquarespaceLoginUrl(page.url())) {
+		return 'Squarespace login page'
 	}
 
 	return null
@@ -704,11 +809,28 @@ async function completeAcuityAuthentication(
 	const stageCounts = new Map()
 	let revisitedEditor = false
 	let selectedLoginMethod = null
+	let selectedAccount = false
 	let submittedCredentials = false
 
 	for (let step = 1; step <= acuityAuthFlowMaxSteps && remainingMs(deadline) > 0; step++) {
 		if (await isAcuityEditorReady(page)) {
 			return null
+		}
+
+		const stepTimeoutMs = Math.max(
+			1,
+			Math.min(loginAttemptSettleTimeoutMs, remainingMs(deadline)),
+		)
+
+		await dismissAcuityInterruptions(page)
+
+		if (await skipOptionalEmailVerification(page, stepTimeoutMs)) {
+			continue
+		}
+
+		if (await selectAcuityAccount(page, stepTimeoutMs)) {
+			selectedAccount = true
+			continue
 		}
 
 		if (isAuthChallengeUrl(page.url())) {
@@ -730,18 +852,11 @@ async function completeAcuityAuthentication(
 			return pageMessage
 		}
 
-		const stepTimeoutMs = Math.max(
-			1,
-			Math.min(loginAttemptSettleTimeoutMs, remainingMs(deadline)),
-		)
-
 		const continuedLoginMethod = await continueWithConfiguredLoginMethod(page, stepTimeoutMs)
 		if (continuedLoginMethod) {
 			selectedLoginMethod = continuedLoginMethod
 			continue
 		}
-
-		await dismissAcuityInterruptions(page)
 
 		const emailInput = await authEmailInput(page)
 		const passwordInput = await authPasswordInput(page)
@@ -787,6 +902,11 @@ async function completeAcuityAuthentication(
 
 		if (!revisitedEditor) {
 			revisitedEditor = true
+			if (selectedAccount) {
+				console.log(
+					`${acuityAccountName} account selected; opening the appointment editor to verify the authenticated session.`,
+				)
+			}
 			await gotoAcuityPage(page, verificationUrl, 'Returning to Acuity after login')
 			continue
 		}
@@ -942,6 +1062,9 @@ if (require.main === module) {
 module.exports = {
 	acuityLoginMethod,
 	authPageDescription,
+	isAcuityAccountSelectionText,
 	isAcuityUrl,
+	isLoggedOutNoticeText,
+	isOptionalEmailVerificationText,
 	isSquarespaceLoginUrl,
 }
