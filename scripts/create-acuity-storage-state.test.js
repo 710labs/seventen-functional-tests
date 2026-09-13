@@ -4,11 +4,13 @@ const test = require('node:test')
 const {
 	acuityLoginMethod,
 	authPageDescription,
+	authRetryMessage,
 	isAcuityAccountSelectionText,
 	isAcuityUrl,
 	isLoggedOutNoticeText,
 	isOptionalEmailVerificationText,
 	isSquarespaceLoginUrl,
+	loginMaxAttempts,
 } = require('./create-acuity-storage-state')
 
 function pageWith(url, bodyText) {
@@ -100,4 +102,38 @@ test('uses Squarespace by default and supports an explicit legacy Acuity method'
 			process.env.ACUITY_LOGIN_METHOD = originalMethod
 		}
 	}
+})
+
+test('retries Acuity authentication no more than three times', () => {
+	const originalAttempts = process.env.ACUITY_LOGIN_MAX_ATTEMPTS
+
+	try {
+		delete process.env.ACUITY_LOGIN_MAX_ATTEMPTS
+		assert.equal(loginMaxAttempts(), 3)
+
+		process.env.ACUITY_LOGIN_MAX_ATTEMPTS = '2'
+		assert.equal(loginMaxAttempts(), 2)
+
+		process.env.ACUITY_LOGIN_MAX_ATTEMPTS = '5'
+		assert.equal(loginMaxAttempts(), 3)
+	} finally {
+		if (originalAttempts === undefined) {
+			delete process.env.ACUITY_LOGIN_MAX_ATTEMPTS
+		} else {
+			process.env.ACUITY_LOGIN_MAX_ATTEMPTS = originalAttempts
+		}
+	}
+})
+
+test('reports credential re-entry only while another auth attempt remains', () => {
+	const futureDeadline = Date.now() + 60_000
+
+	assert.match(
+		authRetryMessage(1, 3, futureDeadline, 'was rejected'),
+		/starting a fresh login and re-entering both credentials/,
+	)
+	assert.equal(
+		authRetryMessage(3, 3, futureDeadline, 'was rejected'),
+		'was rejected; no retries remain.',
+	)
 })

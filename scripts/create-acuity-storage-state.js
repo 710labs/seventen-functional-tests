@@ -8,7 +8,7 @@ const schedulingFrameSelector = '[data-test="scheduling"], [data-test="schedulin
 const offerClassButtonSelector = '#offer-class-btn, [data-testid="offer-class"]'
 const defaultVerificationUrl =
 	'https://secure.acuityscheduling.com/appointments.php?action=editAppointmentType&id=74252273'
-const defaultLoginMaxAttempts = 5
+const defaultLoginMaxAttempts = 3
 const defaultLoginRetryTimeoutMs = defaultLoginMaxAttempts * 30 * 1000
 const loginAttemptSettleTimeoutMs = 15 * 1000
 const pageLoadSettleTimeoutMs = 10 * 1000
@@ -46,8 +46,16 @@ function loginRetryTimeoutMs() {
 function loginMaxAttempts() {
 	const configuredAttempts = Number.parseInt(process.env.ACUITY_LOGIN_MAX_ATTEMPTS || '', 10)
 	return Number.isFinite(configuredAttempts) && configuredAttempts > 0
-		? configuredAttempts
+		? Math.min(configuredAttempts, defaultLoginMaxAttempts)
 		: defaultLoginMaxAttempts
+}
+
+function authRetryMessage(attempt, maxAttempts, deadline, action) {
+	if (attempt < maxAttempts && remainingMs(deadline) > 0) {
+		return `${action}; starting a fresh login and re-entering both credentials.`
+	}
+
+	return `${action}; no retries remain.`
 }
 
 function remainingMs(deadline) {
@@ -997,7 +1005,7 @@ async function createStorageState() {
 					attemptRecord.status = 'login-rejected'
 					attemptRecord.problem = loginProblem
 					console.log(
-						`Acuity auth attempt ${attempts} was rejected; retrying while time remains. Message: ${diagnostic(loginProblem)}`,
+						`Acuity auth attempt ${attempts}/${maxAttempts} ${authRetryMessage(attempts, maxAttempts, deadline, 'was rejected')} Message: ${diagnostic(loginProblem)}`,
 					)
 					continue
 				}
@@ -1016,7 +1024,7 @@ async function createStorageState() {
 				attemptRecord.status = 'not-verified'
 				attemptRecord.problem = sessionProblem
 				console.log(
-					`Acuity auth attempt ${attempts} did not verify; retrying while time remains. Message: ${diagnostic(sessionProblem)}`,
+					`Acuity auth attempt ${attempts}/${maxAttempts} ${authRetryMessage(attempts, maxAttempts, deadline, 'did not verify')} Message: ${diagnostic(sessionProblem)}`,
 				)
 			} catch (error) {
 				lastProblem = error instanceof Error ? error.message : String(error)
@@ -1027,7 +1035,7 @@ async function createStorageState() {
 					throw error
 				}
 				console.log(
-					`Acuity auth attempt ${attempts} failed; retrying while time remains. Message: ${diagnostic(lastProblem)}`,
+					`Acuity auth attempt ${attempts}/${maxAttempts} ${authRetryMessage(attempts, maxAttempts, deadline, 'failed')} Message: ${diagnostic(lastProblem)}`,
 				)
 			} finally {
 				await closeContextWithArtifacts(context, page, attemptRecord, {
@@ -1062,9 +1070,11 @@ if (require.main === module) {
 module.exports = {
 	acuityLoginMethod,
 	authPageDescription,
+	authRetryMessage,
 	isAcuityAccountSelectionText,
 	isAcuityUrl,
 	isLoggedOutNoticeText,
 	isOptionalEmailVerificationText,
 	isSquarespaceLoginUrl,
+	loginMaxAttempts,
 }
