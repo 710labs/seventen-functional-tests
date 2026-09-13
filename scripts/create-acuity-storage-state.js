@@ -14,6 +14,9 @@ const loginAttemptSettleTimeoutMs = 15 * 1000
 const pageLoadSettleTimeoutMs = 10 * 1000
 const loginTypingDelayMs = 75
 const acuityNavigationTimeoutMs = 30 * 1000
+const acuityAuthFlowMaxSteps = 8
+const acuityAuthStateTimeoutMs = 1500
+const defaultAcuityLoginMethod = 'squarespace'
 const outputPath = process.env.ACUITY_STORAGE_STATE_FILE || '.auth/acuity-storage-state.json'
 const authArtifactDir = process.env.ACUITY_AUTH_ARTIFACT_DIR || path.join('test-results', 'acuity-auth')
 const captureAuthArtifacts =
@@ -206,6 +209,29 @@ function isSquarespaceLoginUrl(url) {
 		normalizedUrl.includes('login.squarespace.com') ||
 		(normalizedUrl.includes('squarespace.com') && normalizedUrl.includes('/login'))
 	)
+}
+
+function isAcuityUrl(url) {
+	try {
+		const hostname = new URL(url).hostname
+		return hostname === 'acuityscheduling.com' || hostname.endsWith('.acuityscheduling.com')
+	} catch {
+		return false
+	}
+}
+
+function acuityLoginMethod() {
+	const configuredMethod = String(
+		process.env.ACUITY_LOGIN_METHOD || defaultAcuityLoginMethod,
+	).toLowerCase()
+
+	if (!['acuity', 'squarespace'].includes(configuredMethod)) {
+		throw new Error(
+			`Unsupported ACUITY_LOGIN_METHOD: ${configuredMethod}. Expected "squarespace" or "acuity".`,
+		)
+	}
+
+	return configuredMethod
 }
 
 function isAuthChallengeUrl(url) {
@@ -426,7 +452,7 @@ async function gotoAcuityPage(page, url, context) {
 }
 
 async function loginPageMessage(page) {
-	if (!isSquarespaceLoginUrl(page.url())) {
+	if (!isSquarespaceLoginUrl(page.url()) && !isAcuityUrl(page.url())) {
 		return null
 	}
 
@@ -438,8 +464,13 @@ async function loginPageMessage(page) {
 
 	const hasLoginProblem = [
 		'captcha',
+		"couldn't find",
+		'couldn’t find',
+		"doesn't exist",
+		'doesn’t exist',
 		'incorrect',
 		'invalid',
+		'not recognized',
 		'try again',
 		'two-factor',
 		'unable to log in',
@@ -449,83 +480,329 @@ async function loginPageMessage(page) {
 	return hasLoginProblem ? normalizedText.slice(0, 300) : null
 }
 
-async function submitAcuityLogin(page, acuityUser, acuityPassword, timeoutMs) {
-	const emailInput = page
-		.locator('[placeholder="name\\@example\\.com"], input[type="email"], input[name="email"]')
-		.first()
-	const passwordInput = page.locator('[placeholder="Password"], input[type="password"]').first()
-	const loginButton = page
-		.locator('[data-test="login-button"], button:has-text("Log In"), button:has-text("Log in")')
-		.first()
-	const normalizedAcuityUser = acuityUser.trim()
-
-	await emailInput.waitFor({ state: 'visible', timeout: timeoutMs })
-	await emailInput.fill('', { timeout: timeoutMs })
-	await emailInput.pressSequentially(normalizedAcuityUser, {
-		delay: loginTypingDelayMs,
-		timeout: timeoutMs,
-	})
-	await passwordInput.fill('', { timeout: timeoutMs })
-	await passwordInput.pressSequentially(acuityPassword, {
-		delay: loginTypingDelayMs,
-		timeout: timeoutMs,
-	})
-	await page.waitForTimeout(300)
-
-	const enteredEmail = await emailInput.inputValue({ timeout: timeoutMs })
-	if (enteredEmail !== normalizedAcuityUser) {
-		throw new Error(
-			`Acuity username field did not match the configured username after typing. Expected length ${normalizedAcuityUser.length}, actual length ${enteredEmail.length}.`,
-		)
-	}
-
-	const enteredPassword = await passwordInput.inputValue({ timeout: timeoutMs })
-	if (enteredPassword !== acuityPassword) {
-		throw new Error(
-			`Acuity password field did not match the configured password after typing. Expected length ${acuityPassword.length}, actual length ${enteredPassword.length}.`,
-		)
-	}
-
-	await loginButton.click({ timeout: timeoutMs })
-}
-
-async function waitForLoginAttempt(page, timeoutMs) {
-	await page
-		.waitForURL(url => !isSquarespaceLoginUrl(url.toString()), {
-			timeout: timeoutMs,
-		})
-		.catch(() => undefined)
-
-	await page
-		.waitForLoadState('networkidle', {
-			timeout: Math.min(loginAttemptSettleTimeoutMs, timeoutMs),
-		})
-		.catch(() => undefined)
-
-	const pageMessage = await loginPageMessage(page)
-	if (pageMessage) {
-		if (isAuthChallengeMessage(pageMessage)) {
-			await failWithPageContext(
-				page,
-				`Squarespace returned an authentication challenge that cannot be completed in CI. Login page message: ${pageMessage}`,
-			)
+async function firstVisibleLocator(locators, timeoutMs = acuityAuthStateTimeoutMs) {
+	for (const locator of locators) {
+		const candidate = locator.first()
+		if (await candidate.isVisible({ timeout: timeoutMs }).catch(() => false)) {
+			return candidate
 		}
-
-		return pageMessage
-	}
-
-	if (isSquarespaceLoginUrl(page.url())) {
-		return 'Still on the Squarespace login page after submitting credentials.'
 	}
 
 	return null
 }
 
+async function authEmailInput(page) {
+	return firstVisibleLocator([
+		page.getByRole('textbox', { name: /^(username|email|email address)$/i }),
+		page.locator('[placeholder="name\\@example\\.com"]'),
+		page.locator('input[type="email"]'),
+		page.locator('input[name="username"]'),
+		page.locator('input[name="email"]'),
+		page.locator('input[autocomplete="username"]'),
+	])
+}
+
+async function authPasswordInput(page) {
+	return firstVisibleLocator([
+		page.getByRole('textbox', { name: /^password$/i }),
+		page.locator('[placeholder="Password"]'),
+		page.locator('input[type="password"]'),
+		page.locator('input[autocomplete="current-password"]'),
+	])
+}
+
+async function authSubmitButton(page, names) {
+	return firstVisibleLocator([
+		page.locator('[data-test="login-button"]'),
+		page.getByRole('button', { name: names }),
+		page.locator('button[type="submit"]'),
+		page.locator('input[type="submit"]'),
+	])
+}
+
+async function fillAndVerifyAuthInput(input, value, label, timeoutMs) {
+	await input.fill('', { timeout: timeoutMs })
+	await input.pressSequentially(value, {
+		delay: loginTypingDelayMs,
+		timeout: timeoutMs,
+	})
+
+	const enteredValue = await input
+		.inputValue({ timeout: Math.min(timeoutMs, acuityAuthStateTimeoutMs) })
+		.catch(() => null)
+	if (enteredValue === null) {
+		return false
+	}
+	if (enteredValue !== value) {
+		throw new Error(
+			`Acuity ${label} field did not match the configured value after typing. Expected length ${value.length}, actual length ${enteredValue.length}.`,
+		)
+	}
+
+	return true
+}
+
+async function waitForAuthTransition(page, timeoutMs) {
+	await page
+		.waitForLoadState('domcontentloaded', {
+			timeout: Math.min(timeoutMs, pageLoadSettleTimeoutMs),
+		})
+		.catch(() => undefined)
+	await page
+		.waitForLoadState('networkidle', {
+			timeout: Math.min(timeoutMs, pageLoadSettleTimeoutMs),
+		})
+		.catch(() => undefined)
+	await page.waitForTimeout(500).catch(() => undefined)
+}
+
+async function submitEmailFirstLoginStep(page, emailInput, acuityUser, timeoutMs) {
+	const normalizedAcuityUser = acuityUser.trim()
+	const inputRemainedVisible = await fillAndVerifyAuthInput(
+		emailInput,
+		normalizedAcuityUser,
+		'username',
+		timeoutMs,
+	)
+	if (!inputRemainedVisible) {
+		await waitForAuthTransition(page, timeoutMs)
+		return
+	}
+
+	const nextButton = await authSubmitButton(page, /^(next|continue)$/i)
+	if (!nextButton) {
+		throw new Error('Acuity email login step did not expose a Next or Continue button.')
+	}
+
+	await page.waitForTimeout(300)
+	await nextButton.click({ timeout: timeoutMs })
+	await waitForAuthTransition(page, timeoutMs)
+}
+
+async function submitPasswordLoginStep(
+	page,
+	emailInput,
+	passwordInput,
+	acuityUser,
+	acuityPassword,
+	timeoutMs,
+) {
+	if (emailInput) {
+		const normalizedAcuityUser = acuityUser.trim()
+		const currentEmail = await emailInput
+			.inputValue({ timeout: Math.min(timeoutMs, acuityAuthStateTimeoutMs) })
+			.catch(() => null)
+		if (currentEmail === null) {
+			await waitForAuthTransition(page, timeoutMs)
+			return false
+		}
+
+		if (currentEmail !== normalizedAcuityUser) {
+			const emailInputRemainedVisible = await fillAndVerifyAuthInput(
+				emailInput,
+				normalizedAcuityUser,
+				'username',
+				timeoutMs,
+			)
+			if (!emailInputRemainedVisible) {
+				await waitForAuthTransition(page, timeoutMs)
+				return false
+			}
+
+			passwordInput = await authPasswordInput(page)
+			if (!passwordInput) {
+				await waitForAuthTransition(page, timeoutMs)
+				return false
+			}
+		}
+	}
+
+	const passwordInputRemainedVisible = await fillAndVerifyAuthInput(
+		passwordInput,
+		acuityPassword,
+		'password',
+		timeoutMs,
+	)
+	if (!passwordInputRemainedVisible) {
+		await waitForAuthTransition(page, timeoutMs)
+		return false
+	}
+
+	const loginButton = await authSubmitButton(page, /^(log in|login|sign in|next|continue)$/i)
+	if (!loginButton) {
+		throw new Error('Acuity password login step did not expose a submit button.')
+	}
+
+	await page.waitForTimeout(300)
+	await loginButton.click({ timeout: timeoutMs })
+	await waitForAuthTransition(page, timeoutMs)
+	return true
+}
+
+async function continueWithConfiguredLoginMethod(page, timeoutMs) {
+	const squarespaceChoice = await firstVisibleLocator([
+		page.getByRole('button', { name: /^continue with squarespace$/i }),
+		page.getByRole('link', { name: /^continue with squarespace$/i }),
+	])
+	const acuityChoice = await firstVisibleLocator([
+		page.getByRole('button', { name: /^continue with acuity scheduling$/i }),
+		page.getByRole('link', { name: /^continue with acuity scheduling$/i }),
+	])
+
+	if (!squarespaceChoice && !acuityChoice) {
+		return null
+	}
+
+	const configuredMethod = acuityLoginMethod()
+	const useSquarespace =
+		(configuredMethod === 'squarespace' && squarespaceChoice) || !acuityChoice
+	const selectedChoice = useSquarespace ? squarespaceChoice : acuityChoice
+	const selectedMethod = useSquarespace ? 'squarespace' : 'acuity'
+
+	console.log(`Continuing Acuity authentication with ${selectedMethod}.`)
+	await selectedChoice.click({ timeout: timeoutMs })
+	await waitForAuthTransition(page, timeoutMs)
+	return selectedMethod
+}
+
+async function isAcuityEditorReady(page, timeoutMs = acuityAuthStateTimeoutMs) {
+	const offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
+	return offerClassButton
+		.first()
+		.isVisible({ timeout: timeoutMs })
+		.catch(() => false)
+}
+
+async function authPageDescription(page) {
+	const bodyText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => '')
+	const normalizedText = bodyText.replace(/\s+/g, ' ').trim()
+
+	if (isSquarespaceLoginUrl(page.url())) {
+		return 'Squarespace login page'
+	}
+	if (/automatically logged out after a period of inactivity/i.test(normalizedText)) {
+		return 'expired Acuity session page'
+	}
+	if (/log in to acuity scheduling/i.test(normalizedText)) {
+		return 'Acuity login page'
+	}
+	if (/continue with squarespace|continue with acuity scheduling/i.test(normalizedText)) {
+		return 'Acuity login-method choice page'
+	}
+
+	return null
+}
+
+async function completeAcuityAuthentication(
+	page,
+	acuityUser,
+	acuityPassword,
+	verificationUrl,
+	timeoutMs,
+) {
+	const deadline = Date.now() + timeoutMs
+	const stageCounts = new Map()
+	let revisitedEditor = false
+	let selectedLoginMethod = null
+	let submittedCredentials = false
+
+	for (let step = 1; step <= acuityAuthFlowMaxSteps && remainingMs(deadline) > 0; step++) {
+		if (await isAcuityEditorReady(page)) {
+			return null
+		}
+
+		if (isAuthChallengeUrl(page.url())) {
+			await failWithPageContext(
+				page,
+				'Squarespace returned an authentication challenge that cannot be completed in CI.',
+			)
+		}
+
+		const pageMessage = await loginPageMessage(page)
+		if (pageMessage) {
+			if (isAuthChallengeMessage(pageMessage)) {
+				await failWithPageContext(
+					page,
+					`Squarespace returned an authentication challenge that cannot be completed in CI. Login page message: ${pageMessage}`,
+				)
+			}
+
+			return pageMessage
+		}
+
+		const stepTimeoutMs = Math.max(
+			1,
+			Math.min(loginAttemptSettleTimeoutMs, remainingMs(deadline)),
+		)
+
+		const continuedLoginMethod = await continueWithConfiguredLoginMethod(page, stepTimeoutMs)
+		if (continuedLoginMethod) {
+			selectedLoginMethod = continuedLoginMethod
+			continue
+		}
+
+		await dismissAcuityInterruptions(page)
+
+		const emailInput = await authEmailInput(page)
+		const passwordInput = await authPasswordInput(page)
+		const pageDescription = await authPageDescription(page)
+		if (
+			submittedCredentials &&
+			emailInput &&
+			!passwordInput &&
+			pageDescription?.includes('Acuity')
+		) {
+			return `The ${selectedLoginMethod || 'selected'} credentials returned to the Acuity login page instead of opening the appointment editor. Confirm that ACUITY_USER and ACUITY_PASSWORD match that login provider.`
+		}
+		const stage = passwordInput
+			? emailInput
+				? 'combined-credentials'
+				: 'password'
+			: emailInput
+				? 'email'
+				: pageDescription || 'unknown'
+		const stageCount = (stageCounts.get(stage) || 0) + 1
+		stageCounts.set(stage, stageCount)
+
+		if (stageCount > 2) {
+			return `Acuity authentication stalled on the ${stage} step. ${await pageContextMessage(page)}`
+		}
+
+		if (passwordInput) {
+			submittedCredentials = await submitPasswordLoginStep(
+				page,
+				emailInput,
+				passwordInput,
+				acuityUser,
+				acuityPassword,
+				stepTimeoutMs,
+			)
+			continue
+		}
+
+		if (emailInput) {
+			await submitEmailFirstLoginStep(page, emailInput, acuityUser, stepTimeoutMs)
+			continue
+		}
+
+		if (!revisitedEditor) {
+			revisitedEditor = true
+			await gotoAcuityPage(page, verificationUrl, 'Returning to Acuity after login')
+			continue
+		}
+
+		return `Acuity authentication reached an unsupported page${pageDescription ? ` (${pageDescription})` : ''}. ${await pageContextMessage(page)}`
+	}
+
+	return `Acuity authentication did not complete within ${timeoutMs}ms. ${await pageContextMessage(page)}`
+}
+
 async function verifyAcuitySession(page, url) {
 	await gotoAcuityPage(page, url, 'Verifying Acuity session')
 
-	if (isSquarespaceLoginUrl(page.url())) {
-		return `Redirected back to Squarespace login when opening ${url}.`
+	const authDescription = await authPageDescription(page)
+	if (authDescription) {
+		return `Reached the ${authDescription} instead of the Acuity appointment editor when opening ${url}.`
 	}
 
 	const offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
@@ -587,22 +864,22 @@ async function createStorageState() {
 			try {
 				await gotoAcuityPage(page, verifyUrl, 'Opening Acuity login entry')
 
-				if (isSquarespaceLoginUrl(page.url())) {
-					await submitAcuityLogin(page, acuityUser, acuityPassword, Math.max(1, remainingMs(deadline)))
-					const loginProblem = await waitForLoginAttempt(
-						page,
-						Math.max(1, Math.min(loginAttemptSettleTimeoutMs, remainingMs(deadline))),
+				const loginProblem = await completeAcuityAuthentication(
+					page,
+					acuityUser,
+					acuityPassword,
+					verifyUrl,
+					Math.max(1, remainingMs(deadline)),
+				)
+				if (loginProblem) {
+					lastProblem = loginProblem
+					lastPageContext = await pageContextMessage(page)
+					attemptRecord.status = 'login-rejected'
+					attemptRecord.problem = loginProblem
+					console.log(
+						`Acuity auth attempt ${attempts} was rejected; retrying while time remains. Message: ${diagnostic(loginProblem)}`,
 					)
-					if (loginProblem) {
-						lastProblem = loginProblem
-						lastPageContext = await pageContextMessage(page)
-						attemptRecord.status = 'login-rejected'
-						attemptRecord.problem = loginProblem
-						console.log(
-							`Acuity auth attempt ${attempts} was rejected; retrying while time remains. Message: ${diagnostic(loginProblem)}`,
-						)
-						continue
-					}
+					continue
 				}
 
 				const sessionProblem = await verifyAcuitySession(page, verifyUrl)
@@ -656,6 +933,15 @@ async function createStorageState() {
 	fail(finalMessage)
 }
 
-createStorageState().catch(error => {
-	fail(error instanceof Error ? error.message : String(error))
-})
+if (require.main === module) {
+	createStorageState().catch(error => {
+		fail(error instanceof Error ? error.message : String(error))
+	})
+}
+
+module.exports = {
+	acuityLoginMethod,
+	authPageDescription,
+	isAcuityUrl,
+	isSquarespaceLoginUrl,
+}
