@@ -125,23 +125,30 @@ jobs:
           mkdir -p .auth
           auth_prepared=false
 
-          if [[ -n "${ACUITY_USER:-}" && -n "${ACUITY_PASSWORD:-}" ]]; then
+          if [[ -n "${ACUITY_STORAGE_STATE_B64:-}" ]]; then
+            if printf '%s' "$ACUITY_STORAGE_STATE_B64" | base64 --decode > .auth/acuity-storage-state.json; then
+              if node scripts/verify-acuity-storage-state.js .auth/acuity-storage-state.json; then
+                auth_prepared=true
+                echo "Using verified Acuity auth state from ACUITY_STORAGE_STATE_B64."
+              else
+                echo "::warning::Saved Acuity auth state is expired or invalid; checking fresh credentials."
+              fi
+            else
+              echo "::warning::ACUITY_STORAGE_STATE_B64 is not valid base64; checking fresh credentials."
+            fi
+          fi
+
+          if [[ "$auth_prepared" != true && -n "${ACUITY_USER:-}" && -n "${ACUITY_PASSWORD:-}" ]]; then
             if node scripts/create-acuity-storage-state.js; then
               auth_prepared=true
               echo "Generated fresh Acuity storage state from ACUITY_USER and ACUITY_PASSWORD."
             else
-              echo "::warning::Fresh Acuity login failed; checking for a saved auth-state fallback."
+              echo "::warning::Fresh Acuity login failed."
             fi
           fi
 
-          if [[ "$auth_prepared" != true && -n "${ACUITY_STORAGE_STATE_B64:-}" ]]; then
-            printf '%s' "$ACUITY_STORAGE_STATE_B64" | base64 --decode > .auth/acuity-storage-state.json
-            auth_prepared=true
-            echo "Using saved Acuity auth state from ACUITY_STORAGE_STATE_B64."
-          fi
-
           if [[ "$auth_prepared" != true ]]; then
-            echo "::error::Unable to prepare Acuity auth. Verify ACUITY_USER and ACUITY_PASSWORD, or provide ACUITY_STORAGE_STATE_B64 as a saved-session fallback."
+            echo "::error::Unable to prepare Acuity auth. Regenerate ACUITY_STORAGE_STATE_B64 with npm run helper:acuityslots:auth, or verify ACUITY_USER and ACUITY_PASSWORD."
             exit 1
           fi
 
