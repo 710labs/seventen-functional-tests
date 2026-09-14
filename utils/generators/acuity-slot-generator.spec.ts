@@ -2,15 +2,17 @@ import { Browser, Locator, Page, test } from '@playwright/test'
 const csvFilePath = process.env.ACUITY_SLOT_FILE || 'utils/delivery-slots.csv'
 let csvToJson = require('convert-csv-to-json')
 const fs = require('fs')
+const {
+	authPageDescription: describeAcuityAuthPage,
+	completeAcuityAuthentication: completeAcuityAuthenticationFlow,
+} = require('../../scripts/create-acuity-storage-state')
 
 const schedulingFrameSelector = '[data-test="scheduling"], [data-test="scheduling-iframe"]'
 const offerClassButtonSelector = '#offer-class-btn, [data-testid="offer-class"]'
-const defaultLoginMaxAttempts = 5
+const defaultLoginMaxAttempts = 3
 const defaultLoginRetryTimeoutMs = defaultLoginMaxAttempts * 30 * 1000
 const minimumLoginAttemptTimeoutMs = 8 * 1000
-const loginAttemptSettleTimeoutMs = 15 * 1000
 const pageLoadSettleTimeoutMs = 10 * 1000
-const loginTypingDelayMs = 75
 const defaultAcuityStorageStateFiles = [
 	'.auth/acuity-storage-state.slim.json',
 	'.auth/acuity-storage-state.json',
@@ -81,7 +83,7 @@ function loginRetryTimeoutMs(): number {
 function loginMaxAttempts(): number {
 	const configuredAttempts = Number.parseInt(process.env.ACUITY_LOGIN_MAX_ATTEMPTS || '', 10)
 	return Number.isFinite(configuredAttempts) && configuredAttempts > 0
-		? configuredAttempts
+		? Math.min(configuredAttempts, defaultLoginMaxAttempts)
 		: defaultLoginMaxAttempts
 }
 
@@ -156,8 +158,11 @@ function isStoredAcuityAuthUnavailableError(error: unknown): boolean {
 	)
 }
 
-function storedAcuityAuthUnavailable(message: string): null {
-	if (requireStoredAcuityAuth) {
+function storedAcuityAuthUnavailable(
+	message: string,
+	allowCredentialFallback = false,
+): null {
+	if (requireStoredAcuityAuth && !allowCredentialFallback) {
 		throw new Error(message)
 	}
 
@@ -344,85 +349,6 @@ async function assertAcuityAccess(page: Page, context: string): Promise<void> {
 	}
 }
 
-async function submitAcuityLogin(
-	page: Page,
-	acuityUser: string,
-	acuityPassword: string,
-	timeoutMs: number,
-): Promise<void> {
-	const emailInput = page.locator('[placeholder="name\\@example\\.com"]')
-	const passwordInput = page.locator('[placeholder="Password"]')
-	const normalizedAcuityUser = acuityUser.trim()
-
-	await emailInput.waitFor({ state: 'visible', timeout: timeoutMs })
-	await emailInput.fill('', { timeout: timeoutMs })
-	await emailInput.pressSequentially(normalizedAcuityUser, {
-		delay: loginTypingDelayMs,
-		timeout: timeoutMs,
-	})
-	await passwordInput.fill('', { timeout: timeoutMs })
-	await passwordInput.pressSequentially(acuityPassword, {
-		delay: loginTypingDelayMs,
-		timeout: timeoutMs,
-	})
-	await page.waitForTimeout(300)
-
-	const enteredEmail = await emailInput.inputValue({ timeout: timeoutMs })
-	if (enteredEmail !== normalizedAcuityUser) {
-		throw new Error(
-			`Acuity username field did not match the configured username after typing. Expected length ${normalizedAcuityUser.length}, actual length ${enteredEmail.length}.`,
-		)
-	}
-
-	const enteredPassword = await passwordInput.inputValue({ timeout: timeoutMs })
-	if (enteredPassword !== acuityPassword) {
-		throw new Error(
-			`Acuity password field did not match the configured password after typing. Expected length ${acuityPassword.length}, actual length ${enteredPassword.length}.`,
-		)
-	}
-
-	await page.locator('[data-test="login-button"]').click({ timeout: timeoutMs })
-}
-
-async function waitForLoginAttempt(page: Page, timeoutMs: number): Promise<string | null> {
-	await page
-		.waitForURL((url) => !isSquarespaceLoginUrl(url.toString()), {
-			timeout: timeoutMs,
-		})
-		.catch(() => undefined)
-
-	await page
-		.waitForLoadState('networkidle', {
-			timeout: Math.min(loginAttemptSettleTimeoutMs, timeoutMs),
-		})
-		.catch(() => undefined)
-
-	if (isAuthChallengeUrl(page.url())) {
-		await failWithPageContext(
-			page,
-			'Squarespace returned an authentication challenge that cannot be completed in CI.',
-		)
-	}
-
-	const pageMessage = await loginPageMessage(page)
-	if (pageMessage) {
-		if (isAuthChallengeMessage(pageMessage)) {
-			await failWithPageContext(
-				page,
-				`Squarespace returned an authentication challenge that cannot be completed in CI. Login page message: ${pageMessage}`,
-			)
-		}
-
-		return pageMessage
-	}
-
-	if (isSquarespaceLoginUrl(page.url())) {
-		return 'Still on the Squarespace login page after submitting credentials.'
-	}
-
-	return null
-}
-
 async function verifyAcuitySession(page: Page, slotUrl: string): Promise<string | null> {
 	const editorUrl = directAcuityEditorUrl(slotUrl)
 	await gotoAcuityPage(page, editorUrl, 'Verifying Acuity session')
@@ -487,7 +413,8 @@ async function closePageContext(page?: Page): Promise<void> {
 
 async function pageFromStoredAcuitySession(
 	browser: Browser,
-	_verificationSlotUrl: string,
+	verificationSlotUrl: string,
+	allowCredentialFallback: boolean,
 ): Promise<Page | null> {
 	const storageStateFile = acuityStorageStateFile()
 	if (!storageStateFile) {
@@ -495,8 +422,9 @@ async function pageFromStoredAcuitySession(
 	}
 
 	if (!fs.existsSync(storageStateFile.path)) {
-		throw new Error(
+		return storedAcuityAuthUnavailable(
 			`Acuity storage state file does not exist: ${storageStateFile.path}.`,
+			allowCredentialFallback,
 		)
 	}
 
@@ -506,9 +434,26 @@ async function pageFromStoredAcuitySession(
 	try {
 		const context = await browser.newContext({ storageState: storageStateFile.path })
 		page = await context.newPage()
-		keepContext = true
-		console.log(`Using stored Acuity auth state from ${storageStateFile.path}.`)
-		return page
+		const editorUrl = directAcuityEditorUrl(verificationSlotUrl)
+		await gotoAcuityPage(page, editorUrl, 'Validating stored Acuity auth state')
+
+		const offerClassButton = await schedulingLocator(page, offerClassButtonSelector)
+		const editorReady = await offerClassButton
+			.first()
+			.waitFor({ state: 'visible', timeout: minimumLoginAttemptTimeoutMs })
+			.then(() => true)
+			.catch(() => false)
+		if (editorReady) {
+			keepContext = true
+			console.log(`Using verified stored Acuity auth state from ${storageStateFile.path}.`)
+			return page
+		}
+
+		const authDescription = await describeAcuityAuthPage(page)
+		return storedAcuityAuthUnavailable(
+			`Stored Acuity auth state from ${storageStateFile.path} is no longer authenticated${authDescription ? `; it opened the ${authDescription}` : ''}.`,
+			allowCredentialFallback,
+		)
 	} catch (error) {
 		if (isStoredAcuityAuthUnavailableError(error)) {
 			throw error
@@ -521,6 +466,7 @@ async function pageFromStoredAcuitySession(
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		return storedAcuityAuthUnavailable(
 			`Stored Acuity auth state from ${storageStateFile.path} failed. Message: ${loginDiagnostic(errorMessage)}`,
+			allowCredentialFallback,
 		)
 	} finally {
 		if (!keepContext) {
@@ -542,12 +488,19 @@ async function loginToAcuityWithRetry(
 	acuityPassword: string,
 	verificationSlotUrl: string,
 ): Promise<Page> {
-	const storedSessionPage = await pageFromStoredAcuitySession(browser, verificationSlotUrl)
+	const hasCredentials = Boolean(acuityUser && acuityPassword)
+	const storedSessionPage = await pageFromStoredAcuitySession(
+		browser,
+		verificationSlotUrl,
+		hasCredentials,
+	)
 	if (storedSessionPage) {
 		return storedSessionPage
 	}
 
-	requireStoredAcuityAuthState()
+	if (!hasCredentials) {
+		requireStoredAcuityAuthState()
+	}
 	requireAcuityCredentials(acuityUser, acuityPassword)
 
 	const retryTimeoutMs = loginRetryTimeoutMs()
@@ -574,35 +527,26 @@ async function loginToAcuityWithRetry(
 				Math.max(1, remainingLoginRetryMs(deadline)),
 			)
 
-			if (isSquarespaceLoginUrl(attemptPage.url())) {
-				if (attempts === 1) {
-					console.log(
-						`Acuity credential diagnostics: ${credentialDiagnostics(acuityUser, acuityPassword)}`,
-					)
-				}
-
-				await submitAcuityLogin(
-					attemptPage,
-					acuityUser,
-					acuityPassword,
-					Math.max(1, remainingLoginRetryMs(deadline)),
+			if (attempts === 1) {
+				console.log(
+					`Acuity credential diagnostics: ${credentialDiagnostics(acuityUser, acuityPassword)}`,
 				)
+			}
 
-				const loginProblem = await waitForLoginAttempt(
-					attemptPage,
-					Math.max(
-						1,
-						Math.min(loginAttemptSettleTimeoutMs, remainingLoginRetryMs(deadline)),
-					),
+			const loginProblem = await completeAcuityAuthenticationFlow(
+				attemptPage,
+				acuityUser,
+				acuityPassword,
+				directAcuityEditorUrl(verificationSlotUrl),
+				Math.max(1, remainingLoginRetryMs(deadline)),
+			)
+			if (loginProblem) {
+				lastLoginProblem = loginProblem
+				lastPageContext = await pageContextMessage(attemptPage)
+				console.log(
+					`Acuity login attempt ${attempts}/${maxAttempts} was rejected in a clean context; retrying while time remains. Message: ${loginDiagnostic(loginProblem)}`,
 				)
-				if (loginProblem) {
-					lastLoginProblem = loginProblem
-					lastPageContext = await pageContextMessage(attemptPage)
-					console.log(
-						`Acuity login attempt ${attempts} was rejected in a clean context; retrying while time remains. Message: ${loginDiagnostic(loginProblem)}`,
-					)
-					continue
-				}
+				continue
 			}
 
 			const sessionProblem = await verifyAcuitySession(attemptPage, verificationSlotUrl)

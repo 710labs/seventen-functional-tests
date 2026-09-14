@@ -117,7 +117,7 @@ jobs:
           ACUITY_HEADLESS: 'true'
           ACUITY_LOGIN_METHOD: ${{ vars.ACUITY_LOGIN_METHOD || secrets.ACUITY_LOGIN_METHOD || 'squarespace' }}
           ACUITY_AUTH_DEBUG_ARTIFACTS: 'true'
-          ACUITY_AUTH_ARTIFACT_DIR: test-results/acuity-auth
+          ACUITY_AUTH_ARTIFACT_DIR: acuity-auth-artifacts
           ACUITY_STORAGE_STATE_FILE: .auth/acuity-storage-state.json
         run: |
           set -euo pipefail
@@ -175,6 +175,7 @@ jobs:
         with:
           name: acuity-playwright-failure-artifacts
           path: |
+            acuity-auth-artifacts/
             playwright-report/
             test-results/
           if-no-files-found: ignore

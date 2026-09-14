@@ -563,6 +563,8 @@ async function authSubmitButton(page, names) {
 }
 
 async function fillAndVerifyAuthInput(input, value, label, timeoutMs) {
+	console.log(`Clicking the Acuity ${label} field and entering the configured value.`)
+	await input.click({ timeout: timeoutMs })
 	await input.fill('', { timeout: timeoutMs })
 	await input.pressSequentially(value, {
 		delay: loginTypingDelayMs,
@@ -581,6 +583,7 @@ async function fillAndVerifyAuthInput(input, value, label, timeoutMs) {
 		)
 	}
 
+	console.log(`Acuity ${label} field was filled and verified.`)
 	return true
 }
 
@@ -1071,6 +1074,7 @@ module.exports = {
 	acuityLoginMethod,
 	authPageDescription,
 	authRetryMessage,
+	completeAcuityAuthentication,
 	isAcuityAccountSelectionText,
 	isAcuityUrl,
 	isLoggedOutNoticeText,
