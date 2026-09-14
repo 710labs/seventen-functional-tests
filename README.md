@@ -163,7 +163,31 @@ QA_ENDPOINT=/wp-json/seventen-qa/v1/ (fixed REST namespace; not a secret)
 RECAPTCHA_BYPASS: Optional shared secret for the `qa_wf_captcha_bypass` cookie used to bypass Wordfence reCAPTCHA in QA automation.
 ACUITY_USER:Used to automate creating acuity schedule slots. 
 ACUITY_PASSWORD:Used to automate creating acuity schedule slots. 
+ACUITY_LOGIN_METHOD: Optional Acuity login-provider choice. Configure it as a GitHub Actions repository variable (preferred) or secret. Defaults to `squarespace`; use `acuity` only for a legacy Acuity login.
 ```
+
+### Refreshing the Acuity saved session
+
+Logging into Acuity in a normal Chrome window does not update Playwright's saved session. Run:
+
+```bash
+npm run helper:acuityslots:auth
+```
+
+Complete the Squarespace login inside the Chromium window opened by that command, skip the
+optional email verification, select the `710 Labs` account, and wait for the Acuity dashboard.
+Then close the Chromium window. The command saves, slims, and verifies the new session. It fails if
+the saved file was not refreshed or cannot open the appointment editor.
+
+After it succeeds, copy the verified state as a single-line base64 value on macOS:
+
+```bash
+node -e "process.stdout.write(require('fs').readFileSync('.auth/acuity-storage-state.slim.json').toString('base64'))" | pbcopy
+```
+
+Paste that value into the `ACUITY_STORAGE_STATE_B64` GitHub Actions repository secret. Never
+commit or share files under `.auth/`; they contain authenticated session cookies.
+
 via Command Line 
 ```powershell
 cross-env BASE_URL=http://localhost:2000 ADMIN_USER=admin@710labs.com ADMIN_PW=supersecure! API_KEY=topsecretkey npm run test:local
