@@ -36,7 +36,7 @@ async function schedulingLocator(page: Page, selector: string): Promise<Locator>
 
 async function schedulingText(
 	page: Page,
-	text: string,
+	text: string | RegExp,
 	options?: { exact?: boolean },
 ): Promise<Locator> {
 	if ((await page.locator(schedulingFrameSelector).count()) > 0) {
@@ -44,6 +44,17 @@ async function schedulingText(
 	}
 
 	return page.getByText(text, options)
+}
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function acuitySlotLinkPattern(linkText: string): RegExp {
+	const escapedLinkText = escapeRegExp(linkText)
+	const timezoneFlexibleLinkText = escapedLinkText.replace(/P[DS]T/g, 'P[DS]T')
+
+	return new RegExp(`^${timezoneFlexibleLinkText}$`)
 }
 
 function isSquarespaceLoginUrl(url: string): boolean {
@@ -693,7 +704,10 @@ test.describe('Acuity Automation', () => {
 							//Edit Capacity
 							//Select Slot
 							//Prevent 12PM and 2PM collison
-							const slotLink = await schedulingText(page, `${slot.LinkText}`, { exact: true })
+							const slotLink = await schedulingText(
+								page,
+								acuitySlotLinkPattern(`${slot.LinkText}`),
+							)
 							await openAcuityAnchor(
 								slotLink,
 								page,
