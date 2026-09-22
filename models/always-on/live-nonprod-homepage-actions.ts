@@ -154,7 +154,7 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 		productName: string,
 		initialCartCount: number,
 	): Promise<AddToCartOutcome> {
-		const deadline = Date.now() + 10000
+		const deadline = Date.now() + 15000
 
 		while (Date.now() < deadline) {
 			const inventoryNotice = await getVisibleInsufficientInventoryNotice(page)
@@ -175,9 +175,17 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 			await page.waitForTimeout(200)
 		}
 
+		// The Live cart-response drawer can finish opening as the polling deadline
+		// expires. Check once more before reporting a missing cart response.
+		const finalInventoryNotice = await getVisibleInsufficientInventoryNotice(page)
+
+		if (finalInventoryNotice) {
+			return { reason: finalInventoryNotice, status: 'low-inventory' }
+		}
+
 		return {
 			reason: [
-				`No cart confirmation appeared within 10 seconds for "${productName}".`,
+				`No cart confirmation appeared within 15 seconds for "${productName}".`,
 				`Cart count before: ${initialCartCount}; after: ${await this.cartItemCount(page)}.`,
 				`Current URL: ${page.url()}`,
 			].join(' '),

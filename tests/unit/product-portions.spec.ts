@@ -219,8 +219,14 @@ test('returns to registration before inspecting simultaneous cart warnings', asy
 			<p class="product-subheading">Deli Flower</p>
 			<button>Add to cart</button>
 		</div>
-		<div class="wc-block-components-notice-banner" role="alert" style="display: none">
-			Not enough available Only 12g of this product is left.
+		<div class="wpse-drawer" data-module="cart-response" style="display: none">
+			<div class="wpse-snacktoast warn-toast">
+				<span class="wpse-snacktoast-icon"></span>
+				<span class="wpse-snacktoast-msg">
+					<span class="wpse-snacktoast-headline">Not enough available</span>
+					<span class="wpse-snacktoast-desc">Only 12g of this product is left.</span>
+				</span>
+			</div>
 		</div>
 		<div class="wpse-drawer" data-module="cart-conflict" style="display: none">
 			<h3>Start a new cart?</h3>
@@ -239,7 +245,7 @@ test('returns to registration before inspecting simultaneous cart warnings', asy
 					document.querySelector('#cartDrawer').textContent = '${name}'
 					document.querySelector('#cartDrawer').style.display = 'block'
 				} else {
-					document.querySelector('[role="alert"]').style.display = 'block'
+					document.querySelector('[data-module="cart-response"]').style.display = 'block'
 					document.querySelector('[data-module="cart-conflict"]').style.display = 'block'
 					document.querySelector('#renderGateway').style.display = 'block'
 				}
@@ -306,7 +312,7 @@ test('returns to registration before inspecting simultaneous cart warnings', asy
 	await expect(page).toHaveURL('https://initial-add.test/product/low/')
 	await expect(page.locator('section.wpse-component #renderGateway')).toBeVisible()
 	await expect(page.locator('.wpse-drawer[data-module="cart-conflict"]')).toBeVisible()
-	await expect(page.locator('[role="alert"]')).toContainText('Not enough available')
+	await expect(page.locator('.wpse-snacktoast.warn-toast')).toContainText('Not enough available')
 	expect(openedProductPaths).toEqual(['/product/low/'])
 })
 
@@ -330,8 +336,14 @@ test('retries the next Deli Flower product after an inventory rejection', async 
 			</fieldset>
 			<button data-portion-group="portion_${slug}" disabled>Add to cart</button>
 		</div>
-		<div class="wc-block-components-notice-banner" role="alert" style="display: none">
-			Not enough available Only 12g of this product is left.
+		<div class="wpse-drawer" data-module="cart-response" style="display: none">
+			<div class="wpse-snacktoast warn-toast">
+				<span class="wpse-snacktoast-icon"></span>
+				<span class="wpse-snacktoast-msg">
+					<span class="wpse-snacktoast-headline">Not enough available</span>
+					<span class="wpse-snacktoast-desc">Only 12g of this product is left.</span>
+				</span>
+			</div>
 		</div>
 		<div id="cartDrawer" style="display: none"></div>
 		<script>
@@ -344,7 +356,7 @@ test('retries the next Deli Flower product after an inventory rejection', async 
 					document.querySelector('#cartDrawer').textContent = '${name}'
 					document.querySelector('#cartDrawer').style.display = 'block'
 				} else {
-					document.querySelector('[role="alert"]').style.display = 'block'
+					document.querySelector('[data-module="cart-response"]').style.display = 'block'
 				}
 			})
 		</script>

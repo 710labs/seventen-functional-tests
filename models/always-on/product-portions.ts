@@ -1,6 +1,13 @@
 import { expect, Locator, Page } from '@playwright/test'
 
+const liveCartResponseDrawerSelector = '.wpse-drawer[data-module="cart-response"]'
+const liveInventoryToastSelector =
+	`${liveCartResponseDrawerSelector} .wpse-snacktoast.warn-toast`
+
 const cartNoticeSelector = [
+	liveInventoryToastSelector,
+	`${liveInventoryToastSelector} .wpse-snacktoast-headline`,
+	`${liveInventoryToastSelector} .wpse-snacktoast-desc`,
 	'.woocommerce-error',
 	'.wc-block-components-notice-banner',
 	'.wpse-snacktoast',
@@ -35,6 +42,28 @@ export async function getVisibleInsufficientInventoryNotice(page: Page) {
 		}
 
 		const text = ((await notice.textContent().catch(() => '')) || '')
+			.replace(/\s+/g, ' ')
+			.trim()
+
+		if (isInsufficientInventoryNotice(text)) {
+			return text
+		}
+	}
+
+	// Live renders add-to-cart warnings inside its cart-response drawer. During the
+	// drawer animation the toast wrapper can briefly fail Playwright's visibility
+	// check even though the drawer and its message are already displayed.
+	const responseDrawers = page.locator(liveCartResponseDrawerSelector)
+	const responseDrawerCount = await responseDrawers.count()
+
+	for (let index = 0; index < responseDrawerCount; index += 1) {
+		const responseDrawer = responseDrawers.nth(index)
+
+		if (!(await responseDrawer.isVisible().catch(() => false))) {
+			continue
+		}
+
+		const text = ((await responseDrawer.textContent().catch(() => '')) || '')
 			.replace(/\s+/g, ' ')
 			.trim()
 
