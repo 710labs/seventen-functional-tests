@@ -210,10 +210,8 @@ test('recognizes the Live low-inventory banner text', () => {
 	expect(isInsufficientInventoryNotice('Added to your cart')).toBe(false)
 })
 
-test('advances to the next Deli Flower card when the initial add is low on inventory', async ({
-	page,
-}) => {
-	let otherCategoryWasOpened = false
+test('returns to registration before inspecting simultaneous cart warnings', async ({ page }) => {
+	const openedProductPaths: string[] = []
 	const productPage = (name: string, hasInventory: boolean) => `
 		<a class="wpse-cart-openerize">View cart</a>
 		<div class="summary entry-summary">
@@ -224,6 +222,16 @@ test('advances to the next Deli Flower card when the initial add is low on inven
 		<div class="wc-block-components-notice-banner" role="alert" style="display: none">
 			Not enough available Only 12g of this product is left.
 		</div>
+		<div class="wpse-drawer" data-module="cart-conflict" style="display: none">
+			<h3>Start a new cart?</h3>
+			<button>Keep my cart</button>
+		</div>
+		<section class="wpse-component">
+			<div id="renderGateway" style="display: none">
+				<label>Email <input type="email" /></label>
+				<button>Continue</button>
+			</div>
+		</section>
 		<div id="cartDrawer" style="display: none"></div>
 		<script>
 			document.querySelector('button').addEventListener('click', () => {
@@ -232,6 +240,8 @@ test('advances to the next Deli Flower card when the initial add is low on inven
 					document.querySelector('#cartDrawer').style.display = 'block'
 				} else {
 					document.querySelector('[role="alert"]').style.display = 'block'
+					document.querySelector('[data-module="cart-conflict"]').style.display = 'block'
+					document.querySelector('#renderGateway').style.display = 'block'
 				}
 			})
 		</script>
@@ -275,9 +285,7 @@ test('advances to the next Deli Flower card when the initial add is low on inven
 			return
 		}
 
-		if (pathname === '/product/concentrate/') {
-			otherCategoryWasOpened = true
-		}
+		openedProductPaths.push(pathname)
 
 		const productName =
 			pathname === '/product/low/'
@@ -295,9 +303,11 @@ test('advances to the next Deli Flower card when the initial add is low on inven
 	const homePageActions = new LiveNonProdHomePageActions(page)
 	await homePageActions.addSingleProductToCart(page)
 
-	await expect(page).toHaveURL('https://initial-add.test/product/in-stock/')
-	expect(otherCategoryWasOpened).toBe(false)
-	await expect(page.locator('#cartDrawer')).toContainText('In Stock')
+	await expect(page).toHaveURL('https://initial-add.test/product/low/')
+	await expect(page.locator('section.wpse-component #renderGateway')).toBeVisible()
+	await expect(page.locator('.wpse-drawer[data-module="cart-conflict"]')).toBeVisible()
+	await expect(page.locator('[role="alert"]')).toContainText('Not enough available')
+	expect(openedProductPaths).toEqual(['/product/low/'])
 })
 
 test('retries the next Deli Flower product after an inventory rejection', async ({ page }) => {

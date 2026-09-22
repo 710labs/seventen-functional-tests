@@ -1884,6 +1884,13 @@ export class HomePageActions {
 			let inventoryNotice: string | null = null
 
 			while (Date.now() < deadline) {
+				// Adding this first product is the authentication trigger. Registration must
+				// finish before we inspect or recover any cart state produced by the attempt.
+				if (await authenticationModal.isVisible().catch(() => false)) {
+					addOutcome = 'authentication'
+					break
+				}
+
 				inventoryNotice = await getVisibleInsufficientInventoryNotice(page)
 
 				if (inventoryNotice) {
@@ -1907,11 +1914,6 @@ export class HomePageActions {
 						addOutcome = 'cart'
 						break
 					}
-				}
-
-				if (await authenticationModal.isVisible().catch(() => false)) {
-					addOutcome = 'authentication'
-					break
 				}
 
 				await page.waitForTimeout(200)
