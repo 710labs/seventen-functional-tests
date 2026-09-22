@@ -1,6 +1,9 @@
 require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
-import { selectFirstAvailableDeliFlowerPortion } from './product-portions.ts'
+import {
+	getVisibleInsufficientInventoryNotice,
+	selectFirstAvailableDeliFlowerPortion,
+} from './product-portions.ts'
 const fs = require('fs')
 const path = require('path')
 
@@ -1787,6 +1790,7 @@ export class HomePageActions {
 		// Get all the products on the page — use broad selector to catch all product types
 		// (simple, variable, bundle, etc.) not just product-type-simple
 		const products = page.locator('li.product.type-product')
+		const productListingUrl = page.url()
 
 		// Wait for products to load before counting them
 		await products.first().waitFor({ state: 'visible', timeout: 10000 })
@@ -1797,7 +1801,8 @@ export class HomePageActions {
 		const productCount = await products.count()
 		console.log(`Found ${productCount} products on the page`)
 
-		let i = 1 // Start from index 3 like the original function
+		let i = 1
+		let requiredRetryCategory: string | null = null
 
 		// Loop through products to find one without "Medical Only" tag
 		while (i < productCount) {
@@ -1813,9 +1818,25 @@ export class HomePageActions {
 							.querySelector('.woocommerce-loop-product__title')
 							?.textContent?.replace(/\s+/g, ' ')
 							.trim() || `product at index ${index}`,
+					category:
+						card
+							.querySelector('.product-subheading')
+							?.textContent?.replace(/\s+/g, ' ')
+							.trim() || '',
 				}),
 				i,
 			)
+
+			if (
+				requiredRetryCategory &&
+				candidate.category.trim().toLowerCase() !== requiredRetryCategory
+			) {
+				console.log(
+					`Skipping product "${candidate.name}" (index ${i}) because the retry requires another Deli Flower product.`,
+				)
+				i++
+				continue
+			}
 
 			if (candidate.isMedical) {
 				console.log(`Skipping product "${candidate.name}" (index ${i}) due to "Medical Only" tag.`)
@@ -1851,51 +1872,92 @@ export class HomePageActions {
 			// …and click it
 			await addToCart.click({ force: true })
 
-			console.log(`Product "${productName}" add to cart button clicked. Waiting for cart drawer or conflict modal...`)
+			console.log(
+				`Product "${productName}" add to cart button clicked. Waiting for an add-to-cart result...`,
+			)
 
-			// Explicitly wait for cart drawer to appear
-			// If a conflict modal appears instead, this will catch it in the try/catch below
-			try {
-				await Promise.race([
-					this.cartDrawerContainer.waitFor({ state: 'visible', timeout: 10000 }),
-					page.locator('.wpse-drawer[data-module="cart-conflict"]').waitFor({ state: 'visible', timeout: 10000 })
-				])
-			} catch (e) {
-				console.log('Neither cart drawer nor conflict modal appeared after 10s. Continuing to check manually...')
-			}
+			const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
+			const authenticationModal = page.locator('section.wpse-component #renderGateway')
+			const deadline = Date.now() + 10000
+			let addOutcome: 'authentication' | 'cart' | 'conflict' | 'low-inventory' | 'timeout' =
+				'timeout'
+			let inventoryNotice: string | null = null
 
-			// Check for "Start a new cart" modal
-			try {
-				const conflictModal = page.locator('.wpse-drawer[data-module="cart-conflict"]')
-				// Short timeout because if it's going to appear, it should be relatively quick.
-				// We don't want to wait too long if it doesn't appear.
-				await conflictModal.waitFor({ state: 'visible', timeout: 5000 })
-				
-				if (await conflictModal.isVisible()) {
-					console.log('Cart conflict modal detected. Attempting to start a new cart.')
-					const startNewCartBtn = conflictModal.locator('button:has-text("Start a new cart")') 
-					// Fallback selector or more specific if needed: #conflictOverride button
-					
-					await expect(startNewCartBtn).toBeVisible()
-					await startNewCartBtn.click()
-					console.log('Clicked "Start a new cart".')
-					
-					// Wait for modal to disappear to ensure action was processed
-					await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
-				} else {
-					console.log('Cart conflict modal not visible after wait.')
+			while (Date.now() < deadline) {
+				inventoryNotice = await getVisibleInsufficientInventoryNotice(page)
+
+				if (inventoryNotice) {
+					addOutcome = 'low-inventory'
+					break
 				}
-			} catch (e) {
-				console.log('Cart conflict modal did not appear (timeout or other). Continuing...')
+
+				if (await conflictModal.isVisible().catch(() => false)) {
+					addOutcome = 'conflict'
+					break
+				}
+
+				if (await this.cartDrawerContainer.isVisible().catch(() => false)) {
+					const drawerText =
+						((await this.cartDrawerContainer.textContent().catch(() => '')) || '')
+							.replace(/\s+/g, ' ')
+							.trim()
+							.toLowerCase()
+
+					if (drawerText.includes(productName.toLowerCase())) {
+						addOutcome = 'cart'
+						break
+					}
+				}
+
+				if (await authenticationModal.isVisible().catch(() => false)) {
+					addOutcome = 'authentication'
+					break
+				}
+
+				await page.waitForTimeout(200)
 			}
 
-			console.log(`Product "${productName}" add to cart process finished. Function complete.`)
-			return // Successfully added a product, exit function
+			if (addOutcome === 'low-inventory') {
+				console.warn(
+					`Skipping product "${productName}" (index ${i}) because it could not be added: ${inventoryNotice}`,
+				)
+				if (candidate.category.trim().toLowerCase() === 'deli flower') {
+					requiredRetryCategory = 'deli flower'
+				}
+				i++
+				await page.goto(productListingUrl, { waitUntil: 'domcontentloaded' })
+				await products.first().waitFor({ state: 'visible', timeout: 10000 })
+				await page.waitForLoadState('networkidle').catch(() => {})
+				continue
+			}
+
+			if (addOutcome === 'conflict') {
+				console.log('Cart conflict modal detected. Attempting to start a new cart.')
+				const startNewCartBtn = conflictModal.getByRole('button', {
+					name: /start a new cart/i,
+				})
+
+				await expect(startNewCartBtn).toBeVisible()
+				await startNewCartBtn.click()
+				await conflictModal.waitFor({ state: 'hidden', timeout: 10000 })
+				console.log('Clicked "Start a new cart".')
+			}
+
+			if (addOutcome === 'timeout') {
+				throw new Error(
+					`No cart, authentication, conflict, or inventory response appeared within 10 seconds for "${productName}".`,
+				)
+			}
+
+			console.log(
+				`Product "${productName}" add to cart process finished with outcome "${addOutcome}".`,
+			)
+			return
 		}
 
 		// If we've exhausted all products without finding a suitable one
 		throw new Error(
-			`Could not find a suitable non-medical product to add. Checked ${productCount} products starting from index 3.`,
+			`Could not add a suitable non-medical product. Checked ${productCount} products starting from index 1.`,
 		)
 	}
 }

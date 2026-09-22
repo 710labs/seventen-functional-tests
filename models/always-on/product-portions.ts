@@ -1,7 +1,49 @@
 import { expect, Locator, Page } from '@playwright/test'
 
+const cartNoticeSelector = [
+	'.woocommerce-error',
+	'.wc-block-components-notice-banner',
+	'.wpse-snacktoast',
+	'[role="alert"]',
+].join(', ')
+
 function escapeCssAttributeValue(value: string) {
 	return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
+export function isInsufficientInventoryNotice(text: string) {
+	const normalizedText = text.replace(/\s+/g, ' ').trim()
+
+	return [
+		/\bnot enough available\b/i,
+		/\bonly\s+\d+(?:\.\d+)?\s*[a-z]*\s+(?:of\s+this\s+product\s+)?(?:is\s+)?left\b/i,
+		/\binsufficient (?:inventory|stock)\b/i,
+		/\bout of stock\b/i,
+		/\bcannot add\b.*\b(?:available|inventory|stock)\b/i,
+	].some(pattern => pattern.test(normalizedText))
+}
+
+export async function getVisibleInsufficientInventoryNotice(page: Page) {
+	const notices = page.locator(cartNoticeSelector)
+	const noticeCount = await notices.count()
+
+	for (let index = 0; index < noticeCount; index += 1) {
+		const notice = notices.nth(index)
+
+		if (!(await notice.isVisible().catch(() => false))) {
+			continue
+		}
+
+		const text = ((await notice.textContent().catch(() => '')) || '')
+			.replace(/\s+/g, ' ')
+			.trim()
+
+		if (isInsufficientInventoryNotice(text)) {
+			return text
+		}
+	}
+
+	return null
 }
 
 export async function selectFirstAvailableDeliFlowerPortion(

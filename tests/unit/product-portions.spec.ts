@@ -1,6 +1,9 @@
 import { expect, Page, test } from '@playwright/test'
 import { LiveNonProdHomePageActions } from '../../models/always-on/live-nonprod-homepage-actions.ts'
-import { selectFirstAvailableDeliFlowerPortion } from '../../models/always-on/product-portions.ts'
+import {
+	isInsufficientInventoryNotice,
+	selectFirstAvailableDeliFlowerPortion,
+} from '../../models/always-on/product-portions.ts'
 
 async function setPortionMarkup(page: Page) {
 	await page.setContent(`
@@ -196,4 +199,214 @@ test('does not re-add the product when the cart survives registration', async ({
 		),
 	).toBe(0)
 	await expect(page.locator('.wpse-drawer[data-module="cart-response"]')).toContainText('Z')
+})
+
+test('recognizes the Live low-inventory banner text', () => {
+	expect(
+		isInsufficientInventoryNotice(
+			'Not enough available Only 12g of this product is left.',
+		),
+	).toBe(true)
+	expect(isInsufficientInventoryNotice('Added to your cart')).toBe(false)
+})
+
+test('advances to the next Deli Flower card when the initial add is low on inventory', async ({
+	page,
+}) => {
+	let otherCategoryWasOpened = false
+	const productPage = (name: string, hasInventory: boolean) => `
+		<a class="wpse-cart-openerize">View cart</a>
+		<div class="summary entry-summary">
+			<h1 class="product_title entry-title">${name}</h1>
+			<p class="product-subheading">Deli Flower</p>
+			<button>Add to cart</button>
+		</div>
+		<div class="wc-block-components-notice-banner" role="alert" style="display: none">
+			Not enough available Only 12g of this product is left.
+		</div>
+		<div id="cartDrawer" style="display: none"></div>
+		<script>
+			document.querySelector('button').addEventListener('click', () => {
+				if (${hasInventory}) {
+					document.querySelector('#cartDrawer').textContent = '${name}'
+					document.querySelector('#cartDrawer').style.display = 'block'
+				} else {
+					document.querySelector('[role="alert"]').style.display = 'block'
+				}
+			})
+		</script>
+	`
+
+	await page.route('https://initial-add.test/**', async route => {
+		const pathname = new URL(route.request().url()).pathname
+
+		if (pathname === '/shop/') {
+			await route.fulfill({
+				contentType: 'text/html',
+				body: `
+					<ul class="products">
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://initial-add.test/product/featured/">
+								<h2 class="woocommerce-loop-product__title">Featured</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://initial-add.test/product/low/">
+								<h2 class="woocommerce-loop-product__title">Low Inventory</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://initial-add.test/product/concentrate/">
+								<h2 class="woocommerce-loop-product__title">Concentrate</h2>
+							</a>
+							<p class="product-subheading">Concentrates</p>
+						</li>
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://initial-add.test/product/in-stock/">
+								<h2 class="woocommerce-loop-product__title">In Stock</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+					</ul>
+				`,
+			})
+			return
+		}
+
+		if (pathname === '/product/concentrate/') {
+			otherCategoryWasOpened = true
+		}
+
+		const productName =
+			pathname === '/product/low/'
+				? 'Low Inventory'
+				: pathname === '/product/concentrate/'
+					? 'Concentrate'
+					: 'In Stock'
+		await route.fulfill({
+			contentType: 'text/html',
+			body: productPage(productName, pathname === '/product/in-stock/'),
+		})
+	})
+
+	await page.goto('https://initial-add.test/shop/')
+	const homePageActions = new LiveNonProdHomePageActions(page)
+	await homePageActions.addSingleProductToCart(page)
+
+	await expect(page).toHaveURL('https://initial-add.test/product/in-stock/')
+	expect(otherCategoryWasOpened).toBe(false)
+	await expect(page.locator('#cartDrawer')).toContainText('In Stock')
+})
+
+test('retries the next Deli Flower product after an inventory rejection', async ({ page }) => {
+	const listingUrl = 'https://live.test/shop/beverly-hills/'
+	const productPage = (name: string, slug: string, hasInventory: boolean) => `
+		<a class="wpse-cart-openerize">View cart</a>
+		<div class="summary entry-summary">
+			<h1 class="product_title entry-title">${name}</h1>
+			<p class="product-subheading">Deli Flower</p>
+			<fieldset data-portion-group="portion_${slug}">
+				<label>
+					<input
+						type="radio"
+						class="fasd-portion-radio"
+						name="portion_${slug}"
+						data-weight-label="14g"
+					/>
+					Half
+				</label>
+			</fieldset>
+			<button data-portion-group="portion_${slug}" disabled>Add to cart</button>
+		</div>
+		<div class="wc-block-components-notice-banner" role="alert" style="display: none">
+			Not enough available Only 12g of this product is left.
+		</div>
+		<div id="cartDrawer" style="display: none"></div>
+		<script>
+			document.querySelector('.fasd-portion-radio').addEventListener('change', () => {
+				document.querySelector('button').disabled = false
+			})
+			document.querySelector('button').addEventListener('click', () => {
+				if (${hasInventory}) {
+					document.querySelector('.wpse-cart-openerize').textContent = 'View cart 1'
+					document.querySelector('#cartDrawer').textContent = '${name}'
+					document.querySelector('#cartDrawer').style.display = 'block'
+				} else {
+					document.querySelector('[role="alert"]').style.display = 'block'
+				}
+			})
+		</script>
+	`
+
+	await page.route('https://live.test/**', async route => {
+		const pathname = new URL(route.request().url()).pathname
+
+		if (pathname === '/shop/beverly-hills/') {
+			await route.fulfill({
+				contentType: 'text/html',
+				body: `
+					<ul class="products">
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://live.test/product/featured/">
+								<h2 class="woocommerce-loop-product__title">Featured</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://live.test/product/low-one/">
+								<h2 class="woocommerce-loop-product__title">Low One</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://live.test/product/low-two/">
+								<h2 class="woocommerce-loop-product__title">Low Two</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+						<li class="product type-product">
+							<a class="woocommerce-loop-product__link" href="https://live.test/product/in-stock/">
+								<h2 class="woocommerce-loop-product__title">In Stock</h2>
+							</a>
+							<p class="product-subheading">Deli Flower</p>
+						</li>
+					</ul>
+				`,
+			})
+			return
+		}
+
+		if (pathname === '/product/low-one/') {
+			await route.fulfill({
+				contentType: 'text/html',
+				body: productPage('Low One', 'low_one', false),
+			})
+			return
+		}
+
+		if (pathname === '/product/low-two/') {
+			await route.fulfill({
+				contentType: 'text/html',
+				body: productPage('Low Two', 'low_two', false),
+			})
+			return
+		}
+
+		await route.fulfill({
+			contentType: 'text/html',
+			body: productPage('In Stock', 'in_stock', true),
+		})
+	})
+
+	await page.goto(listingUrl)
+	await page.goto('https://live.test/product/low-one/')
+
+	const homePageActions = new LiveNonProdHomePageActions(page)
+	await homePageActions.addCurrentProductToCartAfterRegistration(page)
+
+	await expect(page).toHaveURL('https://live.test/product/in-stock/')
+	await expect(page.locator('#cartDrawer')).toBeVisible()
+	await expect(page.locator('#cartDrawer')).toContainText('In Stock')
 })

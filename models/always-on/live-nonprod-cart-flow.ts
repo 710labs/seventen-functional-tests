@@ -1,5 +1,8 @@
 import test, { expect, Locator, Page } from '@playwright/test'
-import { selectFirstAvailableDeliFlowerPortion } from './product-portions.ts'
+import {
+	isInsufficientInventoryNotice,
+	selectFirstAvailableDeliFlowerPortion,
+} from './product-portions.ts'
 
 type LiveUserType = 'rec' | 'med'
 
@@ -1118,7 +1121,7 @@ export class LiveNonProdCartFlow {
 					.replace(/\s+/g, ' ')
 					.trim()
 
-				if (/cannot add|only\s+\d+\s+left|out of stock|insufficient stock|not available/i.test(text)) {
+				if (isInsufficientInventoryNotice(text)) {
 					return { added: false, reason: text }
 				}
 			}
