@@ -115,13 +115,42 @@ export class LiveNonProdCartFlow {
 	}
 
 	async addProductsUntilCheckout(userType: LiveUserType) {
-		return test.step(`Build an isolated Live ${userType.toUpperCase()} cart`, async () => {
-			await this.clearTemporaryRegistrationCart(userType)
+		return test.step(`Build a checkout-ready Live ${userType.toUpperCase()} cart`, async () => {
+			const registrationProductNames = await this.retainRegistrationCart()
 			await this.returnToStorefront()
 
 			const productAttemptCounts = new Map<string, number>()
 			const rejectionReasons: string[] = []
 			let medicalProductAdded = false
+			const existingCandidates = await this.readCandidates()
+
+			for (const candidate of existingCandidates) {
+				const candidateName = candidate.name.replace(/\s+/g, ' ').trim().toLowerCase()
+
+				if (
+					registrationProductNames.some(name =>
+						name.replace(/\s+/g, ' ').trim().toLowerCase().includes(candidateName),
+					)
+				) {
+					productAttemptCounts.set(candidate.key, 1)
+				}
+			}
+
+			const medicalCandidateIsAvailable =
+				userType === 'med' &&
+				existingCandidates.some(candidate => {
+					const candidateStorefront = this.normalizeExactStorefrontUrl(candidate.storefrontUrl)
+					return candidate.isMedical && (!candidateStorefront || candidateStorefront === this.storefrontUrl)
+				})
+
+			if (
+				!medicalCandidateIsAvailable &&
+				(await this.checkoutIfMinimumIsMet(userType, medicalProductAdded))
+			) {
+				return { medicalProductAdded }
+			}
+
+			await this.returnToStorefront()
 
 			for (let attempt = 1; attempt <= 24; attempt += 1) {
 				const candidate = await this.findNextCandidate(
@@ -144,42 +173,18 @@ export class LiveNonProdCartFlow {
 
 				if (!result.added) {
 					rejectionReasons.push(`${candidate.name}: ${result.reason}`)
+					await this.closeCartDrawer()
 					await this.returnToStorefront()
 					continue
 				}
 
 				medicalProductAdded ||= candidate.isMedical
 
-				if (await this.minimumOrderIsNotMet()) {
-					await this.closeCartDrawer()
-					await this.returnToStorefront()
-					continue
-				}
-
-				await this.openCartPageFromDrawer()
-
-				if (userType === 'med') {
-					await this.provideMedicalCardIfRequired()
-				}
-
-				const activeCheckoutButton = await this.waitForActiveCheckoutButton()
-
-				if (activeCheckoutButton) {
-					await activeCheckoutButton.click()
+				if (await this.checkoutIfMinimumIsMet(userType, medicalProductAdded)) {
 					return { medicalProductAdded }
 				}
 
-				const addMoreItems = this.page.getByRole('link', { name: /add more items/i }).first()
-
-				if (await addMoreItems.isVisible().catch(() => false)) {
-					await addMoreItems.click()
-					await this.waitForProducts()
-					continue
-				}
-
-				throw new Error(
-					`Checkout remained disabled after adding "${candidate.name}". Current URL: ${this.page.url()}`,
-				)
+				await this.returnToStorefront()
 			}
 
 			throw new Error(
@@ -189,6 +194,51 @@ export class LiveNonProdCartFlow {
 				].join('\n'),
 			)
 		})
+	}
+
+	private async checkoutIfMinimumIsMet(
+		userType: LiveUserType,
+		medicalProductAdded: boolean,
+	) {
+		if (!(await this.cartDrawerIsOpen()) && !(await this.openCartDrawer())) {
+			throw new Error(`Unable to inspect the Live cart minimum at ${this.page.url()}`)
+		}
+
+		if (await this.minimumOrderIsNotMet()) {
+			await this.closeCartDrawer()
+			return false
+		}
+
+		await this.openCartPageFromDrawer()
+
+		if (await this.minimumOrderIsNotMet()) {
+			return false
+		}
+
+		if (userType === 'med') {
+			await this.provideMedicalCardIfRequired()
+		}
+
+		const activeCheckoutButton = await this.waitForActiveCheckoutButton()
+
+		if (activeCheckoutButton) {
+			await activeCheckoutButton.click()
+			return true
+		}
+
+		if (await this.minimumOrderIsNotMet()) {
+			return false
+		}
+
+		const addMoreItems = this.page.getByRole('link', { name: /add more items/i }).first()
+
+		if (await addMoreItems.isVisible().catch(() => false)) {
+			await addMoreItems.click()
+			await this.waitForProducts()
+			return false
+		}
+
+		throw new Error(`Checkout remained disabled after the Live cart minimum check at ${this.page.url()}`)
 	}
 
 	private async waitForProducts() {
@@ -570,14 +620,6 @@ export class LiveNonProdCartFlow {
 		return false
 	}
 
-	private isLiveDev() {
-		try {
-			return new URL(this.page.url()).hostname.toLowerCase() === 'live-dev.710labs.com'
-		} catch {
-			return false
-		}
-	}
-
 	private async openCartDrawer() {
 		if (await this.cartDrawerIsOpen()) {
 			return true
@@ -647,135 +689,27 @@ export class LiveNonProdCartFlow {
 		}
 	}
 
-	private async clearLiveDevMedicalRegistrationCart() {
-		const cartItems = this.cartDrawer.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
-
-		for (let attempt = 1; attempt <= 20; attempt += 1) {
-			if (!(await this.cartDrawerIsOpen()) && !(await this.openCartDrawer())) {
-				throw new Error('Unable to reopen the Live Dev medical registration cart.')
-			}
-
-			const initialItemCount = await cartItems.count()
-
-			if (initialItemCount === 0) {
-				return
-			}
-
-			const firstItem = cartItems.first()
-			const removeLink = firstItem
-				.locator('td.product-remove .remove, .product-remove a, a.remove')
-				.first()
-			const quantityDownButton = firstItem
-				.locator('button.fasd-quantity-button.fasd-quantity-down')
-				.first()
-			const quantityInput = firstItem.locator('input.qty, input[type="number"]').first()
-			const initialQuantity = Number.parseInt(
-				(await quantityInput.inputValue().catch(() => '1')) || '1',
-				10,
-			)
-			const removalControl = (await removeLink.count()) > 0 ? removeLink : quantityDownButton
-
-			if ((await removalControl.count()) === 0) {
-				const itemText = ((await firstItem.textContent().catch(() => '')) || '')
-					.replace(/\s+/g, ' ')
-					.trim()
-
-				throw new Error(`Live Dev medical registration item had no removal control: ${itemText}`)
-			}
-
-			await removalControl.evaluate((element: HTMLElement) => element.click())
-
-			const cartChanged = await expect
-				.poll(
-					async () => {
-						if (!(await this.cartDrawerIsOpen())) {
-							await this.openCartDrawer()
-						}
-
-						const currentItemCount = await cartItems.count()
-
-						if (currentItemCount < initialItemCount) {
-							return true
-						}
-
-						const currentQuantity = Number.parseInt(
-							(await cartItems
-								.first()
-								.locator('input.qty, input[type="number"]')
-								.first()
-								.inputValue()
-								.catch(() => `${initialQuantity}`)) || `${initialQuantity}`,
-							10,
-						)
-
-						return currentQuantity < initialQuantity
-					},
-					{ timeout: 10000 },
-				)
-				.toBeTruthy()
-				.then(() => true)
-				.catch(() => false)
-
-			if (!cartChanged) {
-				throw new Error(
-					`Live Dev medical registration cart did not change after removal attempt ${attempt}.`,
-				)
-			}
-		}
-
-		throw new Error('Unable to clear the Live Dev medical registration cart after 20 attempts.')
-	}
-
-	private async clearTemporaryRegistrationCart(userType: LiveUserType) {
-		await test.step('Clear the temporary registration cart', async () => {
+	private async retainRegistrationCart() {
+		return test.step('Keep the product added during registration', async () => {
 			if (!(await this.openCartDrawer())) {
 				throw new Error(
-					`Unable to open the temporary Live registration cart at ${this.page.url()}`,
+					`Unable to open the Live registration cart at ${this.page.url()}`,
 				)
 			}
 
 			await this.lockSelectedStorefront()
-
-			if (userType === 'med' && this.isLiveDev()) {
-				await this.clearLiveDevMedicalRegistrationCart()
-				await this.closeCartDrawer()
-				return
-			}
-
-			for (let attempt = 0; attempt < 20; attempt += 1) {
-				const removeButton = this.cartDrawer
-					.locator('td.product-remove .remove, .cart_item .product-remove a, a.remove')
-					.first()
-
-				if ((await removeButton.count()) === 0) {
-					break
-				}
-
-				await removeButton.evaluate((element: HTMLElement) => element.click())
-				await this.page.waitForTimeout(500)
-
-				if (!(await this.cartDrawerIsOpen())) {
-					await this.openCartDrawer()
-				}
-			}
-
-			const emptyCartIsVisible = await this.cartDrawer
-				.getByText(/you have nothing in your bag/i)
-				.isVisible()
-				.catch(() => false)
-			let remainingItems = 0
-
-			if (!emptyCartIsVisible) {
-				remainingItems = await this.cartDrawer
-					.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
-					.count()
-			}
-
-			if (remainingItems > 0) {
-				throw new Error(`Temporary registration cart still contains ${remainingItems} item(s).`)
-			}
+			const cartItems = this.cartDrawer.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
+			await expect
+				.poll(() => cartItems.count(), { timeout: 10000 })
+				.toBeGreaterThan(0)
+			const productNames = await cartItems.evaluateAll(items =>
+				items
+					.map(item => item.querySelector('.product-name')?.textContent?.trim() || '')
+					.filter(Boolean),
+			)
 
 			await this.closeCartDrawer()
+			return productNames
 		})
 	}
 

@@ -136,17 +136,48 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 	}
 
 	private async cartDrawerContainsProduct(productName: string) {
-		if (!(await this.cartDrawerContainer.isVisible().catch(() => false))) {
-			return false
+		const normalizedProductName = productName.replace(/\s+/g, ' ').trim().toLowerCase()
+		const cartDrawers = this.page.locator(
+			'#cartDrawer, .wpse-drawer[data-module="cart-response"]',
+		)
+		const drawerCount = await cartDrawers.count()
+
+		for (let index = 0; index < drawerCount; index += 1) {
+			const drawer = cartDrawers.nth(index)
+
+			if (!(await drawer.isVisible().catch(() => false))) {
+				continue
+			}
+
+			const drawerIsOnScreen = await drawer
+				.evaluate(element => {
+					const rect = element.getBoundingClientRect()
+					return (
+						rect.width > 0 &&
+						rect.height > 0 &&
+						rect.left < window.innerWidth &&
+						rect.right > 0 &&
+						rect.top < window.innerHeight &&
+						rect.bottom > 0
+					)
+				})
+				.catch(() => false)
+
+			if (!drawerIsOnScreen) {
+				continue
+			}
+
+			const drawerText = ((await drawer.textContent().catch(() => '')) || '')
+				.replace(/\s+/g, ' ')
+				.trim()
+				.toLowerCase()
+
+			if (normalizedProductName && drawerText.includes(normalizedProductName)) {
+				return true
+			}
 		}
 
-		const drawerText = ((await this.cartDrawerContainer.textContent().catch(() => '')) || '')
-			.replace(/\s+/g, ' ')
-			.trim()
-			.toLowerCase()
-		const normalizedProductName = productName.replace(/\s+/g, ' ').trim().toLowerCase()
-
-		return Boolean(normalizedProductName && drawerText.includes(normalizedProductName))
+		return false
 	}
 
 	private async waitForAddToCartOutcome(
@@ -327,15 +358,6 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 				? ((await productCategoryLabel.textContent()) || '').replace(/\s+/g, ' ').trim()
 				: ''
 		const productUrl = this.selectedProductUrl || page.url()
-		const cartItemCount = await this.cartItemCount(page)
-
-		if (cartItemCount > 0) {
-			console.log(
-				`Cart retained ${cartItemCount} item(s) after registration; skipping the product re-add.`,
-			)
-			return
-		}
-
 		const existingInventoryNotice = await getVisibleInsufficientInventoryNotice(page)
 
 		if (existingInventoryNotice) {
@@ -347,6 +369,23 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 				existingInventoryNotice,
 			)
 			return
+		}
+
+		const cartItemCount = await this.cartItemCount(page)
+		const productIsInCart = await this.cartDrawerContainsProduct(productName)
+
+		if (cartItemCount > 0 || productIsInCart) {
+			console.log(
+				`Cart retained the registration product after registration (cart count: ${cartItemCount}); skipping the product re-add.`,
+			)
+			return
+		}
+
+		const responseDrawer = page.locator('.wpse-drawer[data-module="cart-response"]').first()
+
+		if (await responseDrawer.isVisible().catch(() => false)) {
+			await page.goto(productUrl, { waitUntil: 'domcontentloaded' })
+			await expect(productSummary).toBeVisible()
 		}
 
 		const addToCart = productSummary

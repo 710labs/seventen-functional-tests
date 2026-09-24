@@ -201,6 +201,42 @@ test('does not re-add the product when the cart survives registration', async ({
 	await expect(page.locator('.wpse-drawer[data-module="cart-response"]')).toContainText('Z')
 })
 
+test('keeps a registration product shown in the mobile cart response despite an unreadable cart count', async ({
+	page,
+}) => {
+	await page.setViewportSize({ width: 393, height: 851 })
+	await page.setContent(`
+		<a class="wpse-cart-openerize">View cart</a>
+		<div class="summary entry-summary">
+			<h1 class="product_title entry-title">SB36 #1</h1>
+			<p class="product-subheading">Deli Flower</p>
+			<button>Add to cart</button>
+		</div>
+		<div class="wpse-drawer" data-module="cart-response">
+			<div id="radicalResponseCart" class="wpse-drawer-content">
+				<p>Added to cart from The Artist Tree - Beverly Hills</p>
+				<p>SB36 #1 <span>Deli Flower</span></p>
+				<div class="wpse-snacktoast warn-toast">
+					<span class="wpse-snacktoast-headline">Order minimum not met</span>
+					<span class="wpse-snacktoast-desc">Add $40 to check out.</span>
+				</div>
+			</div>
+		</div>
+		<script>
+			window.addClicks = 0
+			document.querySelector('button').addEventListener('click', () => {
+				window.addClicks += 1
+			})
+		</script>
+	`)
+
+	const homePageActions = new LiveNonProdHomePageActions(page)
+	await homePageActions.addCurrentProductToCartAfterRegistration(page)
+
+	expect(await page.evaluate(() => (window as typeof window & { addClicks: number }).addClicks)).toBe(0)
+	await expect(page.locator('.wpse-snacktoast.warn-toast')).toContainText('Order minimum not met')
+})
+
 test('recognizes the Live low-inventory banner text', () => {
 	expect(
 		isInsufficientInventoryNotice(
