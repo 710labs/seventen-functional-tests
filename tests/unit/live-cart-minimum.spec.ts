@@ -55,8 +55,9 @@ function storefrontPage(
 					<div id="cartDrawer">
 						<a href="/shop/artist-tree/">The Artist Tree</a>
 						<table><tbody id="cartItems"></tbody></table>
+						<a href="/shop/artist-tree/">Add more items</a>
 						<div id="cartMinimum"></div>
-						<a class="button wpse-cart-openerize" href="/cart" data-module="cart">View Cart</a>
+						<a id="cartView" class="button wpse-cart-openerize" href="/cart" data-module="cart">View Cart</a>
 						<a id="cartCheckout" class="checkout-button button alt wc-forward" href="/checkout/">Checkout</a>
 					</div>
 				</div>
@@ -65,7 +66,7 @@ function storefrontPage(
 					<div id="radicalResponseCart">
 						<p id="responseProduct"></p>
 						<div id="responseMinimum"></div>
-						<a href="/cart">View Cart</a>
+						<a id="responseView" href="/cart">View Cart</a>
 					</div>
 				</div>
 				<script>
@@ -75,13 +76,15 @@ function storefrontPage(
 					const cartDrawer = document.querySelector('[data-module="cart"]')
 					const responseDrawer = document.querySelector('[data-module="cart-response"]')
 					const warning = total => total < 50
-						? '<div class="wpse-snacktoast warn-toast"><span>Order minimum not met</span><span>Add $' + (50 - total) + ' to check out.</span></div>'
+						? '<div><strong>Order minimum not met</strong><span>Add $' + (50 - total) + ' to check out.</span></div>'
 						: ''
 					function renderCart() {
 						const total = cart.reduce((sum, name) => sum + prices[name], 0)
 						document.querySelector('#cartItems').innerHTML = cart.map(name => '<tr class="cart_item"><td class="product-name"><a>' + name + '</a></td></tr>').join('')
 						document.querySelector('#cartMinimum').innerHTML = warning(total)
 						document.querySelector('#responseMinimum').innerHTML = warning(total)
+						document.querySelector('#cartView').style.display = total >= 50 ? 'block' : 'none'
+						document.querySelector('#responseView').style.display = total >= 50 ? 'block' : 'none'
 						document.querySelector('#cartCheckout').style.display = total >= 50 ? 'block' : 'none'
 					}
 					renderCart()

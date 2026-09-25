@@ -1115,19 +1115,16 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async minimumOrderIsNotMet() {
-		const notices = this.page.locator('.wpse-snacktoast, .woocommerce-error, [role="alert"]')
-		const noticeCount = await notices.count()
+		const activeDrawer = await this.getActiveCartDrawer()
+		const minimumMessages = (activeDrawer || this.page).getByText(
+			/(?:delivery|order) minimum (?:is )?not met|add \$?\d+(?:\.\d+)? to/i,
+		)
+		const messageCount = await minimumMessages.count()
 
-		for (let index = 0; index < noticeCount; index += 1) {
-			const notice = notices.nth(index)
+		for (let index = 0; index < messageCount; index += 1) {
+			const message = minimumMessages.nth(index)
 
-			if (!(await notice.isVisible().catch(() => false))) {
-				continue
-			}
-
-			const text = ((await notice.textContent().catch(() => '')) || '').replace(/\s+/g, ' ').trim()
-
-			if (/(?:delivery|order) minimum (?:is )?not met|add \$?\d+(?:\.\d+)? to/i.test(text)) {
+			if (await message.isVisible().catch(() => false)) {
 				return true
 			}
 		}
