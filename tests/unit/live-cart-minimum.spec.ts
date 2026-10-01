@@ -3,14 +3,22 @@ import { LiveNonProdCartFlow } from '../../models/always-on/live-nonprod-cart-fl
 
 const origin = 'https://live-cart-minimum.test'
 
+type StorefrontProduct = { id: string; name: string; price: number }
+
 function storefrontPage(
 	pathname: string,
 	initialCart = ['Registration Flower'],
 	withMedicalCandidate = false,
+	options: {
+		mergeQuantities?: boolean
+		products?: StorefrontProduct[]
+		showMinimumNotice?: boolean
+		unavailableNames?: string[]
+	} = {},
 ) {
 	const cartPage = pathname === '/cart/' || pathname === '/cart'
 	const checkoutPage = pathname === '/checkout/'
-	const products = [
+	const products = options.products || [
 		{ id: '1', name: 'Registration Flower', price: 10 },
 		{ id: '2', name: 'Second Flower', price: 20 },
 		{ id: '3', name: 'Third Flower', price: 20 },
@@ -32,6 +40,7 @@ function storefrontPage(
 			</head>
 			<body>
 				<a class="wpse-cart-openerize" href="#">View cart</a>
+				<div id="inventoryNotice"></div>
 				${cartPage ? '<h1>Cart</h1>' : ''}
 				${checkoutPage ? '<h1>Checkout</h1>' : ''}
 				${
@@ -71,16 +80,18 @@ function storefrontPage(
 				</div>
 				<script>
 					const prices = ${JSON.stringify(Object.fromEntries(products.map(p => [p.name, p.price])))}
+					const unavailableNames = ${JSON.stringify(options.unavailableNames || [])}
 					const cart = JSON.parse(sessionStorage.getItem('cart') || '${JSON.stringify(initialCart)}')
 					sessionStorage.setItem('cart', JSON.stringify(cart))
 					const cartDrawer = document.querySelector('[data-module="cart"]')
 					const responseDrawer = document.querySelector('[data-module="cart-response"]')
-					const warning = total => total < 50
+					const warning = total => ${options.showMinimumNotice === false ? 'false' : 'true'} && total < 50
 						? '<div><strong>Order minimum not met</strong><span>Add $' + (50 - total) + ' to check out.</span></div>'
 						: ''
 					function renderCart() {
 						const total = cart.reduce((sum, name) => sum + prices[name], 0)
-						document.querySelector('#cartItems').innerHTML = cart.map(name => '<tr class="cart_item"><td class="product-name"><a>' + name + '</a></td></tr>').join('')
+						const cartRows = ${options.mergeQuantities ? 'Object.entries(cart.reduce((counts, name) => ({ ...counts, [name]: (counts[name] || 0) + 1 }), {}))' : 'cart.map(name => [name, 1])'}
+						document.querySelector('#cartItems').innerHTML = cartRows.map(([name, quantity]) => '<tr class="cart_item"><td class="product-name"><a>' + name + '</a></td><td><input class="qty" value="' + quantity + '"></td></tr>').join('')
 						document.querySelector('#cartMinimum').innerHTML = warning(total)
 						document.querySelector('#responseMinimum').innerHTML = warning(total)
 						document.querySelector('#cartView').style.display = total >= 50 ? 'block' : 'none'
@@ -103,6 +114,11 @@ function storefrontPage(
 							const attempts = JSON.parse(sessionStorage.getItem('attempts') || '[]')
 							attempts.push(name)
 							sessionStorage.setItem('attempts', JSON.stringify(attempts))
+							if (unavailableNames.includes(name)) {
+								document.querySelector('#inventoryNotice').innerHTML = '<div class="wpse-snacktoast warn-toast">Not enough available. Only 12g of this product is left.</div>'
+								return
+							}
+							document.querySelector('#inventoryNotice').innerHTML = ''
 							cart.push(name)
 							sessionStorage.setItem('cart', JSON.stringify(cart))
 							renderCart()
@@ -187,6 +203,80 @@ test('MED adds a medical-only product before checkout even when the registration
 
 	await expect(page).toHaveURL(`${origin}/checkout/`)
 	expect(result.medicalProductAdded).toBe(true)
+	expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('attempts') || '[]'))).toEqual([
+		'Second Flower',
+	])
+})
+
+test('reuses an addable product beyond two attempts until the cart minimum is met', async ({ page }) => {
+	const products = [{ id: '1', name: 'Registration Flower', price: 10 }]
+	await page.route(`${origin}/**`, async route => {
+		await route.fulfill({
+			contentType: 'text/html',
+			body: storefrontPage(new URL(route.request().url()).pathname, undefined, false, {
+				mergeQuantities: true,
+				products,
+			}),
+		})
+	})
+	await page.goto(`${origin}/`)
+
+	await new LiveNonProdCartFlow(page).addProductsUntilCheckout('rec')
+
+	await expect(page).toHaveURL(`${origin}/checkout/`)
+	expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('attempts') || '[]'))).toEqual([
+		'Registration Flower',
+		'Registration Flower',
+		'Registration Flower',
+		'Registration Flower',
+	])
+})
+
+test('skips low-inventory product and tries the next candidate', async ({ page }) => {
+	const products = [
+		{ id: '1', name: 'Registration Flower', price: 10 },
+		{ id: '2', name: 'Low Stock Flower', price: 20 },
+		{ id: '3', name: 'Available Flower', price: 40 },
+	]
+	await page.route(`${origin}/**`, async route => {
+		await route.fulfill({
+			contentType: 'text/html',
+			body: storefrontPage(new URL(route.request().url()).pathname, undefined, false, {
+				products,
+				unavailableNames: ['Low Stock Flower'],
+			}),
+		})
+	})
+	await page.goto(`${origin}/`)
+
+	await new LiveNonProdCartFlow(page).addProductsUntilCheckout('rec')
+
+	await expect(page).toHaveURL(`${origin}/checkout/`)
+	expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('attempts') || '[]'))).toEqual([
+		'Low Stock Flower',
+		'Available Flower',
+	])
+})
+
+test('continues shopping when the drawer has Add more items but no warning or View Cart', async ({ page }) => {
+	const products = [
+		{ id: '1', name: 'Registration Flower', price: 10 },
+		{ id: '2', name: 'Second Flower', price: 40 },
+	]
+	await page.route(`${origin}/**`, async route => {
+		await route.fulfill({
+			contentType: 'text/html',
+			body: storefrontPage(new URL(route.request().url()).pathname, undefined, false, {
+				products,
+				showMinimumNotice: false,
+			}),
+		})
+	})
+	await page.goto(`${origin}/`)
+
+	await new LiveNonProdCartFlow(page).addProductsUntilCheckout('rec')
+
+	await expect(page).toHaveURL(`${origin}/checkout/`)
 	expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('attempts') || '[]'))).toEqual([
 		'Second Flower',
 	])

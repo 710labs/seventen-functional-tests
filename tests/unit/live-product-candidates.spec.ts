@@ -62,4 +62,35 @@ test.describe('Live product candidate selection', () => {
 			selectNextLiveProductCandidate([medical], 'rec', new Map(), false),
 		).toBeUndefined()
 	})
+
+	test('reuses a product that added successfully after its second attempt', () => {
+		const recreational = candidate('Moonbow', false)
+		const attempts = new Map([[recreational.key, 2]])
+
+		expect(
+			selectNextLiveProductCandidate(
+				[recreational],
+				'rec',
+				attempts,
+				false,
+				new Set([recreational.key]),
+			),
+		).toBe(recreational)
+	})
+
+	test('moves to the next product after an inventory rejection', () => {
+		const unavailable = candidate('Moonbow', false)
+		const available = candidate('Z', false)
+
+		expect(
+			selectNextLiveProductCandidate(
+				[unavailable, available],
+				'rec',
+				new Map([[unavailable.key, 1]]),
+				false,
+				new Set(),
+				new Set([unavailable.key]),
+			),
+		).toBe(available)
+	})
 })

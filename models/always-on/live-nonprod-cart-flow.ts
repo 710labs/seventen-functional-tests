@@ -45,10 +45,20 @@ export function selectNextLiveProductCandidate(
 	userType: LiveUserType,
 	productAttemptCounts: Map<string, number>,
 	medicalProductAdded: boolean,
+	successfulProductKeys: ReadonlySet<string> = new Set(),
+	unavailableProductKeys: ReadonlySet<string> = new Set(),
 ) {
-	const selectWithinAttemptLimit = (candidatePool: ProductCandidate[]) =>
-		candidatePool.find(candidate => !productAttemptCounts.has(candidate.key)) ||
-		candidatePool.find(candidate => (productAttemptCounts.get(candidate.key) || 0) < 2)
+	const selectWithinAttemptLimit = (candidatePool: ProductCandidate[]) => {
+		const availableCandidates = candidatePool.filter(
+			candidate => !unavailableProductKeys.has(candidate.key),
+		)
+
+		return (
+			availableCandidates.find(candidate => !productAttemptCounts.has(candidate.key)) ||
+			availableCandidates.find(candidate => successfulProductKeys.has(candidate.key)) ||
+			availableCandidates.find(candidate => (productAttemptCounts.get(candidate.key) || 0) < 2)
+		)
+	}
 
 	if (userType === 'rec') {
 		return selectWithinAttemptLimit(candidates.filter(candidate => !candidate.isMedical))
@@ -120,6 +130,8 @@ export class LiveNonProdCartFlow {
 			await this.returnToStorefront()
 
 			const productAttemptCounts = new Map<string, number>()
+			const successfulProductKeys = new Set<string>()
+			const unavailableProductKeys = new Set<string>()
 			const rejectionReasons: string[] = []
 			let medicalProductAdded = false
 			const existingCandidates = await this.readCandidates()
@@ -133,6 +145,7 @@ export class LiveNonProdCartFlow {
 					)
 				) {
 					productAttemptCounts.set(candidate.key, 1)
+					successfulProductKeys.add(candidate.key)
 				}
 			}
 
@@ -157,6 +170,8 @@ export class LiveNonProdCartFlow {
 					userType,
 					productAttemptCounts,
 					medicalProductAdded,
+					successfulProductKeys,
+					unavailableProductKeys,
 				)
 
 				if (!candidate) {
@@ -173,11 +188,18 @@ export class LiveNonProdCartFlow {
 
 				if (!result.added) {
 					rejectionReasons.push(`${candidate.name}: ${result.reason}`)
+					successfulProductKeys.delete(candidate.key)
+
+					if (isInsufficientInventoryNotice(result.reason)) {
+						unavailableProductKeys.add(candidate.key)
+					}
+
 					await this.closeCartDrawer()
 					await this.returnToStorefront()
 					continue
 				}
 
+				successfulProductKeys.add(candidate.key)
 				medicalProductAdded ||= candidate.isMedical
 
 				if (await this.checkoutIfMinimumIsMet(userType, medicalProductAdded)) {
@@ -204,12 +226,15 @@ export class LiveNonProdCartFlow {
 			throw new Error(`Unable to inspect the Live cart minimum at ${this.page.url()}`)
 		}
 
-		if (await this.minimumOrderIsNotMet()) {
+		if ((await this.waitForCartMinimumDecision()) !== 'ready') {
 			await this.closeCartDrawer()
 			return false
 		}
 
-		await this.openCartPageFromDrawer()
+		if (!(await this.openCartPageFromDrawer())) {
+			await this.closeCartDrawer()
+			return false
+		}
 
 		if (await this.minimumOrderIsNotMet()) {
 			return false
@@ -437,6 +462,17 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async cartItemCount() {
+		const cartLineItemQuantity = await this.cartDrawer
+			.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
+			.evaluateAll(items =>
+				items.reduce((total, item) => {
+					const quantityInput = item.querySelector<HTMLInputElement>(
+						'input.qty, input[name*="quantity"]',
+					)
+					const quantity = Number.parseInt(quantityInput?.value || '', 10)
+					return total + (Number.isFinite(quantity) && quantity > 0 ? quantity : 1)
+				}, 0),
+			)
 		const cartToggles = this.page.locator('a.wpse-cart-openerize')
 		const cartToggleCount = await cartToggles.count()
 		const fallbackCounts: number[] = []
@@ -457,7 +493,7 @@ export class LiveNonProdCartFlow {
 
 			if (parsedCount !== null) {
 				if (await cartToggle.isVisible().catch(() => false)) {
-					return parsedCount
+					return Math.max(parsedCount, cartLineItemQuantity)
 				}
 
 				fallbackCounts.push(parsedCount)
@@ -465,12 +501,10 @@ export class LiveNonProdCartFlow {
 		}
 
 		if (fallbackCounts.length > 0) {
-			return Math.max(...fallbackCounts)
+			return Math.max(...fallbackCounts, cartLineItemQuantity)
 		}
 
-		return this.cartDrawer
-			.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
-			.count()
+		return cartLineItemQuantity
 	}
 
 	private async elementIntersectsViewport(locator: Locator) {
@@ -778,6 +812,8 @@ export class LiveNonProdCartFlow {
 		userType: LiveUserType,
 		productAttemptCounts: Map<string, number>,
 		medicalProductAdded: boolean,
+		successfulProductKeys: ReadonlySet<string>,
+		unavailableProductKeys: ReadonlySet<string>,
 	) {
 		const candidates = await this.readCandidates()
 		const eligibleCandidates = candidates.filter(candidate => {
@@ -806,6 +842,8 @@ export class LiveNonProdCartFlow {
 			userType,
 			productAttemptCounts,
 			medicalProductAdded,
+			successfulProductKeys,
+			unavailableProductKeys,
 		)
 
 		if (userType === 'med' && !medicalProductAdded && candidate && !candidate.isMedical) {
@@ -973,6 +1011,11 @@ export class LiveNonProdCartFlow {
 
 	private async addCandidate(candidate: ProductCandidate): Promise<AddCandidateResult> {
 		const initialCartCount = await this.cartItemCount()
+		const candidateWasInCart =
+			(await this.cartDrawer
+				.locator('tr.woocommerce-cart-form__cart-item, .cart_item')
+				.getByText(candidate.name, { exact: false })
+				.count()) > 0
 		const clickResult = await this.clickCandidate(candidate)
 
 		if (!clickResult.clicked) {
@@ -1076,7 +1119,7 @@ export class LiveNonProdCartFlow {
 				)
 			}
 
-			if (cartContainsCandidate) {
+			if (cartContainsCandidate && !candidateWasInCart) {
 				return {
 					added: true,
 					reason: '',
@@ -1132,27 +1175,77 @@ export class LiveNonProdCartFlow {
 		return false
 	}
 
+	private async getVisibleViewCartButton() {
+		const viewCartButtonCount = await this.viewCartButton.count()
+
+		for (let index = 0; index < viewCartButtonCount; index += 1) {
+			const viewCartButton = this.viewCartButton.nth(index)
+
+			if (
+				(await viewCartButton.isVisible().catch(() => false)) &&
+				(await this.elementIntersectsViewport(viewCartButton))
+			) {
+				return viewCartButton
+			}
+		}
+
+		return null
+	}
+
+	private async waitForCartMinimumDecision(): Promise<'minimum-not-met' | 'add-more' | 'ready'> {
+		for (let attempt = 1; attempt <= 2; attempt += 1) {
+			const deadline = Date.now() + (attempt === 1 ? 2500 : 5000)
+
+			while (Date.now() < deadline) {
+				if (await this.minimumOrderIsNotMet()) {
+					return 'minimum-not-met'
+				}
+
+				if (await this.getVisibleViewCartButton()) {
+					return 'ready'
+				}
+
+				await this.page.waitForTimeout(150)
+			}
+
+			if (attempt === 1) {
+				await this.closeCartDrawer()
+
+				if (!(await this.openCartDrawer())) {
+					throw new Error(
+						`Unable to reopen the Live cart while checking its minimum at ${this.page.url()}`,
+					)
+				}
+			}
+		}
+
+		const activeDrawer = await this.getActiveCartDrawer()
+		const addMoreItems = activeDrawer?.getByText(/add more items/i).first()
+
+		if (addMoreItems && (await this.elementIntersectsViewport(addMoreItems))) {
+			return 'add-more'
+		}
+
+		const drawerText = (await activeDrawer?.innerText().catch(() => '')) || 'none'
+
+		throw new Error(
+			[
+				'Live cart showed neither an order-minimum warning nor a View Cart control after reopening.',
+				`Active drawer text: ${drawerText.replace(/\s+/g, ' ').trim().slice(0, 300)}.`,
+				`Current URL: ${this.page.url()}`,
+			].join('\n'),
+		)
+	}
+
 	private async openCartPageFromDrawer() {
 		if (!(await this.cartDrawerIsOpen()) && !(await this.openCartDrawer())) {
 			throw new Error(`Unable to open the Live cart drawer at ${this.page.url()}`)
 		}
 
-		const viewCartButtonCount = await this.viewCartButton.count()
-		let activeViewCartButton: Locator | null = null
-
-		for (let index = 0; index < viewCartButtonCount; index += 1) {
-			const viewCartButton = this.viewCartButton.nth(index)
-
-			if (await viewCartButton.isVisible().catch(() => false)) {
-				activeViewCartButton = viewCartButton
-				break
-			}
-		}
+		const activeViewCartButton = await this.getVisibleViewCartButton()
 
 		if (!activeViewCartButton) {
-			throw new Error(
-				`No visible View Cart control was available in the active Live drawer at ${this.page.url()}`,
-			)
+			return false
 		}
 
 		await activeViewCartButton.evaluate((element: HTMLAnchorElement) => element.click())
@@ -1160,6 +1253,7 @@ export class LiveNonProdCartFlow {
 			.locator('h6:has-text("Your cart from"), h1:has-text("Cart"), .checkout-button')
 			.first()
 			.waitFor({ state: 'visible', timeout: 15000 })
+		return true
 	}
 
 	private async provideMedicalCardIfRequired() {
