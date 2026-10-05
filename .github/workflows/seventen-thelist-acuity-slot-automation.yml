@@ -1,4 +1,4 @@
-name: Acuity Slot Automation - In Progress
+name: Acuity Slot Automation
 on:
   workflow_dispatch:
     inputs:
@@ -12,18 +12,18 @@ on:
           - upload
       slot_file:
         type: string
-        description: 'CSV filename committed under acuity-slots/. Example: delivery-slots-mi-july.csv'
+        description: "CSV filename committed under acuity-slots/. Example: delivery-slots-mi-july.csv"
         required: true
       workers:
         type: choice
         description: Playwright workers for upload mode.
         required: true
-        default: '3'
+        default: "3"
         options:
-          - '1'
-          - '2'
-          - '3'
-          - '4'
+          - "1"
+          - "2"
+          - "3"
+          - "4"
 concurrency:
   group: acuity-slot-automation
   cancel-in-progress: false
@@ -47,12 +47,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.13.0'
-          cache: 'npm'
+          node-version: "22.13.0"
+          cache: "npm"
       - name: Install dependencies
         timeout-minutes: 15
         env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
       - name: Prepare Acuity slot CSV
         env:
@@ -99,7 +99,7 @@ jobs:
           echo "ACUITY_SLOT_FILE=$selected_file" >> "$GITHUB_ENV"
       - name: Validate Acuity slot CSV
         env:
-          ACUITY_NORMALIZE_SLOT_FILE: 'true'
+          ACUITY_NORMALIZE_SLOT_FILE: "true"
         run: node scripts/validate-acuity-slots.js "$ACUITY_SLOT_FILE"
       - name: Upload selected Acuity CSV
         if: always()
@@ -114,9 +114,9 @@ jobs:
       - name: Prepare Acuity auth state
         if: inputs.mode == 'upload'
         env:
-          ACUITY_HEADLESS: 'true'
+          ACUITY_HEADLESS: "true"
           ACUITY_LOGIN_METHOD: ${{ vars.ACUITY_LOGIN_METHOD || secrets.ACUITY_LOGIN_METHOD || 'squarespace' }}
-          ACUITY_AUTH_DEBUG_ARTIFACTS: 'true'
+          ACUITY_AUTH_DEBUG_ARTIFACTS: "true"
           ACUITY_AUTH_ARTIFACT_DIR: acuity-auth-artifacts
           ACUITY_STORAGE_STATE_FILE: .auth/acuity-storage-state.json
         run: |
@@ -157,8 +157,8 @@ jobs:
         if: inputs.mode == 'upload'
         env:
           WORKERS: ${{ inputs.workers }}
-          ACUITY_HEADLESS: 'true'
-          ACUITY_UPLOAD_CI_ARTIFACTS: 'true'
+          ACUITY_HEADLESS: "true"
+          ACUITY_UPLOAD_CI_ARTIFACTS: "true"
         run: |
           set -euo pipefail
 
