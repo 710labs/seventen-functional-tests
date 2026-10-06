@@ -122,6 +122,7 @@ test('lighthouse error assertion → red; warning → amber', () => {
 		],
 	})
 	assert.equal(warn.status, 'amber')
+	assert.match(warn.slackText, /Lighthouse warnings:\* image-alt on \/shop\//)
 })
 
 test('GSC cliff and API error → red; skipped → note only', () => {

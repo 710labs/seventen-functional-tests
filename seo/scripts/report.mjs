@@ -138,6 +138,7 @@ export function buildReport({ sites, jobs = {}, runUrl = '', date = new Date() }
 				`• Lighthouse (mobile, median of 3): ${pages || 'no pages'}${s.robotsState === 'blocked' ? ' _(SEO score capped while robots-blocked)_' : ''}`,
 			)
 			if (lh.errors.length) actions.push(`❌ *Lighthouse gates:* ${list(lh.errors, 4)}`)
+			if (lh.warnings.length) actions.push(`⚠️ *Lighthouse warnings:* ${list(lh.warnings, 4)}`)
 		} else if (jobs.lighthouse && jobs.lighthouse !== 'skipped') {
 			status = 'red'
 			lines.push(`• Lighthouse: ❌ no results — job ${jobs.lighthouse}`)
