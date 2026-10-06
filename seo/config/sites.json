@@ -24,7 +24,7 @@
 			"productLinkSelector": "a[href*=\"/product/\"]",
 			"productSampleSize": 5,
 			"organizationSchemaPages": ["/shop/"],
-			"knownIssues": ["single-h1:/shop/", "org-schema:/shop/", "img-alt:/shop/", "sitemap-present"],
+			"knownIssues": ["single-h1:/shop/", "img-alt:/shop/"],
 			"gsc": {
 				"property": "sc-domain:710labs.com",
 				"pageContains": "live.710labs.com"

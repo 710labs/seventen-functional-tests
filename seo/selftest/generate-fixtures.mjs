@@ -25,6 +25,7 @@ const page = ({
 	links = [],
 	robots = 'max-image-preview:large',
 	lang = 'en',
+	delayedLinks = false,
 }) => `<!DOCTYPE html>
 <html lang="${lang}"><head><meta charset="utf-8">
 <title>${title}</title>
@@ -35,7 +36,8 @@ ${jsonld.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</scri
 </head><body>
 ${h1s.map(h => `<h1>${h}</h1>`).join('\n')}
 ${imgs.map(i => `<img src="/img/${i.src}" width="${i.w ?? 200}" height="200"${i.alt !== undefined ? ` alt="${i.alt}"` : ''}>`).join('\n')}
-${links.map(l => `<a href="${l}">${l}</a>`).join('\n')}
+${links.map(l => `<a ${delayedLinks ? 'data-href' : 'href'}="${l}">${l}</a>`).join('\n')}
+${delayedLinks ? '<script>setTimeout(() => document.querySelectorAll("a[data-href]").forEach(a => a.href = a.dataset.href), 500)</script>' : ''}
 <img src="/px.gif" width="1" height="1">
 </body></html>
 `
@@ -93,7 +95,7 @@ const products = [
 	['rambutan-11', 'Rambutan #11'],
 ]
 
-// 1) good — fully compliant pre-launch site. Every check passes, zero warnings.
+// 1) good — compliant site with a delayed product grid to guard DOM hydration readiness.
 put('good', 'robots.txt', BLOCKED)
 put('good', 'sitemap.xml', SITEMAP)
 put(
@@ -114,6 +116,7 @@ put(
 			},
 		],
 		links: shopLinks,
+		delayedLinks: true,
 	}),
 )
 put('good', 'learn/index.html', learn)

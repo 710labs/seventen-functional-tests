@@ -9,4 +9,3 @@ Mode: *pre-launch* — robots.txt intentionally blocking crawlers ✅ (as expect
    _0 impressions is expected while blocked — this is the launch-day tripwire._
 
 - ⚠️ *Known issues / warnings:* sitemap-present, single-h1:/shop/, img-alt:/shop/, org-schema:/shop/
-

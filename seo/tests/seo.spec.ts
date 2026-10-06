@@ -169,6 +169,15 @@ test.describe(`SEO pulse · ${site.id} (${site.robotsExpectedState})`, () => {
 			`${site.productListPath} returned HTTP ${res?.status()}`,
 		).toBeLessThan(400)
 
+		// Live hydrates the product grid after DOMContentLoaded. Wait for real links,
+		// while keeping a genuinely empty grid a hard outage.
+		await expect
+			.poll(() => page.locator(site.productLinkSelector).count(), {
+				timeout: 15000,
+				message: `no product links found on ${site.productListPath} — product grid may be broken`,
+			})
+			.toBeGreaterThan(0)
+
 		const hrefs = await page.$$eval(site.productLinkSelector, as =>
 			as.map(a => (a as HTMLAnchorElement).href),
 		)
