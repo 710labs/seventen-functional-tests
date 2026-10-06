@@ -1,0 +1,46 @@
+[
+  {
+    "name": "minScore",
+    "expected": 0.9,
+    "actual": 0,
+    "values": [
+      0
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditId": "image-alt",
+    "level": "warn",
+    "url": "http://127.0.0.1:46200/shop/",
+    "auditTitle": "Image elements do not have `[alt]` attributes",
+    "auditDocumentationLink": "https://dequeuniversity.com/rules/axe/4.10/image-alt"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.85,
+    "actual": 0.81,
+    "values": [
+      0.81
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "accessibility",
+    "auditId": "categories",
+    "level": "warn",
+    "url": "http://127.0.0.1:46200/learn/"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.9,
+    "actual": 0,
+    "values": [
+      0
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditId": "image-alt",
+    "level": "warn",
+    "url": "http://127.0.0.1:46200/learn/",
+    "auditTitle": "Image elements do not have `[alt]` attributes",
+    "auditDocumentationLink": "https://dequeuniversity.com/rules/axe/4.10/image-alt"
+  }
+]

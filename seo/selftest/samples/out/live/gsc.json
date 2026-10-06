@@ -1,0 +1,17 @@
+{
+  "site": "live",
+  "status": "ok",
+  "property": "sc-domain:710labs.com",
+  "pageContains": "live.710labs.com",
+  "windows": {
+    "current": { "startDate": "2026-09-26", "endDate": "2026-10-02" },
+    "previous": { "startDate": "2026-09-19", "endDate": "2026-09-25" }
+  },
+  "totals": { "clicks": 0, "impressions": 0, "ctr": 0, "position": null },
+  "previousTotals": { "clicks": 0, "impressions": 0, "ctr": 0, "position": null },
+  "clicksDeltaPct": 0,
+  "impressionsDeltaPct": 0,
+  "cliff": false,
+  "topQueries": [],
+  "productPagesWithImpressions": 0
+}

@@ -1,0 +1,112 @@
+{
+	"$comment": "Self-test scenarios: the SEO suite run against local fixture sites with known defects. Each site id is one scenario; expectations live in run-selftest.mjs.",
+	"defaults": {
+		"thresholds": {
+			"minTitleLength": 10,
+			"maxTitleLength": 60,
+			"minMetaDescriptionLength": 50,
+			"maxMetaDescriptionLength": 160,
+			"minImageWidthForAlt": 40
+		}
+	},
+	"sites": [
+		{
+			"id": "good",
+			"fixture": "good",
+			"baseUrl": "http://127.0.0.1:46101",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": []
+		},
+		{
+			"id": "good-stale-known",
+			"fixture": "good",
+			"baseUrl": "http://127.0.0.1:46101",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": ["single-h1:/shop/"]
+		},
+		{
+			"id": "prod-strict",
+			"fixture": "prodmirror",
+			"baseUrl": "http://127.0.0.1:46102",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": []
+		},
+		{
+			"id": "prod-known",
+			"fixture": "prodmirror",
+			"baseUrl": "http://127.0.0.1:46102",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": ["single-h1:/shop/", "org-schema:/shop/", "img-alt:/shop/", "sitemap-present"]
+		},
+		{
+			"id": "prod-launched",
+			"fixture": "prodmirror",
+			"baseUrl": "http://127.0.0.1:46102",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "open",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": ["single-h1:/shop/", "org-schema:/shop/", "img-alt:/shop/"]
+		},
+		{
+			"id": "regressed",
+			"fixture": "regressed",
+			"baseUrl": "http://127.0.0.1:46103",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": []
+		},
+		{
+			"id": "outage",
+			"fixture": "outage",
+			"baseUrl": "http://127.0.0.1:46104",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": ["learn-page", "product-grid"]
+		}
+	]
+}

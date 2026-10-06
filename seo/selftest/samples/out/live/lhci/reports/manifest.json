@@ -1,0 +1,26 @@
+[
+  {
+    "url": "http://127.0.0.1:46200/shop/",
+    "isRepresentativeRun": true,
+    "htmlPath": "/home/claude/seo-handoff/reference/.lighthouseci/reports/127_0_0_1-shop_-2026_10_05_14_41_50.report.html",
+    "jsonPath": "/home/claude/seo-handoff/reference/.lighthouseci/reports/127_0_0_1-shop_-2026_10_05_14_41_50.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 0.85,
+      "best-practices": 0.89,
+      "seo": 0.61
+    }
+  },
+  {
+    "url": "http://127.0.0.1:46200/learn/",
+    "isRepresentativeRun": true,
+    "htmlPath": "/home/claude/seo-handoff/reference/.lighthouseci/reports/127_0_0_1-learn_-2026_10_05_14_42_03.report.html",
+    "jsonPath": "/home/claude/seo-handoff/reference/.lighthouseci/reports/127_0_0_1-learn_-2026_10_05_14_42_03.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 0.81,
+      "best-practices": 0.89,
+      "seo": 0.61
+    }
+  }
+]
