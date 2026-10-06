@@ -210,6 +210,7 @@ export function collect(outRoot, cfg, only = process.env.SEO_ONLY_SITE ?? '') {
 			return {
 				id: s.id,
 				name: s.name ?? s.id,
+				healthCheckId: s.healthCheckId ?? `seo-${s.id}`,
 				baseUrl: s.baseUrl,
 				robotsState: process.env.ROBOTS_EXPECTED_STATE || s.robotsExpectedState,
 				technical: tech ? summarizeTechnical(tech) : null,

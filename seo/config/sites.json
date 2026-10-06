@@ -14,7 +14,7 @@
 	"sites": [
 		{
 			"id": "live",
-			"name": "710 Labs Live",
+			"name": "LIVE - PROD",
 			"baseUrl": "https://live.710labs.com",
 			"canonicalHost": "live.710labs.com",
 			"enabled": true,
@@ -28,7 +28,38 @@
 			"gsc": {
 				"property": "sc-domain:710labs.com",
 				"pageContains": "live.710labs.com"
-			}
+			},
+			"healthCheckId": "seo-live-prod"
+		},
+		{
+			"id": "live-stage",
+			"name": "LIVE - STAGE",
+			"baseUrl": "https://live-stage.710labs.com",
+			"canonicalHost": "live-stage.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/strains/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"healthCheckId": "seo-live-stage",
+			"knownIssues": []
+		},
+		{
+			"id": "live-dev",
+			"name": "LIVE - DEV",
+			"baseUrl": "https://live-dev.710labs.com",
+			"canonicalHost": "live-dev.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/strains/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"healthCheckId": "seo-live-dev",
+			"knownIssues": []
 		},
 		{
 			"id": "shop",

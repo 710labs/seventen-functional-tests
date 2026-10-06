@@ -1,8 +1,14 @@
 # SEO Pulse
 
-Daily monitoring for `live.710labs.com`, separate from the functional suites. The workflow starts at **10:22 UTC**, five minutes after Daily System Health starts, and posts one digest through the same `SLACK_WEBHOOK_URL`. It does not wait for the functional workflow to finish. GitHub Actions, Playwright, Lighthouse CI, and Search Console are free tools; Actions usage counts toward the repository's runner allowance.
+SEO runs **inside Daily System Health** at **10:17 UTC**. The GitHub summary and single daily
+Slack digest have an **SEO** section with **LIVE - PROD**, **LIVE - STAGE**, and **LIVE - DEV**
+underneath. Each row shows technical, mobile Lighthouse, and Search Console status. There is no
+separate SEO schedule or Slack message. `seo-pulse.yml` is the reusable implementation called
+by the daily workflow; its manual dispatch is a diagnostic run that never sends Slack.
 
-The site ships in **pre-launch mode**: `robotsExpectedState: "blocked"` guards its intentional full crawl block. No site settings are changed by this monitor.
+All three environments currently use `robotsExpectedState: "blocked"` to guard their intentional
+crawl blocks. Their SEO checks remain isolated from the functional suites. Search Console is
+scoped to Prod; it is explicitly skipped for Stage and Dev. No site settings are changed.
 
 ## Checks and digest
 
@@ -25,11 +31,11 @@ npm run seo
 node seo/scripts/report.mjs --dry-run
 ```
 
-The self-tests use only local fixtures and require no credentials or production traffic. PRs touching `seo/**`, the workflow, or dependency manifests run them. Technical checks use their own Playwright config and never enter the functional suites.
+The self-tests use only local fixtures and require no credentials or production traffic. PRs touching `seo/**`, either workflow, health aggregation code, or dependency manifests run them, along with the Daily System Health regression tests. Technical checks use their own Playwright config and never enter the functional suites.
 
-Actions → **seo-pulse** → **Run workflow** accepts an optional enabled site id. **Post to Slack defaults off**. Scheduled runs always post; PRs never post. GitHub requires a new dispatch workflow to be registered before it can run manually; verify the PR self-test first and dispatch the branch when available. Public-repository schedules can be disabled after 60 days without repository activity.
+Actions → **seo-pulse** → **Run workflow** accepts an optional enabled site id (`live`, `live-stage`, or `live-dev`). These focused diagnostic runs and PR self-tests never post to Slack. The final Daily System Health aggregation job owns the only daily message. GitHub requires a new dispatch workflow to be registered before it can run manually; verify the PR self-test first and dispatch the branch when available. Public-repository schedules can be disabled after 60 days without repository activity.
 
-`seo/config/sites.json` is the source of truth. To add a site, add an enabled entry with its origin, canonical host, key-page paths, product discovery selector, robots state, and optional GSC settings. No workflow edit is needed. `shop` is a disabled example. Inspect the matrix with:
+`seo/config/sites.json` is the source of truth. To add a site, add an enabled entry with its origin, canonical host, key-page paths, product discovery selector, robots state, and optional GSC settings. The health manifest derives enabled SEO environments from the same config, so no workflow or manifest edit is needed. Optional `healthCheckId` sets its stable Daily System Health id; it defaults to `seo-<site id>`. `shop` is a disabled example. Inspect the matrix with:
 
 ```sh
 node seo/scripts/resolve-sites.mjs
@@ -38,7 +44,7 @@ node seo/scripts/resolve-sites.mjs live
 
 Check ids are stable (for example `single-h1:/shop/`). Add one to `knownIssues` only after Brendan accepts the issue in the PR; this changes its failure to a warning. A passing known issue is flagged **Fixed — remove from knownIssues**. Remove confirmed fixed ids in a reviewed config change. Never use the list to hide outages or make a new failure green.
 
-Emergency/self-test overrides: `SEO_SITE`, `SEO_BASE_URL`, `ROBOTS_EXPECTED_STATE`, `SEO_CONFIG`, `SEO_OUT_DIR`, `SEO_ROTATION_SEED`. Digest overrides: `SEO_OUT_ROOT`, `SEO_ONLY_SITE`. Prefer reviewed config changes for normal operation.
+Emergency/self-test overrides: `SEO_SITE`, `SEO_BASE_URL`, `ROBOTS_EXPECTED_STATE`, `SEO_CONFIG`, `SEO_OUT_DIR`, `SEO_ROTATION_SEED`. Diagnostic report overrides: `SEO_OUT_ROOT`, `SEO_ONLY_SITE`, `HEALTH_RESULTS_DIR`. `HEALTH_ONLY_GROUP=SEO` restricts the daily aggregator to SEO artifacts for diagnostics; normal daily runs include all checks. Prefer reviewed config changes for normal operation.
 
 ## Human setup
 
@@ -50,6 +56,6 @@ Emergency/self-test overrides: `SEO_SITE`, `SEO_BASE_URL`, `ROBOTS_EXPECTED_STAT
 ## Launch day
 
 1. The site team ships robots.txt allowing crawl with a `Sitemap:` line and a working `/sitemap.xml`.
-2. Review a PR setting Live's `robotsExpectedState` to `"open"` and removing `sitemap-present` from `knownIssues`. This automatically switches to the live Lighthouse gates and makes a future full crawl block red.
+2. Review a PR setting Live's `robotsExpectedState` to `"open"` and removing `sitemap-present` from `knownIssues` if still listed. This automatically switches to the live Lighthouse gates and makes a future full crawl block red.
 3. Submit the sitemap in Search Console.
 4. Watch for impressions to leave zero. While blocked, zero impressions are expected; after launch this is the indexing tripwire.
