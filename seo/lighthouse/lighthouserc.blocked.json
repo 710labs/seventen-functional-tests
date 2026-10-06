@@ -1,0 +1,69 @@
+{
+	"$comment": "PRE-LAUNCH (robots.txt intentionally blocks crawlers). The SEO *category* score is capped while is-crawlable fails, so it is reported but not asserted; the individual on-page SEO audits are asserted instead. URLs are passed per site on the CLI (--collect.url=...).",
+	"ci": {
+		"collect": {
+			"numberOfRuns": 3,
+			"settings": {
+				"emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36 seventen-seo-pulse/1.0",
+				"chromeFlags": "--no-sandbox",
+				"formFactor": "mobile"
+			}
+		},
+		"assert": {
+			"assertions": {
+				"categories:seo": "off",
+				"categories:performance": [
+					"warn",
+					{
+						"minScore": 0.5
+					}
+				],
+				"categories:accessibility": [
+					"warn",
+					{
+						"minScore": 0.85
+					}
+				],
+				"categories:best-practices": [
+					"warn",
+					{
+						"minScore": 0.85
+					}
+				],
+				"document-title": "error",
+				"meta-description": "error",
+				"http-status-code": "error",
+				"link-text": "warn",
+				"crawlable-anchors": "warn",
+				"image-alt": "warn",
+				"hreflang": "warn",
+				"canonical": "warn",
+				"is-crawlable": "off",
+				"robots-txt": "off",
+				"largest-contentful-paint": [
+					"warn",
+					{
+						"maxNumericValue": 4000
+					}
+				],
+				"cumulative-layout-shift": [
+					"warn",
+					{
+						"maxNumericValue": 0.1
+					}
+				],
+				"total-blocking-time": [
+					"warn",
+					{
+						"maxNumericValue": 600
+					}
+				]
+			},
+			"aggregationMethod": "median"
+		},
+		"upload": {
+			"target": "filesystem",
+			"outputDir": "./.lighthouseci/reports"
+		}
+	}
+}

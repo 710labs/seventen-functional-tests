@@ -1,0 +1,48 @@
+{
+	"$comment": "Source of truth for the SEO pulse. Adding a site = one entry here. Flipping robotsExpectedState to \"open\" (via PR) switches a site from pre-launch guard to live SEO guard.",
+	"defaults": {
+		"thresholds": {
+			"minTitleLength": 10,
+			"maxTitleLength": 60,
+			"minMetaDescriptionLength": 50,
+			"maxMetaDescriptionLength": 160,
+			"minImageWidthForAlt": 40
+		},
+		"gscClicksCliffPct": 40,
+		"gscClicksCliffMinBaseline": 20
+	},
+	"sites": [
+		{
+			"id": "live",
+			"name": "710 Labs Live",
+			"baseUrl": "https://live.710labs.com",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/strains/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": ["single-h1:/shop/", "org-schema:/shop/", "img-alt:/shop/", "sitemap-present"],
+			"gsc": {
+				"property": "sc-domain:710labs.com",
+				"pageContains": "live.710labs.com"
+			}
+		},
+		{
+			"id": "shop",
+			"name": "710 Labs Shop",
+			"baseUrl": "https://shop.710labs.com",
+			"canonicalHost": "shop.710labs.com",
+			"enabled": false,
+			"robotsExpectedState": "open",
+			"keyPages": ["/"],
+			"productListPath": "/",
+			"productLinkSelector": "a[href*=\"/product\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/"],
+			"knownIssues": []
+		}
+	]
+}

@@ -1,0 +1,198 @@
+# SEO Pulse — daily SEO monitoring for 710 Labs sites (its own workflow, separate from the
+# functional suites). Free: GitHub Actions + Playwright + Lighthouse CI + Search Console API.
+#
+#   seo-selftest     PRs touching seo/**: unit tests + fixture regression scenarios (no network)
+#   seo-sites        resolves enabled sites from seo/config/sites.json into a matrix
+#   seo-technical    Playwright: robots/sitemap state, on-page SEO, Product schema (per site)
+#   seo-lighthouse   Lighthouse CI, mobile, 3 runs/URL median (per site)
+#   seo-rankings     Search Console clicks/impressions/position + WoW deltas (per site)
+#   seo-report       ONE combined digest → existing daily-run Slack channel + run summary
+#
+# Secrets: GSC_SERVICE_ACCOUNT_KEY (new), plus the EXISTING daily-run Slack webhook secret.
+# Reuses Daily System Health’s existing Slack webhook.
+
+name: seo-pulse
+
+on:
+  schedule:
+    # Five minutes after Daily System Health (10:17 UTC).
+    - cron: '22 10 * * *'
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site id from seo/config/sites.json (blank = all enabled sites)'
+        required: false
+        default: ''
+      post_to_slack:
+        description: 'Post the digest to Slack'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - 'seo/**'
+      - '.github/workflows/seo-pulse.yml'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-pulse-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22.13.0'
+
+jobs:
+  seo-selftest:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Unit tests (helpers, config, digest, GSC math)
+        run: |
+          npx playwright test -c seo/playwright.seo.config.ts --project=seo-unit
+          node --test seo/selftest/*.test.mjs
+      - name: Fixture regression scenarios (the suite must catch every seeded defect)
+        run: node seo/selftest/run-selftest.mjs
+
+  seo-sites:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - id: resolve
+        env:
+          SITE_FILTER: ${{ inputs.site }}
+        run: node seo/scripts/resolve-sites.mjs "$SITE_FILTER" >> "$GITHUB_OUTPUT"
+
+  seo-technical:
+    needs: seo-sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.seo-sites.outputs.matrix) }}
+    name: 'technical · ${{ matrix.site.id }}'
+    env:
+      SEO_SITE: ${{ matrix.site.id }}
+      SEO_OUT_DIR: seo/out/${{ matrix.site.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Robots/sitemap state, on-page SEO, product schema
+        run: npx playwright test -c seo/playwright.seo.config.ts --project=seo
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-technical-${{ matrix.site.id }}
+          path: seo/out/ # single dir → artifact root is seo/out, so files land at <site>/... after merge
+          retention-days: 30
+
+  seo-lighthouse:
+    needs: seo-sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.seo-sites.outputs.matrix) }}
+    name: 'lighthouse · ${{ matrix.site.id }}'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - name: Lighthouse CI (${{ matrix.site.robotsState }} config)
+        env:
+          SEO_SITE: ${{ matrix.site.id }}
+        run: node seo/scripts/run-lighthouse.mjs
+      - name: Collect LHCI output
+        if: always()
+        run: |
+          mkdir -p "seo/out/${{ matrix.site.id }}"
+          [ -d .lighthouseci ] && cp -r .lighthouseci "seo/out/${{ matrix.site.id }}/lhci" || echo "no .lighthouseci output"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-lighthouse-${{ matrix.site.id }}
+          path: seo/out/ # single dir → artifact root is seo/out, so files land at <site>/... after merge
+          retention-days: 30
+
+  seo-rankings:
+    needs: seo-sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.seo-sites.outputs.matrix) }}
+    name: 'rankings · ${{ matrix.site.id }}'
+    env:
+      SEO_SITE: ${{ matrix.site.id }}
+      SEO_OUT_DIR: seo/out/${{ matrix.site.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - name: Search Console (7d vs prior 7d)
+        run: node seo/scripts/gsc-report.mjs
+        env:
+          GSC_SERVICE_ACCOUNT_KEY: ${{ secrets.GSC_SERVICE_ACCOUNT_KEY }}
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-rankings-${{ matrix.site.id }}
+          path: seo/out/ # single dir → artifact root is seo/out, so files land at <site>/... after merge
+          retention-days: 90 # free ranking history
+
+  seo-report:
+    needs: [seo-sites, seo-technical, seo-lighthouse, seo-rankings]
+    if: always() && needs.seo-sites.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - name: Download all site results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: seo-*
+          path: seo/out
+          merge-multiple: true
+      - name: Build digest, post to Slack, write run summary
+        run: node seo/scripts/report.mjs
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SEO_ONLY_SITE: ${{ inputs.site }}
+          POST_TO_SLACK: ${{ github.event_name == 'schedule' || inputs.post_to_slack }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Preserve the combined digest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-digest
+          path: seo/out/report.md
+          retention-days: 30
