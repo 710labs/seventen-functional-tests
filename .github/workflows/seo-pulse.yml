@@ -14,9 +14,6 @@
 name: seo-pulse
 
 on:
-  # Temporary branch-only trigger for pre-merge runner verification; removed afterward.
-  push:
-    branches: [codex/seo-pulse]
   schedule:
     # Five minutes after Daily System Health (10:17 UTC).
     - cron: '22 10 * * *'
