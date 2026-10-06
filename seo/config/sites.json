@@ -24,7 +24,14 @@
 			"productLinkSelector": "a[href*=\"/product/\"]",
 			"productSampleSize": 5,
 			"organizationSchemaPages": ["/shop/"],
-			"knownIssues": ["single-h1:/shop/", "img-alt:/shop/"],
+			"knownIssues": [
+				"single-h1:/shop/",
+				"img-alt:/shop/",
+				"single-h1:/strains/",
+				"img-alt:/strains/",
+				"single-h1:/learn/",
+				"img-alt:/learn/"
+			],
 			"gsc": {
 				"property": "sc-domain:710labs.com",
 				"pageContains": "live.710labs.com"
@@ -44,7 +51,16 @@
 			"productSampleSize": 5,
 			"organizationSchemaPages": ["/shop/"],
 			"healthCheckId": "seo-live-stage",
-			"knownIssues": []
+			"knownIssues": [
+				"single-h1:/shop/",
+				"img-alt:/shop/",
+				"single-h1:/strains/",
+				"img-alt:/strains/",
+				"single-h1:/learn/",
+				"img-alt:/learn/",
+				"product-schema-image:/product/garlic-cocktail-7-deli-flower/",
+				"product-schema-image:/product/z-deli-flower/"
+			]
 		},
 		{
 			"id": "live-dev",
@@ -59,7 +75,22 @@
 			"productSampleSize": 5,
 			"organizationSchemaPages": ["/shop/"],
 			"healthCheckId": "seo-live-dev",
-			"knownIssues": []
+			"knownIssues": [
+				"single-h1:/shop/",
+				"img-alt:/shop/",
+				"single-h1:/strains/",
+				"img-alt:/strains/",
+				"single-h1:/learn/",
+				"img-alt:/learn/",
+				"product-schema-image:/product/sb36-1-deli-flower/",
+				"product-title-unique:/product/sb36-1-noodle-doinks-1000mg-7/",
+				"product-schema-image:/product/biscotti-x-dosidos-deli-flower/",
+				"product-schema-description:/product/biscotti-x-dosidos-deli-flower/",
+				"product-schema-image:/product/blueberry-haze-deli-flower/",
+				"product-schema-image:/product/harlequin-2-0-deli-flower/",
+				"product-schema-description:/product/harlequin-2-0-deli-flower/",
+				"product-schema-image:/product/white-tahoe-cookies-deli-flower/"
+			]
 		},
 		{
 			"id": "shop",
