@@ -4,22 +4,16 @@ on:
   schedule:
     - cron: '17 10 * * *'
   workflow_dispatch:
-    inputs:
-      seo_verify_only:
-        description: Temporary read-only SEO integration verification
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: daily-system-health-seo-verification-${{ github.ref }}
+  group: daily-system-health
   cancel-in-progress: false
 
 jobs:
   list-dev:
-    if: inputs.seo_verify_only != true
     name: List Dev — all states
     runs-on: ubuntu-latest
     timeout-minutes: 330
@@ -78,7 +72,6 @@ jobs:
         run: exit 1
 
   list-stage:
-    if: inputs.seo_verify_only != true
     name: List Stage — all states
     runs-on: ubuntu-latest
     timeout-minutes: 330
@@ -137,7 +130,6 @@ jobs:
         run: exit 1
 
   list-prod:
-    if: inputs.seo_verify_only != true
     name: List Prod — ${{ matrix.state_label }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -235,7 +227,6 @@ jobs:
         run: exit 1
 
   live-dev:
-    if: inputs.seo_verify_only != true
     name: Live Dev — storefront
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -315,7 +306,7 @@ jobs:
   live-dev-pos:
     name: Live Dev — POS verification
     needs: live-dev
-    if: (always()) && inputs.seo_verify_only != true
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -344,7 +335,6 @@ jobs:
         run: exit 1
 
   live-stage:
-    if: inputs.seo_verify_only != true
     name: Live Stage — storefront
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -424,7 +414,7 @@ jobs:
   live-stage-pos:
     name: Live Stage — POS verification
     needs: live-stage
-    if: (always()) && inputs.seo_verify_only != true
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -453,7 +443,6 @@ jobs:
         run: exit 1
 
   standalone-smokes:
-    if: inputs.seo_verify_only != true
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -564,7 +553,6 @@ jobs:
         run: exit 1
 
   pos-last-ten:
-    if: inputs.seo_verify_only != true
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -648,8 +636,6 @@ jobs:
           path: health-results
           merge-multiple: true
       - name: Build system health report
-        env:
-          HEALTH_ONLY_GROUP: ${{ inputs.seo_verify_only && 'SEO' || '' }}
         run: node scripts/health/aggregate-results.js health-results health-summary.json health-summary.md health-slack.json
       - name: Publish GitHub summary
         run: sed -n '1,500p' health-summary.md >> "$GITHUB_STEP_SUMMARY"
@@ -662,7 +648,6 @@ jobs:
             health-summary.md
           retention-days: 30
       - name: Send the single Slack digest
-        if: inputs.seo_verify_only != true
         id: slack
         continue-on-error: true
         env:
@@ -672,10 +657,9 @@ jobs:
         if: always()
         env:
           SLACK_OUTCOME: ${{ steps.slack.outcome }}
-          SEO_VERIFY_ONLY: ${{ inputs.seo_verify_only }}
         run: |
           node scripts/health/enforce-summary.js health-summary.json
-          if [ "$SEO_VERIFY_ONLY" != "true" ] && [ "$SLACK_OUTCOME" != "success" ]; then
+          if [ "$SLACK_OUTCOME" != "success" ]; then
             echo "The health report was generated, but Slack delivery failed."
             exit 1
           fi
