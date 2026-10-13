@@ -3,7 +3,6 @@ import { buildStorageStateWithRecaptchaBypass } from '../support/qa/recaptcha-by
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const AUTOMATION_BASE_URL = 'https://thelist-dev.710labs.com'
-const captureAcuityFailureArtifacts = process.env.ACUITY_UPLOAD_CI_ARTIFACTS === 'true'
 
 function envBoolean(name: string, defaultValue: boolean): boolean {
 	const value = process.env[name]
@@ -25,11 +24,9 @@ const config: PlaywrightTestConfig = {
 	retries: 0,
 	workers: process.env.CI ? 12 : 5,
 	reporter: [
-		['list'],
-		['html'],
+		['../reporters/security/public-summary-reporter.cjs'],
 		['../reporters/slack/pw-slack-webhook-reporter.ts'],
-		['../reporters/s3/pw-report-s3-upload.ts'],
-		['@estruyf/github-actions-reporter'],
+		['../reporters/health/pw-health-json-reporter.ts'],
 	],
 	use: {
 		acceptDownloads: true,
@@ -40,9 +37,9 @@ const config: PlaywrightTestConfig = {
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: captureAcuityFailureArtifacts ? 'retain-on-failure' : 'off',
-		video: captureAcuityFailureArtifacts ? 'retain-on-failure' : 'off',
-		screenshot: captureAcuityFailureArtifacts ? 'only-on-failure' : 'off',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 	},
 	projects: [
 		{
