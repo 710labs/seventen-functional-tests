@@ -18,12 +18,14 @@ on:
         type: choice
         description: Playwright workers for upload mode.
         required: true
-        default: "3"
+        default: "6"
         options:
           - "1"
           - "2"
           - "3"
           - "4"
+          - "5"
+          - "6"
 concurrency:
   group: acuity-slot-automation
   cancel-in-progress: false
@@ -116,8 +118,6 @@ jobs:
         env:
           ACUITY_HEADLESS: "true"
           ACUITY_LOGIN_METHOD: ${{ vars.ACUITY_LOGIN_METHOD || secrets.ACUITY_LOGIN_METHOD || 'squarespace' }}
-          ACUITY_AUTH_DEBUG_ARTIFACTS: "true"
-          ACUITY_AUTH_ARTIFACT_DIR: acuity-auth-artifacts
           ACUITY_STORAGE_STATE_FILE: .auth/acuity-storage-state.json
         run: |
           set -euo pipefail
@@ -139,7 +139,7 @@ jobs:
           fi
 
           if [[ "$auth_prepared" != true && -n "${ACUITY_USER:-}" && -n "${ACUITY_PASSWORD:-}" ]]; then
-            if node scripts/create-acuity-storage-state.js; then
+            if node scripts/create-acuity-storage-state.js >/dev/null 2>&1; then
               auth_prepared=true
               echo "Generated fresh Acuity storage state from ACUITY_USER and ACUITY_PASSWORD."
             else
@@ -158,7 +158,6 @@ jobs:
         env:
           WORKERS: ${{ inputs.workers }}
           ACUITY_HEADLESS: "true"
-          ACUITY_UPLOAD_CI_ARTIFACTS: "true"
         run: |
           set -euo pipefail
 
@@ -169,24 +168,11 @@ jobs:
 
           export ACUITY_REQUIRE_STORAGE_STATE=true
 
-          npx playwright test \
+          node scripts/run-public-playwright.js \
             --grep "Acuity Automation" \
             --config=configs/automation.config.ts \
             --project="Desktop Chrome" \
-            --workers="$WORKERS" \
-            --trace=retain-on-failure \
-            --reporter=list,html
-      - name: Upload Acuity failure artifacts
-        uses: actions/upload-artifact@v4
-        if: failure() && inputs.mode == 'upload'
-        with:
-          name: acuity-playwright-failure-artifacts
-          path: |
-            acuity-auth-artifacts/
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 14
+            --workers="$WORKERS"
       - name: Send Slack notification
         if: always()
         env:
