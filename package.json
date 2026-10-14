@@ -51,7 +51,10 @@
 		"test:image-uploads:live": "cross-env IMAGE_UPLOAD_STOREFRONT=live IMAGE_UPLOAD_TARGET=https://live-dev.710labs.com npx playwright test --config=configs/image-upload.config.ts --workers=1",
 		"test:live-image-upload-rate-limit-report": "node --test scripts/assert-live-image-upload-rate-limit-report.test.js",
 		"load:live:image-upload-rate-limit": "cross-env ARTILLERY_TARGET=https://live-dev.710labs.com ARTILLERY_INCLUDE_VIP_COOKIE=false npx artillery run artillery/artillery-live-image-upload-rate-limit.yml",
-		"load:thelist:url-hit": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-url-hit.yml"
+		"load:thelist:url-hit": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-url-hit.yml",
+		"seo": "playwright test -c seo/playwright.seo.config.ts --project=seo",
+		"seo:unit": "playwright test -c seo/playwright.seo.config.ts --project=seo-unit && node --test seo/selftest/*.test.mjs",
+		"seo:selftest": "node seo/selftest/run-selftest.mjs"
 	},
 	"repository": {
 		"type": "git",
@@ -91,7 +94,8 @@
 		"find-config": "^1.0.0",
 		"node-fetch": "^3.2.0",
 		"playwright-slack-report": "^1.1.89",
-		"uuid": "^8.3.2"
+		"uuid": "^8.3.2",
+		"@lhci/cli": "^0.15.1"
 	},
 	"dependencies": {
 		"@slack/types": "^2.8.0",
@@ -104,6 +108,7 @@
 		"json2csv": "^5.0.7",
 		"pixelmatch": "^6.0.0",
 		"playwright-tesults-reporter": "^1.5.0",
-		"pngjs": "^7.0.0"
+		"pngjs": "^7.0.0",
+		"googleapis": "^183.0.0"
 	}
 }

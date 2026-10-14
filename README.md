@@ -223,7 +223,8 @@ These will run in headless mode and will execute in a variety of browsers and vi
 
 All previously scheduled end-to-end and POS checks run from
 `.github/workflows/daily-system-health.yml` at 10:17 UTC each day. The workflow accounts for
-22 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
+22 functional checks plus SEO for Live Prod, Stage, and Dev (25 checks total), publishes one
+GitHub summary, and sends one Slack digest. A missing result is
 treated as a failure so a cancelled runner or broken setup cannot appear healthy. A test that
 succeeds on retry is counted as passed and appears green. The question mark is reserved for a
 configured check whose result is missing or unrecognized; a dash means no check is configured for
@@ -235,6 +236,12 @@ Slack webhook during this workflow; only the final aggregate job can post to Sla
 
 The legacy workflows remain available through `workflow_dispatch` for focused reruns and rollback,
 but no longer contain active schedules.
+
+The digest includes an **SEO** section with **LIVE - PROD**, **LIVE - STAGE**, and **LIVE - DEV**
+rows, each showing technical SEO, mobile Lighthouse, and Search Console status. SEO warnings
+remain amber; new SEO failures or missing artifacts make the combined run red. Only Prod uses
+Search Console; Stage and Dev show it as skipped. See [SEO monitoring](seo/README.md) for setup,
+known issues, and the launch runbook. SEO checks remain isolated from the functional test suites.
 
 Health aggregation tests:
 

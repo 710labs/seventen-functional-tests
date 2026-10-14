@@ -1,0 +1,192 @@
+# Reusable SEO checks for Daily System Health; manual diagnostics and PR self-tests.
+name: seo-pulse
+
+on:
+  workflow_call:
+    secrets:
+      GSC_SERVICE_ACCOUNT_KEY:
+        required: false
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site id from seo/config/sites.json (blank = all enabled sites)'
+        required: false
+        default: ''
+  pull_request:
+    paths:
+      - 'seo/**'
+      - '.github/workflows/seo-pulse.yml'
+      - '.github/workflows/daily-system-health.yml'
+      - 'scripts/health/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-pulse-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22.13.0'
+
+jobs:
+  seo-selftest:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Unit tests (helpers, config, digest, GSC math)
+        run: |
+          npx playwright test -c seo/playwright.seo.config.ts --project=seo-unit
+          node --test seo/selftest/*.test.mjs
+          npm run test:health
+          npm run validate:health
+      - name: Fixture regression scenarios (the suite must catch every seeded defect)
+        run: node seo/selftest/run-selftest.mjs
+
+  seo-sites:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - id: resolve
+        env:
+          SITE_FILTER: ${{ inputs.site }}
+        run: node seo/scripts/resolve-sites.mjs "$SITE_FILTER" >> "$GITHUB_OUTPUT"
+
+  seo-technical:
+    needs: seo-sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.seo-sites.outputs.matrix) }}
+    name: '${{ matrix.site.name }} / Technical'
+    env:
+      SEO_SITE: ${{ matrix.site.id }}
+      SEO_OUT_DIR: seo/out/${{ matrix.site.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Robots/sitemap state, on-page SEO, product schema
+        run: npx playwright test -c seo/playwright.seo.config.ts --project=seo
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-technical-${{ matrix.site.id }}
+          path: seo/out/ # single dir → artifact root is seo/out, so files land at <site>/... after merge
+          retention-days: 30
+
+  seo-lighthouse:
+    needs: seo-sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.seo-sites.outputs.matrix) }}
+    name: '${{ matrix.site.name }} / Lighthouse'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - name: Lighthouse CI (${{ matrix.site.robotsState }} config)
+        env:
+          SEO_SITE: ${{ matrix.site.id }}
+        run: node seo/scripts/run-lighthouse.mjs
+      - name: Collect LHCI output
+        if: always()
+        run: |
+          mkdir -p "seo/out/${{ matrix.site.id }}"
+          [ -d .lighthouseci ] && cp -r .lighthouseci "seo/out/${{ matrix.site.id }}/lhci" || echo "no .lighthouseci output"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-lighthouse-${{ matrix.site.id }}
+          path: seo/out/ # single dir → artifact root is seo/out, so files land at <site>/... after merge
+          retention-days: 30
+
+  seo-rankings:
+    needs: seo-sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ${{ fromJson(needs.seo-sites.outputs.matrix) }}
+    name: '${{ matrix.site.name }} / Search Console'
+    env:
+      SEO_SITE: ${{ matrix.site.id }}
+      SEO_OUT_DIR: seo/out/${{ matrix.site.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - name: Search Console (7d vs prior 7d)
+        run: node seo/scripts/gsc-report.mjs
+        env:
+          GSC_SERVICE_ACCOUNT_KEY: ${{ secrets.GSC_SERVICE_ACCOUNT_KEY }}
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-rankings-${{ matrix.site.id }}
+          path: seo/out/ # single dir → artifact root is seo/out, so files land at <site>/... after merge
+          retention-days: 90 # free ranking history
+
+  seo-report:
+    needs: [seo-sites, seo-technical, seo-lighthouse, seo-rankings]
+    if: always() && needs.seo-sites.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - name: Download all site results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: seo-*
+          path: seo/out
+          merge-multiple: true
+      - name: Write SEO section and Daily System Health results
+        run: node seo/scripts/health-report.mjs
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SEO_ONLY_SITE: ${{ inputs.site }}
+      - name: Preserve the combined digest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-digest
+          path: seo/out/report.md
+          retention-days: 30
+      - name: Upload Daily System Health SEO results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-seo
+          path: health-results/
+          retention-days: 30

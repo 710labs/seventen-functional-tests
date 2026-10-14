@@ -1,0 +1,110 @@
+{
+	"$comment": "Source of truth for the SEO pulse. Adding a site = one entry here. Flipping robotsExpectedState to \"open\" (via PR) switches a site from pre-launch guard to live SEO guard.",
+	"defaults": {
+		"thresholds": {
+			"minTitleLength": 10,
+			"maxTitleLength": 60,
+			"minMetaDescriptionLength": 50,
+			"maxMetaDescriptionLength": 160,
+			"minImageWidthForAlt": 40
+		},
+		"gscClicksCliffPct": 40,
+		"gscClicksCliffMinBaseline": 20
+	},
+	"sites": [
+		{
+			"id": "live",
+			"name": "LIVE - PROD",
+			"baseUrl": "https://live.710labs.com",
+			"canonicalHost": "live.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/strains/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"knownIssues": [
+				"single-h1:/shop/",
+				"img-alt:/shop/",
+				"single-h1:/strains/",
+				"img-alt:/strains/",
+				"single-h1:/learn/",
+				"img-alt:/learn/"
+			],
+			"gsc": {
+				"property": "sc-domain:710labs.com",
+				"pageContains": "live.710labs.com"
+			},
+			"healthCheckId": "seo-live-prod"
+		},
+		{
+			"id": "live-stage",
+			"name": "LIVE - STAGE",
+			"baseUrl": "https://live-stage.710labs.com",
+			"canonicalHost": "live-stage.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/strains/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"healthCheckId": "seo-live-stage",
+			"knownIssues": [
+				"single-h1:/shop/",
+				"img-alt:/shop/",
+				"single-h1:/strains/",
+				"img-alt:/strains/",
+				"single-h1:/learn/",
+				"img-alt:/learn/",
+				"product-schema-image:/product/garlic-cocktail-7-deli-flower/",
+				"product-schema-image:/product/z-deli-flower/"
+			]
+		},
+		{
+			"id": "live-dev",
+			"name": "LIVE - DEV",
+			"baseUrl": "https://live-dev.710labs.com",
+			"canonicalHost": "live-dev.710labs.com",
+			"enabled": true,
+			"robotsExpectedState": "blocked",
+			"keyPages": ["/shop/", "/strains/", "/learn/"],
+			"productListPath": "/shop/",
+			"productLinkSelector": "a[href*=\"/product/\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/shop/"],
+			"healthCheckId": "seo-live-dev",
+			"knownIssues": [
+				"single-h1:/shop/",
+				"img-alt:/shop/",
+				"single-h1:/strains/",
+				"img-alt:/strains/",
+				"single-h1:/learn/",
+				"img-alt:/learn/",
+				"product-schema-image:/product/sb36-1-deli-flower/",
+				"product-title-unique:/product/sb36-1-noodle-doinks-1000mg-7/",
+				"product-schema-image:/product/biscotti-x-dosidos-deli-flower/",
+				"product-schema-description:/product/biscotti-x-dosidos-deli-flower/",
+				"product-schema-image:/product/blueberry-haze-deli-flower/",
+				"product-schema-image:/product/harlequin-2-0-deli-flower/",
+				"product-schema-description:/product/harlequin-2-0-deli-flower/",
+				"product-schema-image:/product/white-tahoe-cookies-deli-flower/"
+			]
+		},
+		{
+			"id": "shop",
+			"name": "710 Labs Shop",
+			"baseUrl": "https://shop.710labs.com",
+			"canonicalHost": "shop.710labs.com",
+			"enabled": false,
+			"robotsExpectedState": "open",
+			"keyPages": ["/"],
+			"productListPath": "/",
+			"productLinkSelector": "a[href*=\"/product\"]",
+			"productSampleSize": 5,
+			"organizationSchemaPages": ["/"],
+			"knownIssues": []
+		}
+	]
+}

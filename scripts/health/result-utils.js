@@ -1,7 +1,13 @@
 const fs = require('node:fs')
 const path = require('node:path')
 
-const manifest = require('./checks.json')
+const functionalManifest = require('./checks.json')
+const { getSeoChecks } = require('./seo-checks')
+const seoConfig = require('../../seo/config/sites.json')
+const manifest = {
+	...functionalManifest,
+	checks: [...functionalManifest.checks, ...getSeoChecks(seoConfig.sites)],
+}
 
 function getCheck(id) {
 	const check = manifest.checks.find(candidate => candidate.id === id)
@@ -14,7 +20,11 @@ function resultPath(id, directory = process.env.HEALTH_RESULTS_DIR || 'health-re
 }
 
 function runUrl() {
-	if (!process.env.GITHUB_SERVER_URL || !process.env.GITHUB_REPOSITORY || !process.env.GITHUB_RUN_ID) {
+	if (
+		!process.env.GITHUB_SERVER_URL ||
+		!process.env.GITHUB_REPOSITORY ||
+		!process.env.GITHUB_RUN_ID
+	) {
 		return null
 	}
 	return `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
