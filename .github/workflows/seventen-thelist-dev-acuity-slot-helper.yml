@@ -33,11 +33,6 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run helper:acuityslots:dev
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
       - name: Slack Notification
         if: always()
         uses: rtCamp/action-slack-notify@v2

@@ -124,6 +124,7 @@ async function readBody(response) {
 }
 
 function formatBody(body) {
+	if (process.env.CI || process.env.GITHUB_ACTIONS) return 'Response body omitted from public CI logs.'
 	return typeof body === 'string' ? body : JSON.stringify(body, null, 2)
 }
 
@@ -140,6 +141,7 @@ function isLegacyFailureOutcome(outcome) {
 }
 
 function getErrorDetails(error) {
+	if (process.env.CI || process.env.GITHUB_ACTIONS) return ['QA domain switch failed. Inspect privately with synthetic credentials.']
 	if (!(error instanceof Error)) {
 		return [String(error)]
 	}
@@ -222,7 +224,7 @@ async function main() {
 	}
 
 	const endpoint = endpointUrl.toString()
-	console.log(`[qa] Domain switch endpoint: ${endpoint}`)
+	if (!process.env.CI && !process.env.GITHUB_ACTIONS) console.log(`[qa] Domain switch endpoint: ${endpoint}`)
 	console.log(`[qa] Requested domain state: ${state}`)
 
 	const response = await requestDomainState(endpoint, state, apiKey, endpointMode)
@@ -259,7 +261,7 @@ async function main() {
 		process.exit(1)
 	}
 
-	console.log(`[qa] Domain state set to ${state}. Returned state domain: ${domain}`)
+	console.log(`[qa] Domain state set to ${state}.`)
 }
 
 main().catch(error => {

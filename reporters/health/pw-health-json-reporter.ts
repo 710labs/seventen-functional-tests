@@ -2,6 +2,9 @@ import fs from 'fs'
 import path from 'path'
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
+const { testId } = require('../security/public-summary-reporter.cjs')
+const { runStatus } = require('../../scripts/security/summary')
+
 type Outcome = 'passed' | 'failed' | 'skipped'
 
 class HealthJsonReporter implements Reporter {
@@ -29,7 +32,7 @@ class HealthJsonReporter implements Reporter {
 			if (outcome === 'expected') counts.passed++
 			else if (outcome === 'unexpected') {
 				counts.failed++
-				failures.push(`${test.title} [${test.parent.title}]`)
+				failures.push(`Test ${testId(test)}`)
 			} else if (outcome === 'flaky') {
 				// A retry recovered the test, so health reporting treats the final outcome as passed.
 				counts.passed++
@@ -38,12 +41,8 @@ class HealthJsonReporter implements Reporter {
 
 		const executed = counts.passed + counts.failed
 		if (executed === 0) failures.push('No tests executed.')
-		const status = result.status !== 'passed' || counts.failed > 0 || executed === 0 ? 'failed' : 'passed'
-		const rootKey = `${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}`
-		const reportUrl =
-			process.env.S3_BUCKET && process.env.S3_REGION
-				? `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${rootKey}/index.html`
-				: null
+		const status = runStatus(result.status, counts)
+		const reportUrl = null
 		const runUrl =
 			process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
 				? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`

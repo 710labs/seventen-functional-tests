@@ -1,5 +1,8 @@
 import { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
+const { testId } = require('../security/public-summary-reporter.cjs')
+const { runStatus } = require('../../scripts/security/summary')
+
 interface TestSummary {
 	passed: number
 	failed: number
@@ -49,25 +52,25 @@ class SlackWebhookReporter implements Reporter {
 			// Build failure/flaky summary
 			const failedOrFlakyTests = Array.from(this.testResults.values())
 				.filter(t => t.outcome() === 'unexpected' || t.outcome() === 'flaky')
-				.map(t => `${t.title} [${t.parent.title}]`)
+				.map(t => `Test ${testId(t)}`)
 				.slice(0, 20)
 				.join('\n')
 
 			const total = this.summary.passed + this.summary.failed + this.summary.flaky + this.summary.skipped
+			const failed = runStatus(result.status, this.summary) === 'failed'
 
 			// Determine status: red for failures, yellow for flaky-only, green for all passed
 			const statusEmoji =
-				this.summary.failed > 0
+				failed
 					? ':red_circle:'
 					: this.summary.flaky > 0
 						? ':large_yellow_circle:'
 						: ':large_green_circle:'
 
 			const statusText =
-				this.summary.failed > 0 ? 'Failed' : this.summary.flaky > 0 ? 'Flaky' : 'Passed'
+				failed ? 'Failed' : this.summary.flaky > 0 ? 'Flaky' : 'Passed'
 
-			// Build S3 report URL
-			const s3Url = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${process.env.ENV_ID}-${process.env.UNIQUE_RUN_ID}-${process.env.RUN_ID}/index.html`
+			// Link only to the safe workflow summary.
 			const githubUrl = `https://github.com/710labs/seventen-functional-tests/actions/runs/${process.env.UNIQUE_RUN_ID}`
 
 			// Build counts text
@@ -134,16 +137,6 @@ class SlackWebhookReporter implements Reporter {
 								text: {
 									type: 'plain_text',
 									emoji: false,
-									text: 'Test Report',
-								},
-								style: 'primary',
-								url: s3Url,
-							},
-							{
-								type: 'button',
-								text: {
-									type: 'plain_text',
-									emoji: false,
 									text: 'GitHub Action',
 								},
 								style: 'primary',
@@ -169,10 +162,10 @@ class SlackWebhookReporter implements Reporter {
 			if (response.ok) {
 				console.log('✅ Slack notification sent successfully')
 			} else {
-				console.log(`❌ Slack notification failed: ${response.status} ${response.statusText}`)
+				console.log(`❌ Slack notification failed: ${response.status}`)
 			}
 		} catch (error) {
-			console.log('❌ Slack webhook error:', error)
+			console.log('Slack webhook request failed')
 		}
 	}
 }

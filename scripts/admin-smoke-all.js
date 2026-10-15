@@ -2,7 +2,7 @@
 
 const { spawnSync } = require('child_process')
 
-const configArgs = ['playwright', 'test', '--config=configs/admin-drop.config.ts', '--workers=1']
+const configArgs = ['scripts/run-public-playwright.js', '--config=configs/admin-drop.config.ts', '--workers=1']
 const extraArgs = process.argv.slice(2)
 const fullMenuFixture = process.env.ADMIN_SMOKE_ALL_MENU_FIXTURE || 'ca-menu-4-7-25'
 
@@ -65,7 +65,7 @@ for (const [index, phase] of phases.entries()) {
 	printPhaseHeader(index, phase)
 
 	const phaseStartedAt = Date.now()
-	const result = spawnSync('npx', [...configArgs, ...phase.args, ...extraArgs], {
+	const result = spawnSync(process.execPath, [...configArgs, ...phase.args, ...extraArgs], {
 		stdio: 'inherit',
 		env: {
 			...process.env,

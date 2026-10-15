@@ -14,8 +14,9 @@ const config: PlaywrightTestConfig = {
 	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 12 : undefined,
 	reporter: [
-		['list'],
-		['html'],
+		['./reporters/security/public-summary-reporter.cjs'],
+		['./reporters/slack/pw-slack-webhook-reporter.ts'],
+		['./reporters/health/pw-health-json-reporter.ts'],
 	],
 	use: {
 		acceptDownloads: true,
@@ -26,9 +27,9 @@ const config: PlaywrightTestConfig = {
 			slowMo: 1000, // Slow down so user can see what is happening
             headless: false // Headed by default as requested
 		},
-		trace: 'retain-on-failure',
-		screenshot: 'on',
-		video: 'on',
+		trace: 'off',
+		screenshot: 'off',
+		video: 'off',
 	},
 	projects: [
 		{

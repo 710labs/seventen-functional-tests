@@ -183,7 +183,7 @@ export class HomePageLogin {
 		}
 
 		const newEmail = `${emailPrefix}${safeUserType}${emailSuffix}`
-		console.log(`\n New user email ---> ${newEmail} \n`)
+
 		await test.step('Enter new user email and continue to register user screen', async () => {
 			// enter email in field and click Continue button
 			await this.emailFieldPopUp.click()
@@ -221,7 +221,7 @@ export class HomePageLogin {
 			await expect(this.dobField).toBeVisible()
 			await this.dobField.click()
 			await this.dobField.fill(invalidDobString)
-			console.log(`\n Entered invalid DOB (age 18): ${invalidDobString} \n`)
+
 
 			// Click Create Account to trigger validation error
 			await this.createAccountButton.click()
@@ -243,7 +243,7 @@ export class HomePageLogin {
 			await expect(this.dobField).toBeVisible()
 			await this.dobField.click()
 			await this.dobField.fill(validDobString)
-			console.log(`\n Entered valid DOB (age ${randomAge}): ${validDobString} \n`)
+
 		})
 		await test.step('Click create account to create new user', async () => {
 			// click create account

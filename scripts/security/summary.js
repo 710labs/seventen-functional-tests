@@ -2,6 +2,11 @@ const number = value => {
 	if (!Number.isFinite(value) || value < 0) throw new Error('Invalid summary number')
 	return value
 }
+function runStatus(status, counts) {
+	return status === 'passed' && counts.failed === 0 && counts.passed + (counts.flaky || 0) > 0
+		? 'passed'
+		: 'failed'
+}
 function sanitizeSummary(input) {
 	if (!['passed', 'failed'].includes(input.status) || input.schemaVersion !== 1 || !Array.isArray(input.tests)) throw new Error('Invalid summary')
 	const counts = Object.fromEntries(['passed', 'failed', 'flaky', 'skipped'].map(key => [key, number(input.counts[key])]))
@@ -11,4 +16,4 @@ function sanitizeSummary(input) {
 	})
 	return { schemaVersion: 1, status: input.status, counts, tests }
 }
-module.exports = { sanitizeSummary }
+module.exports = { sanitizeSummary, runStatus }

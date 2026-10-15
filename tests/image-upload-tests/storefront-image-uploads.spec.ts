@@ -116,10 +116,6 @@ async function attachUploadEvidence(
 		contentType: fixtureContentType(result.filename),
 		path: fixturePath(result.filename),
 	})
-	await testInfo.attach(`${attachmentPrefix} - ${result.status} screenshot`, {
-		body: await page.screenshot({ fullPage: true }),
-		contentType: 'image/png',
-	})
 
 	if (result.error) {
 		await testInfo.attach(`${attachmentPrefix} - failure details`, {

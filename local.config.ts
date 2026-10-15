@@ -14,20 +14,18 @@ const config: PlaywrightTestConfig = {
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 12 : undefined,
-	reporter: [
-		['list'],
-		['html'],
-		['playwright-tesults-reporter', { 'tesults-target': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo' }],
-	],
+	reporter: [['./reporters/security/public-summary-reporter.cjs']],
 	use: {
 		acceptDownloads: true,
-		actiontimeout: 10 * 60000,
+		actionTimeout: 10 * 60000,
 		baseURL: LOCAL_BASE_URL,
 		storageState: buildStorageStateWithRecaptchaBypass(LOCAL_BASE_URL),
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'retain-on-failure',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 	},
 	projects: [
 		{

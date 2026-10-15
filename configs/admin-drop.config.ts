@@ -4,12 +4,6 @@ import { defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 
 const authFile = path.join(__dirname, '../.auth/admin-drop.json')
-const reporter = [['list'], ['html'], ['@estruyf/github-actions-reporter']]
-
-if (process.env.ADMIN_DROP_MERGED_REPORT === 'true') {
-	reporter.push(['blob'])
-}
-
 export default defineConfig({
 	testDir: './../tests/admin-drop-tests',
 	timeout: 10 * 60000,
@@ -18,14 +12,17 @@ export default defineConfig({
 	},
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
-	reporter,
+	reporter: [
+		['../reporters/security/public-summary-reporter.cjs'],
+		['../reporters/health/pw-health-json-reporter.ts'],
+	],
 	use: {
 		acceptDownloads: true,
 		actionTimeout: 30 * 1000,
 		baseURL: process.env.BASE_URL,
-		trace: 'on',
-		video: 'on',
-		screenshot: 'on',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 	},
 	projects: [
 		{

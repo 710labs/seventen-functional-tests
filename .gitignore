@@ -23,3 +23,8 @@ loadtest/screenshots/
 loadtest/debug-screenshots/
 loadtest/**/*.generated.*
 output/
+
+# Restricted local diagnostics and safe run summaries
+blob-report/
+public-results/
+acuity-auth-artifacts/

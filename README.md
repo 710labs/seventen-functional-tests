@@ -411,7 +411,7 @@ The capability check runs as one Playwright test with one worker. It does not us
 
 The List retains its existing registration upload flow and actively cycles Photo ID files in HEIC, JPG, and PNG formats. Live creates a unique test account, opens My Account, and saves all Photo ID and Medical Card HEIC/JPEG/PNG fixtures. Live stops after account-document validation and does not proceed to checkout or create an order.
 
-Every format adds the uploaded fixture and a post-attempt screenshot to the Playwright HTML report. A failed format is recorded without stopping the remaining fixture checks; after all files have been attempted, the test fails once with an aggregated filename-by-filename summary. Failed runs also retain Playwright trace, video, and screenshot evidence. GitHub Actions uploads the HTML report and raw failure evidence as artifacts for 14 days.
+A failed format does not stop the remaining fixture checks. Public CI publishes only the safe test outcome summary; browser recordings, HTML reports, and raw attachments are not uploaded. See [public CI reporting](docs/public-ci-reporting.md) for the security policy and debugging guidance.
 
 Required secrets are selected by storefront: The List maps `ARTILLERY_LIST_PASSWORD` to `IMAGE_UPLOAD_LIST_PASSWORD`, Live maps `ALWAYS_ON_PASSWORD` to `IMAGE_UPLOAD_LIVE_PASSWORD`, and both require `RECAPTCHA_BYPASS`.
 

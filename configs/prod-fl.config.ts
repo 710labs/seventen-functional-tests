@@ -15,18 +15,9 @@ export default defineConfig<TestOptions>({
 	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 12 : undefined,
 	reporter: [
-		['list'],
-		['html'],
-		[
-			'playwright-tesults-reporter',
-			{
-				'tesults-target':
-					'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo',
-			},
-		],
+		['../reporters/security/public-summary-reporter.cjs'],
 		['../reporters/slack/pw-slack-webhook-reporter.ts'],
-		['../reporters/s3/pw-report-s3-upload.ts'],
-		['@estruyf/github-actions-reporter'],
+		['../reporters/health/pw-health-json-reporter.ts'],
 	],
 	use: {
 		acceptDownloads: true,
@@ -36,9 +27,9 @@ export default defineConfig<TestOptions>({
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'on',
-		video: 'on',
-		screenshot: 'on',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 		orders: [
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)

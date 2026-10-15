@@ -19,7 +19,10 @@ try {
 	delete env.DEBUG
 	delete env.PWDEBUG
 	// Suppress even config/import/global-setup errors, which occur before reporters load.
-	const child = spawnSync(process.execPath, [require.resolve('@playwright/test/cli'), 'test', ...args], {
+	const child = spawnSync(process.execPath, [
+		'--require', require.resolve('./security/guard-playwright.cjs'),
+		require.resolve('@playwright/test/cli'), 'test', ...args,
+	], {
 		stdio: 'ignore', env,
 	})
 	const summary = sanitizeSummary(JSON.parse(fs.readFileSync(summaryFile, 'utf8')))

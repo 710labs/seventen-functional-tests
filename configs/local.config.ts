@@ -18,23 +18,21 @@ const config: PlaywrightTestConfig = {
 	retries: process.env.CI ? 0 : 0,
 	workers: process.env.CI ? 12 : 5,
 	reporter: [
-		['list'],
-		['html'],
+		['../reporters/security/public-summary-reporter.cjs'],
 		['../reporters/slack/pw-slack-webhook-reporter.ts'],
-		['../reporters/s3/pw-report-s3-upload.ts'],
-		['@estruyf/github-actions-reporter'],
+		['../reporters/health/pw-health-json-reporter.ts'],
 	],
 	use: {
 		acceptDownloads: true,
-		actiontimeout: 10 * 60000,
+		actionTimeout: 10 * 60000,
 		baseURL: LOCAL_BASE_URL,
 		storageState: buildStorageStateWithRecaptchaBypass(LOCAL_BASE_URL),
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'on',
-		video: 'on',
-		screenshot: 'on',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 	},
 	projects: [
 		{

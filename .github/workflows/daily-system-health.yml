@@ -30,17 +30,10 @@ jobs:
       RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_DEV }}
-      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
       QA_ENDPOINT: /wp-json/seventen-qa/v1/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v4
@@ -88,17 +81,10 @@ jobs:
       RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
-      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
       QA_ENDPOINT: /wp-json/seventen-qa/v1/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       DEFAULT_VIDEO_PREVIEW_URL: https://tymber-s3.imgix.net/herbnjoy-beverly-hills-350/product-brand-63616/d17157b5-8a90-48b1-aeb6-d0e092351548.png?s=480dd20057b2bd21b3b6d6200a3c0679
     steps:
       - uses: actions/checkout@v4
@@ -172,13 +158,6 @@ jobs:
       QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
-      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -206,14 +185,6 @@ jobs:
           WC_CONSUMER_KEY: ${{ secrets[matrix.woo_key_secret] }}
           WC_CONSUMER_SECRET: ${{ secrets[matrix.woo_secret_secret] }}
         run: node scripts/health/cleanup-production-orders.js ${{ matrix.id }} order_ids.txt order_id.txt
-      - name: Upload List Prod Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.id }}
-          path: playwright-report
-          if-no-files-found: ignore
-          retention-days: 3
       - name: Upload List Prod health result
         if: always()
         uses: actions/upload-artifact@v4
@@ -242,17 +213,10 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_DEV }}
-      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
       QA_ENDPOINT: ${{ secrets.QA_ENDPOINT }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME }}
       ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
       ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_DEV }}
@@ -283,14 +247,6 @@ jobs:
         id: orders
         if: always()
         run: node scripts/health/collect-order-ids.js order_ids.txt
-      - name: Upload Live Dev Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-live-dev-storefront
-          path: playwright-report
-          if-no-files-found: ignore
-          retention-days: 3
       - name: Upload Live Dev health result
         if: always()
         uses: actions/upload-artifact@v4
@@ -350,17 +306,10 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ secrets.BASE_URL_STAGE }}
-      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
       QA_ENDPOINT: /wp-content/plugins/seventen-qa/api/
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       ALWAYS_ON_USERNAME: ${{ secrets.ALWAYS_ON_USERNAME }}
       ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
       ALWAYS_ON_URL: ${{ secrets.ALWAYS_ON_URL_STAGE }}
@@ -391,14 +340,6 @@ jobs:
         id: orders
         if: always()
         run: node scripts/health/collect-order-ids.js order_ids.txt
-      - name: Upload Live Stage Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-live-stage-storefront
-          path: playwright-report
-          if-no-files-found: ignore
-          retention-days: 3
       - name: Upload Live Stage health result
         if: always()
         uses: actions/upload-artifact@v4
@@ -485,17 +426,10 @@ jobs:
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       API_KEY: ${{ secrets.API_KEY }}
       BASE_URL: ${{ matrix.base_url == 'prod' && secrets.BASE_URL_PROD_CA || secrets.BASE_URL_DEV }}
-      RESULTS_URL: https://710labs.github.io/seventen-functional-tests/
       QA_ENDPOINT: ${{ matrix.qa_endpoint == 'secret' && secrets.QA_ENDPOINT || '/wp-content/plugins/seventen-qa/api/' }}
       BYPASS_TAX_CALC: true
       NEXT_VERSION: true
       ADD_ADDRESS_BEFORE_CHECKOUT: true
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SECRET: ${{ secrets.S3_SECRET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
       PROD_LIVE_URL: ${{ secrets.PROD_LIVE_URL }}
       PROD_LIVE_REC_USERNAME: ${{ secrets.PROD_LIVE_REC_USERNAME }}
       PROD_LIVE_REC_PASSWORD: ${{ secrets.PROD_LIVE_REC_PASSWORD }}
@@ -532,14 +466,6 @@ jobs:
         id: health
         continue-on-error: true
         run: node scripts/health/run-playwright-check.js ${{ matrix.id }}
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.id }}
-          path: playwright-report
-          if-no-files-found: ignore
-          retention-days: 3
       - name: Upload health result
         if: always()
         uses: actions/upload-artifact@v4

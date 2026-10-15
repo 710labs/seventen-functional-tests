@@ -32,27 +32,22 @@ export default defineConfig({
 		timeout: 30000,
 	},
 	reporter: [
-		['list'],
-		[
-			'html',
-			{
-				open: 'never',
-				outputFolder: path.resolve(__dirname, '../playwright-report/image-upload'),
-			},
-		],
+		['../reporters/security/public-summary-reporter.cjs'],
+		['../reporters/slack/pw-slack-webhook-reporter.ts'],
+		['../reporters/health/pw-health-json-reporter.ts'],
 	],
 	outputDir: path.resolve(__dirname, '../test-results/image-upload'),
 	use: {
 		actionTimeout: 30000,
 		baseURL: target,
 		navigationTimeout: 60000,
-		screenshot: 'only-on-failure',
+		screenshot: 'off',
 		storageState:
 			storefront === 'thelist'
 				? buildStorageStateWithListBypass(target)
 				: buildStorageStateWithRecaptchaBypass(target),
-		trace: 'retain-on-failure',
-		video: 'retain-on-failure',
+		trace: 'off',
+		video: 'off',
 	},
 	projects: [
 		{

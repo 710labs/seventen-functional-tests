@@ -17,19 +17,9 @@ export default defineConfig<TestOptions>({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
 	reporter: [
-		['list'],
-		['html'],
-		[
-			'playwright-tesults-reporter',
-			{
-				'tesults-target':
-					'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo',
-			},
-		],
+		['../reporters/security/public-summary-reporter.cjs'],
 		['../reporters/slack/pw-slack-webhook-reporter.ts'],
 		['../reporters/health/pw-health-json-reporter.ts'],
-		['../reporters/s3/pw-report-s3-upload.ts'],
-		['@estruyf/github-actions-reporter'],
 	],
 	use: {
 		acceptDownloads: true,
@@ -50,9 +40,9 @@ export default defineConfig<TestOptions>({
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'on',
-		video: 'on',
-		screenshot: 'on',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 		orders: [
 			[
 				'1246884', //Starburst 36 #1 (https://thelist-dev.710labs.com/product/starburst-36-1-2/)

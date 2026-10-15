@@ -12,11 +12,11 @@ async function main() {
 		body: payload,
 		signal: AbortSignal.timeout(20000),
 	})
-	if (!response.ok) throw new Error(`Slack returned HTTP ${response.status}: ${await response.text()}`)
+	if (!response.ok) throw new Error(`Slack returned HTTP ${response.status}`)
 	console.log('Daily System Health Slack digest sent successfully.')
 }
 
 main().catch(error => {
-	console.error(error.message)
+	console.error('Daily System Health Slack delivery failed.')
 	process.exitCode = 1
 })

@@ -22,10 +22,10 @@ const acuityAccountDomain = 'https://710labs.as.me/'
 const acuityAccountWebsiteId = '61329f74039b125588bb305f'
 const outputPath = process.env.ACUITY_STORAGE_STATE_FILE || '.auth/acuity-storage-state.json'
 const authArtifactDir = process.env.ACUITY_AUTH_ARTIFACT_DIR || path.join('test-results', 'acuity-auth')
-const captureAuthArtifacts =
+const captureAuthArtifacts = !process.env.CI && !process.env.GITHUB_ACTIONS &&
 	['1', 'true', 'yes'].includes(
 		String(process.env.ACUITY_AUTH_DEBUG_ARTIFACTS || '').toLowerCase(),
-	) || process.env.CI === 'true'
+	)
 const captureAuthTraces = ['1', 'true', 'yes'].includes(
 	String(process.env.ACUITY_AUTH_TRACE || '').toLowerCase(),
 )

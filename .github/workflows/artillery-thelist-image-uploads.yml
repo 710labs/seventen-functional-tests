@@ -98,24 +98,6 @@ jobs:
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
         run: npm run test:image-uploads
 
-      - name: Upload Playwright HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-${{ github.event.inputs.storefront }}-${{ github.event.inputs.env }}-image-upload-report
-          path: playwright-report/image-upload
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Upload traces, videos, and failure screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-${{ github.event.inputs.storefront }}-${{ github.event.inputs.env }}-image-upload-evidence
-          path: test-results/image-upload
-          if-no-files-found: ignore
-          retention-days: 14
-
       - name: Add report instructions to summary
         if: always()
         run: |
@@ -125,7 +107,7 @@ jobs:
             echo "- Storefront: $IMAGE_UPLOAD_STOREFRONT"
             echo "- Environment: $IMAGE_UPLOAD_ENV"
             echo "- Target: $IMAGE_UPLOAD_TARGET"
-            echo "- Download the Playwright HTML report artifact to view every uploaded fixture and success screenshot."
+            echo "- See the safe test summary in the workflow logs. Detailed browser artifacts are disabled."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Slack notification
@@ -144,7 +126,7 @@ jobs:
                   `Storefront: ${{ github.event.inputs.storefront }}`,
                   `Environment: ${{ github.event.inputs.env }}`,
                   'Runner: Playwright (1 worker)',
-                  'HTML report: available in the workflow artifacts',
+                  'Results: safe summary in workflow logs',
                   `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
                 ].join('\n'),
               }]

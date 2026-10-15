@@ -18,12 +18,9 @@ export default defineConfig<TestOptions>({
 	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 12 : undefined,
 	reporter: [
-		['list'],
-		['html'],
+		['../reporters/security/public-summary-reporter.cjs'],
 		['../reporters/slack/pw-slack-webhook-reporter.ts'],
 		['../reporters/health/pw-health-json-reporter.ts'],
-		['../reporters/s3/pw-report-s3-upload.ts'],
-		['@estruyf/github-actions-reporter'],
 	],
 	use: {
 		acceptDownloads: true,
@@ -44,9 +41,9 @@ export default defineConfig<TestOptions>({
 		launchOptions: {
 			slowMo: 200,
 		},
-		trace: 'on',
-		video: 'on',
-		screenshot: 'on',
+		trace: 'off',
+		video: 'off',
+		screenshot: 'off',
 		orders: [
 			[
 				'1263018', //Gak Smoothie (https://thelist-stage.710labs.com/product/gak-smoovie-5-4/)

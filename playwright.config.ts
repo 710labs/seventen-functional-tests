@@ -1,5 +1,4 @@
 import { PlaywrightTestConfig, devices } from '@playwright/test'
-import generateCustomLayout from './reporters/slack/slack-alert-layout'
 import { buildStorageStateWithRecaptchaBypass } from './support/qa/recaptcha-bypass'
 require('dotenv').config({ path: require('find-config')('.env') })
 
@@ -15,38 +14,22 @@ const config: PlaywrightTestConfig = {
 	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 12 : undefined,
 	reporter: [
-		['list'],
-		['html'],
-		[
-			'playwright-tesults-reporter',
-			{
-				'tesults-target':
-					'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjM0ZTE3ODMzLWExOTItNDQxNS1hNjI0LTM1ZThjMGNmZmE2ZC0xNjY2NzYzMjEzNjE2IiwiZXhwIjo0MTAyNDQ0ODAwMDAwLCJ2ZXIiOiIwIiwic2VzIjoiNjY2ZjFmZGYtODY5Yi00MWRlLTk2ZGItNjBlNjI5OTdhZmQ0IiwidHlwZSI6InQifQ.4BjX_l1WjT0zaUNtXlD-upc2i7KbchKnngCXoA0EXUo',
-			},
-		],
-		[
-			'./node_modules/playwright-slack-report/dist/src/SlackReporter.js',
-			{
-				channels: ['tech-savagery-tests'], // provide one or more Slack channels
-				sendResults: 'always', // "always" , "on-failure", "off"
-				layout: generateCustomLayout,
-				maxNumberOfFailuresToShow: 20,
-			},
-		],
-		['@estruyf/github-actions-reporter'],
+		['./reporters/security/public-summary-reporter.cjs'],
+		['./reporters/slack/pw-slack-webhook-reporter.ts'],
+		['./reporters/health/pw-health-json-reporter.ts'],
 	],
 	use: {
 		acceptDownloads: true,
-		actiontimeout: 10 * 60000,
+		actionTimeout: 10 * 60000,
 		baseURL: process.env.BASE_URL,
 		storageState: buildStorageStateWithRecaptchaBypass(process.env.BASE_URL),
 		launchOptions: {
 			slowMo: 200,
 			headless: !!process.env.CI,
 		},
-		trace: 'retain-on-failure',
-		screenshot: 'on',
-		video: 'on',
+		trace: 'off',
+		screenshot: 'off',
+		video: 'off',
 	},
 	projects: [
 		{
