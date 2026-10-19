@@ -2,7 +2,7 @@
 
 This repository is public. Treat workflow output and uploaded files as public data.
 
-All Playwright npm test commands use `scripts/run-public-playwright.js`. It runs Playwright with stdout/stderr suppressed, including discovery/configuration errors that occur before reporters load, and prints a validated JSON summary. The summary contains only outcome, counts, opaque test IDs, final-attempt duration, and retry count. Unknown fields are discarded; malformed summaries fail the command. Normal test failures and startup failures still return a nonzero exit code.
+All Playwright npm test commands use `scripts/run-public-playwright.js`. It runs Playwright with stdout/stderr suppressed, including discovery/configuration errors that occur before reporters load, and prints a validated JSON summary. The summary contains outcome, counts, opaque test IDs, final-attempt duration, retry count, and safe failure diagnostics. Unknown fields are discarded; malformed summaries fail the command. Normal test failures and startup failures still return a nonzero exit code.
 
 Every checked-in Playwright configuration disables trace, video, and screenshot capture. Public-safe, health, and summary-only Slack reporters replace HTML, Tesults, S3, and raw GitHub annotations. Health counts retain their existing convention: a successful retry counts as passed. Test titles, errors, browser state, and attachments are excluded from public summaries. Test IDs are the first 16 hex characters of SHA-256 of Playwright's test ID; they allow correlation without publishing dynamic test names.
 
@@ -19,6 +19,10 @@ Raw report and test-result uploads have been removed, including the daily health
 The `Public reporting security` workflow runs these checks without application secrets on pull requests and main. Branch protection must require this check in GitHub settings to make it a merge gate. A source policy check is a regression guard, not a sandbox for malicious test code; reviewers must still inspect new publishers, test-generated files, and non-Playwright logging.
 
 ## Debugging
+
+Failed and flaky tests include a fixed error category and phase (for example `google-maps-referrer-denied` / `address-entry`). When available, the deepest failed step supplies a Git-tracked source filename and line. Untracked/generated paths, raw step titles, selectors, error text, URLs, and browser console messages are never published. Missing Git metadata simply omits source locations. Health artifacts and GitHub summaries include these diagnostics; the daily Slack digest includes category/phase summaries. Successful retries retain their original failure diagnostic in the public summary while still counting as healthy.
+
+The shared address helper supports legacy Google suggestions and the new `gmp-place-autocomplete` widget, including keyboard selection through closed shadow roots. A modern widget must emit its real `gmp-select` event before the test proceeds. Tests do not supply a Maps key, synthesize a selection, or skip address validation. Website-side referrer/API configuration failures remain failures and are reported with fixed codes. `ADDRESS_WIDGET_UNAVAILABLE` means the custom element did not initialize; `ADDRESS_AUTOCOMPLETE_FAILED` means address interaction or suggestion selection did not complete. Run the synthetic address/cart tests with `node scripts/run-public-playwright.js --config=configs/unit.config.ts`.
 
 Do not enable raw diagnostics in a public workflow, even for a manual run or failed retry. Reproduce locally with synthetic credentials using a separate temporary config and no publishing reporters. Local raw artifacts remain sensitive and must not be committed or uploaded. A permanent private diagnostics workflow requires a verified private repository/storage destination; none is provisioned by this patch. Keep real-secret production runs on the safe runner.
 

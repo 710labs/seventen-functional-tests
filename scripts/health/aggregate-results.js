@@ -2,6 +2,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { manifest, runUrl } = require('./result-utils')
+const { sanitizeFailure } = require('../security/failure-diagnostics')
 
 const failureStatuses = new Set(['failed', 'missing', 'cancelled', 'blocked', 'unknown'])
 const validStatuses = new Set(['passed', ...failureStatuses])
@@ -214,6 +215,20 @@ function toSlack(summary) {
 			text: { type: 'mrkdwn', text: formatMarkdownTable(['Application', 'Environment', 'Status'], conciergeRows) },
 		},
 	]
+	// Only fixed diagnostic codes enter Slack; never forward failureSummary,
+	// which may contain business-result data from non-Playwright checks.
+	const diagnosticLines = manifest.checks.flatMap(check => {
+		const result = resultsById.get(check.id)
+		if (!result || !failureStatuses.has(result.status) || !Array.isArray(result.diagnostics)) return []
+		const codes = [...new Set(result.diagnostics.map(value => {
+			const safe = sanitizeFailure(value)
+			return `${safe.category} (${safe.phase})`
+		}))].slice(0, 2)
+		return codes.length ? [`${check.label}: ${codes.join(', ')}`] : []
+	})
+	for (let index = 0; index < diagnosticLines.length; index += 8) {
+		blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Failure categories*\n${diagnosticLines.slice(index, index + 8).join('\n')}` } })
+	}
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }
 }

@@ -1,3 +1,4 @@
+import { selectAutocompleteAddress } from '../../support/qa/address-autocomplete'
 import test, { expect, Locator, Page } from '@playwright/test'
 import { CheckoutPage } from './checkout-page'
 
@@ -46,10 +47,7 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 			await expect(this.addNewAddressButton).toBeVisible()
 			await this.addNewAddressButton.click()
 			await expect(this.addressField).toBeVisible()
-			await this.addressField.fill(newAddress)
-			const suggestion = this.page.locator('.pac-item').first()
-			await expect(suggestion).toBeVisible()
-			await suggestion.click()
+			await selectAutocompleteAddress(this.page, this.addressField, newAddress)
 
 			const city = this.page.locator('#fasd_city')
 			const state = this.page.locator('#fasd_state')

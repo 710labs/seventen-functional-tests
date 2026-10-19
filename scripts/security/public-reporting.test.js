@@ -95,7 +95,7 @@ for (const mode of ['pass', 'fail', 'retry']) test(mode + secret, async ({ page,
  await page.locator('input').fill(secret)
  console.log(secret); console.error(secret)
  await info.attach(secret, { body: Buffer.from(secret), contentType: 'text/plain' })
- if (mode === 'fail' || (mode === 'retry' && info.retry === 0)) expect(secret).toBe('intentionally incorrect')
+ if (mode === 'fail' || (mode === 'retry' && info.retry === 0)) await test.step('Enter address ' + secret, async () => expect(secret).toBe('intentionally incorrect'))
 })
 `)
 		const result = spawnSync(process.execPath, ['scripts/run-public-playwright.js', '--config', config], {
@@ -107,9 +107,14 @@ for (const mode of ['pass', 'fail', 'retry']) test(mode + secret, async ({ page,
 		const output = JSON.parse(fs.readFileSync(summary, 'utf8'))
 		assert.deepEqual(output.counts, { passed: 1, failed: 1, flaky: 1, skipped: 0 }, result.stdout + result.stderr)
 		assert.equal(output.status, 'failed')
+		for (const result of output.tests.filter(t => t.status === 'failed' || t.status === 'flaky')) {
+			assert.equal(result.failure.category, 'assertion')
+			assert.equal(result.failure.phase, 'address-entry')
+		}
 		const healthResult = JSON.parse(fs.readFileSync(health, 'utf8'))
 		assert.deepEqual(healthResult.counts, { passed: 2, failed: 1, skipped: 0 })
 		assert.equal(healthResult.reportUrl, null)
+		assert.match(healthResult.failureSummary[0], /assertion; address-entry/)
 		assert.ok(!fs.readFileSync(health, 'utf8').includes(canary))
 		assert.ok(!fs.readFileSync(summary, 'utf8').includes(canary))
 		assert.ok(!files(path.join(directory, 'results')).some(file => /\.(zip|webm|png|har)$/.test(file)))

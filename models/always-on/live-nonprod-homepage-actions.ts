@@ -1,3 +1,4 @@
+import { selectAutocompleteAddress } from '../../support/qa/address-autocomplete'
 import { expect, Page } from '@playwright/test'
 import { HomePageActions } from './homepage-actions.ts'
 import {
@@ -39,10 +40,7 @@ export class LiveNonProdHomePageActions extends HomePageActions {
 		}
 
 		await expect(this.addressField).toBeVisible()
-		await this.addressField.fill(addressParam)
-		await page.locator('.pac-item').first().waitFor({ state: 'visible', timeout: 10000 })
-		await this.addressField.press('ArrowDown')
-		await this.addressField.press('Enter')
+		await selectAutocompleteAddress(page, this.addressField, addressParam)
 		await this.submitAddress(page)
 	}
 

@@ -4,6 +4,7 @@ import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/tes
 
 const { testId } = require('../security/public-summary-reporter.cjs')
 const { runStatus } = require('../../scripts/security/summary')
+const { failureLabel, testFailure } = require('../../scripts/security/failure-diagnostics')
 
 type Outcome = 'passed' | 'failed' | 'skipped'
 
@@ -26,13 +27,15 @@ class HealthJsonReporter implements Reporter {
 			skipped: 0,
 		}
 		const failures: string[] = []
+		const diagnostics = []
 
 		for (const test of this.tests.values()) {
 			const outcome = test.outcome()
 			if (outcome === 'expected') counts.passed++
 			else if (outcome === 'unexpected') {
 				counts.failed++
-				failures.push(`Test ${testId(test)}`)
+				failures.push(`Test ${testId(test)}: ${failureLabel(test)}`)
+				diagnostics.push({ id: testId(test), ...testFailure(test) })
 			} else if (outcome === 'flaky') {
 				// A retry recovered the test, so health reporting treats the final outcome as passed.
 				counts.passed++
@@ -59,6 +62,7 @@ class HealthJsonReporter implements Reporter {
 			durationSeconds: Math.round((Date.now() - this.startedAt) / 1000),
 			counts,
 			failureSummary: failures.slice(0, 20),
+			diagnostics: diagnostics.slice(0, 20),
 			reportUrl,
 			runUrl,
 		}

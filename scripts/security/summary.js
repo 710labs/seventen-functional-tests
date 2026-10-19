@@ -1,3 +1,4 @@
+const { sanitizeFailure } = require('./failure-diagnostics')
 const number = value => {
 	if (!Number.isFinite(value) || value < 0) throw new Error('Invalid summary number')
 	return value
@@ -12,7 +13,8 @@ function sanitizeSummary(input) {
 	const counts = Object.fromEntries(['passed', 'failed', 'flaky', 'skipped'].map(key => [key, number(input.counts[key])]))
 	const tests = input.tests.map(test => {
 		if (!/^[a-f0-9]{16}$/.test(test.id) || !Object.hasOwn(counts, test.status)) throw new Error('Invalid test summary')
-		return { id: test.id, status: test.status, durationMs: number(test.durationMs), retries: number(test.retries) }
+		return { id: test.id, status: test.status, durationMs: number(test.durationMs), retries: number(test.retries),
+			...((test.status === 'failed' || test.status === 'flaky') && test.failure ? { failure: sanitizeFailure(test.failure) } : {}) }
 	})
 	return { schemaVersion: 1, status: input.status, counts, tests }
 }

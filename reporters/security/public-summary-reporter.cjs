@@ -3,6 +3,7 @@ const path = require('node:path')
 const { createHash } = require('node:crypto')
 const { assertRecordingOff } = require('../../scripts/security/recording-policy')
 const { runStatus } = require('../../scripts/security/summary')
+const { testFailure } = require('../../scripts/security/failure-diagnostics')
 
 // No titles, errors, stdout, URLs, attachments, or browser data cross this boundary.
 const testId = test => createHash('sha256').update(test.id).digest('hex').slice(0, 16)
@@ -34,7 +35,8 @@ class PublicSummaryReporter {
 		const tests = [...this.tests.values()].map(({ test, durationMs, retries }) => {
 			const status = outcomes[test.outcome()] || 'failed'
 			counts[status]++
-			return { id: testId(test), status, durationMs, retries }
+			return { id: testId(test), status, durationMs, retries,
+				...(['failed', 'flaky'].includes(status) ? { failure: testFailure(test) } : {}) }
 		})
 		const summary = {
 			schemaVersion: 1,

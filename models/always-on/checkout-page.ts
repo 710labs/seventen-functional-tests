@@ -1,3 +1,4 @@
+import { selectAutocompleteAddress } from '../../support/qa/address-autocomplete'
 require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
 const fs = require('fs')
@@ -139,16 +140,7 @@ export class CheckoutPage {
 				// Type the address into the text field
 				await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
 				await expect(this.addressField).toBeVisible()
-				await this.addressField.click()
-				const newAddress = newAddressParam
-				await this.addressField.fill(newAddress)
-				const dropDownSelector = page.locator('.pac-item')
-				// Wait for the autocomplete suggestions to appear
-				await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-				// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-				// await this.addressField.press('ArrowDown')
-				// await this.addressField.press('Enter')
-				await dropDownSelector.first().click()
+				await selectAutocompleteAddress(page, this.addressField, newAddressParam)
 				await page.waitForTimeout(1000)
 				//await this.checkoutPageTitle.click()
 				await this.saveContinueButtonAddress.first().click()
@@ -375,16 +367,7 @@ export class CheckoutPage {
 				// Type the address into the text field
 				await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
 				await expect(this.addressField).toBeVisible()
-				await this.addressField.click()
-				const newAddress = newAddressParam
-				await this.addressField.fill(newAddress)
-				const dropDownSelector = page.locator('.pac-item')
-				// Wait for the autocomplete suggestions to appear
-				await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-				// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-				// await this.addressField.press('ArrowDown')
-				// await this.addressField.press('Enter')
-				await dropDownSelector.first().click()
+				await selectAutocompleteAddress(page, this.addressField, newAddressParam)
 				await page.waitForTimeout(1000)
 				//await this.checkoutPageTitle.click()
 				await this.saveContinueButtonAddress.first().click()
@@ -631,16 +614,7 @@ export class CheckoutPage {
 				// Type the address into the text field
 				await this.addressField.waitFor({ state: 'visible', timeout: 10000 })
 				await expect(this.addressField).toBeVisible()
-				await this.addressField.click()
-				const newAddress = newAddressParam
-				await this.addressField.fill(newAddress)
-				const dropDownSelector = page.locator('.pac-item')
-				// Wait for the autocomplete suggestions to appear
-				await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-				// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-				// await this.addressField.press('ArrowDown')
-				// await this.addressField.press('Enter')
-				await dropDownSelector.first().click()
+				await selectAutocompleteAddress(page, this.addressField, newAddressParam)
 				await page.waitForTimeout(1000)
 				//await this.checkoutPageTitle.click()
 				await this.saveContinueButtonAddress.first().click()

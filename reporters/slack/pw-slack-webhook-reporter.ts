@@ -2,6 +2,7 @@ import { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/rep
 
 const { testId } = require('../security/public-summary-reporter.cjs')
 const { runStatus } = require('../../scripts/security/summary')
+const { failureLabel } = require('../../scripts/security/failure-diagnostics')
 
 interface TestSummary {
 	passed: number
@@ -52,7 +53,7 @@ class SlackWebhookReporter implements Reporter {
 			// Build failure/flaky summary
 			const failedOrFlakyTests = Array.from(this.testResults.values())
 				.filter(t => t.outcome() === 'unexpected' || t.outcome() === 'flaky')
-				.map(t => `Test ${testId(t)}`)
+				.map(t => `Test ${testId(t)}: ${failureLabel(t)}`)
 				.slice(0, 20)
 				.join('\n')
 

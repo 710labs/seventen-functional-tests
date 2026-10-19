@@ -19,4 +19,5 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:security
       - run: npm run test:health
+      - run: node scripts/run-public-playwright.js --config=configs/unit.config.ts
       - run: npm run validate:health

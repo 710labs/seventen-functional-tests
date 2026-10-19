@@ -1,3 +1,4 @@
+import { selectAutocompleteAddress } from '../../support/qa/address-autocomplete'
 require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
 import {
@@ -334,16 +335,7 @@ export class HomePageActions {
 			await expect(this.addressInfoSideBarContainer).toBeVisible()
 			await expect(this.addressField).toBeVisible()
 
-			const address = addressParam
-			// Type the address into the text field
-			await this.addressField.fill(address)
-
-			// Wait for the autocomplete suggestions to appear
-			await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-
-			// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-			await this.addressField.press('ArrowDown')
-			await this.addressField.press('Enter')
+			await selectAutocompleteAddress(page, this.addressField, addressParam)
 		})
 		await test.step('Click submit button', async () => {
 			await this.submitAddress(page)

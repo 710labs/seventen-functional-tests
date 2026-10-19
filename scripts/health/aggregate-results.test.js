@@ -74,6 +74,23 @@ test('aggregate rejects an invalid status rather than treating it as healthy', (
 	assert.equal(summary.results[0].status, 'unknown')
 })
 
+test('Slack diagnostic summary uses fixed codes and never raw failure text', () => {
+	const directory = createDirectory()
+	manifest.checks.forEach(check => writeCheck(directory, check))
+	const check = manifest.checks.find(check => check.id === 'live-dev-storefront')
+	fs.writeFileSync(path.join(directory, `${check.id}.json`), JSON.stringify({
+		id: check.id, status: 'failed', failureSummary: ['SECRET_CANARY'],
+		diagnostics: [
+			{ category: 'google-maps-referrer-denied', phase: 'address-entry', message: 'SECRET_CANARY' },
+			{ category: 'SECRET_CANARY', phase: 'SECRET_CANARY' },
+		],
+	}))
+	const body = JSON.stringify(toSlack(aggregate(directory)))
+	assert.match(body, /Live \/ Dev \/ Storefront: google-maps-referrer-denied \(address-entry\)/)
+	assert.match(body, /test-error \(test\)/)
+	assert.doesNotMatch(body, /SECRET_CANARY/)
+})
+
 test('Slack uses standard blocks with manifest-driven status tables and no individual failure names', () => {
 	const directory = createDirectory()
 	const failedIds = new Set([

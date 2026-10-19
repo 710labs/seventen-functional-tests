@@ -1,3 +1,4 @@
+import { selectAutocompleteAddress } from '../../support/qa/address-autocomplete'
 require('dotenv').config({ path: '.env' })
 import test, { expect, Locator, Page } from '@playwright/test'
 const fs = require('fs')
@@ -269,15 +270,7 @@ export class AccountPage {
 
 		const newAddress = '6801 Hollywood Blvd, Los Angeles, CA 90028'
 
-		// Type the address into the text field
-		await this.addressField.fill(newAddress)
-
-		// Wait for the autocomplete suggestions to appear
-		await this.page.waitForSelector('.pac-item') // Replace with the actual class or selector of the autocomplete suggestion items
-
-		// Press 'ArrowDown' to navigate to the first suggestion and then press 'Enter' to select it
-		await this.addressField.press('ArrowDown')
-		await this.addressField.press('Enter')
+		await selectAutocompleteAddress(this.page, this.addressField, newAddress)
 		await this.page.waitForTimeout(2000)
 		await this.addressSubmitButton.click({ force: true })
 		//await this.addressSubmitButton.click()
