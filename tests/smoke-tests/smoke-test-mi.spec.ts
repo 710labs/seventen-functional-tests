@@ -1,3 +1,4 @@
+import { withQueueItDetection } from '../../support/queueit'
 import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
@@ -18,7 +19,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 	var orderNumber: any
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Recreational @recreational @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Recreational @recreational @smoke`, async ({ page, browserName, qaClient }, workerInfo) => withQueueItDetection(page, workerInfo, async () => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 
 		const address = '123 Eight Mile Rd, Detroit, MI 48203'
@@ -91,5 +92,5 @@ test.describe('Basic Acceptance Tests MI', () => {
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
 		})
-	})
+	}))
 })

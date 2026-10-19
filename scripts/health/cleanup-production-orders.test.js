@@ -50,3 +50,14 @@ test('a cleanup error changes an otherwise passing health result to failed', () 
 	assert.equal(result.status, 'failed')
 	assert.match(result.failureSummary.at(-1), /HTTP 500/)
 })
+
+test('a cleanup error still fails a QueueIt-deferred health check', () => {
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'prod-order-result-'))
+	try {
+		const outputFile = path.join(directory, 'list-prod-ca.json')
+		const check = getCheck('list-prod-ca')
+		writeResult(check, { status: 'queued', failureSummary: [] }, outputFile)
+		markCleanupFailure(check, new Error('HTTP 500'), outputFile)
+		assert.equal(readResult(outputFile).status, 'failed')
+	} finally { fs.rmSync(directory, { recursive: true, force: true }) }
+})

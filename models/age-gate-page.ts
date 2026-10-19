@@ -1,4 +1,5 @@
 import test, { expect, Page } from '@playwright/test'
+import { skipIfQueueIt } from '../support/queueit'
 import { addListBypassCookies } from '../support/qa/recaptcha-bypass'
 
 export class AgeGatePage {
@@ -60,6 +61,7 @@ export class AgeGatePage {
 		await test.step('Pass Age Gate', async () => {
 			await addListBypassCookies(this.page.context(), process.env.BASE_URL)
 			const response = await this.page.goto('/', { waitUntil: 'domcontentloaded' })
+			await skipIfQueueIt(this.page)
 			await this.assertNotForbidden(response?.status())
 
 			const passwordField = this.page.locator('input[name="post_password"]')

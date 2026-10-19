@@ -1,3 +1,4 @@
+import { withQueueItDetection } from '../../support/queueit'
 import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
@@ -18,7 +19,7 @@ test.describe('Basic Acceptance Tests CO', () => {
 	var orderNumber: any
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Medical @medical @smoke`, async ({ page, browserName, qaClient }, workerInfo) => withQueueItDetection(page, workerInfo, async () => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const address = faker.helpers.arrayElement(coloradoAddressess)
 		var fakeFirstName = faker.name.firstName() + '_Test'
@@ -75,6 +76,6 @@ test.describe('Basic Acceptance Tests CO', () => {
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
 		})
-	})
+	}))
 
 })

@@ -5,6 +5,7 @@ import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/tes
 const { testId } = require('../security/public-summary-reporter.cjs')
 const { runStatus } = require('../../scripts/security/summary')
 const { failureLabel, testFailure } = require('../../scripts/security/failure-diagnostics')
+const { reportingOutcome, isQueuedTest, QUEUEIT_REASON } = require('../../scripts/security/queueit-status')
 
 type Outcome = 'passed' | 'failed' | 'skipped'
 
@@ -21,7 +22,7 @@ class HealthJsonReporter implements Reporter {
 		const outputFile = process.env.HEALTH_RESULT_FILE
 		if (!outputFile) return
 
-		const counts: Record<Outcome, number> = {
+		const counts: Record<Outcome, number> & { queued?: number } = {
 			passed: 0,
 			failed: 0,
 			skipped: 0,
@@ -30,8 +31,9 @@ class HealthJsonReporter implements Reporter {
 		const diagnostics = []
 
 		for (const test of this.tests.values()) {
-			const outcome = test.outcome()
-			if (outcome === 'expected') counts.passed++
+			const outcome = reportingOutcome(test)
+			if (isQueuedTest(test)) counts.queued = (counts.queued || 0) + 1
+			else if (outcome === 'expected') counts.passed++
 			else if (outcome === 'unexpected') {
 				counts.failed++
 				failures.push(`Test ${testId(test)}: ${failureLabel(test)}`)
@@ -42,7 +44,7 @@ class HealthJsonReporter implements Reporter {
 			} else counts.skipped++
 		}
 
-		const executed = counts.passed + counts.failed
+		const executed = counts.passed + counts.failed + (counts.queued || 0)
 		if (executed === 0) failures.push('No tests executed.')
 		const status = runStatus(result.status, counts)
 		const reportUrl = null
@@ -57,6 +59,7 @@ class HealthJsonReporter implements Reporter {
 			label: process.env.HEALTH_CHECK_LABEL,
 			group: process.env.HEALTH_CHECK_GROUP,
 			status,
+			...(counts.queued ? { queueSummary: QUEUEIT_REASON } : {}),
 			startedAt: new Date(this.startedAt).toISOString(),
 			finishedAt: new Date().toISOString(),
 			durationSeconds: Math.round((Date.now() - this.startedAt) / 1000),

@@ -4,6 +4,7 @@ const { createHash } = require('node:crypto')
 const { assertRecordingOff } = require('../../scripts/security/recording-policy')
 const { runStatus } = require('../../scripts/security/summary')
 const { testFailure } = require('../../scripts/security/failure-diagnostics')
+const { reportingOutcome, isQueuedTest } = require('../../scripts/security/queueit-status')
 
 // No titles, errors, stdout, URLs, attachments, or browser data cross this boundary.
 const testId = test => createHash('sha256').update(test.id).digest('hex').slice(0, 16)
@@ -33,8 +34,8 @@ class PublicSummaryReporter {
 		const counts = { passed: 0, failed: 0, flaky: 0, skipped: 0 }
 		const outcomes = { expected: 'passed', unexpected: 'failed', flaky: 'flaky', skipped: 'skipped' }
 		const tests = [...this.tests.values()].map(({ test, durationMs, retries }) => {
-			const status = outcomes[test.outcome()] || 'failed'
-			counts[status]++
+			const status = isQueuedTest(test) ? 'queued' : outcomes[reportingOutcome(test)] || 'failed'
+			counts[status] = (counts[status] || 0) + 1
 			return { id: testId(test), status, durationMs, retries,
 				...(['failed', 'flaky'].includes(status) ? { failure: testFailure(test) } : {}) }
 		})
@@ -48,7 +49,7 @@ class PublicSummaryReporter {
 			fs.writeFileSync(process.env.PUBLIC_SUMMARY_FILE, JSON.stringify(summary) + '\n', { mode: 0o600 })
 		}
 		console.log(JSON.stringify(summary))
-		return { status: summary.status }
+		return { status: summary.status === 'queued' ? 'passed' : summary.status }
 	}
 }
 module.exports = PublicSummaryReporter

@@ -3,12 +3,14 @@ import { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/rep
 const { testId } = require('../security/public-summary-reporter.cjs')
 const { runStatus } = require('../../scripts/security/summary')
 const { failureLabel } = require('../../scripts/security/failure-diagnostics')
+const { reportingOutcome, isQueuedTest, QUEUEIT_REASON } = require('../../scripts/security/queueit-status')
 
 interface TestSummary {
 	passed: number
 	failed: number
 	flaky: number
 	skipped: number
+	queued?: number
 }
 
 class SlackWebhookReporter implements Reporter {
@@ -30,8 +32,10 @@ class SlackWebhookReporter implements Reporter {
 	async onEnd(result: FullResult) {
 		// Count final outcomes using test.outcome() which correctly identifies flaky tests
 		Array.from(this.testResults.values()).forEach(test => {
-			const outcome = test.outcome()
-			if (outcome === 'expected') {
+			const outcome = reportingOutcome(test)
+			if (isQueuedTest(test)) {
+				this.summary.queued = (this.summary.queued || 0) + 1
+			} else if (outcome === 'expected') {
 				this.summary.passed++
 			} else if (outcome === 'flaky') {
 				this.summary.flaky++
@@ -52,24 +56,26 @@ class SlackWebhookReporter implements Reporter {
 		try {
 			// Build failure/flaky summary
 			const failedOrFlakyTests = Array.from(this.testResults.values())
-				.filter(t => t.outcome() === 'unexpected' || t.outcome() === 'flaky')
+				.filter(t => reportingOutcome(t) === 'unexpected' || t.outcome() === 'flaky')
 				.map(t => `Test ${testId(t)}: ${failureLabel(t)}`)
 				.slice(0, 20)
 				.join('\n')
 
-			const total = this.summary.passed + this.summary.failed + this.summary.flaky + this.summary.skipped
-			const failed = runStatus(result.status, this.summary) === 'failed'
+			const total = this.summary.passed + this.summary.failed + this.summary.flaky + this.summary.skipped + (this.summary.queued || 0)
+			const status = runStatus(result.status, this.summary)
+			const failed = status === 'failed'
 
 			// Determine status: red for failures, yellow for flaky-only, green for all passed
 			const statusEmoji =
 				failed
 					? ':red_circle:'
+					: status === 'queued' ? ':hourglass_flowing_sand:'
 					: this.summary.flaky > 0
 						? ':large_yellow_circle:'
 						: ':large_green_circle:'
 
 			const statusText =
-				failed ? 'Failed' : this.summary.flaky > 0 ? 'Flaky' : 'Passed'
+				failed ? 'Failed' : status === 'queued' ? QUEUEIT_REASON : this.summary.flaky > 0 ? 'Flaky' : 'Passed'
 
 			// Link only to the safe workflow summary.
 			const githubUrl = `https://github.com/710labs/seventen-functional-tests/actions/runs/${process.env.UNIQUE_RUN_ID}`
@@ -78,6 +84,7 @@ class SlackWebhookReporter implements Reporter {
 			const countsText =
 				`${this.summary.passed} (Passed)\n` +
 				`${this.summary.failed} (Failed)\n` +
+				`${this.summary.queued ? `${this.summary.queued} (QueueIt deferred)\n` : ''}` +
 				`${this.summary.flaky > 0 ? `${this.summary.flaky} (Flaky)\n` : ''}` +
 				`${this.summary.skipped > 0 ? `${this.summary.skipped} (Skipped)\n` : ''}` +
 				`${total} (Total)`

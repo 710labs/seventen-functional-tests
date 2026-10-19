@@ -50,6 +50,28 @@ test('aggregate treats a missing result as a failure', () => {
 	assert.match(summary.results.at(-1).failureSummary[0], /did not produce/)
 })
 
+test('QueueIt is visible as deferred, excluded from failures, and never hides a real failure', () => {
+	const directory = createDirectory()
+	try {
+		manifest.checks.forEach(check => writeCheck(directory, check, check.id.startsWith('list-prod-') ? 'queued' : 'passed'))
+		const summary = aggregate(directory)
+		assert.equal(summary.status, 'queued')
+		assert.equal(summary.totals.queued, 4)
+		assert.equal(summary.totals.passed, 18)
+		assert.match(toMarkdown(summary), /0 failed\/missing · 4 QueueIt deferred/)
+		const slack = JSON.stringify(toSlack(summary))
+		assert.match(slack, /⏳ Daily System Health/)
+		assert.match(slack, /QueueIt active — checks deferred/)
+		assert.match(slack, /CA\s+\| ✅\s+\| ✅\s+\| ⏳/)
+		writeCheck(directory, manifest.checks[0], 'failed')
+		const mixed = aggregate(directory)
+		assert.equal(mixed.status, 'failed')
+		assert.match(JSON.stringify(toSlack(mixed)), /1 failed\/missing · 4 QueueIt deferred/)
+		fs.unlinkSync(path.join(directory, `${manifest.checks[1].id}.json`))
+		assert.equal(aggregate(directory).status, 'failed')
+	} finally { fs.rmSync(directory, { recursive: true, force: true }) }
+})
+
 test('aggregate treats a retry-recovered flaky result as passed', () => {
 	const directory = createDirectory()
 	manifest.checks.forEach((check, index) => writeCheck(directory, check, index === 0 ? 'flaky' : 'passed'))

@@ -1,3 +1,4 @@
+import { withQueueItDetection } from '../../support/queueit'
 import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
@@ -15,7 +16,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 	var orderNumber: any
 	const orderQuanity = 6
 
-	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, qaClient }, workerInfo) => withQueueItDetection(page, workerInfo, async () => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
 		const zipCode = '32003'
 		const address = '1845 Town Center Blvd, Fleming Island, FL 32003'
@@ -70,5 +71,5 @@ test.describe('Medical Customer Checkout Florida', () => {
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote order_id.txt → ${orderNumber}`)
 		})
-	})
+	}))
 })

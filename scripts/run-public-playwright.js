@@ -32,7 +32,7 @@ try {
 		fs.mkdirSync(path.dirname(process.env.PUBLIC_SUMMARY_FILE), { recursive: true })
 		fs.writeFileSync(process.env.PUBLIC_SUMMARY_FILE, JSON.stringify(summary) + '\n', { mode: 0o600 })
 	}
-	exitCode = child.status === 0 && summary.status === 'passed' ? 0 : 1
+	exitCode = child.status === 0 && ['passed', 'queued'].includes(summary.status) ? 0 : 1
 } catch {
 	console.error('Playwright failed before producing a safe summary. Inspect privately with synthetic credentials.')
 } finally {

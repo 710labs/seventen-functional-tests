@@ -5,8 +5,8 @@ const { manifest, runUrl } = require('./result-utils')
 const { sanitizeFailure } = require('../security/failure-diagnostics')
 
 const failureStatuses = new Set(['failed', 'missing', 'cancelled', 'blocked', 'unknown'])
-const validStatuses = new Set(['passed', ...failureStatuses])
-const emoji = { passed: '✅', failed: '❌', missing: '❓', cancelled: '⛔', blocked: '🚫', unknown: '❓' }
+const validStatuses = new Set(['passed', 'queued', ...failureStatuses])
+const emoji = { queued: '⏳', passed: '✅', failed: '❌', missing: '❓', cancelled: '⛔', blocked: '🚫', unknown: '❓' }
 
 function walkJson(directory) {
 	if (!fs.existsSync(directory)) return []
@@ -77,7 +77,7 @@ function aggregate(directory) {
 		{ expected: results.length },
 	)
 	const hasFailure = results.some(result => failureStatuses.has(result.status))
-	const status = hasFailure ? 'failed' : 'passed'
+	const status = hasFailure ? 'failed' : totals.queued ? 'queued' : 'passed'
 	return {
 		schemaVersion: 1,
 		status,
@@ -94,18 +94,19 @@ function markdownCell(value) {
 
 function toMarkdown(summary) {
 	const passed = summary.totals.passed || 0
-	const failed = summary.totals.expected - passed
-	const titleEmoji = summary.status === 'passed' ? '🟢' : '🔴'
+	const queued = summary.totals.queued || 0
+	const failed = summary.totals.expected - passed - queued
+	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'queued' ? '⏳' : '🔴'
 	const lines = [
 		`# ${titleEmoji} Daily System Health`,
 		'',
-		`**${passed}/${summary.totals.expected} passed** · ${failed} failed/missing`,
+		`**${passed}/${summary.totals.expected} passed** · ${failed} failed/missing${queued ? ` · ${queued} QueueIt deferred` : ''}`,
 		'',
 		'| Status | Check | Result |',
 		'|---|---|---|',
 	]
 	for (const result of summary.results) {
-		const detail = result.failureSummary?.[0] || (result.counts ? `${result.counts.passed} tests passed` : result.status)
+		const detail = result.status === 'queued' ? 'QueueIt active — checks deferred' : result.failureSummary?.[0] || (result.counts ? `${result.counts.passed} tests passed` : result.status)
 		const url = result.reportUrl || result.runUrl
 		const renderedDetail = url ? `[${markdownCell(detail)}](${url})` : markdownCell(detail)
 		lines.push(`| ${emoji[result.status] || '❓'} | ${markdownCell(result.label)} | ${renderedDetail} |`)
@@ -115,8 +116,9 @@ function toMarkdown(summary) {
 
 function toSlack(summary) {
 	const passed = summary.totals.passed || 0
-	const failed = summary.totals.expected - passed
-	const titleEmoji = summary.status === 'passed' ? '🟢' : '🔴'
+	const queued = summary.totals.queued || 0
+	const failed = summary.totals.expected - passed - queued
+	const titleEmoji = summary.status === 'passed' ? '🟢' : summary.status === 'queued' ? '⏳' : '🔴'
 	const resultsById = new Map(summary.results.map(result => [result.id, result]))
 	const status = check => emoji[resultsById.get(check.id)?.status] || '❓'
 	const formatMarkdownTable = (headers, rows) => {
@@ -185,7 +187,7 @@ function toSlack(summary) {
 		},
 		{
 			type: 'context',
-			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing` }],
+			elements: [{ type: 'mrkdwn', text: `${failed} failed/missing${queued ? ` · ${queued} QueueIt deferred` : ''}` }],
 		},
 		{ type: 'divider' },
 		{
@@ -215,6 +217,7 @@ function toSlack(summary) {
 			text: { type: 'mrkdwn', text: formatMarkdownTable(['Application', 'Environment', 'Status'], conciergeRows) },
 		},
 	]
+	if (queued) blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: '⏳ QueueIt active — checks deferred. Storefront validation will resume on the next run after the queue clears.' }] })
 	// Only fixed diagnostic codes enter Slack; never forward failureSummary,
 	// which may contain business-result data from non-Playwright checks.
 	const diagnosticLines = manifest.checks.flatMap(check => {

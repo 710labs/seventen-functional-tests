@@ -4,13 +4,15 @@ const number = value => {
 	return value
 }
 function runStatus(status, counts) {
+	if (status === 'passed' && counts.failed === 0 && counts.queued > 0) return 'queued'
 	return status === 'passed' && counts.failed === 0 && counts.passed + (counts.flaky || 0) > 0
 		? 'passed'
 		: 'failed'
 }
 function sanitizeSummary(input) {
-	if (!['passed', 'failed'].includes(input.status) || input.schemaVersion !== 1 || !Array.isArray(input.tests)) throw new Error('Invalid summary')
+	if (!['passed', 'failed', 'queued'].includes(input.status) || input.schemaVersion !== 1 || !Array.isArray(input.tests)) throw new Error('Invalid summary')
 	const counts = Object.fromEntries(['passed', 'failed', 'flaky', 'skipped'].map(key => [key, number(input.counts[key])]))
+	if (input.counts.queued !== undefined) counts.queued = number(input.counts.queued)
 	const tests = input.tests.map(test => {
 		if (!/^[a-f0-9]{16}$/.test(test.id) || !Object.hasOwn(counts, test.status)) throw new Error('Invalid test summary')
 		return { id: test.id, status: test.status, durationMs: number(test.durationMs), retries: number(test.retries),

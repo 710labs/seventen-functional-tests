@@ -229,6 +229,15 @@ succeeds on retry is counted as passed and appears green. The question mark is r
 configured check whose result is missing or unrecognized; a dash means no check is configured for
 that table cell.
 
+An active QueueIt pre-sale or waiting-room page appears as **⏳ QueueIt active — checks deferred**.
+These checks have a separate `queued` status and are excluded from both passed and failed counts.
+A run containing only passes and queue deferrals exits successfully, with an hourglass in the
+digest instead of a green all-passed indicator. Real failures, missing results, and order-cleanup
+errors still fail the run. Detection requires QueueIt waiting-room page markers; loading a QueueIt
+connector script on an otherwise normal storefront does not defer a check. List smoke tests also
+check for a queue after an action timeout, covering redirects later in registration or checkout.
+Checks run normally again on the next scheduled or manual run after the queue clears.
+
 The List Dev and List Stage checks remain serial because they switch shared domain state. Other
 independent smoke checks use limited parallelism. Individual Playwright jobs do not receive the
 Slack webhook during this workflow; only the final aggregate job can post to Slack.

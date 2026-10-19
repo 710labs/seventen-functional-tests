@@ -1,3 +1,4 @@
+import { withQueueItDetection } from '../../support/queueit'
 import { expect, test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
@@ -16,7 +17,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 	var orderNumber: any
 	var cartTotals: any
 
-	test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserName, qaClient }, workerInfo) => {
+	test(`Basic Acceptance Test - Recreational @rec @smoke`, async ({ page, browserName, qaClient }, workerInfo) => withQueueItDetection(page, workerInfo, async () => {
 		const address = '440 N Rodeo Dr, Beverly Hills, CA 90210'
 		var fakeFirstName = faker.name.firstName() + '_Test'
 		var fakeLastName = faker.name.lastName() + '_Test'
@@ -72,5 +73,5 @@ test.describe('Basic Acceptance Tests CA', () => {
 			writeFileSync('order_id.txt', String(orderNumber), { encoding: 'utf-8' })
 			console.log(`✅ Wrote order_id.txt and appended order_ids.txt → ${orderNumber}`)
 		})
-	})
+	}))
 })
