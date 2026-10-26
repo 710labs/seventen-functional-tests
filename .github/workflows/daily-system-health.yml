@@ -15,6 +15,9 @@ concurrency:
 jobs:
   list-dev:
     name: List Dev — all states
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 330
     concurrency:
@@ -46,6 +49,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run List Dev health lane
@@ -66,6 +76,9 @@ jobs:
 
   list-stage:
     name: List Stage — all states
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 330
     concurrency:
@@ -97,6 +110,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run List Stage health lane
@@ -117,6 +137,9 @@ jobs:
 
   list-prod:
     name: List Prod — ${{ matrix.state_label }}
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -169,6 +192,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Clear previous production order IDs
@@ -199,6 +229,9 @@ jobs:
 
   live-dev:
     name: Live Dev — storefront
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 75
     outputs:
@@ -235,6 +268,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Clear previous order IDs
@@ -292,6 +332,9 @@ jobs:
 
   live-stage:
     name: Live Stage — storefront
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 75
     outputs:
@@ -328,6 +371,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Clear previous order IDs
@@ -385,6 +435,9 @@ jobs:
 
   standalone-smokes:
     name: ${{ matrix.label }}
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 75
     strategy:
@@ -460,6 +513,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run health check

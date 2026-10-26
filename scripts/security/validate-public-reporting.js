@@ -17,7 +17,9 @@ function validate(directory = root) {
 		const source = read(file)
 		for (const key of ['trace', 'video', 'screenshot']) {
 			const values = [...source.matchAll(new RegExp(`\\b${key}:\\s*([^,\\n]+)`, 'g'))].map(m => m[1])
-			if (!values.length || values.some(value => value !== "'off'")) errors.push(`${file}: ${key} must be off`)
+			const helperPath = file.startsWith('configs/') ? '../scripts/private-videos/session' : './scripts/private-videos/session'
+			const approvedVideo = key === 'video' && source.includes(`const { privateVideoMode } = require('${helperPath}')`)
+			if (!values.length || values.some(value => value !== "'off'" && !(approvedVideo && value === 'privateVideoMode()'))) errors.push(`${file}: ${key} must be off or use the verified private video helper`)
 		}
 		if (!source.includes('reporters/security/public-summary-reporter.cjs')) errors.push(`${file}: missing safe reporter`)
 		const reporterBlock = source.match(/reporter:\s*\[([\s\S]*?)(?=\n\t[A-Za-z])/)?.[1] || ''

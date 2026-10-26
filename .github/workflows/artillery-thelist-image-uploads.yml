@@ -26,6 +26,7 @@ jobs:
     environment: ${{ github.event.inputs.env }}
 
     permissions:
+      id-token: write
       contents: read
 
     steps:
@@ -87,6 +88,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -107,7 +115,7 @@ jobs:
             echo "- Storefront: $IMAGE_UPLOAD_STOREFRONT"
             echo "- Environment: $IMAGE_UPLOAD_ENV"
             echo "- Target: $IMAGE_UPLOAD_TARGET"
-            echo "- See the safe test summary in the workflow logs. Detailed browser artifacts are disabled."
+            echo "- See the safe test summary in the workflow logs. When private recording is enabled, failure video links appear in this run summary."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Slack notification

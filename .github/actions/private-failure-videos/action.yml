@@ -1,0 +1,55 @@
+name: Configure private failure videos
+description: Authenticate to a dedicated private S3 bucket without publishing browser artifacts.
+inputs:
+  enabled:
+    description: Set to true to require private video storage for this run.
+    default: 'false'
+  bucket:
+    description: Dedicated private S3 bucket.
+    required: false
+  region:
+    description: Bucket region.
+    required: false
+  role-arn:
+    description: AWS role that trusts this repository's main branch through GitHub OIDC.
+    required: false
+runs:
+  using: composite
+  steps:
+    - name: Validate video configuration
+      if: inputs.enabled == 'true'
+      shell: bash
+      env:
+        VIDEO_BUCKET: ${{ inputs.bucket }}
+        VIDEO_REGION: ${{ inputs.region }}
+        VIDEO_ROLE: ${{ inputs.role-arn }}
+        VIDEO_REF: ${{ github.ref }}
+        VIDEO_EVENT: ${{ github.event_name }}
+      run: |
+        if [[ "$VIDEO_REF" != 'refs/heads/main' || "$VIDEO_EVENT" == pull_request* ]]; then
+          echo 'Private recording credentials are only available to trusted main-branch runs.' >&2
+          exit 1
+        fi
+        if [[ ! "$VIDEO_BUCKET" =~ ^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$ || ! "$VIDEO_REGION" =~ ^[a-z]{2}-[a-z]+-[0-9]$ || ! "$VIDEO_ROLE" =~ ^arn:aws:iam::[0-9]{12}:role/ ]]; then
+          echo 'Configure PRIVATE_VIDEO_BUCKET, PRIVATE_VIDEO_REGION, and PRIVATE_VIDEO_ROLE_ARN before enabling recordings.' >&2
+          exit 1
+        fi
+    - name: Obtain temporary AWS credentials
+      if: inputs.enabled == 'true'
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-arn }}
+        aws-region: ${{ inputs.region }}
+        role-duration-seconds: 21600
+        role-session-name: playwright-${{ github.run_id }}
+        mask-aws-account-id: true
+    - name: Enable verified private capture
+      if: inputs.enabled == 'true'
+      shell: bash
+      env:
+        VIDEO_BUCKET: ${{ inputs.bucket }}
+        VIDEO_REGION: ${{ inputs.region }}
+      run: |
+        echo 'PRIVATE_VIDEO_RECORDING=true' >> "$GITHUB_ENV"
+        echo "PRIVATE_VIDEO_BUCKET=$VIDEO_BUCKET" >> "$GITHUB_ENV"
+        echo "PRIVATE_VIDEO_REGION=$VIDEO_REGION" >> "$GITHUB_ENV"

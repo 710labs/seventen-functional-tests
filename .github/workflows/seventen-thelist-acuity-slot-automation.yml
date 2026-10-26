@@ -32,6 +32,9 @@ concurrency:
 jobs:
   acuity-slot-automation:
     timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     env:
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
@@ -110,6 +113,13 @@ jobs:
           name: acuity-selected-delivery-slots
           path: .acuity-input/selected-delivery-slots.csv
           if-no-files-found: ignore
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         if: inputs.mode == 'upload'
         run: npx playwright install --with-deps chromium

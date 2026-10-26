@@ -1,3 +1,4 @@
+const { privateVideoMode } = require('../scripts/private-videos/session')
 import path from 'path'
 import { defineConfig, devices } from '@playwright/test'
 
@@ -21,7 +22,7 @@ export default defineConfig({
 		actionTimeout: 30 * 1000,
 		baseURL: process.env.BASE_URL,
 		trace: 'off',
-		video: 'off',
+		video: privateVideoMode(),
 		screenshot: 'off',
 	},
 	projects: [

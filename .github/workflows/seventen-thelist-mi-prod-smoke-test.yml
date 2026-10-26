@@ -21,6 +21,9 @@ on:
 jobs:
   smoke-test-prod-mi:
     timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     env:
       ENV: prod-mi thelist-mi.710labs.com
@@ -53,6 +56,13 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests
