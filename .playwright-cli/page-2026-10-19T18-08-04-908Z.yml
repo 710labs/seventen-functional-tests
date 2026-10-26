@@ -1,0 +1,38 @@
+- generic [active] [ref=e1]:
+  - dialog "Verify you are over %s years of age?" [ref=e5]:
+    - generic [ref=e6]:
+      - img "710 Labs" [ref=e8]
+      - paragraph
+      - generic [ref=e9]:
+        - paragraph [ref=e10]: You must be at least 21 years of age or possess a valid medical recommendation to view this site.
+        - generic [ref=e11]:
+          - button "I'm over 21 or a qualified patient" [ref=e12] [cursor=pointer]
+          - button "I'm not 21 yet or don't qualify" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - banner [ref=e15]:
+      - generic [ref=e19]:
+        - link "Skip to navigation" [ref=e20] [cursor=pointer]:
+          - /url: "#site-navigation"
+        - link "Skip to content" [ref=e21] [cursor=pointer]:
+          - /url: "#content"
+        - link "710 Labs" [ref=e24] [cursor=pointer]:
+          - /url: https://thelist.710labs.com/
+    - text: 
+    - generic [ref=e26]:
+      - main [ref=e28]:
+        - article [ref=e29]:
+          - paragraph [ref=e33]:
+            - generic [ref=e34]:
+              - text: What's the password?
+              - textbox "What's the password?" [ref=e35]
+            - button "Enter Site" [ref=e36] [cursor=pointer]
+      - complementary [ref=e37]
+  - contentinfo [ref=e38]:
+    - generic [ref=e40]:
+      - text: © 710 Labs 2026 |
+      - link "Terms of Service" [ref=e42] [cursor=pointer]:
+        - /url: https://thelist.710labs.com/terms-of-use/
+      - text: "|"
+      - link "Privacy Policy" [ref=e43] [cursor=pointer]:
+        - /url: https://thelist.710labs.com/privacy-policy/
+  - status [ref=e45]

@@ -1,7 +1,7 @@
 import { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
 const { testId } = require('../security/public-summary-reporter.cjs')
-const { runStatus } = require('../../scripts/security/summary')
+const { runStatus, readRecordingSummary } = require('../../scripts/security/summary')
 const { failureLabel } = require('../../scripts/security/failure-diagnostics')
 const { reportingOutcome, isQueuedTest, QUEUEIT_REASON } = require('../../scripts/security/queueit-status')
 
@@ -62,7 +62,8 @@ class SlackWebhookReporter implements Reporter {
 				.join('\n')
 
 			const total = this.summary.passed + this.summary.failed + this.summary.flaky + this.summary.skipped + (this.summary.queued || 0)
-			const status = runStatus(result.status, this.summary)
+			const recordings = readRecordingSummary()
+			const status = runStatus(recordings?.failed ? 'failed' : result.status, this.summary)
 			const failed = status === 'failed'
 
 			// Determine status: red for failures, yellow for flaky-only, green for all passed
@@ -157,6 +158,14 @@ class SlackWebhookReporter implements Reporter {
 					},
 				],
 			}
+
+			if (recordings?.url) message.blocks.push({
+				type: 'section', text: { type: 'mrkdwn',
+					text: `<${recordings.url}|View failure recordings in AWS> — ${recordings.uploaded} videos; AWS sign-in required.` },
+			} as any)
+			if (recordings?.failed) message.blocks.push({
+				type: 'section', text: { type: 'mrkdwn', text: 'Private failure video upload was incomplete. Check the GitHub run summary.' },
+			} as any)
 
 			// Send to Slack webhook
 			const response = await fetch(webhookUrl, {

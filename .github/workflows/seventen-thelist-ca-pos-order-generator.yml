@@ -48,6 +48,9 @@ concurrency:
 jobs:
   pos-order-generator:
     timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     env:
       ENV_ID: pos-sync-ca-${{ github.event.inputs.environment }}
@@ -96,6 +99,13 @@ jobs:
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
       - name: Set Domain to CA
         run: node ./scripts/set-qa-domain.js ca
+      - name: Configure private failure videos
+        uses: ./.github/actions/private-failure-videos
+        with:
+          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
+          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
+          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
+          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Run Playwright tests

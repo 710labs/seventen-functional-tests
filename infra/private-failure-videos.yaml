@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Private Playwright failure videos and a write-only GitHub Actions role.
+Parameters:
+  GitHubRepository:
+    Type: String
+    Default: 710labs/seventen-functional-tests
+    AllowedPattern: '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+'
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Default: ''
+    Description: Supply the existing token.actions.githubusercontent.com provider ARN if this AWS account already has one.
+  RetentionDays:
+    Type: Number
+    Default: 7
+    MinValue: 1
+    MaxValue: 30
+Conditions:
+  CreateOidcProvider: !Equals [!Ref ExistingGitHubOidcProviderArn, '']
+Resources:
+  VideoBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireRecordings
+            Status: Enabled
+            Prefix: playwright/
+            ExpirationInDays: !Ref RetentionDays
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      Tags:
+        - Key: Purpose
+          Value: Private Playwright failure recordings
+  VideoBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VideoBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: RequireTLS
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt VideoBucket.Arn
+              - !Sub '${VideoBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+  VideoUploadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      MaxSessionDuration: 21600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If [CreateOidcProvider, !Ref GitHubOidcProvider, !Ref ExistingGitHubOidcProviderArn]
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub:
+                  - !Sub 'repo:${GitHubRepository}:ref:refs/heads/main'
+                  # The image-upload check uses these GitHub environments.
+                  # Restrict their deployment branches to main before enabling.
+                  - !Sub 'repo:${GitHubRepository}:environment:dev'
+                  - !Sub 'repo:${GitHubRepository}:environment:stage'
+      Policies:
+        - PolicyName: VerifyAndUploadPrivateVideos
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketPublicAccessBlock
+                  - s3:GetBucketPolicyStatus
+                  - s3:GetBucketOwnershipControls
+                Resource: !GetAtt VideoBucket.Arn
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub '${VideoBucket.Arn}/playwright/*'
+Outputs:
+  PrivateVideoBucket:
+    Value: !Ref VideoBucket
+  PrivateVideoRegion:
+    Value: !Ref AWS::Region
+  PrivateVideoRoleArn:
+    Value: !GetAtt VideoUploadRole.Arn
