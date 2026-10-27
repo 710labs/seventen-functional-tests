@@ -229,18 +229,13 @@ function toSlack(summary) {
 			return `${safe.category} (${safe.phase})`
 		}))].slice(0, 2)
 		if (result.hostedReport?.status === 'incomplete') codes.push('hosted report upload incomplete')
-		return codes.length ? [`${check.label}: ${codes.join(', ')}`] : []
+		const url = safeReportUrl(result.hostedReport?.url) || safeReportUrl(result.reportUrl)
+		const label = url ? `<${url}|${check.label}>` : check.label
+		return [`${label}: ${codes.length ? codes.join(', ') : result.status}`]
 	})
 	for (let index = 0; index < diagnosticLines.length; index += 8) {
-		blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Failure categories*\n${diagnosticLines.slice(index, index + 8).join('\n')}` } })
-	}
-	const videoLines = manifest.checks.flatMap(check => {
-		const result = resultsById.get(check.id)
-		const url = safeReportUrl(result?.hostedReport?.url)
-		return url ? [`<${url}|${check.label} — Playwright report>`] : []
-	})
-	for (let index = 0; index < videoLines.length; index += 8) {
-		blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Playwright reports*\n${videoLines.slice(index, index + 8).join('\n')}` } })
+		const heading = index === 0 ? '*Failure categories*\n' : ''
+		blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `${heading}${diagnosticLines.slice(index, index + 8).join('\n')}` } })
 	}
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }
