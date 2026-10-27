@@ -4,7 +4,7 @@ const os = require('node:os')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 const { sanitizeSummary } = require('./security/summary')
-const { prepareSession, sessionVariable } = require('./private-videos/session')
+const { prepareSession, sessionVariable, errorCode } = require('./hosted-reports/session')
 
 const args = process.argv.slice(2)
 // Reporter overrides and interactive modes bypass the public output boundary.
@@ -17,13 +17,20 @@ async function main() {
 	const summaryFile = path.join(temporary, 'summary.json')
 	let phase = 'preflight'
 	try {
-		const env = { ...process.env, PUBLIC_SUMMARY_FILE: summaryFile }
+		const env = { ...process.env, PUBLIC_SUMMARY_FILE: summaryFile,
+			REPORT_INVOCATION: process.env.PUBLIC_SUMMARY_FILE ? path.basename(process.env.PUBLIC_SUMMARY_FILE, '.json') : 'tests' }
 		delete env.DEBUG
 		delete env.PWDEBUG
 		// A caller cannot reuse an unverified session from an earlier invocation.
 		delete env[sessionVariable]
 		const sessionFile = await prepareSession(temporary, env)
-		if (sessionFile) env[sessionVariable] = sessionFile
+		if (sessionFile) {
+			env[sessionVariable] = sessionFile
+			// Keep report assets together and never honor caller-supplied remote attachment URLs.
+			env.PLAYWRIGHT_HTML_OUTPUT_DIR = path.join(temporary, 'playwright-report')
+			env.PLAYWRIGHT_HTML_ATTACHMENTS_BASE_URL = 'data/'
+			env.PLAYWRIGHT_HTML_OPEN = 'never'
+		}
 		phase = 'tests'
 		// Suppress even config/import/global-setup errors, which occur before reporters load.
 		const child = spawnSync(process.execPath, [
@@ -39,19 +46,17 @@ async function main() {
 			fs.mkdirSync(path.dirname(process.env.PUBLIC_SUMMARY_FILE), { recursive: true })
 			fs.writeFileSync(process.env.PUBLIC_SUMMARY_FILE, JSON.stringify(summary) + '\n', { mode: 0o600 })
 		}
-		if (process.env.GITHUB_STEP_SUMMARY && summary.recordings) {
-			const recordings = summary.recordings
-			const label = String(process.env.HEALTH_CHECK_ID || process.env.ENV_ID || 'tests').replace(/[^a-zA-Z0-9_-]/g, '-')
-			const lines = [`\n### Private failure videos — ${label}`, '',
-				`${recordings.uploaded} uploaded; ${recordings.failed} upload errors; ${recordings.missing} failed attempts without a video. AWS sign-in is required.`, '']
-			for (const video of recordings.videos || []) lines.push(`- Test ${video.id}, attempt ${video.retry + 1}: [Open video in AWS Console](${video.url})`)
-			if (recordings.url) lines.push('', `[All recordings and private test-name manifest](${recordings.url})`)
+		if (process.env.GITHUB_STEP_SUMMARY && summary.hostedReport) {
+			const report = summary.hostedReport
+			const lines = ['\n### Playwright report', '',
+				report.status === 'complete' ? 'HTML report and attachments are available.' : `Report upload incomplete (${report.error || 'upload_failed'}).`]
+			if (report.url) lines.push('', `[Test Report](${report.url})`)
 			fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n')
 		}
 		process.exitCode = child.status === 0 && ['passed', 'queued'].includes(summary.status) ? 0 : 1
-	} catch {
+	} catch (error) {
 		console.error(phase === 'preflight'
-			? 'Private failure video preflight failed. Check the AWS role, bucket region, and private access settings. No tests or recordings were started.'
+			? `Hosted report preflight failed (${errorCode(error)}). Check the original S3 reporting secrets and anonymous read access on the report bucket. No tests or recordings were started.`
 			: 'Playwright failed before producing a safe summary. Inspect privately with synthetic credentials.')
 		process.exitCode = 1
 	} finally {

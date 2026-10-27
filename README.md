@@ -420,7 +420,7 @@ The capability check runs as one Playwright test with one worker. It does not us
 
 The List retains its existing registration upload flow and actively cycles Photo ID files in HEIC, JPG, and PNG formats. Live creates a unique test account, opens My Account, and saves all Photo ID and Medical Card HEIC/JPEG/PNG fixtures. Live stops after account-document validation and does not proceed to checkout or create an order.
 
-A failed format does not stop the remaining fixture checks. Public CI publishes safe test summaries. Automatic failed-attempt videos can be uploaded to a dedicated private S3 bucket and opened through your AWS Console session; no browser recordings, HTML reports, or raw attachments are uploaded publicly. See [private recording setup](docs/public-ci-reporting.md#automatic-private-failure-videos) for activation and debugging guidance.
+A failed format does not stop the remaining fixture checks. Public CI publishes safe test summaries. Full Playwright HTML reports with failed-attempt videos are hosted in the original S3 report bucket and opened through the Slack **Test Report** button. These report links are publicly readable; console summaries remain sanitized. See [hosted report setup](docs/public-ci-reporting.md#hosted-playwright-reports) for activation and debugging guidance.
 
 Required secrets are selected by storefront: The List maps `ARTILLERY_LIST_PASSWORD` to `IMAGE_UPLOAD_LIST_PASSWORD`, Live maps `ALWAYS_ON_PASSWORD` to `IMAGE_UPLOAD_LIVE_PASSWORD`, and both require `RECAPTCHA_BYPASS`.
 

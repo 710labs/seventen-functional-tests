@@ -1,3 +1,5 @@
+# Legacy private-video deployment reference. Current workflows use the original hosted report bucket.
+# Do not create this stack for hosted reports; existing resources are managed separately.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Private Playwright failure videos and a write-only GitHub Actions role.
 Parameters:

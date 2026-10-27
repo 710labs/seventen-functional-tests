@@ -1,4 +1,4 @@
-const { privateVideoMode } = require('../scripts/private-videos/session')
+const { hostedVideoMode } = require('../scripts/hosted-reports/session')
 import { defineConfig, devices } from '@playwright/test'
 import path from 'path'
 import {
@@ -48,7 +48,7 @@ export default defineConfig({
 				? buildStorageStateWithListBypass(target)
 				: buildStorageStateWithRecaptchaBypass(target),
 		trace: 'off',
-		video: privateVideoMode(),
+		video: hostedVideoMode(),
 	},
 	projects: [
 		{

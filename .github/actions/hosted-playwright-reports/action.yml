@@ -1,0 +1,49 @@
+name: Configure hosted Playwright reports
+description: Restore full HTML reports using the original S3 reporting secrets.
+inputs:
+  bucket:
+    required: true
+    description: Original hosted report bucket (S3_BUCKET).
+  region:
+    required: true
+    description: Bucket region (S3_REGION).
+  access-key:
+    required: true
+    description: Upload access key (S3_ACCESS_KEY).
+  secret-key:
+    required: true
+    description: Upload secret key (S3_SECRET).
+runs:
+  using: composite
+  steps:
+    - name: Configure report hosting
+      shell: bash
+      env:
+        REPORT_BUCKET: ${{ inputs.bucket }}
+        REPORT_REGION: ${{ inputs.region }}
+        REPORT_ACCESS_KEY: ${{ inputs.access-key }}
+        REPORT_SECRET_KEY: ${{ inputs.secret-key }}
+      run: |
+        invalid=0
+        if [[ ! "$REPORT_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
+          echo '::error::S3_BUCKET must contain the original report bucket name, without a URL or ARN.' >&2
+          invalid=1
+        fi
+        if [[ ! "$REPORT_REGION" =~ ^[a-z]{2}-[a-z]+-[0-9]$ ]]; then
+          echo '::error::S3_REGION must contain a region code such as us-east-1.' >&2
+          invalid=1
+        fi
+        if [[ ! "$REPORT_ACCESS_KEY" =~ ^[A-Za-z0-9]+$ ]]; then
+          echo '::error::S3_ACCESS_KEY is missing or malformed.' >&2
+          invalid=1
+        fi
+        if [[ ! "$REPORT_SECRET_KEY" =~ ^[A-Za-z0-9/+=]+$ ]]; then
+          echo '::error::S3_SECRET is missing or malformed.' >&2
+          invalid=1
+        fi
+        if [[ "$invalid" == 1 ]]; then exit 1; fi
+        echo 'PLAYWRIGHT_HOSTED_REPORT=true' >> "$GITHUB_ENV"
+        echo "S3_BUCKET=$REPORT_BUCKET" >> "$GITHUB_ENV"
+        echo "S3_REGION=$REPORT_REGION" >> "$GITHUB_ENV"
+        echo "S3_ACCESS_KEY=$REPORT_ACCESS_KEY" >> "$GITHUB_ENV"
+        echo "S3_SECRET=$REPORT_SECRET_KEY" >> "$GITHUB_ENV"

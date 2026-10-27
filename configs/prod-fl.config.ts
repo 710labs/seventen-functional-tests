@@ -1,4 +1,4 @@
-const { privateVideoMode } = require('../scripts/private-videos/session')
+const { hostedVideoMode } = require('../scripts/hosted-reports/session')
 import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import { TestOptions } from '../options'
@@ -29,7 +29,7 @@ export default defineConfig<TestOptions>({
 			slowMo: 200,
 		},
 		trace: 'off',
-		video: privateVideoMode(),
+		video: hostedVideoMode(),
 		screenshot: 'off',
 		orders: [
 			[
