@@ -113,6 +113,35 @@ test('Slack diagnostic summary uses fixed codes and never raw failure text', () 
 	assert.doesNotMatch(body, /SECRET_CANARY/)
 })
 
+test('Slack links failures to their reports without separate report lists or repeated headings', () => {
+	const directory = createDirectory()
+	try {
+		manifest.checks.forEach((check, index) => writeCheck(directory, check, index < 9 ? 'failed' : 'passed'))
+		const summary = aggregate(directory)
+		const reportUrl = id => `https://test-reports.s3.us-east-1.amazonaws.com/run-123/${id}/index.html`
+		summary.results.forEach(result => {
+			result.reportUrl = reportUrl(result.id)
+			result.hostedReport = { status: 'complete', url: result.reportUrl }
+			result.diagnostics = [{ category: 'timeout', phase: 'test' }]
+		})
+		// Keep links for failures without diagnostics and for older result metadata.
+		summary.results[1].diagnostics = []
+		delete summary.results[1].hostedReport
+		// A failure with no usable report must remain visible as plain text.
+		summary.results[2].reportUrl = null
+		summary.results[2].hostedReport = { status: 'incomplete', url: 'javascript:alert(1)' }
+		const payload = toSlack(summary)
+		const text = payload.blocks.map(block => block.text?.text || '').join('\n')
+		assert.ok(text.includes(`<${reportUrl(summary.results[0].id)}|${summary.results[0].label}>: timeout (test)`))
+		assert.ok(text.includes(`<${reportUrl(summary.results[1].id)}|${summary.results[1].label}>: failed`))
+		assert.ok(text.includes(`${summary.results[2].label}: timeout (test), hosted report upload incomplete`))
+		assert.ok(text.includes(`<${reportUrl(summary.results[8].id)}|${summary.results[8].label}>: timeout (test)`))
+		assert.equal((text.match(/\*Failure categories\*/g) || []).length, 1)
+		assert.doesNotMatch(JSON.stringify(payload), /Playwright reports|javascript:|Synthetic failed/)
+		assert.ok(!JSON.stringify(payload).includes(reportUrl(summary.results[9].id)))
+	} finally { fs.rmSync(directory, { recursive: true, force: true }) }
+})
+
 test('Slack uses standard blocks with manifest-driven status tables and no individual failure names', () => {
 	const directory = createDirectory()
 	const failedIds = new Set([
