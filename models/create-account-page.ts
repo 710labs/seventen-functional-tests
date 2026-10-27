@@ -447,16 +447,6 @@ export class CreateAccountPage {
 		)
 	}
 
-	private async recoverEligibilityStepFromShopRedirect() {
-		test.info().annotations.push({
-			type: 'Eligibility fallback',
-			description:
-				'Registration redirected to the shop before eligibility appeared; navigating to /my-account/eligibility/.',
-		})
-
-		await this.page.goto('/my-account/eligibility/', { waitUntil: 'domcontentloaded' })
-	}
-
 	private async throwSkippedEligibilityError(
 		expectedState: string,
 		expectedZip: string | undefined,
@@ -464,7 +454,7 @@ export class CreateAccountPage {
 	): Promise<never> {
 		throw new Error(
 			[
-				'Registration skipped the eligibility/license step and redirected to the shop.',
+				'Registration eligibility/license controls did not appear within 20 seconds after reaching the shop. The test did not navigate to account settings.',
 				`Current URL: ${this.page.url()}`,
 				`Expected state: ${expectedState}`,
 				`Expected zip: ${expectedZip || 'not provided'}`,
@@ -482,32 +472,18 @@ export class CreateAccountPage {
 		expectedZip: string | undefined,
 		submitSnapshot: RegistrationSubmitSnapshot,
 	) {
-		const deadline = Date.now() + 20000
-		let attemptedEligibilityFallback = false
-
-		while (Date.now() < deadline) {
-			if (await this.isEligibilityLicenseStepVisible()) {
-				return
-			}
-
-			if (
-				!attemptedEligibilityFallback &&
-				this.isShopRouteBeforeEligibility() &&
-				!(await this.isEligibilityLicenseStepVisible())
-			) {
-				attemptedEligibilityFallback = true
-				await this.recoverEligibilityStepFromShopRedirect()
-				continue
-			}
-
-			await this.page.waitForTimeout(250)
+		try {
+			// The shop can render the registration eligibility panel after navigation.
+			// Account settings share its fields but are not a registration step.
+			await expect
+				.poll(() => this.isEligibilityLicenseStepVisible(), { timeout: 20000 })
+				.toBe(true)
+			return
+		} catch {
+			// Preserve the original page and report registration diagnostics below.
 		}
 
-		if (
-			!attemptedEligibilityFallback &&
-			this.isShopRouteBeforeEligibility() &&
-			!(await this.isEligibilityLicenseStepVisible())
-		) {
+		if (this.isShopRouteBeforeEligibility()) {
 			await this.throwSkippedEligibilityError(expectedState, expectedZip, submitSnapshot)
 		}
 
@@ -527,6 +503,16 @@ export class CreateAccountPage {
 	}
 
 	private async isEligibilityLicenseStepVisible() {
+		const onAccountPage = /^\/my-account(?:\/|$)/.test(new URL(this.page.url()).pathname)
+		const registerVisible = await this.page
+			.getByRole('button', { name: /^register$/i })
+			.isVisible()
+			.catch(() => false)
+
+		if (onAccountPage || !registerVisible) {
+			return false
+		}
+
 		const eligibilityContextVisible = await this.page
 			.locator('#eligibilityContext')
 			.first()

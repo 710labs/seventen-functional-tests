@@ -113,6 +113,42 @@ test('Slack diagnostic summary uses fixed codes and never raw failure text', () 
 	assert.doesNotMatch(body, /SECRET_CANARY/)
 })
 
+test('Slack lays out linked failures in two-column fields without duplicate report lists', () => {
+	const directory = createDirectory()
+	try {
+		manifest.checks.forEach((check, index) => writeCheck(directory, check, index < 9 ? 'failed' : 'passed'))
+		const summary = aggregate(directory)
+		const reportUrl = id => `https://test-reports.s3.us-east-1.amazonaws.com/run-123/${id}/index.html`
+		summary.results.forEach(result => {
+			result.reportUrl = reportUrl(result.id)
+			result.hostedReport = { status: 'complete', url: result.reportUrl }
+			result.diagnostics = [{ category: 'timeout', phase: 'test' }]
+		})
+		summary.results[1].diagnostics = []
+		delete summary.results[1].hostedReport
+		summary.results[2].reportUrl = null
+		summary.results[2].hostedReport = { status: 'incomplete', url: 'javascript:alert(1)' }
+		const payload = toSlack(summary)
+		const sections = payload.blocks.filter(block => block.fields)
+		assert.equal(sections.length, 1)
+		assert.equal(sections[0].fields.length, 9)
+		const fields = sections[0].fields
+		assert.equal(fields[0].text, `<${reportUrl(summary.results[0].id)}|${summary.results[0].label}>: timeout (test)`)
+		assert.equal(fields[1].text, `<${reportUrl(summary.results[1].id)}|${summary.results[1].label}>: failed`)
+		assert.equal(fields[2].text, `${summary.results[2].label}: timeout (test), hosted report upload incomplete`)
+		assert.doesNotMatch(JSON.stringify(payload), /Playwright reports|javascript:|Synthetic failed/)
+		assert.ok(!JSON.stringify(payload).includes(reportUrl(summary.results[9].id)))
+
+		// Larger failure sets must retain every link and respect Slack's field limit.
+		summary.results.forEach(result => { result.status = 'failed' })
+		const expanded = toSlack(summary).blocks
+		assert.deepEqual(expanded.filter(block => block.fields).map(block => block.fields.length), [10, 10, 2])
+		assert.equal(expanded.filter(block => block.text?.text === '*Failure categories*').length, 1)
+		summary.results.forEach(result => { result.status = 'passed' })
+		assert.equal(toSlack(summary).blocks.filter(block => block.fields).length, 0)
+	} finally { fs.rmSync(directory, { recursive: true, force: true }) }
+})
+
 test('Slack uses standard blocks with manifest-driven status tables and no individual failure names', () => {
 	const directory = createDirectory()
 	const failedIds = new Set([
