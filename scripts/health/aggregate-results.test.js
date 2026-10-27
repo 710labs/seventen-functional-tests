@@ -124,8 +124,10 @@ test('Slack lays out linked failures in two-column fields without duplicate repo
 			result.hostedReport = { status: 'complete', url: result.reportUrl }
 			result.diagnostics = [{ category: 'timeout', phase: 'test' }]
 		})
+		// Keep links for failures without diagnostics and for older result metadata.
 		summary.results[1].diagnostics = []
 		delete summary.results[1].hostedReport
+		// A failure with no usable report must remain visible as plain text.
 		summary.results[2].reportUrl = null
 		summary.results[2].hostedReport = { status: 'incomplete', url: 'javascript:alert(1)' }
 		const payload = toSlack(summary)
@@ -136,6 +138,8 @@ test('Slack lays out linked failures in two-column fields without duplicate repo
 		assert.equal(fields[0].text, `<${reportUrl(summary.results[0].id)}|${summary.results[0].label}>: timeout (test)`)
 		assert.equal(fields[1].text, `<${reportUrl(summary.results[1].id)}|${summary.results[1].label}>: failed`)
 		assert.equal(fields[2].text, `${summary.results[2].label}: timeout (test), hosted report upload incomplete`)
+		assert.equal(fields[8].text, `<${reportUrl(summary.results[8].id)}|${summary.results[8].label}>: timeout (test)`)
+		assert.equal(payload.blocks.filter(block => block.text?.text === '*Failure categories*').length, 1)
 		assert.doesNotMatch(JSON.stringify(payload), /Playwright reports|javascript:|Synthetic failed/)
 		assert.ok(!JSON.stringify(payload).includes(reportUrl(summary.results[9].id)))
 
