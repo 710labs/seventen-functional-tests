@@ -5,27 +5,32 @@ const { assertRecordingOff } = require('../../scripts/security/recording-policy'
 const { runStatus } = require('../../scripts/security/summary')
 const { testFailure } = require('../../scripts/security/failure-diagnostics')
 const { reportingOutcome, isQueuedTest } = require('../../scripts/security/queueit-status')
-const { readSession } = require('../../scripts/private-videos/session')
-const { PrivateVideoRecorder } = require('../../scripts/private-videos/recorder')
+const { readSession } = require('../../scripts/hosted-reports/session')
+const { HostedReport } = require('../../scripts/hosted-reports/report')
 
 // No titles, errors, stdout, URLs, attachments, or browser data cross this boundary.
 const testId = test => createHash('sha256').update(test.id).digest('hex').slice(0, 16)
 class PublicSummaryReporter {
-	constructor() { this.tests = new Map(); this.errors = 0 }
+	constructor() { this.tests = new Map(); this.errors = 0; this.privateErrors = [] }
 	printsToStdio() { return true }
 	onStdOut() {}
 	onStdErr() {}
-	onError() { this.errors++ }
-	onBegin(config) {
+	onError(error) { this.errors++; this.privateErrors.push(error); this.hostedReport?.onError(error) }
+	onBegin(config, suite) {
 		try {
 			for (const project of config.projects) assertRecordingOff(project.use, true)
 			const session = readSession()
-			if (session) this.videos = new PrivateVideoRecorder(session, config.projects.map(project => project.outputDir))
+			if (session) {
+				this.hostedReport = new HostedReport(session)
+				this.hostedReport.onBegin(config, suite)
+				for (const error of this.privateErrors) this.hostedReport.onError(error)
+			}
 		} catch {
 			// Playwright catches reporter exceptions and continues. Stop the child
 			// process before workers launch, after persisting a safe failure summary.
 			try {
-				this.onEnd({ status: 'failed' })
+				this.hostedReport = null
+				this.writeSummary({ status: 'failed' })
 			} finally {
 				process.exit(1)
 			}
@@ -33,13 +38,12 @@ class PublicSummaryReporter {
 	}
 	onTestEnd(test, result) {
 		this.tests.set(test.id, { test, durationMs: result.duration, retries: result.retry })
-		this.videos?.collect(test, result)
 	}
 	onEnd(result) {
-		if (this.videos) return this.videos.finish().then(recordings => this.writeSummary(result, recordings))
+		if (this.hostedReport) return this.hostedReport.finish(result).then(report => this.writeSummary(result, report))
 		return this.writeSummary(result)
 	}
-	writeSummary(result, recordings) {
+	writeSummary(result, hostedReport) {
 		const counts = { passed: 0, failed: 0, flaky: 0, skipped: 0 }
 		const outcomes = { expected: 'passed', unexpected: 'failed', flaky: 'flaky', skipped: 'skipped' }
 		const tests = [...this.tests.values()].map(({ test, durationMs, retries }) => {
@@ -50,9 +54,9 @@ class PublicSummaryReporter {
 		})
 		const summary = {
 			schemaVersion: 1,
-			status: runStatus(this.errors || recordings?.failed ? 'failed' : result.status, counts),
+			status: runStatus(this.errors || hostedReport?.failed ? 'failed' : result.status, counts),
 			counts, tests,
-			...(recordings ? { recordings } : {}),
+			...(hostedReport ? { hostedReport } : {}),
 		}
 		if (process.env.PUBLIC_SUMMARY_FILE) {
 			fs.mkdirSync(path.dirname(process.env.PUBLIC_SUMMARY_FILE), { recursive: true })

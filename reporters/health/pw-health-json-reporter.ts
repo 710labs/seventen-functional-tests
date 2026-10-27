@@ -3,7 +3,7 @@ import path from 'path'
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
 const { testId } = require('../security/public-summary-reporter.cjs')
-const { runStatus, readRecordingSummary } = require('../../scripts/security/summary')
+const { runStatus, readHostedReportSummary } = require('../../scripts/security/summary')
 const { failureLabel, testFailure } = require('../../scripts/security/failure-diagnostics')
 const { reportingOutcome, isQueuedTest, QUEUEIT_REASON } = require('../../scripts/security/queueit-status')
 
@@ -46,10 +46,10 @@ class HealthJsonReporter implements Reporter {
 
 		const executed = counts.passed + counts.failed + (counts.queued || 0)
 		if (executed === 0) failures.push('No tests executed.')
-		const recordings = readRecordingSummary()
-		if (recordings?.failed) failures.push('Private failure video upload was incomplete.')
-		const status = runStatus(recordings?.failed ? 'failed' : result.status, counts)
-		const reportUrl = recordings?.url || null
+		const hostedReport = readHostedReportSummary()
+		if (hostedReport?.failed) failures.push('Hosted Playwright report upload was incomplete.')
+		const status = runStatus(hostedReport?.failed ? 'failed' : result.status, counts)
+		const reportUrl = hostedReport?.url || null
 		const runUrl =
 			process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
 				? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
@@ -69,7 +69,7 @@ class HealthJsonReporter implements Reporter {
 			failureSummary: failures.slice(0, 20),
 			diagnostics: diagnostics.slice(0, 20),
 			reportUrl,
-			...(recordings ? { recordings } : {}),
+			...(hostedReport ? { hostedReport } : {}),
 			runUrl,
 		}
 

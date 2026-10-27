@@ -3,7 +3,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { manifest, runUrl } = require('./result-utils')
 const { sanitizeFailure } = require('../security/failure-diagnostics')
-const { safeConsoleUrl } = require('../private-videos/session')
+const { safeReportUrl } = require('../hosted-reports/session')
 
 const failureStatuses = new Set(['failed', 'missing', 'cancelled', 'blocked', 'unknown'])
 const validStatuses = new Set(['passed', 'queued', ...failureStatuses])
@@ -228,7 +228,7 @@ function toSlack(summary) {
 			const safe = sanitizeFailure(value)
 			return `${safe.category} (${safe.phase})`
 		}))].slice(0, 2)
-		if (result.recordings?.status === 'incomplete') codes.push('private video upload incomplete')
+		if (result.hostedReport?.status === 'incomplete') codes.push('hosted report upload incomplete')
 		return codes.length ? [`${check.label}: ${codes.join(', ')}`] : []
 	})
 	for (let index = 0; index < diagnosticLines.length; index += 8) {
@@ -236,11 +236,11 @@ function toSlack(summary) {
 	}
 	const videoLines = manifest.checks.flatMap(check => {
 		const result = resultsById.get(check.id)
-		const url = safeConsoleUrl(result?.recordings?.url)
-		return url ? [`<${url}|${check.label} — failure videos>`] : []
+		const url = safeReportUrl(result?.hostedReport?.url)
+		return url ? [`<${url}|${check.label} — Playwright report>`] : []
 	})
 	for (let index = 0; index < videoLines.length; index += 8) {
-		blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Private recordings — AWS sign-in required*\n${videoLines.slice(index, index + 8).join('\n')}` } })
+		blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Playwright reports*\n${videoLines.slice(index, index + 8).join('\n')}` } })
 	}
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
 	return { blocks }

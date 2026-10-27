@@ -1,4 +1,4 @@
-const { privateVideoMode } = require('./scripts/private-videos/session')
+const { hostedVideoMode } = require('./scripts/hosted-reports/session')
 import { PlaywrightTestConfig, devices } from '@playwright/test'
 import { buildStorageStateWithRecaptchaBypass } from './support/qa/recaptcha-bypass'
 require('dotenv').config({ path: require('find-config')('.env') })
@@ -30,7 +30,7 @@ const config: PlaywrightTestConfig = {
 		},
 		trace: 'off',
 		screenshot: 'off',
-		video: privateVideoMode(),
+		video: hostedVideoMode(),
 	},
 	projects: [
 		{

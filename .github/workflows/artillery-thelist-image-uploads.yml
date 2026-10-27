@@ -26,7 +26,6 @@ jobs:
     environment: ${{ github.event.inputs.env }}
 
     permissions:
-      id-token: write
       contents: read
 
     steps:
@@ -88,13 +87,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Configure private failure videos
-        uses: ./.github/actions/private-failure-videos
+      - name: Configure hosted Playwright reports
+        uses: ./.github/actions/hosted-playwright-reports
         with:
-          enabled: ${{ secrets.PRIVATE_VIDEO_RECORDING }}
-          bucket: ${{ secrets.PRIVATE_VIDEO_BUCKET }}
-          region: ${{ secrets.PRIVATE_VIDEO_REGION }}
-          role-arn: ${{ secrets.PRIVATE_VIDEO_ROLE_ARN }}
+          bucket: ${{ secrets.S3_BUCKET }}
+          region: ${{ secrets.S3_REGION }}
+          access-key: ${{ secrets.S3_ACCESS_KEY }}
+          secret-key: ${{ secrets.S3_SECRET }}
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -115,7 +114,7 @@ jobs:
             echo "- Storefront: $IMAGE_UPLOAD_STOREFRONT"
             echo "- Environment: $IMAGE_UPLOAD_ENV"
             echo "- Target: $IMAGE_UPLOAD_TARGET"
-            echo "- See the safe test summary in the workflow logs. When private recording is enabled, failure video links appear in this run summary."
+            echo "- See the safe test summary in the workflow logs. The Test Report link in this run summary opens the hosted Playwright report and its videos."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Slack notification
