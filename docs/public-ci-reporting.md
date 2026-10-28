@@ -16,7 +16,7 @@ Raw GitHub artifact uploads remain removed, including the daily health, admin, i
 - `npm run test:security` runs synthetic passing/failing/retrying browser cases, including fake cookies, headers, password inputs, page content, raw output, attachments, and errors. It never contacts the real applications or sends Slack notifications. Install Chromium with `npx playwright install chromium` if needed.
 - `npm run test:health` and `npm run validate:health` verify health aggregation and workflow configuration.
 
-The `Public reporting security` workflow runs these checks without application secrets on pull requests and main. Branch protection must require this check in GitHub settings to make it a merge gate. A source policy check is a regression guard, not a sandbox for malicious test code; reviewers must still inspect new publishers, test-generated files, and non-Playwright logging.
+These checks are available to run manually with the commands above. A source policy check is a regression guard, not a sandbox for malicious test code; reviewers must still inspect new publishers, test-generated files, and non-Playwright logging.
 
 ## Debugging
 

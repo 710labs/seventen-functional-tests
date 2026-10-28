@@ -1,6 +1,6 @@
 import { Browser, Locator, Page, test } from '@playwright/test'
 const csvFilePath = process.env.ACUITY_SLOT_FILE || 'utils/delivery-slots.csv'
-let csvToJson = require('convert-csv-to-json')
+const { loadSlots, editorUrl: slotEditorUrl, reconcileSlot } = require('../../scripts/acuity-slot-reconciliation')
 const fs = require('fs')
 const {
 	authPageDescription: describeAcuityAuthPage,
@@ -32,29 +32,6 @@ async function schedulingLocator(page: Page, selector: string): Promise<Locator>
 	}
 
 	return page.locator(selector)
-}
-
-async function schedulingText(
-	page: Page,
-	text: string | RegExp,
-	options?: { exact?: boolean },
-): Promise<Locator> {
-	if ((await page.locator(schedulingFrameSelector).count()) > 0) {
-		return page.frameLocator(schedulingFrameSelector).getByText(text, options)
-	}
-
-	return page.getByText(text, options)
-}
-
-function escapeRegExp(value: string): string {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function acuitySlotLinkPattern(linkText: string): RegExp {
-	const escapedLinkText = escapeRegExp(linkText)
-	const timezoneFlexibleLinkText = escapedLinkText.replace(/P[DS]T/g, 'P[DS]T')
-
-	return new RegExp(`^${timezoneFlexibleLinkText}$`)
 }
 
 function isSquarespaceLoginUrl(url: string): boolean {
@@ -218,14 +195,6 @@ function isRecoverableAcuityEditorRedirect(url: string): boolean {
 	}
 }
 
-function absoluteAcuityUrl(href: string, currentUrl: string): string {
-	if (href.startsWith('/appointments.php')) {
-		return new URL(href, 'https://secure.acuityscheduling.com').toString()
-	}
-
-	return new URL(href, currentUrl).toString()
-}
-
 async function failWithPageContext(
 	page: Page,
 	message: string,
@@ -245,6 +214,7 @@ async function dismissAcuityInterruptions(page: Page): Promise<void> {
 	await page.keyboard.press('Escape').catch(() => undefined)
 
 	const closeTargets = [
+		'button[aria-label="Close survey"]',
 		'button[aria-label="Close"]',
 		'[aria-label="Close"]',
 		'button:has-text("No thanks")',
@@ -289,33 +259,6 @@ async function gotoAcuityPage(page: Page, url: string, context: string): Promise
 	}
 
 	await failWithPageContext(page, `${context}: Acuity navigation failed for ${url}.`, lastError)
-}
-
-async function clickAcuityControl(locator: Locator, page: Page, context: string): Promise<void> {
-	await dismissAcuityInterruptions(page)
-	try {
-		await locator.click()
-	} catch (error) {
-		await dismissAcuityInterruptions(page)
-		await locator.evaluate((element) => (element as HTMLElement).click()).catch(async () => {
-			await locator.click({ force: true }).catch(async () => {
-				await failWithPageContext(page, `${context}: Acuity control click failed.`, error)
-			})
-		})
-	}
-}
-
-async function openAcuityAnchor(locator: Locator, page: Page, context: string): Promise<void> {
-	await dismissAcuityInterruptions(page)
-	const href = await locator.getAttribute('href').catch(() => null)
-
-	if (href) {
-		await gotoAcuityPage(page, absoluteAcuityUrl(href, page.url()), context)
-		await assertAcuityAccess(page, context)
-		return
-	}
-
-	await clickAcuityControl(locator, page, context)
 }
 
 async function loginPageMessage(page: Page): Promise<string | null> {
@@ -639,7 +582,7 @@ async function waitForOfferClassButton(page: Page, slotUrl: string): Promise<Loc
 test.describe('Acuity Automation', () => {
 	test.describe.configure({ mode: 'parallel' })
 
-	const slots = csvToJson.fieldDelimiter(';').getJsonFromCsv(csvFilePath)
+	const slots = loadSlots(csvFilePath)
 	const slotsByAppointmentType = new Map<string, typeof slots>()
 
 	for (let index = 0; index < slots.length; index++) {
@@ -659,7 +602,7 @@ test.describe('Acuity Automation', () => {
 
 					let page: Page | undefined
 					try {
-						const editorUrl = directAcuityEditorUrl(slot.URL)
+						const editorUrl = slotEditorUrl(slot)
 						await test.step('Open authenticated Acuity session', async () => {
 							const acuityUser = process.env.ACUITY_USER || ''
 							const acuityPassword = process.env.ACUITY_PASSWORD || ''
@@ -667,72 +610,10 @@ test.describe('Acuity Automation', () => {
 							page = await loginToAcuityWithRetry(browser, acuityUser, acuityPassword, editorUrl)
 						})
 
-						await test.step(`Create Slot on ${slot.DateOffered} - ${slot.TimeOffered}`, async () => {
-							if (!page) {
-								throw new Error('Acuity page was not initialized.')
-							}
-
-							//Navigate to Zone
-							await openAcuitySlotPage(page, editorUrl)
-
-							// Start Create Slot
-							const offerClassButton = await waitForOfferClassButton(page, editorUrl)
-							await clickAcuityControl(
-								offerClassButton.first(),
-								page,
-								'Starting Acuity class creation',
-							)
-							// Select "Another Test Calendar"
-							const calendarSelect = await schedulingLocator(page, 'select[name="calendar"]')
-							await calendarSelect.selectOption({ label: slot.CalendarName })
-							// Date Selector
-							// Select Day of Month
-							const dateInput = await schedulingLocator(page, '#date-input')
-							await dateInput.fill(`${slot.DateOffered}`)
-
-							// Select Time
-							const timeInput = await schedulingLocator(page, '[placeholder="Ex\\. 9\\:00am"]')
-							await clickAcuityControl(timeInput, page, 'Focusing Acuity time input')
-							await timeInput.fill(`${slot.TimeOffered}`)
-							// Save Class
-							const saveClassButton = await schedulingText(page, 'Save Class')
-							await Promise.all([
-								page.waitForNavigation(/*{ url: 'https://koi-mandolin-afct.squarespace.com/config/scheduling/appointments.php?action=editAppointmentType&id=27879714' }*/),
-								clickAcuityControl(saveClassButton, page, 'Saving Acuity class'),
-							])
-
-							//Edit Capacity
-							//Select Slot
-							//Prevent 12PM and 2PM collison
-							const slotLink = await schedulingText(
-								page,
-								acuitySlotLinkPattern(`${slot.LinkText}`),
-							)
-							await openAcuityAnchor(
-								slotLink,
-								page,
-								`Opening saved Acuity slot ${slot.LinkText}`,
-							)
-
-							// Click Edit
-							const editButton = await schedulingText(page, 'Edit')
-							await clickAcuityControl(editButton, page, 'Opening Acuity slot edit form')
-
-							// Edit Capacity Value
-							const capacityInput = await schedulingLocator(
-								page,
-								'text=Max number of people for this class >> input[name="group_max"]',
-							)
-							await clickAcuityControl(capacityInput, page, 'Focusing Acuity capacity input')
-							await capacityInput.fill(slot.Availability)
-
-							// Save Slot
-							const saveChangesButton = await schedulingText(page, 'Save Changes')
-							await clickAcuityControl(
-								saveChangesButton,
-								page,
-								'Saving Acuity slot capacity',
-							)
+						await test.step('Reconcile slot and verify saved capacity', async () => {
+							if (!page) throw new Error('Acuity page was not initialized.')
+							const result = await reconcileSlot(page, slot)
+							test.info().annotations.push({ type: 'acuity-result', description: result.action })
 						})
 					} finally {
 						await closePageContext(page)

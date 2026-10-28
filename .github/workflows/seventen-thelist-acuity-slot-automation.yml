@@ -4,11 +4,12 @@ on:
     inputs:
       mode:
         type: choice
-        description: Validate the selected CSV only, or upload slots to Acuity.
+        description: Validate CSV, preview against Acuity, or reconcile missing slots and capacities.
         required: true
         default: validate_only
         options:
           - validate_only
+          - preview
           - upload
       slot_file:
         type: string
@@ -113,6 +114,7 @@ jobs:
           path: .acuity-input/selected-delivery-slots.csv
           if-no-files-found: ignore
       - name: Configure hosted Playwright reports
+        if: inputs.mode == 'upload'
         uses: ./.github/actions/hosted-playwright-reports
         with:
           bucket: ${{ secrets.S3_BUCKET }}
@@ -120,10 +122,10 @@ jobs:
           access-key: ${{ secrets.S3_ACCESS_KEY }}
           secret-key: ${{ secrets.S3_SECRET }}
       - name: Install Playwright
-        if: inputs.mode == 'upload'
+        if: inputs.mode == 'upload' || inputs.mode == 'preview'
         run: npx playwright install --with-deps chromium
       - name: Prepare Acuity auth state
-        if: inputs.mode == 'upload'
+        if: inputs.mode == 'upload' || inputs.mode == 'preview'
         env:
           ACUITY_HEADLESS: "true"
           ACUITY_LOGIN_METHOD: ${{ vars.ACUITY_LOGIN_METHOD || secrets.ACUITY_LOGIN_METHOD || 'squarespace' }}
@@ -162,6 +164,9 @@ jobs:
           fi
 
           echo "ACUITY_STORAGE_STATE_FILE=.auth/acuity-storage-state.json" >> "$GITHUB_ENV"
+      - name: Preview Acuity reconciliation
+        if: inputs.mode == 'upload' || inputs.mode == 'preview'
+        run: node scripts/preview-acuity-slots.js
       - name: Run Playwright tests
         if: inputs.mode == 'upload'
         env:
