@@ -283,7 +283,11 @@ async function reconcileSlot(page, slot) {
 	await page.locator('select[name="type"]').selectOption(slot.AppointmentID)
 	await page.locator('select[name="calendar"]').selectOption({ label: slot.CalendarName })
 	await page.locator('#date-input').fill(slot.DateOffered)
-	await page.getByPlaceholder('Ex. 9:00am', { exact: true }).fill(slot.TimeOffered)
+	const timeInput = page.getByPlaceholder('Ex. 9:00am', { exact: true })
+	await timeInput.fill(slot.TimeOffered)
+	// Acuity's date picker remains open after filling (or clicking) the time field
+	// and covers Save Class. Escape dismisses the popup while preserving the form.
+	await timeInput.press('Escape')
 	await submitOnce(page, page.getByRole('button', { name: 'Save Class', exact: true }), '0')
 	const created = await verifySaved(page, slot, false)
 	if (created.action === 'update_capacity') await setCapacity(page, slot, created.session)
