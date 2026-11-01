@@ -1,0 +1,88 @@
+{
+  "source": {
+    "workbook": "TheList_BulkDiscount_QA_Tracker_v4.xlsx",
+    "sheets": ["Expected Values!A5:M75", "Journey Steps!A1:F51"],
+    "exportDate": "2026-10-31",
+    "provenance": "Transcribed from the supplied handoff and workbook; original Flycart JSON export not supplied.",
+    "taxSettingsVerified": false,
+    "labelsVerified": false
+  },
+  "currency": "USD",
+  "minorUnit": 2,
+  "bulkRules": [
+    {
+      "id": 21,
+      "title": "Live Rosin Vapes bulk discount",
+      "cartLabel": "",
+      "categoryId": 323,
+      "categoryName": "Vapes",
+      "operator": "product_cumulative",
+      "type": "flat",
+      "applyAsCartRule": true,
+      "expectedLabelTemplate": "Live Rosin Vapes {min}+",
+      "couponKey": "live-rosin-vapes-bulk-discount",
+      "labelSource": "User-provided shop/cart/checkout markup, 2026-11-01",
+      "tiers": [{"min": 3, "max": 4, "amountPerUnit": "5.00"}, {"min": 5, "max": 999, "amountPerUnit": "7.00"}]
+    },
+    {
+      "id": 22,
+      "title": "Live rosin badder bulk discount",
+      "cartLabel": "Live Rosin",
+      "categoryId": 327,
+      "categoryName": "Badder",
+      "operator": "product_cumulative",
+      "type": "flat",
+      "applyAsCartRule": true,
+      "expectedLabelTemplate": "Live Rosin Badder {min}+",
+      "couponKey": "live-rosin",
+      "labelSource": "User-provided shop/cart/checkout markup, 2026-11-01",
+      "tiers": [{"min": 3, "max": 4, "amountPerUnit": "5.00"}, {"min": 5, "max": 999, "amountPerUnit": "7.00"}]
+    },
+    {
+      "id": 23,
+      "title": "Gummis bulk discount",
+      "cartLabel": "",
+      "categoryId": 324,
+      "categoryName": "Gummis",
+      "operator": "product_cumulative",
+      "type": "flat",
+      "applyAsCartRule": true,
+      "expectedLabelTemplate": "Gummis {min}+",
+      "tiers": [{"min": 3, "max": 4, "amountPerUnit": "3.00"}, {"min": 5, "max": 999, "amountPerUnit": "5.00"}]
+    },
+    {
+      "id": 24,
+      "title": "Eighths",
+      "cartLabel": "",
+      "categoryId": 331,
+      "categoryName": "Eighths",
+      "operator": "product_cumulative",
+      "type": "flat",
+      "applyAsCartRule": true,
+      "expectedLabelTemplate": "Eighths {min}+",
+      "tiers": [{"min": 3, "max": 4, "amountPerUnit": "5.00"}, {"min": 5, "max": 999, "amountPerUnit": "7.00"}]
+    },
+    {
+      "id": 25,
+      "title": "Doinks",
+      "cartLabel": "",
+      "categoryId": 326,
+      "categoryName": "Doinks",
+      "operator": "product_cumulative",
+      "type": "flat",
+      "applyAsCartRule": true,
+      "expectedLabelTemplate": "Doinks {min}+",
+      "tiers": [{"min": 3, "max": 4, "amountPerUnit": "3.00"}, {"min": 5, "max": 999, "amountPerUnit": "5.00"}]
+    }
+  ],
+  "accountDiscounts": {
+    "plain": null,
+    "vip": {"id": 6, "label": "VIP Discount (15%)", "rateBasisPoints": 1500, "base": "afterBulk"}
+  },
+  "bogo": {"id": 16, "productId": 128881, "minPaid": 1, "maxPaid": 1, "freeQty": 2, "countFreeUnits": false, "categoryVerified": false},
+  "taxes": [
+    {"key": "gross", "rateBasisPoints": 800, "base": ["discountedSubtotal"]},
+    {"key": "excise", "rateBasisPoints": 1500, "base": ["discountedSubtotal", "gross"]},
+    {"key": "sales", "rateBasisPoints": 775, "base": ["discountedSubtotal", "gross", "excise"]}
+  ]
+}
