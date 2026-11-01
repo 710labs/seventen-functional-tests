@@ -475,6 +475,14 @@ ARTILLERY_LIVE_PASSWORD=<password> RECAPTCHA_BYPASS=<secret> npm run load:live:i
 ```
 
 ## Test Tools
+
+### Bulk discount tests
+
+Bulk-discount specs run alongside the existing CA E2E tests with `npm run ci:test:dev:ca`.
+They reuse the shared page objects, QA account creation, dev config, and existing reports.
+Run `npm run test:bulk:unit` for the offline oracle checks. See
+[bulk discount coverage and remaining cases](docs/bulk-discounts.md).
+
 ### [Test Tools Documentation](https://documenter.getpostman.com/view/11482169/UVeDuTqj)
 Postman collection with examples of endpoints used for grabbing data used in test assertions.
 

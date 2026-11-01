@@ -1,6 +1,7 @@
 import test, { Browser, expect, Locator, Page, TestInfo } from '@playwright/test'
 require('dotenv').config({ path: require('find-config')('.env') })
 import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
+import { moneyInCents } from './components/order-pricing'
 
 type GoToCartOptions = {
 	requireItems?: boolean
@@ -37,6 +38,13 @@ export type StorefrontProductCandidate = {
 	name: string
 	price: number
 	sku: string | null
+	productId?: number
+}
+
+export type CategoryProductCandidate = StorefrontProductCandidate & {
+	productId: number
+	categoryIds: number[]
+	unitPrice: string
 }
 
 export type MinimumOrderBannerState = {
@@ -791,7 +799,9 @@ export class ShopPage {
 			return null
 		}
 
-		const priceLocators = productCard.locator('.price, .woocommerce-Price-amount, bdi')
+		// The offer chips contain .amount elements too ($5/$7 off). They are
+		// discount amounts, not candidate prices for any shopping flow.
+		const priceLocators = productCard.locator(':is(.price, .woocommerce-Price-amount, bdi):not(.svntn-wdr-offers *)')
 		const priceCount = await priceLocators.count()
 		const parsedPrices: number[] = []
 
@@ -824,12 +834,15 @@ export class ShopPage {
 			.replace(/\s+/g, ' ')
 			.trim()
 		const sku = await addToCartButton.getAttribute('data-product_sku').catch(() => null)
+		const rawId = await addToCartButton.getAttribute('data-product_id') ||
+			await addToCartButton.getAttribute('data-id')
 
 		return {
 			menuIndex,
 			name,
 			price: Math.min(...parsedPrices),
 			sku,
+			...(rawId && /^\d+$/.test(rawId) ? { productId: Number(rawId) } : {}),
 		}
 	}
 
@@ -1025,6 +1038,80 @@ export class ShopPage {
 
 			if (!result.added) {
 				throw new Error(result.errorText || `Unable to add "${candidate.name}" to the cart`)
+			}
+		})
+	}
+
+	async getCategoryProducts(categoryIds: number[], usage: TestUsageType = 'recreational'): Promise<CategoryProductCandidate[]> {
+		return test.step('Match storefront inventory to product categories', async () => {
+			const candidates = await this.getAddableStorefrontProducts(usage)
+			const origin = new URL(this.page.url()).origin
+			const catalogue = new Map<number, any>()
+			for (const categoryId of categoryIds) {
+				if (!Number.isSafeInteger(categoryId) || categoryId <= 0) throw new Error('Invalid category ID')
+				let totalPages = 1
+				for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+					const response = await this.page.request.get(`${origin}/wp-json/wc/store/v1/products`, {
+						params: { category: categoryId, per_page: 100, page: pageNumber }, maxRedirects: 0,
+					})
+					expect(response.ok(), 'Category catalogue request must succeed without redirecting').toBeTruthy()
+					totalPages = Number(response.headers()['x-wp-totalpages'] || 1)
+					expect(Number.isSafeInteger(totalPages) && totalPages >= 0 && totalPages <= 100).toBeTruthy()
+					const products = await response.json()
+					expect(Array.isArray(products), 'Category endpoint must return products').toBeTruthy()
+					for (const product of products) catalogue.set(product.id, product)
+				}
+			}
+			return candidates.flatMap(candidate => {
+				const matches = [...catalogue.values()].filter(product => candidate.productId
+					? product.id === candidate.productId
+					: candidate.sku && product.sku === candidate.sku)
+				if (!matches.length) return []
+				expect(matches, 'A storefront product must identify exactly one catalogue entry').toHaveLength(1)
+				const product = matches[0]
+				expect(product.prices.currency_code).toBe('USD')
+				expect(product.prices.currency_minor_unit).toBe(2)
+				expect(product.prices.price).toMatch(/^\d+$/)
+				const price = Number(product.prices.price)
+				expect(Number.isSafeInteger(price)).toBeTruthy()
+				return [{ ...candidate, productId: product.id,
+					categoryIds: product.categories.map(category => category.id), unitPrice: (price / 100).toFixed(2) }]
+			}).sort((a, b) => a.productId - b.productId)
+		})
+	}
+
+	async addSelectedProducts(selected: CategoryProductCandidate[], usage: TestUsageType = 'recreational') {
+		for (const product of selected) {
+			const current = (await this.getAddableStorefrontProducts(usage)).find(candidate =>
+				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
+			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
+			await this.addStorefrontProduct(current, usage)
+		}
+		await this.goToCart({ requireItems: true })
+	}
+
+	async verifyProductPricingOffers(
+		product: CategoryProductCandidate,
+		tiers: { min: number; amountPerUnit: string | number }[],
+		usage: TestUsageType = 'recreational',
+	) {
+		await test.step(`Verify shop pricing offers for product ${product.productId}`, async () => {
+			const current = (await this.getAddableStorefrontProducts(usage)).find(candidate =>
+				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
+			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
+			const offers = this.getAddableProductCards(usage).nth(current.menuIndex).locator('.svntn-wdr-offers')
+			await expect(offers).toHaveCount(1)
+			await expect(offers).toBeVisible()
+			await expect(offers.locator('.svntn-wdr-offers__label')).toHaveText('List member pricing', { ignoreCase: true })
+			const chips = offers.locator('.svntn-wdr-chip')
+			await expect(chips).toHaveCount(tiers.length)
+			for (const [index, tier] of tiers.entries()) {
+				const chip = chips.nth(index)
+				await expect(chip).toBeVisible()
+				await expect(chip.locator('strong')).toHaveText(`Buy ${tier.min}+`)
+				expect(moneyInCents(await chip.locator('.amount').innerText(), true),
+					`Product ${product.productId}: discount per unit at ${tier.min}+`).toBe(Math.round(Number(tier.amountPerUnit) * 100))
+				await expect(chip).toContainText('off each')
 			}
 		})
 	}

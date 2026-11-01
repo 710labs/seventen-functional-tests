@@ -2,6 +2,7 @@ import test, { Page, TestInfo, Locator, expect } from '@playwright/test'
 import { calculateCartTotals, formatNumbers } from '../utils/order-calculations'
 import { QAClient } from '../support/qa/client'
 import { type TestUsageType } from '../utils/usage-types'
+import { moneyInCents, verifyOrderPricing, type ExpectedOrderPricing, type ExpectedDiscountLine } from './components/order-pricing'
 
 export class CartPage {
 	page: Page
@@ -42,6 +43,86 @@ export class CartPage {
 			const checkoutButton = await this.waitForCheckoutButton()
 			await checkoutButton.click()
 		})
+	}
+
+	productRow(productId: number) {
+		if (!Number.isSafeInteger(productId) || productId <= 0) throw new Error('Invalid product ID')
+		return this.page.locator('.woocommerce-cart-form .cart_item').filter({
+			has: this.page.locator(`[data-product_id="${productId}"]`),
+		})
+	}
+
+	async setProductQuantity(productId: number, quantity: number) {
+		if (!Number.isSafeInteger(quantity) || quantity < 1) throw new Error('Quantity must be a positive integer')
+		await test.step(`Set cart product ${productId} quantity to ${quantity}`, async () => {
+			const row = this.productRow(productId)
+			await expect(row).toHaveCount(1)
+			const input = row.locator('input.qty')
+			await input.fill(String(quantity))
+			await input.dispatchEvent('change')
+			const update = this.page.locator('[name="update_cart"]')
+			if (await update.isVisible() && await update.isEnabled()) await update.click()
+			await expect(this.page.locator('.woocommerce-cart-form .blockUI')).toHaveCount(0)
+			await expect(input).toHaveValue(String(quantity))
+		})
+	}
+
+	async removeProduct(productId: number) {
+		await test.step(`Remove cart product ${productId}`, async () => {
+			const row = this.productRow(productId)
+			await expect(row).toHaveCount(1)
+			await row.locator('.product-remove a').click()
+			await expect(row).toHaveCount(0)
+		})
+	}
+
+	async verifyDiscountPricing(expected: ExpectedOrderPricing) {
+		await test.step('Verify cart discount lines, taxes and total', async () => {
+			const summary = this.page.locator('.cart_totals:visible')
+			const bulkLines = expected.discountLines.filter(line => line.categoryId !== undefined)
+			await expect(summary.locator('tr.svntn-wdr-section')).toHaveCount(bulkLines.length ? 1 : 0)
+			if (bulkLines.length) await expect(summary.locator('tr.svntn-wdr-section th')).toHaveText('List member pricing', { ignoreCase: true })
+			await expect(summary.locator('tr.cart-discount.svntn-wdr-row')).toHaveCount(bulkLines.length)
+			await verifyOrderPricing(summary, expected)
+		})
+	}
+
+	async verifyProductDiscountTags(
+		lines: { productId: number; categoryIds: number[]; isFreeBogoUnit?: boolean }[],
+		discounts: ExpectedDiscountLine[],
+	) {
+		await test.step('Verify category tier badges on each cart product', async () => {
+			for (const line of lines) {
+				const expected = line.isFreeBogoUnit ? [] : discounts.filter(discount =>
+					discount.categoryId !== undefined && line.categoryIds.includes(discount.categoryId))
+				const row = this.productRow(line.productId)
+				await expect(row).toHaveCount(1)
+				const tags = row.locator('.svntn-wdr-tag')
+				await expect(tags, `Product ${line.productId}: only the active category tier should be shown`).toHaveCount(expected.length)
+				for (const [index, discount] of expected.entries()) {
+					await expect(tags.nth(index)).toBeVisible()
+					await expect(tags.nth(index)).toHaveText(discount.label)
+					if (discount.couponKey) await expect(tags.nth(index)).toHaveAttribute('data-wdr-coupon', discount.couponKey)
+				}
+			}
+		})
+	}
+
+	async verifyProductQuantities(lines: { productId: number; qty: number; unitPrice: string }[]) {
+		await test.step('Verify cart quantities and undiscounted unit prices', async () => {
+			await expect(this.page.locator('.woocommerce-cart-form .cart_item')).toHaveCount(lines.length)
+			for (const line of lines) {
+				const row = this.productRow(line.productId)
+				await expect(row).toHaveCount(1)
+				await expect(row.locator('input.qty')).toHaveValue(String(line.qty))
+				expect(moneyInCents(await row.locator('.product-price .amount').first().innerText())).toBe(Math.round(Number(line.unitPrice) * 100))
+			}
+		})
+	}
+
+	async verifyEmpty() {
+		await expect(this.page.locator('.woocommerce-cart-form .cart_item')).toHaveCount(0)
+		await expect(this.page.locator('.cart_totals:visible tr.cart-discount')).toHaveCount(0)
 	}
 
 	private async handleRecreationalLimit(): Promise<Locator | null> {
