@@ -54,6 +54,16 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		login = new LoginPage(page)
 		createAccount = new CreateAccountPage(page, qaClient)
 		orderReceived = new OrderReceivedPage(page)
+		await new AgeGatePage(page).passAgeGate()
+		await new ListPasswordPage(page).submitPassword(process.env.CHECKOUT_PASSWORD || '')
+		cleanupUser = { email: `test+bulk-${randomUUID()}@710labs-test.com`, password: 'test1234' }
+		await createAccount.create('Bulk', 'Regression', cleanupUser.email, cleanupUser.password,
+			'90210', 'recreational', false, '440 N Rodeo Dr, Beverly Hills, CA 90210', 'CA')
+		// Registration leaves this test's new account signed in.
+		signedIn = true
+		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') await account.addAddress()
+		await shop.goToCart()
+		await cart.verifyEmpty()
 	})
 
 	test.afterEach(async () => {
@@ -66,18 +76,6 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 			await cart.verifyEmpty()
 		}
 	})
-
-	async function signIn(page, credentials?: { email: string; password: string }) {
-		await new AgeGatePage(page).passAgeGate()
-		await new ListPasswordPage(page).submitPassword(process.env.CHECKOUT_PASSWORD || '')
-		// Same generated account/QAClient path as the existing CA E2E tests.
-		const user = credentials || await createAccount.createApi('recreational', 'current')
-		cleanupUser = user
-		await login.login(user.email, user.password)
-		signedIn = true
-		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') await account.addAddress()
-		return user
-	}
 
 	async function catalogue(): Promise<CategoryProductCandidate[]> {
 		await shop.openStorefrontForFulfillment('Pickup')
@@ -112,8 +110,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 	}
 
 	for (const rule of rules.bulkRules) {
-		test(`${rule.categoryName}: 2 → 3 → 4 → 5 → 6 → 4 → 5 units`, async ({ page }) => {
-			await signIn(page)
+		test(`${rule.categoryName}: 2 → 3 → 4 → 5 → 6 → 4 → 5 units`, async () => {
 			const products = await catalogue()
 			const product = products.find(product => product.categoryIds.includes(rule.categoryId) && product.productId !== rules.bogo.productId)
 			expect(product, `Need an addable product in category ${rule.categoryId}`).toBeTruthy()
@@ -129,8 +126,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		})
 	}
 
-	test('J1: cross-SKU tiers, removal and re-addition through checkout', async ({ page }) => {
-		await signIn(page)
+	test('J1: cross-SKU tiers, removal and re-addition through checkout', async () => {
 		const products = await catalogue()
 		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J1'), products).requests
 		await buildCart(lines, products)
@@ -150,8 +146,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		await checkout.verifyDiscountPricing(expectedCart(lines))
 	})
 
-	test('J2: all five bulk rules and mixed prices survive order placement', async ({ page }, testInfo) => {
-		await signIn(page)
+	test('J2: all five bulk rules and mixed prices survive order placement', async ({}, testInfo) => {
 		const products = await catalogue()
 		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J2'), products).requests
 		await buildCart(lines, products)
@@ -162,8 +157,9 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		await orderReceived.verifyDiscountedTotal(expected)
 	})
 
-	test('J5: existing user retains bulk discounts after logout/login', async ({ page }, testInfo) => {
-		const user = await signIn(page)
+	test('J5: newly registered user retains bulk discounts after logout/login', async ({}, testInfo) => {
+		if (!cleanupUser) throw new Error('Fresh registration did not provide test credentials')
+		const user = cleanupUser
 		const products = await catalogue()
 		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J5'), products).requests
 		await buildCart(lines, products)
@@ -176,17 +172,11 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		await verifyCart(lines)
 		const expected = expectedCart(lines)
 		await cart.goToCheckout()
-		await checkout.submitDiscountOrder(expected, `bulk-regression:J5-existing:${testInfo.project.name}:${randomUUID()}`)
+		await checkout.submitDiscountOrder(expected, `bulk-regression:J5-relogin:${testInfo.project.name}:${randomUUID()}`)
 		await orderReceived.verifyDiscountedTotal(expected)
 	})
 
-	test('J5: freshly registered user receives bulk pricing on their first order', async ({ page }, testInfo) => {
-		await new AgeGatePage(page).passAgeGate()
-		await new ListPasswordPage(page).submitPassword(process.env.CHECKOUT_PASSWORD || '')
-		await createAccount.create('Bulk', 'Regression', `test+bulk-${randomUUID()}@710labs-test.com`,
-			'test1234', '90210', 'recreational', false, '440 N Rodeo Dr, Beverly Hills, CA 90210', 'CA')
-		signedIn = true
-		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') await account.addAddress()
+	test('J5: freshly registered user receives bulk pricing on their first order', async ({}, testInfo) => {
 		const products = await catalogue()
 		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J5'), products).requests
 		await buildCart(lines, products)

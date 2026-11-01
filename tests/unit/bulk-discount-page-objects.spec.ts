@@ -131,6 +131,19 @@ test('shop offer chips use whole-dollar amounts and never become product prices'
 	await expect(shop.verifyProductPricingOffers(product, [{ min: 3, amountPerUnit: '3.00' }, { min: 5, amountPerUnit: '5.00' }])).rejects.toThrow('discount per unit at 3+')
 })
 
+test('category pricing offers belong to the adjacent product list', async ({ page }, info) => {
+	const card = (id: number) => `<li class="product"><h2>Product ${id}</h2><div class="price"><span class="amount">$39.00</span></div><button class="add_to_cart_button" data-product_id="${id}">Add</button></li>`
+	const cheaperOffers = shopOffersMarkup.replace('$</span>5', '$</span>3').replace('$</span>7', '$</span>5')
+	await page.setContent(`<h1>Gummis</h1>${cheaperOffers}<ul>${card(101)}</ul><h1>Vapes</h1>${shopOffersMarkup}<ul>${card(202)}</ul><h1>No offers</h1><ul>${card(303)}</ul>`)
+	const shop = new ShopPage(page, 'chromium', info)
+	const products = (await shop.getAddableStorefrontProducts()).map(candidate => ({ ...candidate, productId: candidate.productId!, categoryIds: [], unitPrice: '39.00' }))
+	const vapeTiers = [{ min: 3, amountPerUnit: '5.00' }, { min: 5, amountPerUnit: '7.00' }]
+	await shop.verifyProductPricingOffers(products[0], [{ min: 3, amountPerUnit: '3.00' }, { min: 5, amountPerUnit: '5.00' }])
+	await shop.verifyProductPricingOffers(products[1], vapeTiers)
+	await expect(shop.verifyProductPricingOffers(products[0], vapeTiers)).rejects.toThrow('discount per unit at 3+')
+	await expect(shop.verifyProductPricingOffers(products[2], vapeTiers)).rejects.toThrow('toHaveCount')
+})
+
 test('cart badges match each product category and the coupon keys supplied in the markup', async ({ page }, info) => {
 	await page.setContent(productTagsMarkup)
 	const cart = new CartPage(page, null!, 'chromium', info, 'recreational')

@@ -21,9 +21,9 @@ node scripts/run-public-playwright.js tests/cart-tests/bulk-discount-tests.spec.
 ```
 
 Use the existing `CHECKOUT_PASSWORD`, `API_KEY`, `QA_ENDPOINT`, `RECAPTCHA_BYPASS`,
-`NEXT_VERSION`, and `ADD_ADDRESS_BEFORE_CHECKOUT` setup. Ordinary users are created
-through `CreateAccountPage.createApi`, just like existing CA order tests. Fresh
-registration uses `CreateAccountPage.create` and the existing test-email convention.
+`NEXT_VERSION`, and `ADD_ADDRESS_BEFORE_CHECKOUT` setup. Every bulk test registers a new account in `beforeEach` through the shared
+`CreateAccountPage.create` UI flow, with a unique test email. Registration leaves the
+account signed in, and the setup verifies that its cart is empty.
 No separate plain-user credentials are required.
 
 The dev config enables bulk tests through metadata. Other configs skip them before
@@ -36,7 +36,7 @@ requests refuse redirects. Tags `@CA` and `@bulk` keep these CA rules out of MI/
 | Work | Existing methods reused |
 | --- | --- |
 | Gates/login | AgeGatePage.passAgeGate, ListPasswordPage.submitPassword, LoginPage.login |
-| Accounts | CreateAccountPage.createApi/create, MyAccountPage.addAddress/logout |
+| Accounts | CreateAccountPage.create, MyAccountPage.addAddress/logout |
 | Shopping | ShopPage.openStorefrontForFulfillment, getAddableStorefrontProducts, addStorefrontProduct, goToCart, clearStorefrontCart |
 | Checkout/order | CartPage.goToCheckout, CheckoutPage.selectSlot/submitOrder, OrderReceivedPage.getOrderNumber |
 
@@ -49,6 +49,8 @@ OrderReceivedPage verifies the confirmed discounted total. The E2E specs have no
 
 The supplied markup is used by the shared page objects: ShopPage checks
 `.svntn-wdr-offers` / `.svntn-wdr-chip`, including whole-dollar `$5`/`$7` amounts;
+offers can be on the product card or immediately above its category's product list.
+The lookup cannot borrow offers from another category.
 CartPage checks the `.svntn-wdr-section` heading and `.svntn-wdr-row` grouping, plus each
 product's `.svntn-wdr-tag` text and known `data-wdr-coupon` key. Checkout uses its ordinary
 `tfoot .cart-discount` rows without requiring the cart-only heading/classes. Tier changes
@@ -57,8 +59,9 @@ Shop price discovery excludes offer-chip amounts so `$5 off each` cannot become 
 product's apparent unit price in any existing shopping flow.
 
 Existing behavior of `BYPASS_TAX_CALC` is unchanged. Explicit bulk pricing assertions
-always verify taxes, even when that legacy switch is true. Each ordinary test uses
-its own generated user. Cleanup uses the existing clear-cart method in afterEach.
+always verify taxes, even when that legacy switch is true. Each test uses
+its own freshly registered user; only the logout/login scenario signs in again, using
+that same test account. Cleanup uses the existing clear-cart method in afterEach.
 Order tests add a `bulk-regression:` note and disable retries to avoid duplicate orders
 after a confirmation failure. These cases do not modify stock, menus, or global rules.
 
@@ -68,7 +71,7 @@ after a confirmation failure. These cases do not modify stock, menus, or global 
 - J1: 2+1 eighths plus below-threshold vapes/gummy; 3→5→3→2→3 via removal/re-addition;
   category isolation and checkout summary.
 - J2: all five discounts, mixed eighth prices, checkout and order confirmation.
-- J5: existing-user logout/login persistence and freshly registered user's first order,
+- J5: newly registered user logout/login persistence and freshly registered user's first order,
   using the suite's existing desktop and mobile projects.
 
 Implementation is not evidence of a successful live run. Missing inventory and pricing
@@ -141,6 +144,20 @@ check verifies transmission identifiers, not POS monetary data. These are additi
 checks, not replacements for the existing login, account creation, or reporting setup.
 
 ## Validation on November 1, 2026
+
+After switching every bulk test to UI registration:
+
+- All 13 synthetic browser cases passed, including category-level offer isolation.
+- Discovery found all nine bulk cases on both existing projects (18 runs), with no errors.
+- Public-reporting policy validation and whitespace checks passed. TypeScript still
+  reports 15 existing diagnostics, with none in the files changed for this update.
+- A live dev Eighths cart test was run with the shared registration page object. It
+  failed waiting for the eligibility/license step after submitting the new-customer
+  form (`models/create-account-page.ts:478`). No discount assertions or order placement
+  were reached. The local environment has no `RECAPTCHA_BYPASS` configured; this is a
+  setup difference to check, not a confirmed cause of the missing eligibility step.
+
+Earlier validation, before the registration change:
 
 - 74 offline oracle/generator/guard tests passed.
 - All 12 synthetic browser cases passed using the existing unit config and shared page

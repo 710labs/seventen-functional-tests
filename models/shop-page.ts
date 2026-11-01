@@ -1099,7 +1099,13 @@ export class ShopPage {
 			const current = (await this.getAddableStorefrontProducts(usage)).find(candidate =>
 				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
 			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
-			const offers = this.getAddableProductCards(usage).nth(current.menuIndex).locator('.svntn-wdr-offers')
+			const card = this.getAddableProductCards(usage).nth(current.menuIndex)
+			const cardOffers = card.locator('.svntn-wdr-offers')
+			// Category offers precede that category's product list on the shop page.
+			// Only inspect the adjacent sibling, so another category cannot supply its tiers.
+			const offers = await cardOffers.count() ? cardOffers : card
+				.locator('xpath=ancestor::ul[1]/preceding-sibling::*[1]')
+				.locator('xpath=self::*[contains(concat(" ", normalize-space(@class), " "), " svntn-wdr-offers ")]')
 			await expect(offers).toHaveCount(1)
 			await expect(offers).toBeVisible()
 			await expect(offers.locator('.svntn-wdr-offers__label')).toHaveText('List member pricing', { ignoreCase: true })
