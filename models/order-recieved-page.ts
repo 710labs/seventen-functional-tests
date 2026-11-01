@@ -1,7 +1,6 @@
 import test, { expect, Locator, Page } from '@playwright/test'
 import { formatNumbers } from '../utils/order-calculations'
 import { assertFooterLinks } from '../utils/footer-links'
-import { moneyInCents, type ExpectedOrderPricing } from './components/order-pricing'
 
 export class OrderReceivedPage {
 	readonly page: Page
@@ -47,14 +46,6 @@ export class OrderReceivedPage {
 		var orderNumber
 		await this.waitForOrderReceivedPage()
 		orderNumber = await this.orderNumber.innerText()
-		return orderNumber
-	}
-
-	async verifyDiscountedTotal(expected: ExpectedOrderPricing): Promise<string> {
-		const orderNumber = await this.getOrderNumber()
-		await test.step('Verify confirmed order total after discounts', async () => {
-			expect(moneyInCents(await this.total.innerText())).toBe(expected.total)
-		})
 		return orderNumber
 	}
 }

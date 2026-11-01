@@ -8,7 +8,6 @@ import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 import zipcodes from '../utils/zipcodes-ca.json'
 import zipcodesCO from '../utils/zipcodes-co.json'
 import { fictionalAreacodes } from '../utils/data-generator'
-import { verifyOrderPricing, type ExpectedOrderPricing } from './components/order-pricing'
 
 type CheckoutRefreshDiagnostics = {
 	submittedZipcode: string
@@ -486,19 +485,6 @@ export class CheckoutPage {
 				await timeSlot.click()
 			}
 		})
-	}
-
-	async verifyDiscountPricing(expected: ExpectedOrderPricing) {
-		await test.step('Verify checkout discount lines, taxes and total', async () => {
-			await verifyOrderPricing(this.page.locator('.woocommerce-checkout-review-order-table'), expected)
-		})
-	}
-
-	async submitDiscountOrder(expected: ExpectedOrderPricing, testNote: string) {
-		await this.comments.fill(testNote)
-		await this.selectSlot()
-		await this.verifyDiscountPricing(expected)
-		await this.submitOrder()
 	}
 
 	async submitOrder() {

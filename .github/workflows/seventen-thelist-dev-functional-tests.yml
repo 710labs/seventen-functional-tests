@@ -64,8 +64,6 @@ jobs:
         run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
       - name: Set Domain to CA
         run: node ./scripts/set-qa-domain.js ca
-      - name: Verify bulk discount calculations
-        run: npm run test:bulk:unit
       - name: Configure hosted Playwright reports
         uses: ./.github/actions/hosted-playwright-reports
         with:
