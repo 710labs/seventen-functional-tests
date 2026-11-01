@@ -1,4 +1,114 @@
-# Load Test - Drop Simulation
+# Load Tests
+
+## Load Test Live (dev only)
+
+The manual **Load Test Live** action (`.github/workflows/load-test-live.yml`) runs
+Playwright browser journeys on AWS Fargate against **https://live-dev.710labs.com**.
+The workflow, config planner, and browser processor reject other targets. It uses
+the existing `dev` GitHub environment. There is no stage or production option.
+
+### Journeys
+
+- `rec-order`: delivery address, product selection, unique registration, cart minimum,
+  checkout appointment, personal information, photo ID, cash payment, checkout
+  password, and optionally order submission and confirmation.
+- `med-order`: the same journey with a required medical product and medical-card
+  handling. Missing medical inventory fails the run instead of silently testing a
+  recreational order.
+- `rec-account`: unique registration, personal information/email update, photo ID,
+  password change, logout, and login with the updated credentials.
+- `med-account`: the account journey including a medical-card update.
+- `mixed`: all four journeys. Smoke runs execute each once in separate sequential
+  jobs; ramp runs assign equal weights to the four journeys.
+
+These are successful customer paths. Intentional invalid birthdays/passwords and
+repeated edit checks remain in the functional suite. Cart minimum, storefront,
+inventory, and product-portion handling reuse the functional cart implementation.
+
+### Inputs and load model
+
+- `profile`: `dry` builds and validates without launching workers; `smoke` launches
+  exactly one user per selected journey; `ramp` ramps arrivals for 120 seconds and
+  then sustains load for `duration_seconds` (60–1800 seconds, default 300).
+- `browsers`: concurrent-user cap for ramp: 1, 5, 10, 20, 50, or 100 (default 5).
+  Smoke ignores this input and uses one user. Each worker has at most 10 concurrent
+  users, allocated 4 vCPU / 8 GB, following the drop simulation's starting sizing.
+- Each ramp worker increases from 0.1 to 1 new user/second, then holds 1/second.
+  For example, 50 browsers use 5 workers and ramp from 0.5 to 5 users/second total.
+  These configs already contain per-worker load: do not split their phases again.
+  Arrivals at the concurrency cap may be skipped; reports show skipped users.
+- `place_orders`: defaults to **false**. Order flows still create accounts, upload
+  documents, and complete checkout through an enabled Place Order button. True
+  submits dev orders and requires a confirmation/order ID. Submission is never
+  retried after an ambiguous timeout.
+- `fargate_capacity`: `on_demand` (default) or `spot`.
+
+Each journey has a ten-minute deadline. Total execution includes worker startup,
+the arrival phases, and time for the last users to finish. Browser cap is not a
+total-account/order budget. Prepare inventory and appointment capacity for the
+chosen workload. Start with dry, then individual smoke runs, mixed smoke, and
+5–10-browser ramps before increasing load.
+
+### Secrets and reports
+
+Fargate requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_REGION`, and
+`ARTILLERY_REPORT_APIKEY`. Every journey requires `ALWAYS_ON_PASSWORD` and
+`RECAPTCHA_BYPASS`. Order journeys also require `CHECKOUT_PASSWORD`, even with
+submission disabled. Account journeys require `NEW_ALWAYS_ON_PASSWORD`, which
+must differ from `ALWAYS_ON_PASSWORD`. Mixed runs require all of these.
+
+The processor injects the CAPTCHA bypass cookie only on live-dev and does not
+inject the List VIP cookie. Temporary worker dotenv files are removed after the
+job and are never uploaded as artifacts.
+
+Artillery Cloud receives the run; GitHub retains JSON reports for 14 days and
+summarizes step p95 timings, completed/failed/skipped users, and confirmed orders.
+Smoke requires one completed user with no failures or skips. Ramp permits at most
+1% failed users and requires at least one completed journey of each selected type.
+Missing reports, empty runs, incomplete user accounting, and missing confirmation
+evidence fail the action. Latencies are reported without an invented pass/fail
+budget; use baseline runs to establish a suitable latency budget.
+
+Confirmed order IDs are logged as structured `LIVE_ORDER` records with the GitHub
+run ID and virtual-user ID. Artillery Fargate persists worker logs to the run's S3
+worker-log files. They are separate from the GitHub JSON artifact. POS verification
+remains in the existing Live functional workflows; it is not part of the load
+measurement. Browser traces and screenshots are disabled.
+
+### Local validation
+
+Use Node 22.13.0 or newer:
+
+```bash
+npm ci --prefix loadtest --no-audit
+npm --prefix loadtest run test:live
+LIVE_PROFILE=dry LIVE_SCENARIO=mixed node loadtest/scripts/prepare-live.js
+node loadtest/scripts/validate-configs.js loadtest/live loadtest/generated/live-*.yml
+```
+
+The build bundles the shared TypeScript cart/address helpers into an ignored
+`loadtest/generated/live-funnel.cjs`; do not commit generated files. The Live
+template lives in `loadtest/live/` so existing drop config validation works without
+first building Live. `loadtest/tsconfig.live.json` resolves shared helper types
+against the loadtest Playwright version.
+
+For a one-user local recreational checkout smoke, provide the required secrets in
+a local ignored dotenv file, then:
+
+```bash
+LIVE_PROFILE=smoke LIVE_SCENARIO=rec-order PLACE_ORDERS=false \
+  node loadtest/scripts/prepare-live.js
+mkdir -p loadtest/reports
+npm --prefix loadtest exec -- artillery run loadtest/generated/live-rec-order.yml \
+  --dotenv loadtest/.env --output loadtest/reports/live-local.json
+LIVE_PROFILE=smoke LIVE_SCENARIO=rec-order PLACE_ORDERS=false \
+  node loadtest/scripts/check-live-report.js loadtest/reports/live-local.json
+```
+
+Order submission is embedded in the generated config: regenerate it when changing
+`PLACE_ORDERS`. Setting the runtime environment alone does not override that choice.
+
+## Load Test - Drop Simulation
 
 This directory contains the self-contained Artillery suite for the manual **Load Test- Drop Simulation** GitHub Action. It is built for The List dev, stage, CA prod, CO prod, MI prod, and NJ prod environments and uses AWS Fargate for generated load.
 

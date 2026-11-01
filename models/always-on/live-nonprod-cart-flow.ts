@@ -6,6 +6,12 @@ import {
 
 type LiveUserType = 'rec' | 'med'
 
+type CartFlowOptions = {
+	step?: <T>(name: string, action: () => Promise<T>) => Promise<T>
+	medicalCardPath?: string
+	requireMedicalProduct?: boolean
+}
+
 export type ProductCandidate = {
 	category: string
 	facility: string | null
@@ -109,7 +115,7 @@ export class LiveNonProdCartFlow {
 	private lockedFulfillmentMethod?: string
 	private storefrontUrl?: string
 
-	constructor(page: Page) {
+	constructor(page: Page, private readonly options: CartFlowOptions = {}) {
 		this.page = page
 		this.cartButton = page.locator('a.wpse-cart-openerize').first()
 		this.cartDrawer = page.locator('#cartDrawer')
@@ -125,7 +131,8 @@ export class LiveNonProdCartFlow {
 	}
 
 	async addProductsUntilCheckout(userType: LiveUserType) {
-		return test.step(`Build a checkout-ready Live ${userType.toUpperCase()} cart`, async () => {
+		const step = this.options.step || ((name, action) => test.step(name, action))
+		return step(`Build a checkout-ready Live ${userType.toUpperCase()} cart`, async () => {
 			const registrationProductNames = await this.retainRegistrationCart()
 			await this.returnToStorefront()
 
@@ -155,6 +162,10 @@ export class LiveNonProdCartFlow {
 					const candidateStorefront = this.normalizeExactStorefrontUrl(candidate.storefrontUrl)
 					return candidate.isMedical && (!candidateStorefront || candidateStorefront === this.storefrontUrl)
 				})
+
+			if (userType === 'med' && this.options.requireMedicalProduct && !medicalCandidateIsAvailable) {
+				throw new Error('LIVE_MEDICAL_INVENTORY_UNAVAILABLE')
+			}
 
 			if (
 				!medicalCandidateIsAvailable &&
@@ -222,6 +233,9 @@ export class LiveNonProdCartFlow {
 		userType: LiveUserType,
 		medicalProductAdded: boolean,
 	) {
+		if (userType === 'med' && this.options.requireMedicalProduct && !medicalProductAdded) {
+			return false
+		}
 		if (!(await this.cartDrawerIsOpen()) && !(await this.openCartDrawer())) {
 			throw new Error(`Unable to inspect the Live cart minimum at ${this.page.url()}`)
 		}
@@ -724,7 +738,8 @@ export class LiveNonProdCartFlow {
 	}
 
 	private async retainRegistrationCart() {
-		return test.step('Keep the product added during registration', async () => {
+		const step = this.options.step || ((name, action) => test.step(name, action))
+		return step('Keep the product added during registration', async () => {
 			if (!(await this.openCartDrawer())) {
 				throw new Error(
 					`Unable to open the Live registration cart at ${this.page.url()}`,
@@ -1336,7 +1351,7 @@ export class LiveNonProdCartFlow {
 
 		for (let attempt = 1; attempt <= 3; attempt += 1) {
 			await revealMedicalCardForm()
-			await medicalCardInput.setInputFiles('CA-DL.jpg')
+			await medicalCardInput.setInputFiles(this.options.medicalCardPath || 'CA-DL.jpg')
 
 			medicalCardFileReady = await expect
 				.poll(

@@ -7,11 +7,16 @@
 		"render-config": "node scripts/render-config.js",
 		"validate-configs": "node scripts/validate-configs.js",
 		"check-thresholds": "node scripts/check-thresholds.js",
-		"wait-until-gate": "node scripts/wait-until-gate.js"
+		"wait-until-gate": "node scripts/wait-until-gate.js",
+		"build:live": "node scripts/build-live.js",
+		"prepare:live": "node scripts/prepare-live.js",
+		"test:live": "node --test flows/live-settings.test.js scripts/check-live-report.test.js scripts/prepare-live.test.js"
 	},
 	"dependencies": {
+		"@playwright/test": "1.60.0",
 		"artillery": "^2.0.31",
 		"cheerio": "^1.2.0",
+		"esbuild-wasm": "0.19.12",
 		"js-yaml": "^3.14.1"
 	}
 }

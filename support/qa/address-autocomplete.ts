@@ -7,8 +7,9 @@ export async function selectAutocompleteAddress(
 	field: Locator,
 	address: string,
 	timeout = 10000,
+	step: (name: string, action: () => Promise<void>) => Promise<void> = (name, action) => test.step(name, action),
 ) {
-	await test.step('Select address autocomplete suggestion', async () => {
+	await step('Select address autocomplete suggestion', async () => {
 		let mapsFailure = ''
 		const onConsole = (message: ConsoleMessage) => {
 			if (message.text().includes('RefererNotAllowedMapError')) mapsFailure = 'ADDRESS_REFERRER_DENIED'

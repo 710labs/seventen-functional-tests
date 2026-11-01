@@ -1,0 +1,25 @@
+config:
+  target: https://live-dev.710labs.com
+  processor: ../generated/live-funnel.cjs
+  includeFiles:
+    - ../fixtures/CA-DL.jpg
+    - ../fixtures/Medical-Card.png
+  phases:
+    - name: one-user-smoke
+      duration: 1
+      arrivalCount: 1
+      maxVusers: 1
+  engines:
+    playwright:
+      trace: false
+      aggregateByName: true
+      launchOptions:
+        headless: true
+      contextOptions:
+        viewport:
+          width: 1280
+          height: 720
+scenarios:
+  - name: rec-order
+    engine: playwright
+    testFunction: liveRecOrder

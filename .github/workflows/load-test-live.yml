@@ -1,0 +1,173 @@
+name: Load Test Live
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Live dev customer journey
+        type: choice
+        default: rec-order
+        options: [rec-order, med-order, rec-account, med-account, mixed]
+      profile:
+        description: Dry validates only; smoke runs one user per selected journey; ramp sustains load
+        type: choice
+        default: smoke
+        options: [dry, smoke, ramp]
+      browsers:
+        description: Maximum concurrent browsers for ramp (smoke always uses 1 per journey)
+        type: choice
+        default: '5'
+        options: ['1', '5', '10', '20', '50', '100']
+      duration_seconds:
+        description: Sustained load duration after a 120-second ramp
+        type: choice
+        default: '300'
+        options: ['60', '300', '600', '900', '1800']
+      place_orders:
+        description: Submit dev orders; false stops when checkout is ready to submit
+        type: boolean
+        default: false
+      fargate_capacity:
+        description: Fargate capacity
+        type: choice
+        default: on_demand
+        options: [on_demand, spot]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: load-test-live-dev
+  cancel-in-progress: false
+
+env:
+  ARTILLERY_TARGET: https://live-dev.710labs.com
+  LIVE_PROFILE: ${{ inputs.profile }}
+  LIVE_BROWSERS: ${{ inputs.browsers }}
+  LIVE_DURATION: ${{ inputs.duration_seconds }}
+  LIVE_CAPACITY: ${{ inputs.fargate_capacity }}
+  PLACE_ORDERS: ${{ inputs.place_orders }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      workers: ${{ steps.plan.outputs.workers }}
+      spot: ${{ steps.plan.outputs.spot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Resolve live-dev plan
+        id: plan
+        env:
+          LIVE_SCENARIO: ${{ inputs.scenario }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const { buildPlan } = require('./loadtest/flows/live-settings')
+          const plan = buildPlan({
+            target: process.env.ARTILLERY_TARGET, profile: process.env.LIVE_PROFILE,
+            scenario: process.env.LIVE_SCENARIO, browsers: process.env.LIVE_BROWSERS,
+            duration: process.env.LIVE_DURATION, capacity: process.env.LIVE_CAPACITY,
+            placeOrders: process.env.PLACE_ORDERS,
+          })
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify(plan.matrix)}\nworkers=${plan.workers}\nspot=${plan.capacity === 'spot' ? '--spot' : ''}\n`)
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+            '## Live dev load plan', '',
+            `Target: ${plan.target}`, `Profile: ${plan.profile}`, `Journeys: ${plan.matrix.join(', ')}`,
+            `Browser cap: ${plan.browsers}; workers: ${plan.workers}; cap per worker: ${plan.perWorker}`,
+            `Submit orders: ${plan.placeOrders}`,
+            plan.profile === 'ramp' ? `Arrival rate: ${plan.workers * 0.1} → ${plan.workers} users/sec over 120 seconds, then ${plan.duration} seconds sustained. Users at the concurrency cap may be skipped.` : 'Exactly one user per journey; mixed smoke journeys run sequentially.',
+            '',
+          ].join('\n'))
+          NODE
+
+  run:
+    name: Live dev / ${{ matrix.scenario }}
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        scenario: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      LIVE_SCENARIO: ${{ matrix.scenario }}
+      LIVE_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.scenario }}
+      ARTILLERY_REPORT_JSON: loadtest/reports/live-${{ matrix.scenario }}.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+          cache-dependency-path: loadtest/package-lock.json
+      - name: Install loadtest dependencies
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --prefix loadtest --no-audit --no-fund
+      - name: Test Live load helpers
+        run: npm --prefix loadtest run test:live
+      - name: Build and validate worker config
+        run: |
+          node loadtest/scripts/prepare-live.js
+          node loadtest/scripts/validate-configs.js "loadtest/generated/live-${LIVE_SCENARIO}.yml"
+      - name: Prepare worker secrets
+        if: inputs.profile != 'dry'
+        env:
+          AWS_ACCESS_KEY_ID_VALUE: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY_VALUE: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_REGION_VALUE: ${{ secrets.S3_REGION }}
+          ARTILLERY_REPORT_APIKEY_VALUE: ${{ secrets.ARTILLERY_REPORT_APIKEY }}
+          ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+          NEW_ALWAYS_ON_PASSWORD: ${{ secrets.NEW_ALWAYS_ON_PASSWORD }}
+          CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const e = process.env
+          const required = ['AWS_ACCESS_KEY_ID_VALUE', 'AWS_SECRET_ACCESS_KEY_VALUE', 'S3_REGION_VALUE', 'ARTILLERY_REPORT_APIKEY_VALUE', 'ALWAYS_ON_PASSWORD', 'RECAPTCHA_BYPASS']
+          if (e.LIVE_SCENARIO === 'mixed' || e.LIVE_SCENARIO.endsWith('-order')) required.push('CHECKOUT_PASSWORD')
+          if (e.LIVE_SCENARIO === 'mixed' || e.LIVE_SCENARIO.endsWith('-account')) required.push('NEW_ALWAYS_ON_PASSWORD')
+          for (const key of required) if (!e[key]) throw new Error(`Missing dev secret: ${key}`)
+          const names = ['ARTILLERY_TARGET', 'LIVE_RUN_ID', 'PLACE_ORDERS', 'ALWAYS_ON_PASSWORD', 'NEW_ALWAYS_ON_PASSWORD', 'CHECKOUT_PASSWORD', 'RECAPTCHA_BYPASS']
+          // Single-quoted dotenv values preserve $, #, backticks and double quotes.
+          const lines = names.map(key => {
+            const value = e[key] || ''
+            if (/[\r\n']/.test(value)) throw new Error(`Unsupported newline or single quote in ${key}`)
+            return `${key}='${value}'`
+          })
+          fs.writeFileSync('loadtest/generated/live.fargate.env', lines.join('\n') + '\n', { mode: 0o600 })
+          fs.mkdirSync('loadtest/reports', { recursive: true })
+          NODE
+      - name: Run Live journeys on AWS Fargate
+        if: inputs.profile != 'dry'
+        uses: artilleryio/action-cli@v2.0.32
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ needs.plan.outputs.workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.spot }} --dotenv loadtest/generated/live.fargate.env --packages loadtest/package.json loadtest/generated/live-${{ matrix.scenario }}.yml --output ${{ env.ARTILLERY_REPORT_JSON }} --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:live-dev/${{ inputs.profile }}/${{ matrix.scenario }},run:${{ github.run_id }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Summarize Artillery report
+        if: always() && inputs.profile != 'dry'
+        run: node scripts/summarize-artillery-report.js "$ARTILLERY_REPORT_JSON"
+      - name: Check Live completion and failure thresholds
+        if: always() && inputs.profile != 'dry'
+        run: node loadtest/scripts/check-live-report.js "$ARTILLERY_REPORT_JSON"
+      - name: Upload Live report
+        if: always() && inputs.profile != 'dry'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-dev-${{ matrix.scenario }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: loadtest/reports/*.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove worker secrets
+        if: always()
+        run: rm -f loadtest/generated/live.fargate.env

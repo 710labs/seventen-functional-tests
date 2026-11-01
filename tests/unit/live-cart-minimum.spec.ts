@@ -3,6 +3,22 @@ import { LiveNonProdCartFlow } from '../../models/always-on/live-nonprod-cart-fl
 
 const origin = 'https://live-cart-minimum.test'
 
+test('load-test medical carts reject missing medical inventory using an injected step runner', async ({ page }) => {
+	await page.route(`${origin}/**`, route => route.fulfill({
+		contentType: 'text/html',
+		body: storefrontPage(new URL(route.request().url()).pathname, ['Registration Flower', 'Third Flower', 'Third Flower']),
+	}))
+	await page.goto(`${origin}/`)
+	const steps: string[] = []
+	const flow = new LiveNonProdCartFlow(page, {
+		requireMedicalProduct: true,
+		step: async (name, action) => { steps.push(name); return action() },
+	})
+	await expect(flow.addProductsUntilCheckout('med')).rejects.toThrow('LIVE_MEDICAL_INVENTORY_UNAVAILABLE')
+	expect(steps).toContain('Keep the product added during registration')
+	await expect(page).not.toHaveURL(`${origin}/checkout/`)
+})
+
 type StorefrontProduct = { id: string; name: string; price: number }
 
 function storefrontPage(
