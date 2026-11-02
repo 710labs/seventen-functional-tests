@@ -313,3 +313,15 @@ to satisfy the pickup minimum, submitted order **182318** under
 **Bulk Doinks Tiers / Desktop Chrome**, and verified its confirmation total.
 The full 18-case headed run was restarted with failed-test videos and a local HTML
 report; that run's result is pending.
+
+## Local replay videos for passed and failed tests
+
+The user requested videos for successful runs as well. The ignored local config
+`output/playwright/local-video.config.ts` inherits the dev config and uses
+`video: 'on'`, retaining recordings for every result in the local HTML report.
+Earlier local runs used `retain-on-failure`, which deleted passed-test videos.
+Those deleted recordings cannot be added retroactively; a new run is needed.
+
+The J1/J2 rerun after exact cart ID/quantity verification passed all four
+desktop/mobile cases. A full 18-case headed run was then started with all videos
+retained. Its report opens automatically when the run completes.
