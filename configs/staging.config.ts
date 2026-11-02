@@ -9,6 +9,7 @@ const STAGING_BASE_DOMAIN = new URL(STAGING_BASE_URL).hostname
 
 /* https://playwright.dev/docs/test-configuration */
 export default defineConfig<TestOptions>({
+	metadata: { bulkDiscounts: true },
 	testDir: './../tests',
 	testIgnore: ['**/admin-drop-tests/**'],
 	timeout: 10 * 60000,

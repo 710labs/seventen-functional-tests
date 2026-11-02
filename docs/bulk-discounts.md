@@ -1,7 +1,7 @@
 # Bulk discounts in the existing E2E suite
 
 Bulk tests live in `tests/cart-tests/bulk-discount-tests.spec.ts`. They import `test`
-from `options.ts`, use the existing `qaClient`, and run with the existing dev
+from `options.ts`, use the existing `qaClient`, and run with the existing dev and staging
 configuration, desktop/mobile projects, workflow, and Slack/health/HTML/video reporters.
 Public hosted reports were explicitly approved for this suite on November 1, 2026,
 superseding the handoff's private-evidence requirement. There is no separate live runner.
@@ -12,6 +12,7 @@ The normal CA command includes bulk tests alongside existing tests:
 
 ```bash
 npm run ci:test:dev:ca
+npm run ci:test:staging:ca
 ```
 
 To focus on the new specs with the same runner/configuration:
@@ -30,10 +31,19 @@ a unique run identifier. Reports retain the full case/run reference; it is also
 filled into order notes when the checkout offers that field.
 No separate plain-user credentials are required.
 
-The dev config enables bulk tests through metadata. Other configs skip them before
-login/account/cart actions. Enabled tests fail if their base URL is not the exact HTTPS
-dev origin. Top-level browser navigation is restricted to that origin; catalogue API
+The dev and staging configs enable bulk tests through metadata. Other configs skip them before
+login/account/cart actions. Enabled tests require the exact HTTPS dev or Stage origin.
+Top-level browser navigation is restricted to the configured origin (including blocking
+redirects between dev and Stage); catalogue API
 requests refuse redirects. Tags `@CA` and `@bulk` keep these CA rules out of MI/CO/NJ runs.
+
+Stage CA runs all nine scenarios on desktop and mobile (18 tests), alongside the existing
+E2E tests. Missing bulk discounts are ordinary assertion failures, not skips or expected
+failures. Stage enablement was requested on November 2, 2026, superseding the original
+dev-only browser restriction; the standalone API probe remains dev-only. Tax assertions
+currently use the verified dev pickup-store profile; Stage store rates have not been
+verified and can cause additional failures. Stage smoke-only workflows do not run this
+full suite.
 
 ## Shared code
 

@@ -16,7 +16,7 @@ const pickupTaxes = require('../../support/bulk-discounts/dev-pickup-taxes.json'
 // Keep workbook reference rates separate from this dev pickup store's rates.
 const liveRules = { ...rules, taxes: pickupTaxes.taxes, taxRounding: pickupTaxes.taxRounding }
 const { resolvePlan, goldenPlans } = require('../../support/bulk-discounts/scenarios.cjs')
-const { assertDevBaseUrl, assertDevUrl } = require('../../support/bulk-discounts/dev-only.cjs')
+const { assertBulkBaseUrl, assertBulkNavigationUrl } = require('../../support/bulk-discounts/environment.cjs')
 
 type CartLine = {
 	productId: number; categoryIds: number[]; qty: number; unitPrice: string; isFreeBogoUnit: boolean
@@ -42,13 +42,13 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		signedIn = false
 		cartTouched = false
 		cleanupUser = undefined
-		// Ordinary prod/stage suites still discover this file but cannot execute it.
-		test.skip(testInfo.config.metadata.bulkDiscounts !== true, 'Bulk rules are enabled only in the existing dev configuration')
-		assertDevBaseUrl(baseURL)
+		// Dev and Stage CA exercise the same expectations; production remains excluded.
+		test.skip(testInfo.config.metadata.bulkDiscounts !== true, 'Bulk rules are enabled only in the dev and staging configurations')
+		const targetOrigin = assertBulkBaseUrl(baseURL)
 		await page.context().route('**/*', async route => {
 			const request = route.request()
 			if (request.isNavigationRequest() && request.frame().parentFrame() === null) {
-				try { assertDevUrl(request.url()) } catch { await route.abort('blockedbyclient'); return }
+				try { assertBulkNavigationUrl(request.url(), targetOrigin) } catch { await route.abort('blockedbyclient'); return }
 			}
 			await route.continue()
 		})
