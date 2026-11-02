@@ -10,6 +10,23 @@ const { expectedCart } = require('../../support/bulk-discounts/oracle.cjs')
 const expected = expectedCart([{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }])
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`
 const amount = (cents: number) => `<span class="amount">${dollars(cents)}</span>`
+
+test('storefront becomes usable while a background request remains pending', async ({ browser }, info) => {
+	test.setTimeout(10000)
+	const context = await browser.newContext({ baseURL: 'https://storefront.test' })
+	try {
+		const page = await context.newPage()
+		await page.route('https://storefront.test/', route => route.fulfill({ contentType: 'text/html', body:
+			'<button class="wcse-nav">Pickup</button><ul><li class="product"><button class="add_to_cart_button">Add</button></li></ul><script>fetch("/background")</script>' }))
+		await page.route('https://storefront.test/background', () => {})
+		await new ShopPage(page, 'chromium', info).openStorefrontForFulfillment('Pickup')
+		await expect(page.locator('li.product')).toBeVisible()
+		await expect(page.waitForLoadState('networkidle', { timeout: 750 })).rejects.toThrow('Timeout')
+	} finally {
+		await context.close()
+	}
+})
+
 function summaryRows(pricing = expected, removeLink = false, cart = true) {
 	return `<tr class="cart-subtotal"><th>Subtotal</th><td>${amount(pricing.subtotal)}</td></tr>
 		${cart && pricing.discountLines.some(line => line.categoryId) ? '<tr class="svntn-wdr-section"><th colspan="2">List member pricing</th></tr>' : ''}
@@ -31,10 +48,22 @@ test('cart and checkout share the same discount assertion even with legacy tax b
 	}
 })
 
-test('cart rejects a stale tier and a nonfunctional Remove link', async ({ page }, info) => {
+test('cart and checkout verify discounted totals using the current dev pickup rates', async ({ page }, info) => {
+	const rules = require('../../support/bulk-discounts/rules.json')
+	const pickupTaxes = require('../../support/bulk-discounts/dev-pickup-taxes.json')
+	const pricing = expectedCart([
+		{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false },
+		{ productId: 102, categoryIds: [326], qty: 3, unitPrice: '14.00', isFreeBogoUnit: false },
+	], 'plain', { ...rules, taxes: pickupTaxes.taxes, taxRounding: pickupTaxes.taxRounding })
+	await page.setContent(`<div class="cart_totals"><table>${summaryRows(pricing)}</table></div><table class="woocommerce-checkout-review-order-table">${summaryRows(pricing, false, false)}</table>`)
+	await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)
+	await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
+})
+
+test('cart accepts existing coupon controls but still rejects a stale tier', async ({ page }, info) => {
 	const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
 	await page.setContent(`<div class="cart_totals"><table>${summaryRows(expected, true)}</table></div>`)
-	await expect(cart.verifyDiscountPricing(expected)).rejects.toThrow()
+	await cart.verifyDiscountPricing(expected)
 	await page.setContent(`<div class="cart_totals"><table>${summaryRows({ ...expected, discountLines: [{ ...expected.discountLines[0], label: 'Eighths 5+', amount: 2100 }] })}</table></div>`)
 	await expect(cart.verifyDiscountPricing(expected)).rejects.toThrow()
 })
@@ -59,6 +88,52 @@ test('quantity edits submit the shared cart form and product removal targets one
 	await cart.removeProduct(101)
 	await cart.verifyEmpty()
 })
+
+for (const mode of ['stale-header', 'wrong-product', 'unchanged-quantity'] as const) {
+	test(`selected products require the actual cart ID and quantity: ${mode}`, async ({ browser }, info) => {
+		const context = await browser.newContext({ baseURL: 'https://cart-confirm.test' })
+		try {
+			const page = await context.newPage()
+			const quantities = new Map<number, number>(mode === 'wrong-product' ? [] : [[101, 2]])
+			let addRequests = 0
+			await page.route('https://cart-confirm.test/**', async route => {
+				const path = new URL(route.request().url()).pathname
+				if (path === '/add') {
+					addRequests++
+					const id = mode === 'stale-header' ? 101 : 202
+					quantities.set(id, (quantities.get(id) || 0) + 1)
+					await route.fulfill({ json: { count: [...quantities.values()].reduce((sum, qty) => sum + qty, 0) } })
+				} else if (path === '/cart/') {
+					await route.fulfill({ contentType: 'text/html', body: `<h1>Cart</h1><form class="woocommerce-cart-form"><table>
+						${[...quantities].map(([id, qty]) => `<tr class="cart_item"><td><a data-product_id="${id}">Same visible name</a></td><td><input class="qty" value="${qty}"></td></tr>`).join('')}
+						</table></form>` })
+				} else {
+					await route.fulfill({ contentType: 'text/html', body: `<a href="/cart/">My Bag (${[...quantities.values()].reduce((sum, qty) => sum + qty, 0)})</a>
+						<ul>${[101, 202].map(id => `<li class="product"><h2>Same visible name</h2><span class="price">$39.00</span><button class="add_to_cart_button" data-product_id="${id}" data-product_sku="sku-${id}">Add</button></li>`).join('')}</ul>
+						<script>document.querySelectorAll('button').forEach(button => button.onclick = async () => {
+							const result = await (await fetch('/add', { method: 'POST' })).json();
+							if (${JSON.stringify(mode)} !== 'stale-header') document.querySelector('a').textContent = 'My Bag (' + result.count + ')';
+						});</script>` })
+				}
+			})
+			await page.goto('/')
+			const shop = new ShopPage(page, 'chromium', info)
+			const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+			const candidate = (await shop.getAddableStorefrontProducts()).find(product => product.productId === 101)!
+			const selected = [{ ...candidate, productId: 101, categoryIds: [331], unitPrice: '39.00' }]
+			if (mode === 'stale-header') {
+				await shop.addSelectedProducts(selected, cart)
+				await cart.verifyProductQuantity(101, 3)
+			} else {
+				await expect(shop.addSelectedProducts(selected, cart)).rejects.toThrow(
+					mode === 'wrong-product' ? 'Cart must contain product ID 101' : 'toHaveValue')
+			}
+			expect(addRequests, 'An ambiguous UI signal must never trigger a duplicate add').toBe(1)
+		} finally {
+			await context.close()
+		}
+	})
+}
 
 test('category discovery paginates and matches only addable menu products', async ({ page }, info) => {
 	const origin = 'https://bulk-catalogue.test'
@@ -91,6 +166,33 @@ test('thank-you total is checked regardless of legacy tax bypass', async ({ page
 	expect(await new OrderReceivedPage(page).verifyDiscountedTotal(expected)).toBe('123')
 })
 
+for (const hasNotes of [false, true]) {
+	test(`bulk checkout submits with ${hasNotes ? 'an available' : 'no'} optional notes field`, async ({ page }) => {
+		await page.route('https://bulk-order.test/checkout/', route => route.fulfill({ contentType: 'text/html', body: `
+			${hasNotes ? '<textarea name="order_comments"></textarea>' : ''}
+			<table class="woocommerce-checkout-review-order-table">${summaryRows(expected, true, false)}</table>
+			<div id="svntnAcuityDayChoices"><button class="acuityChoice">Tuesday</button></div>
+			<div id="svntnAcuityTimeChoices" hidden><button class="acuityChoice">9 AM</button></div>
+			<label><input type="checkbox">I understand my reserved items will be released if not picked up</label>
+			<button id="place_order" disabled>Place your order</button>
+			<script>
+			const day = document.querySelector('#svntnAcuityDayChoices button');
+			const time = document.querySelector('#svntnAcuityTimeChoices button');
+			const commit = document.querySelector('input');
+			const submit = document.querySelector('#place_order');
+			day.onclick = () => { document.querySelector('#svntnAcuityTimeChoices').hidden = false; };
+			time.onclick = () => { document.body.dataset.slot = 'selected'; };
+			commit.onchange = () => { submit.disabled = !(commit.checked && document.body.dataset.slot === 'selected'); };
+			submit.onclick = () => { document.body.dataset.submitted = 'true'; };
+			</script>` }))
+		await page.goto('https://bulk-order.test/checkout/')
+		const note = 'bulk-regression:Doinks Tiers:Desktop Chrome:fixture'
+		await new CheckoutPage(page, null!).submitDiscountOrder(expected, note)
+		await expect(page.locator('body')).toHaveAttribute('data-submitted', 'true')
+		if (hasNotes) await expect(page.locator('[name="order_comments"]')).toHaveValue(note)
+	})
+}
+
 test('currency parsing rejects missing amounts and handles thousands/discount signs', () => {
 	expect(moneyInCents('-$1,234.56')).toBe(123456)
 	expect(() => moneyInCents('not available')).toThrow()
@@ -108,16 +210,16 @@ const suppliedCart = [
 ]
 const suppliedExpected = expectedCart(suppliedCart)
 
-test('supplied cart tbody and checkout tfoot reconcile once Remove links are absent', async ({ page }, info) => {
+test('supplied cart tbody and checkout tfoot reconcile without coupon controls', async ({ page }, info) => {
 	await page.setContent(`<div class="cart_totals"><table>${suppliedSummaryMarkup(false, false)}</table></div><table class="woocommerce-checkout-review-order-table">${suppliedSummaryMarkup(true, false)}</table>`)
 	await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(suppliedExpected)
 	await new CheckoutPage(page, null!).verifyDiscountPricing(suppliedExpected)
 })
 
-test('the supplied Remove links fail the specific automatic-coupon control assertion', async ({ page }, info) => {
+test('supplied cart and checkout pricing reconcile with existing coupon controls', async ({ page }, info) => {
 	await page.setContent(`<div class="cart_totals"><table>${suppliedSummaryMarkup()}</table></div><table class="woocommerce-checkout-review-order-table">${suppliedSummaryMarkup(true)}</table>`)
-	await expect(new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(suppliedExpected)).rejects.toThrow('Automatic discount rows must not expose coupon removal controls')
-	await expect(new CheckoutPage(page, null!).verifyDiscountPricing(suppliedExpected)).rejects.toThrow('Automatic discount rows must not expose coupon removal controls')
+	await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(suppliedExpected)
+	await new CheckoutPage(page, null!).verifyDiscountPricing(suppliedExpected)
 })
 
 test('shop offer chips use whole-dollar amounts and never become product prices', async ({ page }, info) => {
@@ -131,10 +233,14 @@ test('shop offer chips use whole-dollar amounts and never become product prices'
 	await expect(shop.verifyProductPricingOffers(product, [{ min: 3, amountPerUnit: '3.00' }, { min: 5, amountPerUnit: '5.00' }])).rejects.toThrow('discount per unit at 3+')
 })
 
-test('category pricing offers belong to the adjacent product list', async ({ page }, info) => {
+for (const wrapped of [false, true]) test(`category pricing offers belong to the ${wrapped ? 'wrapped' : 'unwrapped'} product list`, async ({ page }, info) => {
 	const card = (id: number) => `<li class="product"><h2>Product ${id}</h2><div class="price"><span class="amount">$39.00</span></div><button class="add_to_cart_button" data-product_id="${id}">Add</button></li>`
+	// The live shop wraps ul.products in this container after rendering.
+	const list = (id: number) => wrapped
+		? `<div class="products-container standard-list"><ul class="products">${card(id)}</ul></div>`
+		: `<ul class="products">${card(id)}</ul>`
 	const cheaperOffers = shopOffersMarkup.replace('$</span>5', '$</span>3').replace('$</span>7', '$</span>5')
-	await page.setContent(`<h1>Gummis</h1>${cheaperOffers}<ul>${card(101)}</ul><h1>Vapes</h1>${shopOffersMarkup}<ul>${card(202)}</ul><h1>No offers</h1><ul>${card(303)}</ul>`)
+	await page.setContent(`<h1>Gummis</h1>${cheaperOffers}${list(101)}<h1>Vapes</h1>${shopOffersMarkup}${list(202)}<h1>No offers</h1>${list(303)}`)
 	const shop = new ShopPage(page, 'chromium', info)
 	const products = (await shop.getAddableStorefrontProducts()).map(candidate => ({ ...candidate, productId: candidate.productId!, categoryIds: [], unitPrice: '39.00' }))
 	const vapeTiers = [{ min: 3, amountPerUnit: '5.00' }, { min: 5, amountPerUnit: '7.00' }]

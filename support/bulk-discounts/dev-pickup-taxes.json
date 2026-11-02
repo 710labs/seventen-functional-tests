@@ -1,0 +1,15 @@
+{
+  "source": {
+    "environment": "https://thelist-dev.710labs.com",
+    "fulfillment": "Pickup",
+    "store": "Spaceflyt Sandbox",
+    "verifiedDate": "2026-11-01",
+    "provenance": "Current default pickup store, confirmed by rendered cart and authenticated Store API tax_lines rates. $120.00 subtotal: $13.20 gross, $19.98 excise, $14.55 sales, $167.73 total. J5 discounted product lines $102 and $33: gross $14.85, excise $22.47, sales $16.37, total $188.69. User approved matching current dev rates; these are not statewide or billing-ZIP rates."
+  },
+  "taxRounding": "line",
+  "taxes": [
+    {"key": "gross", "rateBasisPoints": 1100, "base": ["discountedSubtotal"]},
+    {"key": "excise", "rateBasisPoints": 1500, "base": ["discountedSubtotal", "gross"]},
+    {"key": "sales", "rateBasisPoints": 950, "base": ["discountedSubtotal", "gross", "excise"]}
+  ]
+}

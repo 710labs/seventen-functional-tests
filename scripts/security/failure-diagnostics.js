@@ -71,15 +71,24 @@ function sanitizeFailure(value) {
 
 function failureFor(result) {
 	// Preserve a useful user step and the deepest failed operation underneath it.
-	function failedBranch(steps) {
+	// expect.poll and caught assertions can leave failed child steps in successful
+	// setup. Match the actual test error before falling back to a failed step.
+	const actualError = result?.error || result?.errors?.[0]
+	const actualMessages = new Set([actualError, ...(result?.errors || [])]
+		.map(error => error?.message).filter(Boolean))
+	function failedBranch(steps, matchActualError) {
 		for (const step of steps || []) {
-			const child = failedBranch(step.steps)
-			if (child.length || step.error) return [step, ...child]
+			const child = failedBranch(step.steps, matchActualError)
+			const matches = step.error && (!matchActualError ||
+				actualMessages.has(step.error.message))
+			if (child.length || matches) return [step, ...child]
 		}
 		return []
 	}
-	const branch = failedBranch(result?.steps)
-	const error = result?.error || result?.errors?.[0] || branch.at(-1)?.error
+	const matchedBranch = actualError ? failedBranch(result?.steps, true) : []
+	const failedRoots = actualError ? result?.steps?.filter(step => step.error) : result?.steps
+	const branch = matchedBranch.length ? matchedBranch : failedBranch(failedRoots, false)
+	const error = actualError || branch.at(-1)?.error
 	const location = [...branch].reverse().map(step => step.location).find(loc => loc && sources().has(path.relative(root, loc.file).split(path.sep).join('/')))
 	return sanitizeFailure({
 		category: categoryFor(error, result?.status), phase: phaseFor(branch),

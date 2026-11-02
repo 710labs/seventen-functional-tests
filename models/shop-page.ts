@@ -2,6 +2,7 @@ import test, { Browser, expect, Locator, Page, TestInfo } from '@playwright/test
 require('dotenv').config({ path: require('find-config')('.env') })
 import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 import { moneyInCents } from './components/order-pricing'
+import type { CartPage } from './cart-page'
 
 type GoToCartOptions = {
 	requireItems?: boolean
@@ -956,9 +957,12 @@ export class ShopPage {
 	private async tryAddStorefrontProduct(
 		candidate: StorefrontProductCandidate,
 		usage: TestUsageType,
+		verifyInCart?: () => Promise<void>,
 	): Promise<AddToCartResult> {
 		const products = this.getAddableProductCards(usage)
-		const productCard = products.nth(candidate.menuIndex)
+		const productCard = candidate.productId
+			? products.filter({ has: this.page.locator(`[data-product_id="${candidate.productId}"], [data-id="${candidate.productId}"]`) }).first()
+			: products.nth(candidate.menuIndex)
 
 		if (!(await productCard.isVisible().catch(() => false))) {
 			return { added: false, errorText: `Product "${candidate.name}" is no longer visible` }
@@ -972,21 +976,29 @@ export class ShopPage {
 
 		const previousCartCount = await this.getStorefrontCartItemCount()
 		await addToCartButton.scrollIntoViewIfNeeded()
-		await addToCartButton.click({ force: true })
+		await addToCartButton.click()
 
+		let result: AddToCartResult
 		try {
 			await this.acceptCartConflictIfPresent()
-			return await this.waitForAddToCartResult(candidate.name, previousCartCount)
+			result = await this.waitForAddToCartResult(candidate.name, previousCartCount)
 		} finally {
 			await this.closeCartDrawerIfPresent()
 		}
+		if (verifyInCart) {
+			// Counter/drawer changes are readiness hints. The exact cart quantity
+			// decides success, including when those storefront hints never refresh.
+			await verifyInCart()
+			return { added: true, errorText: null }
+		}
+		return result
 	}
 
 	async openStorefrontForFulfillment(fulfillment: ShopFulfillment) {
 		await test.step(`Open storefront for ${fulfillment}`, async () => {
-			await this.page.goto('/')
-			await this.page.waitForLoadState('networkidle').catch(() => {})
+			await this.page.goto('/', { waitUntil: 'domcontentloaded' })
 			await this.ensureFulfillmentSelected(fulfillment)
+			await expect(this.page.locator('li.product').first()).toBeVisible()
 		})
 	}
 
@@ -1032,9 +1044,13 @@ export class ShopPage {
 		})
 	}
 
-	async addStorefrontProduct(candidate: StorefrontProductCandidate, usage: TestUsageType = 'recreational') {
+	async addStorefrontProduct(
+		candidate: StorefrontProductCandidate,
+		usage: TestUsageType = 'recreational',
+		verifyInCart?: () => Promise<void>,
+	) {
 		await test.step(`Add storefront product "${candidate.name}"`, async () => {
-			const result = await this.tryAddStorefrontProduct(candidate, usage)
+			const result = await this.tryAddStorefrontProduct(candidate, usage, verifyInCart)
 
 			if (!result.added) {
 				throw new Error(result.errorText || `Unable to add "${candidate.name}" to the cart`)
@@ -1080,14 +1096,23 @@ export class ShopPage {
 		})
 	}
 
-	async addSelectedProducts(selected: CategoryProductCandidate[], usage: TestUsageType = 'recreational') {
+	async addSelectedProducts(selected: CategoryProductCandidate[], cart: CartPage, usage: TestUsageType = 'recreational') {
+		const storefrontUrl = this.page.url()
+		await this.goToCart()
+		const quantities = new Map<number, number>()
+		for (const product of selected) quantities.set(product.productId, await cart.getProductQuantity(product.productId))
 		for (const product of selected) {
+			await this.page.goto(storefrontUrl, { waitUntil: 'domcontentloaded' })
 			const current = (await this.getAddableStorefrontProducts(usage)).find(candidate =>
 				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
 			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
-			await this.addStorefrontProduct(current, usage)
+			const expectedQuantity = quantities.get(product.productId)! + 1
+			await this.addStorefrontProduct(current, usage, async () => {
+				await this.goToCart()
+				await cart.verifyProductQuantity(product.productId, expectedQuantity)
+			})
+			quantities.set(product.productId, expectedQuantity)
 		}
-		await this.goToCart({ requireItems: true })
 	}
 
 	async verifyProductPricingOffers(
@@ -1101,11 +1126,13 @@ export class ShopPage {
 			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
 			const card = this.getAddableProductCards(usage).nth(current.menuIndex)
 			const cardOffers = card.locator('.svntn-wdr-offers')
-			// Category offers precede that category's product list on the shop page.
-			// Only inspect the adjacent sibling, so another category cannot supply its tiers.
-			const offers = await cardOffers.count() ? cardOffers : card
-				.locator('xpath=ancestor::ul[1]/preceding-sibling::*[1]')
-				.locator('xpath=self::*[contains(concat(" ", normalize-space(@class), " "), " svntn-wdr-offers ")]')
+			const productList = card.locator('xpath=ancestor::ul[1]')
+			// The rendered shop wraps ul.products; offers sit beside the wrapper.
+			const wrapper = productList.locator('xpath=parent::*[contains(concat(" ", normalize-space(@class), " "), " products-container ")]')
+			const categoryList = await wrapper.count() ? wrapper : productList
+			// Stay adjacent to this category; never borrow another category's offers.
+			const offers = await cardOffers.count() ? cardOffers : categoryList
+				.locator('xpath=preceding-sibling::*[1][contains(concat(" ", normalize-space(@class), " "), " svntn-wdr-offers ")]')
 			await expect(offers).toHaveCount(1)
 			await expect(offers).toBeVisible()
 			await expect(offers.locator('.svntn-wdr-offers__label')).toHaveText('List member pricing', { ignoreCase: true })

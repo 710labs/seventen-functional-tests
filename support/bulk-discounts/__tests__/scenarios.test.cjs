@@ -54,12 +54,20 @@ test('runtime prices drive expectations; product order does not affect reproduci
 	}
 })
 
-test('J2 resolves two different eighth prices, never silently weakens coverage', () => {
+test('J2 pools two distinct $39 eighth SKUs into the five-unit tier', () => {
 	const plan = goldenPlans.find(plan => plan.id === 'J2')
-	const resolved = resolvePlan(plan, catalogue)
+	const samePriceCatalogue = catalogue.map(product => product.categoryIds.includes(331)
+		? { ...product, unitPrice: '39.00' } : product)
+	const resolved = resolvePlan(plan, samePriceCatalogue)
 	const eighths = resolved.requests.filter(line => line.categoryIds.includes(331))
-	assert.notEqual(eighths[0].unitPrice, eighths[1].unitPrice)
-	assert.throws(() => resolvePlan(plan, catalogue.map(product => ({ ...product, unitPrice: '39.00' }))), /Inventory coverage gap/)
+	assert.equal(eighths.length, 2)
+	assert.notEqual(eighths[0].productId, eighths[1].productId)
+	assert.deepEqual(eighths.map(line => [line.qty, line.unitPrice]), [[3, '39.00'], [2, '39.00']])
+	const expected = expectedCart(resolved.expectedLines)
+	assert.equal(expected.discountLines.length, 5)
+	assert.equal(expected.discountLines.find(line => line.categoryId === 331).amount, 3500)
+	assert.throws(() => resolvePlan(plan, samePriceCatalogue.filter(product =>
+		!product.categoryIds.includes(331) || product.productId === eighths[0].productId)), /Inventory coverage gap/)
 })
 
 test('missing stock, BOGO category, and duplicate category membership are visible gaps', () => {

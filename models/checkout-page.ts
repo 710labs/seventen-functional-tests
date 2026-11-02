@@ -495,7 +495,14 @@ export class CheckoutPage {
 	}
 
 	async submitDiscountOrder(expected: ExpectedOrderPricing, testNote: string) {
-		await this.comments.fill(testNote)
+		await test.step('Verify checkout opened before preparing the order', async () => {
+			await expect(this.page, 'Cart must navigate to checkout before order submission')
+				.toHaveURL(/\/checkout\/?(?:[?#].*)?$/)
+			await expect(this.page.locator('.woocommerce-checkout-review-order-table')).toBeVisible()
+		})
+		// The current dev checkout omits optional order notes. The scenario account
+		// and report reference identify the order even when this field is absent.
+		if (await this.comments.isVisible()) await this.comments.fill(testNote)
 		await this.selectSlot()
 		await this.verifyDiscountPricing(expected)
 		await this.submitOrder()

@@ -4,12 +4,13 @@ const { cents } = require('./oracle.cjs')
 const quantities = [0, 1, 2, 3, 4, 5, 6, 10]
 const line = (categoryId, skuIndex, qty, extra = {}) => ({ categoryId, skuIndex, qty, ...extra })
 
-// Prices/SKUs are discovered at runtime. These are the FINAL workbook carts.
+// Prices/SKUs are discovered at runtime. Final workbook carts with user-approved
+// J2 adjustment: distinct eighth SKUs may both cost $39.
 // J6 is a catalogue sweep, generated separately, rather than a fixed cart.
 const goldenPlans = [
 	{ id: 'J0', user: 'plain', lines: [line(331, 0, 3), line(331, 1, 3)] },
 	{ id: 'J1', user: 'plain', lines: [line(331, 0, 2), line(331, 1, 1), line(323, 0, 2), line(324, 0, 1)] },
-	{ id: 'J2', user: 'plain', lines: [line(331, 0, 3), line(331, 1, 2, { differentPriceFrom: 0 }), line(323, 0, 5), line(327, 0, 3), line(324, 0, 5), line(326, 0, 3)] },
+	{ id: 'J2', user: 'plain', lines: [line(331, 0, 3), line(331, 1, 2), line(323, 0, 5), line(327, 0, 3), line(324, 0, 5), line(326, 0, 3)] },
 	{ id: 'J3', user: 'vip', lines: [line(331, 0, 5), line(324, 0, 3)] },
 	{ id: 'J4', user: 'plain', lines: [line(331, 0, 2), line(331, 1, 2)] },
 	{ id: 'J5', user: 'plain', lines: [line(331, 0, 3), line(326, 0, 3)] },
@@ -77,15 +78,12 @@ function resolvePlan(plan, catalogue, rules = defaultRules) {
 			product.productId !== rules.bogo.productId && product.inStock !== false)
 			.sort((a, b) => cents(a.unitPrice) - cents(b.unitPrice) || a.productId - b.productId)
 		const used = new Set([...chosen.values()].map(product => product.productId))
-		const reference = request.differentPriceFrom === undefined ? undefined : chosen.get(`${request.categoryId}:${request.differentPriceFrom}`)
-		if (request.differentPriceFrom !== undefined && !reference) throw new Error('Missing price comparison slot')
-		// Stable SKU slots let mutation sequences remove/re-add/swap the same IDs.
-		// Move a second price point into slot 1 when one is available.
-		const differentPriceIndex = candidates.findIndex(product => cents(product.unitPrice) !== cents(candidates[0].unitPrice))
-		if (differentPriceIndex > 1) candidates.splice(1, 0, candidates.splice(differentPriceIndex, 1)[0])
+		// Stable SKU slots preserve distinct products even when every price is equal.
 		const product = candidates[request.skuIndex]
-		if (!product || used.has(product.productId) || (reference && cents(product.unitPrice) === cents(reference.unitPrice))) {
-			throw new Error(`Inventory coverage gap for category ${request.categoryId}, slot ${request.skuIndex}`)
+		if (!product || used.has(product.productId)) {
+			const prices = [...new Set(candidates.map(candidate => cents(candidate.unitPrice)))].map(price => `$${(price / 100).toFixed(2)}`)
+			throw new Error(`Inventory coverage gap for category ${request.categoryId}, slot ${request.skuIndex} (${plan.id}): ` +
+				`${candidates.length} eligible products; available unit prices: ${prices.join(', ') || 'none'}.`)
 		}
 		chosen.set(key, product)
 		return { productId: product.productId, categoryIds: [...product.categoryIds], unitPrice: product.unitPrice, qty: request.qty, isFreeBogoUnit: false }

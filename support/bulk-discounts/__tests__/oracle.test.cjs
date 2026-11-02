@@ -46,13 +46,13 @@ test('J1: cross-SKU count with below-threshold categories unchanged', () => {
 	assert.equal(result.discountLines[0].categoryId, 331)
 })
 
-test('J2: five independent category lines and mixed-price allocation sum', () => {
-	const result = expectedCart([item(331, 3), item(331, 2, '45.00', 2), item(323, 5, '55.00', 3), item(327, 3, '60.00', 4), item(324, 5, '25.00', 5), item(326, 3, '20.00', 6)])
+test('J2: five independent category lines with two $39 eighth SKUs', () => {
+	const result = expectedCart([item(331, 3), item(331, 2, '39.00', 2), item(323, 5, '55.00', 3), item(327, 3, '60.00', 4), item(324, 5, '25.00', 5), item(326, 3, '20.00', 6)])
 	assert.equal(result.bulkTotal, 11900)
 	assert.equal(result.discountLines.length, 5)
 	assert.equal(result.discountLines.find(line => line.categoryId === 331).amount, 3500)
 	// The oracle intentionally makes no per-line allocation assertion.
-	assert.equal(result.subtotal, 84700)
+	assert.equal(result.subtotal, 83500)
 })
 
 test('provided cart labels and coupon keys identify badder and vapes separately', () => {

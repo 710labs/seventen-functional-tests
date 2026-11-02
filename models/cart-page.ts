@@ -52,6 +52,23 @@ export class CartPage {
 		})
 	}
 
+	async getProductQuantity(productId: number): Promise<number> {
+		const row = this.productRow(productId)
+		if (await row.count() === 0) return 0
+		await expect(row).toHaveCount(1)
+		const quantity = Number(await row.locator('input.qty').inputValue())
+		if (!Number.isSafeInteger(quantity) || quantity < 1) throw new Error(`Invalid cart quantity for product ${productId}`)
+		return quantity
+	}
+
+	async verifyProductQuantity(productId: number, quantity: number) {
+		await test.step(`Verify product ${productId} has ${quantity} units in the cart`, async () => {
+			const row = this.productRow(productId)
+			await expect(row, `Cart must contain product ID ${productId}`).toHaveCount(1)
+			await expect(row.locator('input.qty')).toHaveValue(String(quantity))
+		})
+	}
+
 	async setProductQuantity(productId: number, quantity: number) {
 		if (!Number.isSafeInteger(quantity) || quantity < 1) throw new Error('Quantity must be a positive integer')
 		await test.step(`Set cart product ${productId} quantity to ${quantity}`, async () => {
@@ -113,8 +130,7 @@ export class CartPage {
 			await expect(this.page.locator('.woocommerce-cart-form .cart_item')).toHaveCount(lines.length)
 			for (const line of lines) {
 				const row = this.productRow(line.productId)
-				await expect(row).toHaveCount(1)
-				await expect(row.locator('input.qty')).toHaveValue(String(line.qty))
+				await this.verifyProductQuantity(line.productId, line.qty)
 				expect(moneyInCents(await row.locator('.product-price .amount').first().innerText())).toBe(Math.round(Number(line.unitPrice) * 100))
 			}
 		})

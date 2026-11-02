@@ -25,6 +25,7 @@ function percentage(amount, basisPoints) {
 
 function validateRules(rules) {
 	if (rules.currency !== 'USD' || rules.minorUnit !== 2) throw new Error('Unsupported currency')
+	if (rules.taxRounding !== undefined && !['subtotal', 'line'].includes(rules.taxRounding)) throw new Error('Unsupported tax rounding')
 	const categories = new Set()
 	const ruleIds = new Set()
 	for (const rule of rules.bulkRules) {
@@ -54,6 +55,28 @@ function validateRules(rules) {
 		percentage(0, tax.rateBasisPoints)
 		knownBases.add(tax.key)
 	}
+}
+
+function lineTaxes(cart, discountLines, perCategoryQty, rules) {
+	const taxes = Object.fromEntries(rules.taxes.map(tax => [tax.key, 0]))
+	// Keep compound bases unrounded. Each basis-point multiplication can add
+	// four decimal places; BigInt preserves them without floating-point drift.
+	const precision = 10000n ** BigInt(rules.taxes.length)
+	for (const line of cart.filter(line => !line.isFreeBogoUnit)) {
+		const discount = discountLines.find(discount => line.categoryIds.includes(discount.categoryId))
+		const bulk = discount ? discount.amount / perCategoryQty[discount.categoryId] * line.qty : 0
+		const net = integer(cents(line.unitPrice) * line.qty - bulk, 'discounted line subtotal')
+		const bases = { discountedSubtotal: BigInt(net) * precision }
+		for (const tax of rules.taxes) {
+			const raw = tax.base.reduce((sum, key) => sum + bases[key], 0n) * BigInt(tax.rateBasisPoints) / 10000n
+			bases[tax.key] = raw
+			// WC_Tax computes with cents at 4DP, then WC_Cart_Totals rounds
+			// each line's tax to whole cents before summing the tax rows.
+			const internal = (raw * 10000n + precision / 2n) / precision
+			taxes[tax.key] += integer(Number((internal + 5000n) / 10000n), 'line tax')
+		}
+	}
+	return taxes
 }
 
 function expectedCart(cart, user = 'plain', rules = defaultRules) {
@@ -105,11 +128,18 @@ function expectedCart(cart, user = 'plain', rules = defaultRules) {
 	if (accountTotal) discountLines.push({ kind: 'account', ruleId: accountRule.id, label: accountRule.label, amount: accountTotal })
 	const discountedSubtotal = subtotal - bulkTotal - accountTotal
 	const bases = { discountedSubtotal }
-	const taxes = {}
-	for (const tax of rules.taxes) {
-		const amount = percentage(tax.base.reduce((sum, key) => sum + bases[key], 0), tax.rateBasisPoints)
-		taxes[tax.key] = amount
-		bases[tax.key] = amount
+	let taxes = {}
+	if (rules.taxRounding === 'line') {
+		// Current live cases are plain accounts. Do not invent percentage-coupon
+		// allocations for future VIP browser coverage; workbook mode still supports it.
+		if (accountTotal) throw new Error('Per-line account discount allocation is not configured')
+		taxes = lineTaxes(cart, discountLines, perCategoryQty, rules)
+	} else {
+		for (const tax of rules.taxes) {
+			const amount = percentage(tax.base.reduce((sum, key) => sum + bases[key], 0), tax.rateBasisPoints)
+			taxes[tax.key] = amount
+			bases[tax.key] = amount
+		}
 	}
 	return {
 		subtotal, discountLines, bulkTotal, accountTotal, discountedSubtotal, ...taxes,
