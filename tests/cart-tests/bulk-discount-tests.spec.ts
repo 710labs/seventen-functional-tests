@@ -12,7 +12,8 @@ import { OrderReceivedPage } from '../../models/order-recieved-page'
 
 const rules = require('../../support/bulk-discounts/rules.json')
 const { expectedCart: calculateExpectedCart } = require('../../support/bulk-discounts/oracle.cjs')
-const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+const { rulesForEnvironment, pickupStoreForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+const { bindCategoryIds, remapPlanCategories } = require('../../support/bulk-discounts/categories.cjs')
 const { resolvePlan, goldenPlans } = require('../../support/bulk-discounts/scenarios.cjs')
 const { assertBulkBaseUrl, assertBulkNavigationUrl } = require('../../support/bulk-discounts/environment.cjs')
 
@@ -24,6 +25,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 	// Retrying an order test could create a second order after a confirmation failure.
 	test.describe.configure({ retries: 0 })
 	let liveRules: ReturnType<typeof rulesForEnvironment>
+	let pickupStore: string
 	const expectedCart = (lines: CartLine[], user = 'plain') => calculateExpectedCart(lines, user, liveRules)
 	let shop: ShopPage
 	let cart: CartPage
@@ -44,6 +46,8 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		test.skip(testInfo.config.metadata.bulkDiscounts !== true, 'Bulk rules are enabled only in the dev and staging configurations')
 		const targetOrigin = assertBulkBaseUrl(baseURL)
 		liveRules = rulesForEnvironment(targetOrigin)
+		pickupStore = pickupStoreForEnvironment(targetOrigin)
+		testInfo.annotations.push({ type: 'pickup-store', description: pickupStore })
 		testInfo.annotations.push({ type: 'tax-profile', description: `${targetOrigin}: ` +
 			liveRules.taxes.map(tax => `${tax.key} ${tax.rateBasisPoints / 100}%`).join(', ') })
 		await page.context().route('**/*', async route => {
@@ -94,13 +98,23 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 	})
 
 	async function catalogue(): Promise<CategoryProductCandidate[]> {
-		await shop.openStorefrontForFulfillment('Pickup')
-		const products = await shop.getCategoryProducts(rules.bulkRules.map(rule => rule.categoryId))
+		await shop.openStorefrontForFulfillment('Pickup', pickupStore)
+		const categoryIds = await shop.getCategoryIdsBySlug(rules.bulkRules.map(rule => rule.categorySlug))
+		liveRules = bindCategoryIds(liveRules, categoryIds)
+		test.info().annotations.push({ type: 'category-map', description: JSON.stringify(categoryIds) })
+		test.info().annotations.push({ type: 'bulk-rules', description: liveRules.bulkRules
+			.map(rule => `${rule.categoryName}: ${rule.enabled === false ? 'no bulk discount' : 'enabled'}`).join(', ') })
+		const products = await shop.getCategoryProducts(liveRules.bulkRules.map(rule => rule.categoryId))
 		for (const product of products) {
-			expect(rules.bulkRules.filter(rule => product.categoryIds.includes(rule.categoryId)),
+			expect(liveRules.bulkRules.filter(rule => product.categoryIds.includes(rule.categoryId)),
 				`Product ${product.productId} must not belong to multiple bulk categories`).toHaveLength(1)
 		}
 		return products
+	}
+
+	function scenarioLines(id: string, products: CategoryProductCandidate[]): CartLine[] {
+		const plan = remapPlanCategories(goldenPlans.find(plan => plan.id === id), rules, liveRules)
+		return resolvePlan(plan, products, liveRules).requests
 	}
 
 	async function buildCart(lines: CartLine[], products: CategoryProductCandidate[]) {
@@ -138,7 +152,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 					.find(product => product.productId !== rules.bogo.productId &&
 						product.categoryIds.every(id => !scenarioCategories.has(id)))
 				if (!product) throw new Error('Need a companion product outside the scenario categories to meet the pickup minimum')
-				await shop.openStorefrontForFulfillment('Pickup')
+				await shop.openStorefrontForFulfillment('Pickup', pickupStore)
 				await shop.addSelectedProducts([product], cart)
 				companion = { productId: product.productId, categoryIds: product.categoryIds,
 					unitPrice: product.unitPrice, qty: 1, isFreeBogoUnit: false }
@@ -163,8 +177,9 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		test(`${rule.categoryName}: 2 → 3 → 4 → 5 → 6 → 4 → 5 units and order placement`,
 			{ annotation: { type: 'bulk-case', description: `${rule.categoryName} Tiers` } }, async () => {
 			const products = await catalogue()
-			const product = products.find(product => product.categoryIds.includes(rule.categoryId) && product.productId !== rules.bogo.productId)
-			expect(product, `Need an addable product in category ${rule.categoryId}`).toBeTruthy()
+			const categoryId = liveRules.bulkRules.find(live => live.categorySlug === rule.categorySlug).categoryId
+			const product = products.find(product => product.categoryIds.includes(categoryId) && product.productId !== rules.bogo.productId)
+			expect(product, `Need an addable product in category ${rule.categorySlug} (${categoryId})`).toBeTruthy()
 			const line: CartLine = { productId: product.productId, categoryIds: product.categoryIds, unitPrice: product.unitPrice, qty: 2, isFreeBogoUnit: false }
 			await buildCart([line], products)
 			for (const quantity of [2, 3, 4, 5, 6, 4, 5]) {
@@ -181,7 +196,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 	test('J1: cross-SKU tiers, removal and re-addition through order placement',
 		{ annotation: { type: 'bulk-case', description: 'J1 Cross SKU' } }, async () => {
 		const products = await catalogue()
-		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J1'), products).requests
+		const lines: CartLine[] = scenarioLines('J1', products)
 		await buildCart(lines, products)
 		await verifyCart(lines)
 		const secondEighth = lines[1]
@@ -192,16 +207,16 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		}
 		await cart.removeProduct(secondEighth.productId)
 		await verifyCart(lines.filter(line => line !== secondEighth))
-		await shop.openStorefrontForFulfillment('Pickup')
+		await shop.openStorefrontForFulfillment('Pickup', pickupStore)
 		await shop.addSelectedProducts([products.find(product => product.productId === secondEighth.productId)!], cart)
 		await verifyCart(lines)
 		await submitScenarioOrder(lines, products)
 	})
 
-	test('J2: all five bulk rules and distinct eighth SKUs survive order placement',
+	test('J2: all configured bulk rules and distinct eighth SKUs survive order placement',
 		{ annotation: { type: 'bulk-case', description: 'J2 All Categories' } }, async () => {
 		const products = await catalogue()
-		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J2'), products).requests
+		const lines: CartLine[] = scenarioLines('J2', products)
 		await buildCart(lines, products)
 		await verifyCart(lines)
 		await submitScenarioOrder(lines, products)
@@ -212,7 +227,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		if (!cleanupUser) throw new Error('Fresh registration did not provide test credentials')
 		const user = cleanupUser
 		const products = await catalogue()
-		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J5'), products).requests
+		const lines: CartLine[] = scenarioLines('J5', products)
 		await buildCart(lines, products)
 		await verifyCart(lines)
 		await account.logout()
@@ -227,7 +242,7 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 	test('J5: freshly registered user receives bulk pricing on their first order',
 		{ annotation: { type: 'bulk-case', description: 'J5 First Order' } }, async () => {
 		const products = await catalogue()
-		const lines: CartLine[] = resolvePlan(goldenPlans.find(plan => plan.id === 'J5'), products).requests
+		const lines: CartLine[] = scenarioLines('J5', products)
 		await buildCart(lines, products)
 		await verifyCart(lines)
 		await submitScenarioOrder(lines, products)

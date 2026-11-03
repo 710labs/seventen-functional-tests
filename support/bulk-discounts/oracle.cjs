@@ -29,6 +29,7 @@ function validateRules(rules) {
 	const categories = new Set()
 	const ruleIds = new Set()
 	for (const rule of rules.bulkRules) {
+		if (rule.enabled !== undefined && typeof rule.enabled !== 'boolean') throw new Error('Invalid bulk rule enabled flag')
 		integer(rule.id, 'rule id')
 		integer(rule.categoryId, 'category id')
 		if (categories.has(rule.categoryId) || ruleIds.has(rule.id)) throw new Error('Duplicate bulk rule')
@@ -109,6 +110,7 @@ function expectedCart(cart, user = 'plain', rules = defaultRules) {
 
 	const discountLines = []
 	for (const rule of rules.bulkRules) {
+		if (rule.enabled === false) continue
 		const qty = perCategoryQty[rule.categoryId]
 		const tier = rule.tiers.find(tier => qty >= tier.min && qty <= tier.max)
 		if (!tier) continue

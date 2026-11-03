@@ -1,5 +1,13 @@
 # Bulk discounts in the existing E2E suite
 
+Latest Stage verification: all 18 scenarios have a passing result across focused
+reruns, with confirmed orders and retained videos. This includes the corrected
+four-category Stage policy and the final mobile first-order rerun with explicit
+pickup-store verification. Local validation also passed 107 Node tests and 26
+browser regression tests, including focused rechecks. The ignored local evidence
+index is `output/playwright/stage-bulk-verification.md`; source reports preserve
+intermediate failures rather than presenting these reruns as one uninterrupted run.
+
 Bulk tests live in `tests/cart-tests/bulk-discount-tests.spec.ts`. They import `test`
 from `options.ts`, use the existing `qaClient`, and run with the existing dev and staging
 configuration, desktop/mobile projects, workflow, and Slack/health/HTML/video reporters.
@@ -56,13 +64,47 @@ Stage smoke-only workflows do not run this full suite.
 
 New methods extend those same page objects. ShopPage matches paginated Store API category
 metadata to addable menu products and delegates selected-product additions to its existing
-add method. Selected-product additions identify the Add button by product ID, use
+add method. `getCategoryIdsBySlug` resolves the current environment's category IDs by
+exact slug, with pagination and explicit failures for missing/ambiguous categories.
+The suite remaps both pricing rules and journey plans before selecting products;
+neither shop section order nor Dev's numeric category IDs determine Stage selection.
+Reports record the resolved mapping in a `category-map` annotation.
+
+Bulk storefront visits also pass the tax profile's pickup-store name to the shared
+`openStorefrontForFulfillment` method: Spaceflyt Sandbox on Dev and March and Ash Mill
+Valley on Stage. If the current header points to a different partner, the POM opens
+the fulfillment modal, verifies its address-resolved pickup store, and uses the existing
+Pickup/Submit flow to persist it. The store heading is informational and is not clicked.
+An unavailable/mismatched store fails explicitly. This prevents a stale Spaceflyt selection
+on Stage (observed at 10% gross) from being tested against March and Ash's 8% gross profile.
+Reports record the intended store in a `pickup-store` annotation.
+
+| Category | Slug | Dev ID | Stage ID (November 2, 2026) |
+| --- | --- | ---: | ---: |
+| Vapes | live-rosin-vapes | 323 | 319 |
+| Badder | live-rosin-badder | 327 | 312 |
+| Gummis | gummis-2 | 324 | 323 |
+| Eighths | eighths | 331 | 325 |
+| Doinks | doinks | 326 | 320 |
+
+These IDs document the observed catalogue; browser tests resolve them at runtime.
+Stage also uses different coupon identifiers: `live-rosin-vapes` and
+`live-rosin-badder`, versus Dev's `live-rosin-vapes-bulk-discount` and `live-rosin`.
+`stage-rule-metadata.json` records these observed differences. The selected environment
+profile supplies the coupon identifiers while retaining the shared business labels and tiers.
+The user confirmed Stage enables only Eighths, Gummis, Vapes, and Badder: its Doinks
+rule is explicitly disabled. All 18 tests remain present. Stage's Doinks quantity
+scenario verifies full-price lines with no discount badge or coupon; J2 and J5 keep
+Doinks in their carts and verify that only enabled categories receive discounts.
+Dev retains both Doinks tiers. Reports record this distinction in `bulk-rules` annotations.
+Selected-product additions identify the Add button by product ID, use
 a normal actionable click, and visit the cart after every addition. The cart POM
 checks that exact product ID and an increment from its pre-add quantity. Header
 counts and drawer text are readiness hints, not proof of a selected product being
 added. A stale hint never triggers a duplicate click. CartPage owns quantity edits,
 removal, product/quantity checks and cleanup
-verification. Cart and checkout share `models/components/order-pricing.ts` for coupon
+verification. Cleanup waits for each product row to disappear and the cart loading
+overlay to clear before selecting the next Remove link. Cart and checkout share `models/components/order-pricing.ts` for coupon
 labels/amounts, subtotal, all three taxes and total. Coupon Remove controls are
 ignored: neither their presence nor their behavior is tested.
 OrderReceivedPage verifies the confirmed discounted total. The E2E specs have no UI selectors.
@@ -93,7 +135,8 @@ after a confirmation failure. These cases do not modify stock, menus, or global 
   order submission and confirmation total.
 - J1: 2+1 eighths plus below-threshold vapes/gummy; 3→5→3→2→3 via removal/re-addition;
   category isolation, checkout summary, order submission and confirmation total.
-- J2: all five discounts, two distinct eighth SKUs (currently both $39), checkout and order confirmation.
+- J2: all configured discounts (five on Dev, four on Stage), two distinct eighth SKUs
+  (currently both $39), checkout and order confirmation; Stage Doinks stay full price.
 - J5: newly registered user logout/login persistence and freshly registered user's first order,
   using the suite's existing desktop and mobile projects.
 
@@ -133,7 +176,8 @@ labels and BOGO category still need full dev verification.
 Live bulk tests use `support/bulk-discounts/tax-profiles.cjs` to select expectations
 by the exact configured environment URL. Each test records its selected rates in a
 `tax-profile` report annotation. Unknown environments fail instead of falling back
-to dev. Bulk discount expectations are shared across both environments.
+to dev. Both environments share tier definitions; Stage's enabled categories and
+coupon identifiers come from its explicit rule metadata.
 
 Dev overlays `support/bulk-discounts/dev-pickup-taxes.json` for the current
 default pickup store, Spaceflyt Sandbox: 11% gross, 15% excise on subtotal plus gross,
@@ -165,12 +209,12 @@ at 3+2 they produced $12.80 gross, $25.92 excise, $18.88 sales and $217.60 total
 Both carts passed the shared cart assertions, confirming per-line rounding. Rates are pinned
 independently of test output; tests continue to assert exact discounted taxes and totals.
 
-The November 2 full Eighths scenario attempt stopped before tax assertions because
-its catalogue lookup uses dev category 331, while Stage's Eighths category is 325.
+The initial November 2 full Eighths scenario attempt stopped before tax assertions because
+its catalogue lookup used dev category 331, while Stage's Eighths category is 325.
 The separate tax diagnostic used the confirmed Stage category and did not submit an order.
 Its tax assertions passed, but final cart cleanup timed out when a loading overlay
-intercepted a product Remove click. The tax-profile change does not resolve category-ID differences;
-the full Stage suite has not been verified passing.
+intercepted a product Remove click. The subsequent slug-resolution and cleanup changes
+address these two automation issues separately from tax expectations.
 
 The pure oracle accepts decimal-dollar prices and returns integer USD cents. It counts
 paid units across SKUs within each category, excludes free BOGO units, applies account
