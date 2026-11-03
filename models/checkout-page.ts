@@ -8,6 +8,7 @@ import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 import zipcodes from '../utils/zipcodes-ca.json'
 import zipcodesCO from '../utils/zipcodes-co.json'
 import { fictionalAreacodes } from '../utils/data-generator'
+import { verifyOrderPricing, type ExpectedOrderPricing } from './components/order-pricing'
 
 type CheckoutRefreshDiagnostics = {
 	submittedZipcode: string
@@ -485,6 +486,26 @@ export class CheckoutPage {
 				await timeSlot.click()
 			}
 		})
+	}
+
+	async verifyDiscountPricing(expected: ExpectedOrderPricing) {
+		await test.step('Verify checkout discount lines, taxes and total', async () => {
+			await verifyOrderPricing(this.page.locator('.woocommerce-checkout-review-order-table'), expected)
+		})
+	}
+
+	async submitDiscountOrder(expected: ExpectedOrderPricing, testNote: string) {
+		await test.step('Verify checkout opened before preparing the order', async () => {
+			await expect(this.page, 'Cart must navigate to checkout before order submission')
+				.toHaveURL(/\/checkout\/?(?:[?#].*)?$/)
+			await expect(this.page.locator('.woocommerce-checkout-review-order-table')).toBeVisible()
+		})
+		// The current dev checkout omits optional order notes. The scenario account
+		// and report reference identify the order even when this field is absent.
+		if (await this.comments.isVisible()) await this.comments.fill(testNote)
+		await this.selectSlot()
+		await this.verifyDiscountPricing(expected)
+		await this.submitOrder()
 	}
 
 	async submitOrder() {

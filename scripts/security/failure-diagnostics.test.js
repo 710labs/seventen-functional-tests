@@ -21,7 +21,7 @@ test('nested failing steps retain phase and tracked source without dynamic text'
 	const result = failureFor({
 		status: 'failed', error: { message: 'ADDRESS_REFERRER_DENIED secret' },
 		steps: [{ category: 'test.step', title: 'Enter address secret', steps: [{
-			category: 'pw:api', title: 'fill("secret")', error: { message: 'secret' },
+			category: 'pw:api', title: 'fill("secret")', error: { message: 'ADDRESS_REFERRER_DENIED secret' },
 			location: { file: path.resolve('models/always-on/homepage-actions.ts'), line: 339 },
 		}] }],
 	})
@@ -47,4 +47,33 @@ test('flaky tests retain the failing attempt diagnostic', () => {
 	assert.deepEqual(testFailure({ results: [{ status: 'failed', error: { message: 'ADDRESS_WIDGET_UNAVAILABLE' } }, { status: 'passed' }] }), {
 		category: 'address-widget-unavailable', phase: 'test',
 	})
+})
+
+test('successful registration polling does not hide a later storefront failure', () => {
+	const error = { message: 'expect(locator).toHaveCount failed secret' }
+	const result = failureFor({ status: 'failed', error, steps: [
+		{ category: 'hook', title: 'Before Hooks', steps: [
+			{ category: 'test.step', title: 'Submit New Customer Form', steps: [
+				{ category: 'expect', title: 'poll', error: { message: 'intermediate false' },
+					location: { file: path.resolve('models/create-account-page.ts'), line: 478 } },
+			] },
+		] },
+		{ category: 'test.step', title: 'Verify shop pricing offers for product secret', error, steps: [
+			{ category: 'expect', title: 'count', error,
+				location: { file: path.resolve('models/shop-page.ts'), line: 1109 } },
+		] },
+		{ category: 'hook', title: 'After Hooks', error: { message: 'unrelated cleanup error' } },
+	] })
+	assert.deepEqual(result, { category: 'assertion', phase: 'cart', file: 'models/shop-page.ts', line: 1109 })
+})
+
+test('an error outside a step is not attributed to a caught setup assertion', () => {
+	assert.deepEqual(failureFor({ status: 'failed', error: { message: 'Inventory coverage gap' }, steps: [
+		{ category: 'hook', title: 'Before Hooks', steps: [
+			{ category: 'test.step', title: 'Registration', steps: [
+				{ category: 'expect', error: { message: 'intermediate false' },
+					location: { file: path.resolve('models/create-account-page.ts'), line: 478 } },
+			] },
+		] },
+	] }), { category: 'test-error', phase: 'test' })
 })

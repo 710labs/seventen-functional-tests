@@ -3,6 +3,8 @@
 	"version": "1.0.0",
 	"description": "",
 	"scripts": {
+		"test:bulk:unit": "node --test support/bulk-discounts/__tests__/*.test.cjs",
+		"test:bulk:probe": "node scripts/bulk-discounts/probe.cjs",
 		"test:health": "node --test scripts/health/*.test.js",
 		"test:acuity-auth": "node --test scripts/*acuity-storage-state.test.js",
 		"test:acuity-slots": "node --test scripts/acuity-slot-reconciliation.test.js",
