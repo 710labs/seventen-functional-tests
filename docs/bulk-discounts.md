@@ -41,9 +41,9 @@ Stage CA runs all nine scenarios on desktop and mobile (18 tests), alongside the
 E2E tests. Missing bulk discounts are ordinary assertion failures, not skips or expected
 failures. Stage enablement was requested on November 2, 2026, superseding the original
 dev-only browser restriction; the standalone API probe remains dev-only. Tax assertions
-currently use the verified dev pickup-store profile; Stage store rates have not been
-verified and can cause additional failures. Stage smoke-only workflows do not run this
-full suite.
+select a pinned pickup-store profile from the Playwright base URL: dev uses
+11% / 15% / 9.5%, while Stage uses 8% / 15% / 9.5% (gross / excise / sales).
+Stage smoke-only workflows do not run this full suite.
 
 ## Shared code
 
@@ -130,7 +130,12 @@ Expected Values C5:C7, A11:G15, A19:E39, C62, G59:L65, and Journey Steps. The or
 Flycart JSON export was not supplied. Workbook taxes remain as reference values;
 labels and BOGO category still need full dev verification.
 
-Live bulk tests overlay `support/bulk-discounts/dev-pickup-taxes.json` for the current
+Live bulk tests use `support/bulk-discounts/tax-profiles.cjs` to select expectations
+by the exact configured environment URL. Each test records its selected rates in a
+`tax-profile` report annotation. Unknown environments fail instead of falling back
+to dev. Bulk discount expectations are shared across both environments.
+
+Dev overlays `support/bulk-discounts/dev-pickup-taxes.json` for the current
 default pickup store, Spaceflyt Sandbox: 11% gross, 15% excise on subtotal plus gross,
 and 9.5% sales on subtotal plus gross plus excise. Taxes use each product line after
 its bulk discount, keep unrounded compound bases, round each line tax, then sum the
@@ -147,6 +152,25 @@ This is a pinned store profile, not a statewide rate or a rate inferred anew fro
 each assertion. If the default pickup store changes,
 verify and update this profile. Cart and checkout use the same oracle and live profile;
 offline workbook assertions retain their original 8% / 15% / 7.75% rates.
+
+Stage overlays `support/bulk-discounts/stage-pickup-taxes.json`. The observed Stage
+cart on November 2, 2026 contained three $39 Rainbow Belts eighths: $117 subtotal,
+$15 bulk discount, $102 discounted subtotal, $8.16 County Gross Tax,
+$16.52 California Excise Tax, $12.03 Sales, and $138.71 total. These amounts are
+consistent with 8% gross, 15% compounded excise, and 9.5% compounded sales. A fresh-account
+browser diagnostic confirmed those exact rates through the authenticated Store API.
+The selected pickup store was March and Ash Mill Valley. Two distinct $39 eighth SKUs
+at quantities 3+1 produced $10.88 gross, $22.03 excise, $16.04 sales and $184.95 total;
+at 3+2 they produced $12.80 gross, $25.92 excise, $18.88 sales and $217.60 total.
+Both carts passed the shared cart assertions, confirming per-line rounding. Rates are pinned
+independently of test output; tests continue to assert exact discounted taxes and totals.
+
+The November 2 full Eighths scenario attempt stopped before tax assertions because
+its catalogue lookup uses dev category 331, while Stage's Eighths category is 325.
+The separate tax diagnostic used the confirmed Stage category and did not submit an order.
+Its tax assertions passed, but final cart cleanup timed out when a loading overlay
+intercepted a product Remove click. The tax-profile change does not resolve category-ID differences;
+the full Stage suite has not been verified passing.
 
 The pure oracle accepts decimal-dollar prices and returns integer USD cents. It counts
 paid units across SKUs within each category, excludes free BOGO units, applies account

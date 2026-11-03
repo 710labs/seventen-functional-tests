@@ -1,0 +1,36 @@
+{
+  "source": {
+    "environment": "https://thelist-stage.710labs.com",
+    "fulfillment": "Pickup",
+    "verifiedDate": "2026-11-02",
+    "provenance": "Confirmed November 2, 2026 with a fresh Stage account using the shared page objects and authenticated Store API tax_lines: County Gross Tax 8%, California Excise Tax 15%, Sales 9.5%. Three $39 Rainbow Belts eighths: subtotal $117, discount $15, net $102; taxes $8.16 / $16.52 / $12.03, total $138.71. Two distinct $39 eighth SKUs at quantities 3+1: net $136, taxes $10.88 / $22.03 / $16.04, total $184.95; at 3+2: net $160, taxes $12.80 / $25.92 / $18.88, total $217.60. Multi-line cart assertions confirm per-line rounding. These are pickup-store rates, not statewide rates.",
+    "store": "March and Ash Mill Valley"
+  },
+  "taxRounding": "line",
+  "taxes": [
+    {
+      "key": "gross",
+      "rateBasisPoints": 800,
+      "base": [
+        "discountedSubtotal"
+      ]
+    },
+    {
+      "key": "excise",
+      "rateBasisPoints": 1500,
+      "base": [
+        "discountedSubtotal",
+        "gross"
+      ]
+    },
+    {
+      "key": "sales",
+      "rateBasisPoints": 950,
+      "base": [
+        "discountedSubtotal",
+        "gross",
+        "excise"
+      ]
+    }
+  ]
+}

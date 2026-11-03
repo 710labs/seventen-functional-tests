@@ -12,9 +12,7 @@ import { OrderReceivedPage } from '../../models/order-recieved-page'
 
 const rules = require('../../support/bulk-discounts/rules.json')
 const { expectedCart: calculateExpectedCart } = require('../../support/bulk-discounts/oracle.cjs')
-const pickupTaxes = require('../../support/bulk-discounts/dev-pickup-taxes.json')
-// Keep workbook reference rates separate from this dev pickup store's rates.
-const liveRules = { ...rules, taxes: pickupTaxes.taxes, taxRounding: pickupTaxes.taxRounding }
+const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
 const { resolvePlan, goldenPlans } = require('../../support/bulk-discounts/scenarios.cjs')
 const { assertBulkBaseUrl, assertBulkNavigationUrl } = require('../../support/bulk-discounts/environment.cjs')
 
@@ -22,11 +20,11 @@ type CartLine = {
 	productId: number; categoryIds: number[]; qty: number; unitPrice: string; isFreeBogoUnit: boolean
 }
 
-const expectedCart = (lines: CartLine[], user = 'plain') => calculateExpectedCart(lines, user, liveRules)
-
 test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 	// Retrying an order test could create a second order after a confirmation failure.
 	test.describe.configure({ retries: 0 })
+	let liveRules: ReturnType<typeof rulesForEnvironment>
+	const expectedCart = (lines: CartLine[], user = 'plain') => calculateExpectedCart(lines, user, liveRules)
 	let shop: ShopPage
 	let cart: CartPage
 	let checkout: CheckoutPage
@@ -45,6 +43,9 @@ test.describe('Bulk discounts', { tag: ['@CA', '@bulk'] }, () => {
 		// Dev and Stage CA exercise the same expectations; production remains excluded.
 		test.skip(testInfo.config.metadata.bulkDiscounts !== true, 'Bulk rules are enabled only in the dev and staging configurations')
 		const targetOrigin = assertBulkBaseUrl(baseURL)
+		liveRules = rulesForEnvironment(targetOrigin)
+		testInfo.annotations.push({ type: 'tax-profile', description: `${targetOrigin}: ` +
+			liveRules.taxes.map(tax => `${tax.key} ${tax.rateBasisPoints / 100}%`).join(', ') })
 		await page.context().route('**/*', async route => {
 			const request = route.request()
 			if (request.isNavigationRequest() && request.frame().parentFrame() === null) {
