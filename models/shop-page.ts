@@ -994,10 +994,29 @@ export class ShopPage {
 		return result
 	}
 
-	async openStorefrontForFulfillment(fulfillment: ShopFulfillment) {
+	private async ensurePickupStore(storeName: string) {
+		const nav = this.page.locator('button.wcse-nav:visible').first()
+		const escapedName = storeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+		const expectedSelection = new RegExp(`^\\s*Pickup\\s*\\|?\\s*${escapedName}\\s*$`, 'i')
+		if (expectedSelection.test(await nav.innerText())) return
+		await nav.click()
+		const modal = await this.getVisibleFulfillmentModalRoot(5000)
+		if (!modal) throw new Error(`Pickup selection must offer the configured store: ${storeName}`)
+		// This heading is informational. Confirm the address-resolved pickup partner,
+		// then use the existing Pickup/Submit flow to persist that selection.
+		await expect(modal.locator('.wcse-reactive--pickup-title'), 'Pickup store must match the tax profile')
+			.toHaveText(storeName, { timeout: 10000 })
+		await this.resolveOpenFulfillmentModal('Pickup')
+		await this.waitForFulfillmentReady('Pickup')
+		await expect(nav, 'Selected pickup store must match the tax profile').toHaveText(expectedSelection, { timeout: 10000 })
+	}
+
+	async openStorefrontForFulfillment(fulfillment: ShopFulfillment, pickupStore?: string) {
 		await test.step(`Open storefront for ${fulfillment}`, async () => {
+			if (pickupStore && fulfillment !== 'Pickup') throw new Error('Named pickup stores require Pickup fulfillment')
 			await this.page.goto('/', { waitUntil: 'domcontentloaded' })
 			await this.ensureFulfillmentSelected(fulfillment)
+			if (pickupStore) await this.ensurePickupStore(pickupStore)
 			await expect(this.page.locator('li.product').first()).toBeVisible()
 		})
 	}
@@ -1007,16 +1026,16 @@ export class ShopPage {
 			await this.goToCart()
 
 			for (let pass = 0; pass < 20; pass += 1) {
-				const removeLink = this.page.locator('.cart_item .product-remove a, a.remove').first()
-				const hasRemoveLink = await removeLink.isVisible().catch(() => false)
-
-				if (!hasRemoveLink) {
-					return
-				}
-
+				// Re-read rows after each cart update; an overlay can outlive a removed row.
+				await expect(this.page.locator('.blockUI.blockOverlay:visible')).toHaveCount(0, { timeout: 30000 })
+				const rows = this.page.locator('.cart_item')
+				if (await rows.count() === 0) return
+				const removeLink = rows.first().locator('.product-remove a, a.remove').first()
+				const productId = await removeLink.getAttribute('data-product_id')
+				if (!productId || !/^\d+$/.test(productId)) throw new Error('Cart removal requires a product ID')
+				const target = rows.filter({ has: this.page.locator(`[data-product_id="${productId}"]`) })
 				await removeLink.click()
-				await this.page.waitForLoadState('networkidle').catch(() => {})
-				await this.page.waitForTimeout(500)
+				await expect(target, `Removed cart product ${productId}`).toHaveCount(0, { timeout: 30000 })
 			}
 
 			throw new Error('Unable to clear storefront cart after 20 remove attempts')
@@ -1055,6 +1074,31 @@ export class ShopPage {
 			if (!result.added) {
 				throw new Error(result.errorText || `Unable to add "${candidate.name}" to the cart`)
 			}
+		})
+	}
+
+	async getCategoryIdsBySlug(slugs: string[]): Promise<Record<string, number>> {
+		return test.step('Resolve product categories by slug in the current environment', async () => {
+			const origin = new URL(this.page.url()).origin
+			const categories: { id: number; slug: string }[] = []
+			let totalPages = 1
+			for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+				const response = await this.page.request.get(`${origin}/wp-json/wc/store/v1/products/categories`, {
+					params: { per_page: 100, page: pageNumber }, maxRedirects: 0,
+				})
+				expect(response.ok(), 'Category metadata request must succeed without redirecting').toBeTruthy()
+				totalPages = Number(response.headers()['x-wp-totalpages'] || 1)
+				expect(Number.isSafeInteger(totalPages) && totalPages >= 0 && totalPages <= 100).toBeTruthy()
+				const data = await response.json()
+				expect(Array.isArray(data), 'Category metadata must be an array').toBeTruthy()
+				categories.push(...data)
+			}
+			return Object.fromEntries(slugs.map(slug => {
+				const matches = categories.filter(category => category.slug === slug)
+				expect(matches, `Exactly one product category must match slug "${slug}"`).toHaveLength(1)
+				expect(Number.isSafeInteger(matches[0].id) && matches[0].id > 0).toBeTruthy()
+				return [slug, matches[0].id]
+			}))
 		})
 	}
 

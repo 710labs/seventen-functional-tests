@@ -30,9 +30,42 @@ test('storefront becomes usable while a background request remains pending', asy
 function summaryRows(pricing = expected, removeLink = false, cart = true) {
 	return `<tr class="cart-subtotal"><th>Subtotal</th><td>${amount(pricing.subtotal)}</td></tr>
 		${cart && pricing.discountLines.some(line => line.categoryId) ? '<tr class="svntn-wdr-section"><th colspan="2">List member pricing</th></tr>' : ''}
-		${pricing.discountLines.map(line => `<tr class="cart-discount${cart && line.categoryId ? ' svntn-wdr-row' : ''}"><th>${line.label}</th><td>-${amount(line.amount)}${removeLink ? '<a class="woocommerce-remove-coupon">[Remove]</a>' : ''}</td></tr>`).join('')}
+		${pricing.discountLines.map(line => `<tr class="cart-discount${cart && line.categoryId ? ' svntn-wdr-row' : ''}${line.couponKey ? ` coupon-${line.couponKey}` : ''}"><th>${line.label}</th><td>-${amount(line.amount)}${removeLink ? '<a class="woocommerce-remove-coupon">[Remove]</a>' : ''}</td></tr>`).join('')}
 		${['gross', 'excise', 'sales'].map(key => `<tr class="tax-rate"><th>${key}</th><td>${amount(pricing[key])}</td></tr>`).join('')}
 		<tr class="order-total"><th>Total</th><td>${amount(pricing.total)}</td></tr>`
+}
+
+for (const available of [true, false]) {
+	test(`named pickup selection ${available ? 'persists the tax-profile store' : 'rejects a different address-resolved store'}`, async ({ browser }, info) => {
+		const context = await browser.newContext({ baseURL: 'https://pickup.test' })
+		try {
+			const page = await context.newPage()
+			const store = 'March and Ash Mill Valley'
+			await page.route('https://pickup.test/', route => route.fulfill({ contentType: 'text/html', body: `
+				<button class="wcse-nav" id="nav">Pickup | Spaceflyt Sandbox</button>
+				<button class="wcse-nav" hidden>Hidden duplicate</button>
+				<ul><li class="product">Fixture product</li></ul>
+				<div id="fulfillmentElement" hidden><h2>How do you want your order?</h2>
+				<h3 class="wcse-reactive--pickup-title">${available ? store : 'Different Store'}</h3>
+				<button id="pickup">Pickup</button><button id="fulfillerSubmit">Submit</button></div>
+				<script>
+				const nav=document.querySelector('#nav'); const modal=document.querySelector('#fulfillmentElement');
+				nav.onclick=()=>{ modal.hidden=false; };
+				document.querySelector('#pickup').onclick=()=>{ document.body.dataset.pickup='true'; };
+				document.querySelector('#fulfillerSubmit').onclick=()=>{
+				  if(document.body.dataset.pickup==='true'){ nav.textContent='Pickup | ${store}'; modal.hidden=true; document.body.dataset.submitted='true'; }
+				};</script>` }))
+			const shop = new ShopPage(page, 'chromium', info)
+			if (available) {
+				await shop.openStorefrontForFulfillment('Pickup', store)
+				await expect(page.locator('#nav')).toHaveText(`Pickup | ${store}`)
+				await expect(page.locator('body')).toHaveAttribute('data-submitted', 'true')
+			} else {
+				await expect(shop.openStorefrontForFulfillment('Pickup', store)).rejects.toThrow('Pickup store must match the tax profile')
+				await expect(page.locator('body')).not.toHaveAttribute('data-submitted', 'true')
+			}
+		} finally { await context.close() }
+	})
 }
 
 test('cart and checkout share the same discount assertion even with legacy tax bypass', async ({ page }, info) => {
@@ -55,6 +88,22 @@ test('cart and checkout verify discounted totals using the current dev pickup ra
 		{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false },
 		{ productId: 102, categoryIds: [326], qty: 3, unitPrice: '14.00', isFreeBogoUnit: false },
 	], 'plain', { ...rules, taxes: pickupTaxes.taxes, taxRounding: pickupTaxes.taxRounding })
+	await page.setContent(`<div class="cart_totals"><table>${summaryRows(pricing)}</table></div><table class="woocommerce-checkout-review-order-table">${summaryRows(pricing, false, false)}</table>`)
+	await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)
+	await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
+})
+
+test('Stage cart and checkout accept Stage coupon metadata with the shared pricing assertions', async ({ page }, info) => {
+	const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+	const { bindCategoryIds } = require('../../support/bulk-discounts/categories.cjs')
+	const rules = bindCategoryIds(rulesForEnvironment('https://thelist-stage.710labs.com'), {
+		'live-rosin-vapes': 319, 'live-rosin-badder': 312, 'gummis-2': 323, eighths: 325, doinks: 320,
+	})
+	const pricing = expectedCart([
+		{ productId: 101, categoryIds: [319], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false },
+		{ productId: 102, categoryIds: [312], qty: 5, unitPrice: '39.00', isFreeBogoUnit: false },
+	], 'plain', rules)
+	expect(pricing.discountLines.map(line => line.couponKey)).toEqual(['live-rosin-vapes', 'live-rosin-badder'])
 	await page.setContent(`<div class="cart_totals"><table>${summaryRows(pricing)}</table></div><table class="woocommerce-checkout-review-order-table">${summaryRows(pricing, false, false)}</table>`)
 	await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)
 	await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
@@ -96,10 +145,13 @@ for (const mode of ['stale-header', 'wrong-product', 'unchanged-quantity'] as co
 			const page = await context.newPage()
 			const quantities = new Map<number, number>(mode === 'wrong-product' ? [] : [[101, 2]])
 			let addRequests = 0
+			let menuLoads = 0
+			const clickedIds: number[] = []
 			await page.route('https://cart-confirm.test/**', async route => {
 				const path = new URL(route.request().url()).pathname
 				if (path === '/add') {
 					addRequests++
+					clickedIds.push(route.request().postDataJSON().id)
 					const id = mode === 'stale-header' ? 101 : 202
 					quantities.set(id, (quantities.get(id) || 0) + 1)
 					await route.fulfill({ json: { count: [...quantities.values()].reduce((sum, qty) => sum + qty, 0) } })
@@ -108,10 +160,12 @@ for (const mode of ['stale-header', 'wrong-product', 'unchanged-quantity'] as co
 						${[...quantities].map(([id, qty]) => `<tr class="cart_item"><td><a data-product_id="${id}">Same visible name</a></td><td><input class="qty" value="${qty}"></td></tr>`).join('')}
 						</table></form>` })
 				} else {
+					menuLoads++
+					const menuIds = menuLoads % 2 ? [101, 202] : [202, 101]
 					await route.fulfill({ contentType: 'text/html', body: `<a href="/cart/">My Bag (${[...quantities.values()].reduce((sum, qty) => sum + qty, 0)})</a>
-						<ul>${[101, 202].map(id => `<li class="product"><h2>Same visible name</h2><span class="price">$39.00</span><button class="add_to_cart_button" data-product_id="${id}" data-product_sku="sku-${id}">Add</button></li>`).join('')}</ul>
+						<ul>${menuIds.map(id => `<li class="product"><h2>Same visible name</h2><span class="price">$39.00</span><button class="add_to_cart_button" data-product_id="${id}" data-product_sku="sku-${id}">Add</button></li>`).join('')}</ul>
 						<script>document.querySelectorAll('button').forEach(button => button.onclick = async () => {
-							const result = await (await fetch('/add', { method: 'POST' })).json();
+							const result = await (await fetch('/add', { method: 'POST', headers: {'Content-Type':'application/json'}, body:JSON.stringify({id:Number(button.dataset.product_id)}) })).json();
 							if (${JSON.stringify(mode)} !== 'stale-header') document.querySelector('a').textContent = 'My Bag (' + result.count + ')';
 						});</script>` })
 				}
@@ -129,6 +183,7 @@ for (const mode of ['stale-header', 'wrong-product', 'unchanged-quantity'] as co
 					mode === 'wrong-product' ? 'Cart must contain product ID 101' : 'toHaveValue')
 			}
 			expect(addRequests, 'An ambiguous UI signal must never trigger a duplicate add').toBe(1)
+			expect(clickedIds, 'Reordering the menu must not change the selected product').toEqual([101])
 		} finally {
 			await context.close()
 		}
@@ -156,6 +211,50 @@ test('category discovery paginates and matches only addable menu products', asyn
 		expect(products).toHaveLength(1)
 		expect(products[0]).toMatchObject({ productId: 101, categoryIds: [331], unitPrice: '39.00' })
 	} finally { page.request.get = originalGet }
+})
+
+test('category slugs resolve across reordered pages with different environment IDs', async ({ page }, info) => {
+	await page.route('https://categories.test/', route => route.fulfill({ contentType: 'text/html', body: '<h1>Shop</h1>' }))
+	await page.goto('https://categories.test/')
+	const originalGet = page.request.get.bind(page.request)
+	const requests: number[] = []
+	page.request.get = async (url, options) => {
+		expect(url).toBe('https://categories.test/wp-json/wc/store/v1/products/categories')
+		expect(options.maxRedirects).toBe(0)
+		const number = Number((options.params as any).page)
+		requests.push(number)
+		return { ok: () => true, headers: () => ({ 'x-wp-totalpages': '2' }), json: async () => number === 1
+			? [{ id: 324, slug: 'persy-doinks' }, { id: 325, slug: 'eighths' }]
+			: [{ id: 323, slug: 'gummis-2' }, { id: 319, slug: 'live-rosin-vapes' }] } as any
+	}
+	try {
+		const shop = new ShopPage(page, 'chromium', info)
+		expect(await shop.getCategoryIdsBySlug(['live-rosin-vapes', 'gummis-2', 'eighths']))
+			.toEqual({ 'live-rosin-vapes': 319, 'gummis-2': 323, eighths: 325 })
+		expect(requests).toEqual([1, 2])
+		await expect(shop.getCategoryIdsBySlug(['missing'])).rejects.toThrow('Exactly one product category')
+	} finally { page.request.get = originalGet }
+})
+
+test('cart cleanup waits for asynchronous removal before targeting the next product', async ({ browser }, info) => {
+	const context = await browser.newContext({ baseURL: 'https://cleanup.test' })
+	try {
+		const page = await context.newPage()
+		await page.route('https://cleanup.test/cart/', route => route.fulfill({ contentType: 'text/html', body: `
+			<h1>Cart</h1><form class="woocommerce-cart-form"><table>
+			${[101, 202].map(id => `<tr class="cart_item"><td class="product-remove"><a class="remove" data-product_id="${id}" href="#">Remove</a></td></tr>`).join('')}
+			</table></form><script>
+			document.querySelectorAll('a.remove').forEach(link => link.onclick = event => {
+				event.preventDefault();
+				const overlay = document.createElement('div'); overlay.className='blockUI blockOverlay';
+				overlay.style='position:fixed;inset:0;background:#fff8;z-index:9999'; document.body.append(overlay);
+				setTimeout(() => { link.closest('tr').remove(); }, 700);
+				setTimeout(() => { overlay.remove(); }, 1100);
+			});</script>` }))
+		await page.goto('https://cleanup.test/cart/')
+		await new ShopPage(page, 'chromium', info).clearStorefrontCart()
+		await expect(page.locator('.cart_item')).toHaveCount(0)
+	} finally { await context.close() }
 })
 
 test('thank-you total is checked regardless of legacy tax bypass', async ({ page }) => {

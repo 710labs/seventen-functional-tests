@@ -1,0 +1,12 @@
+{
+  "source": {
+    "environment": "https://thelist-stage.710labs.com",
+    "verifiedDate": "2026-11-02",
+    "provenance": "Stage desktop and mobile cart badges report data-wdr-coupon=live-rosin-vapes for Vapes and live-rosin-badder for Badder. The displayed tier labels and discount amounts retain the shared business expectations. The user explicitly confirmed Stage enables only Eighths, Gummis, Vapes and Badder, with no Doinks bulk discount; Dev retains Doinks discounts."
+  },
+  "couponKeysByCategorySlug": {
+    "live-rosin-vapes": "live-rosin-vapes",
+    "live-rosin-badder": "live-rosin-badder"
+  },
+  "disabledCategorySlugs": ["doinks"]
+}
