@@ -45,6 +45,17 @@ export class CartPage {
 		})
 	}
 
+	async getTaxRateMetadata(): Promise<{ name: string; rate: string }[]> {
+		return test.step('Read configured tax rates for the selected store', async () => {
+			const origin = new URL(this.page.url()).origin
+			const response = await this.page.request.get(`${origin}/wp-json/wc/store/v1/cart`, { maxRedirects: 0 })
+			expect(response.ok(), 'Cart tax metadata request must succeed without redirecting').toBeTruthy()
+			const cart = await response.json()
+			expect(Array.isArray(cart.totals?.tax_lines), 'Cart must report tax-rate metadata').toBeTruthy()
+			return cart.totals.tax_lines.map(line => ({ name: line.name, rate: line.rate }))
+		})
+	}
+
 	productRow(productId: number) {
 		if (!Number.isSafeInteger(productId) || productId <= 0) throw new Error('Invalid product ID')
 		return this.page.locator('.woocommerce-cart-form .cart_item').filter({

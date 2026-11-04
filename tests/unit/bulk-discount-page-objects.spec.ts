@@ -35,35 +35,38 @@ function summaryRows(pricing = expected, removeLink = false, cart = true) {
 		<tr class="order-total"><th>Total</th><td>${amount(pricing.total)}</td></tr>`
 }
 
-for (const available of [true, false]) {
-	test(`named pickup selection ${available ? 'persists the tax-profile store' : 'rejects a different address-resolved store'}`, async ({ browser }, info) => {
-		const context = await browser.newContext({ baseURL: 'https://pickup.test' })
+for (const [store, grossRate, observed] of [
+	['March and Ash Mill Valley', '8%', [816, 1652, 1203, 13871]],
+	['Spaceflyt Sandbox', '10%', [1020, 1683, 1226, 14129]],
+] as const) {
+	test(`bulk pricing accepts the selected store and independently checks its taxes: ${store}`, async ({ browser }, info) => {
+		const context = await browser.newContext({ baseURL: 'https://store-tax.test' })
 		try {
 			const page = await context.newPage()
-			const store = 'March and Ash Mill Valley'
-			await page.route('https://pickup.test/', route => route.fulfill({ contentType: 'text/html', body: `
-				<button class="wcse-nav" id="nav">Pickup | Spaceflyt Sandbox</button>
-				<button class="wcse-nav" hidden>Hidden duplicate</button>
-				<ul><li class="product">Fixture product</li></ul>
-				<div id="fulfillmentElement" hidden><h2>How do you want your order?</h2>
-				<h3 class="wcse-reactive--pickup-title">${available ? store : 'Different Store'}</h3>
-				<button id="pickup">Pickup</button><button id="fulfillerSubmit">Submit</button></div>
-				<script>
-				const nav=document.querySelector('#nav'); const modal=document.querySelector('#fulfillmentElement');
-				nav.onclick=()=>{ modal.hidden=false; };
-				document.querySelector('#pickup').onclick=()=>{ document.body.dataset.pickup='true'; };
-				document.querySelector('#fulfillerSubmit').onclick=()=>{
-				  if(document.body.dataset.pickup==='true'){ nav.textContent='Pickup | ${store}'; modal.hidden=true; document.body.dataset.submitted='true'; }
-				};</script>` }))
+			await page.route('https://store-tax.test/', route => route.fulfill({ contentType: 'text/html', body:
+				`<button class="wcse-nav">Pickup | ${store}</button><ul><li class="product">Product</li></ul>` }))
 			const shop = new ShopPage(page, 'chromium', info)
-			if (available) {
-				await shop.openStorefrontForFulfillment('Pickup', store)
-				await expect(page.locator('#nav')).toHaveText(`Pickup | ${store}`)
-				await expect(page.locator('body')).toHaveAttribute('data-submitted', 'true')
-			} else {
-				await expect(shop.openStorefrontForFulfillment('Pickup', store)).rejects.toThrow('Pickup store must match the tax profile')
-				await expect(page.locator('body')).not.toHaveAttribute('data-submitted', 'true')
+			await shop.openStorefrontForFulfillment('Pickup')
+			expect(await shop.getFulfillmentLabel()).toBe(`Pickup | ${store}`)
+			page.request.get = async (url, options) => {
+				expect(url).toBe('https://store-tax.test/wp-json/wc/store/v1/cart')
+				expect(options.maxRedirects).toBe(0)
+				return { ok: () => true, json: async () => ({ totals: { tax_lines: [
+					{ name: 'Gross', rate: grossRate, price: '99999' },
+					{ name: 'Excise', rate: '15%', price: '99999' },
+					{ name: 'Sales', rate: '9.5%', price: '99999' },
+				] } }) } as any
 			}
+			const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+			const metadata = await cart.getTaxRateMetadata()
+			expect(metadata.every(line => !('price' in line))).toBe(true)
+			const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+			const { rulesWithCartTaxRates } = require('../../support/bulk-discounts/cart-tax-rates.cjs')
+			const pricing = expectedCart([{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }], 'plain',
+				rulesWithCartTaxRates(rulesForEnvironment('https://thelist-stage.710labs.com'), metadata))
+			const [gross, excise, sales, total] = observed
+			await page.setContent(`<div class="cart_totals"><table>${summaryRows({ ...pricing, gross, excise, sales, total })}</table></div>`)
+			await cart.verifyDiscountPricing(pricing)
 		} finally { await context.close() }
 	})
 }
@@ -370,4 +373,46 @@ test('cart tier badges replace 3+ with 5+ and disappear below threshold', async 
 	await expect(cart.verifyProductDiscountTags([line], expectedCart([line]).discountLines)).rejects.toThrow('only the active category tier')
 	await page.locator('[data-wdr-coupon="live-rosin"]').evaluate(tag => tag.remove())
 	await cart.verifyProductDiscountTags([line], expectedCart([line]).discountLines)
+})
+
+for (const taxLines of [[], [{ label: 'Sales (State)', amount: 676 }], [
+	{ label: 'Sales', amount: 612 }, { label: 'Sales Local', amount: 204 },
+]]) {
+	test(`cart and checkout verify state-specific tax rows: ${taxLines.map(line => line.label).join(', ') || 'tax free'}`, async ({ page }, info) => {
+		const pricing = { ...expected, taxLines, total: 10200 + taxLines.reduce((sum, line) => sum + line.amount, 0) }
+		const rows = summaryRows(pricing).replace(/<tr class="tax-rate">.*?<\/tr>/g, '') +
+			taxLines.map(line => `<tr class="tax-rate"><th>${line.label}</th><td>${amount(line.amount)}</td></tr>`).join('')
+		await page.setContent(`<div class="cart_totals"><table>${rows}</table></div><table class="woocommerce-checkout-review-order-table">${rows}</table>`)
+		await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)
+		await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
+	})
+}
+
+test('state tax assertions reject an incorrect amount even if the total is correct', async ({ page }, info) => {
+	test.setTimeout(15000)
+	const pricing = { ...expected, taxLines: [{ label: 'Sales', amount: 676 }], total: 10876 }
+	const rows = summaryRows(pricing).replace(/<tr class="tax-rate">.*?<\/tr>/g, '') +
+		`<tr class="tax-rate"><th>Sales</th><td>${amount(675)}</td></tr>`
+	await page.setContent(`<div class="cart_totals"><table>${rows}</table></div>`)
+	await expect(new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)).rejects.toThrow('Sales tax')
+})
+
+test('delivery fulfillment uses the scenario address and includes medical-only inventory', async ({ browser }, info) => {
+	const context = await browser.newContext({ baseURL: 'https://delivery.test' })
+	try {
+		const page = await context.newPage()
+		await page.route('https://delivery.test/', route => route.fulfill({ contentType: 'text/html', body: `
+			<div id="fulfillmentElement"><h2>How do you want your order?</h2><button>Delivery</button>
+			<input id="fasd_address"><button class="wpse-button-primary fasd-form-submit"
+				onclick="document.getElementById('fulfillmentElement').hidden = true">Confirm address</button></div>
+			<button class="wcse-nav">Delivery</button><ul><li class="product"><h2>Medical product</h2>
+			<span class="medOnly">Medical only</span><span class="price">$39.00</span>
+			<button class="add_to_cart_button" data-product_id="101">Add</button></li></ul>` }))
+		const address = '1845 Town Center Blvd, Fleming Island, FL 32003'
+		const shop = new ShopPage(page, 'chromium', info, { deliveryAddress: address })
+		await shop.openStorefrontForFulfillment('Delivery')
+		await expect(page.locator('#fasd_address')).toHaveValue(address)
+		expect((await shop.getAddableStorefrontProducts('medical')).map(product => product.productId)).toEqual([101])
+		expect(await shop.getAddableStorefrontProducts('recreational')).toEqual([])
+	} finally { await context.close() }
 })

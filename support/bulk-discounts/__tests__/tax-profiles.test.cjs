@@ -1,17 +1,12 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
-const { rulesForEnvironment, pickupStoreForEnvironment } = require('../tax-profiles.cjs')
+const { rulesForEnvironment } = require('../tax-profiles.cjs')
 const { expectedCart } = require('../oracle.cjs')
 const rules = require('../rules.json')
 const dev = 'https://thelist-dev.710labs.com'
 const stage = 'https://thelist-stage.710labs.com'
 const eighths = { productId: 1, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }
 
-test('each environment names the pickup store whose tax rates were verified', () => {
-	assert.equal(pickupStoreForEnvironment(dev), 'Spaceflyt Sandbox')
-	assert.equal(pickupStoreForEnvironment(stage), 'March and Ash Mill Valley')
-	assert.throws(() => pickupStoreForEnvironment('https://thelist.710labs.com'))
-})
 
 test('Stage profile reproduces the observed discounted Rainbow Belts cart', () => {
 	const result = expectedCart([eighths], 'plain', rulesForEnvironment(stage))

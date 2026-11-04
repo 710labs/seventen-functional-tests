@@ -123,7 +123,7 @@ export class ShopPage {
 	readonly loginButton: Locator
 	readonly createAccountLink: Locator
 	readonly cartTitle: Locator
-	constructor(page: Page, browserName: any, workerInfo: TestInfo) {
+	constructor(page: Page, browserName: any, workerInfo: TestInfo, private readonly fulfillmentOptions: { deliveryAddress?: string } = {}) {
 		this.page = page
 		this.browserName = browserName
 		this.workerInfo = workerInfo
@@ -582,7 +582,7 @@ export class ShopPage {
 			return
 		}
 
-		const address = process.env.ADMIN_DROP_DELIVERY_ADDRESS || defaultDeliveryAddress
+		const address = this.fulfillmentOptions.deliveryAddress || process.env.ADMIN_DROP_DELIVERY_ADDRESS || defaultDeliveryAddress
 		await deliveryAddressInput.fill(address)
 
 		const hasAutocompleteSuggestion = await this.page
@@ -994,29 +994,14 @@ export class ShopPage {
 		return result
 	}
 
-	private async ensurePickupStore(storeName: string) {
-		const nav = this.page.locator('button.wcse-nav:visible').first()
-		const escapedName = storeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-		const expectedSelection = new RegExp(`^\\s*Pickup\\s*\\|?\\s*${escapedName}\\s*$`, 'i')
-		if (expectedSelection.test(await nav.innerText())) return
-		await nav.click()
-		const modal = await this.getVisibleFulfillmentModalRoot(5000)
-		if (!modal) throw new Error(`Pickup selection must offer the configured store: ${storeName}`)
-		// This heading is informational. Confirm the address-resolved pickup partner,
-		// then use the existing Pickup/Submit flow to persist that selection.
-		await expect(modal.locator('.wcse-reactive--pickup-title'), 'Pickup store must match the tax profile')
-			.toHaveText(storeName, { timeout: 10000 })
-		await this.resolveOpenFulfillmentModal('Pickup')
-		await this.waitForFulfillmentReady('Pickup')
-		await expect(nav, 'Selected pickup store must match the tax profile').toHaveText(expectedSelection, { timeout: 10000 })
+	async getFulfillmentLabel(): Promise<string> {
+		return (await this.page.locator('button.wcse-nav:visible').first().innerText()).replace(/\s+/g, ' ').trim()
 	}
 
-	async openStorefrontForFulfillment(fulfillment: ShopFulfillment, pickupStore?: string) {
+	async openStorefrontForFulfillment(fulfillment: ShopFulfillment) {
 		await test.step(`Open storefront for ${fulfillment}`, async () => {
-			if (pickupStore && fulfillment !== 'Pickup') throw new Error('Named pickup stores require Pickup fulfillment')
 			await this.page.goto('/', { waitUntil: 'domcontentloaded' })
 			await this.ensureFulfillmentSelected(fulfillment)
-			if (pickupStore) await this.ensurePickupStore(pickupStore)
 			await expect(this.page.locator('li.product').first()).toBeVisible()
 		})
 	}
