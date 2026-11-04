@@ -25,7 +25,9 @@ function dateKey(value) {
 	const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(compact(value))
 	if (!match) throw new Error('Invalid Acuity slot date; expected M/D/YYYY.')
 	const [, month, day, year] = match.map(Number)
-	const date = new Date(Date.UTC(year, month - 1, day))
+	// Date.UTC maps years 0–99 into the 1900s; preserve Acuity's literal year.
+	const date = new Date(0)
+	date.setUTCFullYear(year, month - 1, day)
 	if (
 		date.getUTCMonth() !== month - 1 ||
 		date.getUTCDate() !== day ||
@@ -99,7 +101,7 @@ function editorUrl(slot) {
 
 function parseSession(record, appointmentId) {
 	const label = compact(record.label)
-	const match = /^(\d{1,2}:\d{2}\s*[ap]m) ([A-Z]+) \w+, (\w+) (\d{1,2}), (\d{4})$/.exec(label)
+	const match = /^(\d{1,2}:\d{2}\s*[ap]m) ([A-Z]+) \w+, (\w+) (\d{1,2}), (\d{1,4})$/.exec(label)
 	if (!match || !months.includes(match[3]))
 		throw new Error('Unrecognized Acuity class label; refusing to infer a missing slot.')
 	const details = compact(record.details)
@@ -116,7 +118,7 @@ function parseSession(record, appointmentId) {
 		throw new Error('Unexpected Acuity class link.')
 	return {
 		appointmentId,
-		date: dateKey(`${months.indexOf(match[3]) + 1}/${match[4]}/${match[5]}`),
+		date: dateKey(`${months.indexOf(match[3]) + 1}/${match[4]}/${match[5].padStart(4, '0')}`),
 		time: timeKey(match[1]),
 		calendar: calendar[1],
 		capacity: capacity ? Number(capacity[2]) : null,

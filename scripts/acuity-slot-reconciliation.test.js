@@ -46,6 +46,29 @@ test('matches standard time labels without relying on CSV timezone text', () => 
 	)
 })
 
+test('reads ancient Acuity years literally without hiding current sessions or relaxing CSV dates', () => {
+	const record = {
+		label: '11:00am LMT Wednesday, July  3, 2',
+		details: 'with Test calendar',
+		href: '/appointments.php?action=detailAvailableGroup&id=62762814',
+	}
+	const ancient = parseSession(record, '123')
+	assert.equal(ancient.date, '0002-07-03')
+	assert.equal(ancient.capacity, null)
+	assert.equal(planSlot(slot, [ancient]).action, 'create')
+	assert.equal(planSlot(slot, [ancient, session()]).action, 'skip')
+	assert.equal(planSlot(slot, [ancient, session({ capacity: 30 })]).action, 'update_capacity')
+	assert.throws(
+		() => planSlot(slot, [ancient, session({ capacity: null })]),
+		/Cannot verify/,
+	)
+	assert.throws(() => desiredSlot({ ...slot, DateOffered: '7/3/2' }), /M\/D\/YYYY/)
+	assert.throws(
+		() => parseSession({ ...record, label: '11:00am LMT Wednesday, February 29, 2' }, '123'),
+		/Invalid Acuity slot date/,
+	)
+})
+
 test('distinguishes missing, matching, wrong capacity, and different local times', () => {
 	assert.equal(planSlot(slot, []).action, 'create')
 	assert.equal(planSlot(slot, [session()]).action, 'skip')
