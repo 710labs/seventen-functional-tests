@@ -56,7 +56,7 @@ export async function verifyOrderPricing(summary: Locator, expected: ExpectedOrd
 	for (const tax of taxes) {
 		const label = tax.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 		const row = expected.taxLines
-			? summary.locator('tr.tax-rate').filter({ has: summary.page().locator('th').filter({ hasText: new RegExp(`^\\s*${label}\\s*$`, 'i') }) })
+			? summary.locator('tr.tax-rate').filter({ has: summary.page().locator('th').filter({ hasText: new RegExp(`^\\s*${label}(?:\\s*\\(estimated for [\\s\\S]*\\))?\\s*$`, 'i') }) })
 			: summary.locator('tr.tax-rate').filter({ hasText: new RegExp(label, 'i') })
 		await expect(row, `Exactly one ${tax.label} tax line is expected`).toHaveCount(1)
 		await expect.poll(async () => moneyInCents(await row.locator('.amount').first().innerText()), { message: `${tax.label} tax on discounted subtotal` }).toBe(tax.amount)

@@ -89,6 +89,15 @@ The suite remaps both pricing rules and journey plans before selecting products;
 neither shop section order nor Dev's numeric category IDs determine Stage selection.
 Reports record the resolved mapping in a `category-map` annotation.
 
+Bulk cart setup checks catalogue stock/maximum quantities and then the actual cart's
+quantity control before selecting a SKU. Hidden, read-only, missing or capped controls
+reject that candidate; any added unit is removed and the next SKU in the same bulk
+category is tried. Tier cases require capacity for six units; J1 reserves capacity for
+its later three-unit mutation. Replacements remain distinct across cart lines and their
+actual prices feed the oracle. Rejections appear as `inventory-candidate-rejected`
+annotations. Exhausted inventory remains an explicit coverage failure; an unexplained
+wrong product ID or server error is not converted into a pass.
+
 Bulk storefront visits use the existing state fulfillment flow and accept whichever store the
 site selects. `ShopPage.getFulfillmentLabel` records the actual store in a `fulfillment-store`
 annotation. There is no required store name and no attempt to force a different partner.
@@ -104,7 +113,12 @@ trace recording. This uses the existing `ADMIN_USER` and `ADMIN_PW` credentials 
 only reads settings. The QA `/rates` endpoint is not used here because it currently
 hardcodes California, even for MI and CO postal codes.
 
-Cart tax row codes identify the actual fulfillment jurisdiction and priority. Each row
+Cart tax row codes identify the actual fulfillment jurisdiction and priority. The cart's
+"estimated for" suffix is presentation text and is excluded when matching API tax names.
+When no tax rows are returned, the selected pickup/delivery address must independently
+identify a jurisdiction with no applicable nonzero configured rates (including wildcard
+rates). Otherwise missing taxes still fail. This supports Stage NJ's current tax-free
+configuration without making every empty tax response pass. Each row
 must match its configured jurisdiction, priority, label and percentage in the account's
 `standard` or `medical-rate` tax class. This supports a store in a different jurisdiction
 from the test address. Missing tax priorities and ambiguous compounding fail explicitly;

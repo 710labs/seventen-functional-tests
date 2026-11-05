@@ -103,3 +103,12 @@ test('wildcard state tax codes match wildcard configuration without borrowing CA
 		[...miConfig.slice(0, -1), config('Sales Tax', 6, 2, true, '')])
 	assert.equal(expectedCart(line, 'plain', selected).total, 11893)
 })
+
+test('an empty tax list is valid only when the independently selected fulfillment jurisdiction has no configured tax', () => {
+	const selected = rulesWithCartTaxRates(rules, [], miConfig, { country: 'US', state: 'NJ' })
+	assert.equal(expectedCart(line, 'plain', selected).total, 10200)
+	assert.deepEqual(selected.taxes, [])
+	for (const state of ['MI', 'CA']) assert.throws(() => rulesWithCartTaxRates(rules, [], miConfig, { country: 'US', state }), /Missing configured taxes/)
+	assert.throws(() => rulesWithCartTaxRates(rules, [], miConfig, { country: 'US', state: '' }), /cannot establish/)
+	assert.throws(() => rulesWithCartTaxRates(rules, [], [...miConfig, config('Sales', 6, 1, false, '')], { country: 'US', state: 'NJ' }), /Missing configured taxes/)
+})

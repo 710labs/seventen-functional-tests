@@ -2,7 +2,7 @@ import test, { Browser, expect, Locator, Page, TestInfo } from '@playwright/test
 require('dotenv').config({ path: require('find-config')('.env') })
 import { isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 import { moneyInCents } from './components/order-pricing'
-import type { CartPage } from './cart-page'
+import { ProductQuantityUnavailableError, type CartPage } from './cart-page'
 
 type GoToCartOptions = {
 	requireItems?: boolean
@@ -11,6 +11,8 @@ type GoToCartOptions = {
 type AddProductsToCartOptions = {
 	exactItemCount?: boolean
 }
+
+export class ProductInventoryUnavailableError extends Error {}
 
 type AddToCartResult = {
 	added: boolean
@@ -46,6 +48,7 @@ export type CategoryProductCandidate = StorefrontProductCandidate & {
 	productId: number
 	categoryIds: number[]
 	unitPrice: string
+	maxQuantity?: number
 }
 
 export type MinimumOrderBannerState = {
@@ -985,6 +988,9 @@ export class ShopPage {
 		} finally {
 			await this.closeCartDrawerIfPresent()
 		}
+		if (verifyInCart && !result.added && /out of stock|insufficient stock|only\s+\d+\s+left|not enough stock/i.test(result.errorText || '')) {
+			throw new ProductInventoryUnavailableError(result.errorText!)
+		}
 		if (verifyInCart) {
 			// Counter/drawer changes are readiness hints. The exact cart quantity
 			// decides success, including when those storefront hints never refresh.
@@ -996,6 +1002,18 @@ export class ShopPage {
 
 	async getFulfillmentLabel(): Promise<string> {
 		return (await this.page.locator('button.wcse-nav:visible').first().innerText()).replace(/\s+/g, ' ').trim()
+	}
+
+	async getFulfillmentTaxLocation(): Promise<{ country: string; state: string }> {
+		const fulfillment = this.page.locator('#fulfillmentElement')
+		await expect(fulfillment).toHaveCount(1)
+		const method = await fulfillment.getAttribute('data-toggle')
+		if (method !== 'pickup' && method !== 'delivery') throw new Error('Cannot determine the selected fulfillment method')
+		const address = await fulfillment.locator(method === 'pickup'
+			? '.wcse-reactive--destination-link' : '.wcse-reactive--origin').first().textContent()
+		const state = /\b([A-Z]{2})\s+\d{5}(?:-\d{4})?\b/.exec(address || '')?.[1]
+		if (!state) throw new Error('Cannot determine the tax jurisdiction from the selected fulfillment address')
+		return { country: 'US', state }
 	}
 
 	async openStorefrontForFulfillment(fulfillment: ShopFulfillment) {
@@ -1057,6 +1075,7 @@ export class ShopPage {
 			const result = await this.tryAddStorefrontProduct(candidate, usage, verifyInCart)
 
 			if (!result.added) {
+				if (/no longer (visible|addable)/i.test(result.errorText || '')) throw new ProductInventoryUnavailableError(result.errorText!)
 				throw new Error(result.errorText || `Unable to add "${candidate.name}" to the cart`)
 			}
 		})
@@ -1114,13 +1133,17 @@ export class ShopPage {
 				if (!matches.length) return []
 				expect(matches, 'A storefront product must identify exactly one catalogue entry').toHaveLength(1)
 				const product = matches[0]
+				if (product.is_in_stock === false || product.is_purchasable === false) return []
+				const limits = [product.low_stock_remaining, product.add_to_cart?.maximum, product.is_sold_individually ? 1 : undefined]
+					.filter(value => value !== null && value !== undefined && value !== '' && Number.isSafeInteger(Number(value)) && Number(value) >= 0).map(Number)
 				expect(product.prices.currency_code).toBe('USD')
 				expect(product.prices.currency_minor_unit).toBe(2)
 				expect(product.prices.price).toMatch(/^\d+$/)
 				const price = Number(product.prices.price)
 				expect(Number.isSafeInteger(price)).toBeTruthy()
 				return [{ ...candidate, productId: product.id,
-					categoryIds: product.categories.map(category => category.id), unitPrice: (price / 100).toFixed(2) }]
+					categoryIds: product.categories.map(category => category.id), unitPrice: (price / 100).toFixed(2),
+					...(limits.length ? { maxQuantity: Math.min(...limits) } : {}) }]
 			}).sort((a, b) => a.productId - b.productId)
 		})
 	}
@@ -1134,7 +1157,7 @@ export class ShopPage {
 			await this.page.goto(storefrontUrl, { waitUntil: 'domcontentloaded' })
 			const current = (await this.getAddableStorefrontProducts(usage)).find(candidate =>
 				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
-			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
+			if (!current) throw new ProductInventoryUnavailableError(`Selected product ${product.productId} is no longer addable`)
 			const expectedQuantity = quantities.get(product.productId)! + 1
 			await this.addStorefrontProduct(current, usage, async () => {
 				await this.goToCart()
@@ -1142,6 +1165,35 @@ export class ShopPage {
 			})
 			quantities.set(product.productId, expectedQuantity)
 		}
+	}
+
+	async addQuantityCapableProduct(candidates: CategoryProductCandidate[], cart: CartPage,
+		requiredQuantity: number, usage: TestUsageType = 'recreational'): Promise<CategoryProductCandidate> {
+		if (!Number.isSafeInteger(requiredQuantity) || requiredQuantity < 1) throw new Error('Required quantity must be a positive integer')
+		const storefrontUrl = new URL('/', this.page.url()).toString()
+		const rejected: string[] = []
+		for (const product of candidates) {
+			let reason: string | null = product.maxQuantity !== undefined && product.maxQuantity < requiredQuantity
+				? `catalogue permits ${product.maxQuantity} units` : null
+			if (!reason) {
+				await this.page.goto(storefrontUrl, { waitUntil: 'domcontentloaded' })
+				try {
+					await this.addSelectedProducts([product], cart, usage)
+					reason = await cart.quantityUnavailableReason(product.productId, requiredQuantity)
+					if (!reason) return product
+				} catch (error) {
+					// A wrong cart ID, pricing failure, or server error remains a failure.
+					if (!(error instanceof ProductInventoryUnavailableError || error instanceof ProductQuantityUnavailableError)) throw error
+					reason = error.message
+					await this.goToCart()
+				}
+				if (await cart.productRow(product.productId).count() === 1) await cart.removeProduct(product.productId)
+			}
+			const detail = `${product.productId} (${product.name}): ${reason}; need ${requiredQuantity}`
+			rejected.push(detail)
+			this.workerInfo.annotations.push({ type: 'inventory-candidate-rejected', description: detail })
+		}
+		throw new Error(`Inventory coverage gap: no product supports ${requiredQuantity} units. ${rejected.join('; ') || 'No eligible candidates.'}`)
 	}
 
 	async verifyProductPricingOffers(
@@ -1152,7 +1204,7 @@ export class ShopPage {
 		await test.step(`Verify shop pricing offers for product ${product.productId}`, async () => {
 			const current = (await this.getAddableStorefrontProducts(usage)).find(candidate =>
 				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
-			if (!current) throw new Error(`Selected product ${product.productId} is no longer addable`)
+			if (!current) throw new ProductInventoryUnavailableError(`Selected product ${product.productId} is no longer addable`)
 			const card = this.getAddableProductCards(usage).nth(current.menuIndex)
 			const cardOffers = card.locator('.svntn-wdr-offers')
 			const productList = card.locator('xpath=ancestor::ul[1]')

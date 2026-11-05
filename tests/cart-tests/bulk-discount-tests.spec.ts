@@ -102,7 +102,9 @@ for (const profile of bulkStateProfiles) {
 				const configuredRates = profile.state === 'CA' ? undefined
 					: await readStoreTaxConfiguration(browser, targetOrigin, storageState, getRatesBucketForUsage(profile.usage))
 				if (profile.state !== 'CA' && !Array.isArray(configuredRates)) throw new Error(`Missing tax configuration for ${profile.state} ${profile.usage}`)
-				liveRules = rulesWithCartTaxRates(liveRules, metadata, configuredRates)
+				const location = configuredRates && metadata.length === 0 ? await shop.getFulfillmentTaxLocation() : undefined
+				liveRules = rulesWithCartTaxRates(liveRules, metadata, configuredRates, location)
+				if (location) testInfo.annotations.push({ type: 'tax-jurisdiction', description: `${location.country}-${location.state}: no configured taxes` })
 			}
 		})
 
@@ -138,15 +140,18 @@ for (const profile of bulkStateProfiles) {
 			return resolvePlan(plan, products, liveRules).requests
 		}
 
-		async function buildCart(lines: CartLine[], products: CategoryProductCandidate[]) {
-			const selected = lines.map(line => {
-				const product = products.find(product => product.productId === line.productId)
-				if (!product) throw new Error(`Required product ${line.productId} is unavailable`)
-				return product
-			})
+		async function buildCart(lines: CartLine[], products: CategoryProductCandidate[], requiredQuantities = lines.map(line => line.qty)) {
 			cartTouched = true
-			await shop.addSelectedProducts(selected, cart, profile.usage)
-			for (const line of lines) if (line.qty !== 1) await cart.setProductQuantity(line.productId, line.qty)
+			const used = new Set<number>()
+			for (const [index, line] of lines.entries()) {
+				const candidates = products.filter(product => !used.has(product.productId) && product.productId !== rules.bogo.productId &&
+					liveRules.bulkRules.some(rule => line.categoryIds.includes(rule.categoryId) && product.categoryIds.includes(rule.categoryId)))
+					.sort((a, b) => Number(b.productId === line.productId) - Number(a.productId === line.productId) || Number(a.unitPrice) - Number(b.unitPrice) || a.productId - b.productId)
+				const selected = await shop.addQuantityCapableProduct(candidates, cart, requiredQuantities[index], profile.usage)
+				Object.assign(line, { productId: selected.productId, categoryIds: selected.categoryIds, unitPrice: selected.unitPrice })
+				used.add(selected.productId)
+				if (line.qty !== 1) await cart.setProductQuantity(line.productId, line.qty)
+			}
 		}
 
 		async function verifyCart(lines: CartLine[], user = 'plain') {
@@ -208,10 +213,10 @@ for (const profile of bulkStateProfiles) {
 				const product = products.find(product => product.categoryIds.includes(categoryId) && product.productId !== rules.bogo.productId)
 				expect(product, `Need an addable product in category ${rule.categorySlug} (${categoryId})`).toBeTruthy()
 				const line: CartLine = { productId: product.productId, categoryIds: product.categoryIds, unitPrice: product.unitPrice, qty: 2, isFreeBogoUnit: false }
-				await buildCart([line], products)
+				await buildCart([line], products, [6])
 				for (const quantity of [2, 3, 4, 5, 6, 4, 5]) {
 					await test.step(`Verify ${quantity} paid units`, async () => {
-						if (quantity !== line.qty) await cart.setProductQuantity(product.productId, quantity)
+						if (quantity !== line.qty) await cart.setProductQuantity(line.productId, quantity)
 						line.qty = quantity
 						await verifyCart([line])
 					})
@@ -224,7 +229,7 @@ for (const profile of bulkStateProfiles) {
 			{ annotation: { type: 'bulk-case', description: 'J1 Cross SKU' } }, async () => {
 			const products = await catalogue()
 			const lines: CartLine[] = scenarioLines('J1', products)
-			await buildCart(lines, products)
+			await buildCart(lines, products, lines.map((line, index) => index === 1 ? 3 : line.qty))
 			await verifyCart(lines)
 			const secondEighth = lines[1]
 			for (const quantity of [3, 1]) {

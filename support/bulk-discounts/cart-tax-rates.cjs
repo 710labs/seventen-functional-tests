@@ -1,7 +1,7 @@
 // Read configured percentage metadata only. Discount bases, tax amounts, and totals
 // are still calculated independently by the oracle and checked against the UI.
-function rulesWithCartTaxRates(rules, taxLines, configuredRates) {
-	if (configuredRates !== undefined) return rulesWithConfiguredTaxes(rules, taxLines, configuredRates)
+function rulesWithCartTaxRates(rules, taxLines, configuredRates, fulfillmentLocation) {
+	if (configuredRates !== undefined) return rulesWithConfiguredTaxes(rules, taxLines, configuredRates, fulfillmentLocation)
 	if (!Array.isArray(taxLines) || taxLines.length !== rules.taxes.length) {
 		throw new Error('Expected configured gross, excise, and sales tax rates for the selected store')
 	}
@@ -28,7 +28,7 @@ function basisPoints(value) {
 	return (Number(match[1]) * 10000 + Number((match[2] || '').padEnd(4, '0'))) / 100
 }
 
-function rulesWithConfiguredTaxes(rules, taxLines, configuredRates) {
+function rulesWithConfiguredTaxes(rules, taxLines, configuredRates, fulfillmentLocation) {
 	if (!Array.isArray(taxLines) || !Array.isArray(configuredRates)) throw new Error('Missing store tax metadata')
 	const normalize = name => String(name || '').trim().replace(/\s+/g, ' ').toLowerCase()
 	const configuration = configuredRates.map(tax => {
@@ -37,7 +37,13 @@ function rulesWithConfiguredTaxes(rules, taxLines, configuredRates) {
 		return { ...tax, country: tax.country.toLowerCase(), state: tax.state.toLowerCase(), rateBasisPoints: basisPoints(tax.rate) }
 	})
 	if (!taxLines.length && configuration.some(tax => tax.rateBasisPoints > 0)) {
-		throw new Error('Cart returned no tax metadata; cannot establish its taxable jurisdiction')
+		const location = fulfillmentLocation
+		if (!location || location.country !== 'US' || !/^[A-Z]{2}$/.test(location.state)) {
+			throw new Error('Cart returned no tax metadata; cannot establish its taxable jurisdiction')
+		}
+		const applicable = configuration.filter(tax => (!tax.country || tax.country === location.country.toLowerCase()) &&
+			(!tax.state || tax.state === location.state.toLowerCase()) && tax.rateBasisPoints > 0)
+		if (applicable.length) throw new Error(`Missing configured taxes for fulfillment jurisdiction ${location.state}`)
 	}
 	const priorities = new Set()
 	const labels = new Set()
