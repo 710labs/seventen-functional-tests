@@ -29,36 +29,55 @@ function basisPoints(value) {
 }
 
 function rulesWithConfiguredTaxes(rules, taxLines, configuredRates) {
-	if (!Array.isArray(taxLines) || !Array.isArray(configuredRates)) throw new Error('Missing state tax metadata')
+	if (!Array.isArray(taxLines) || !Array.isArray(configuredRates)) throw new Error('Missing store tax metadata')
 	const normalize = name => String(name || '').trim().replace(/\s+/g, ' ').toLowerCase()
-	const names = new Set()
-	const configured = configuredRates.map((tax, index) => {
-		const name = normalize(tax.label)
-		if (!name || names.has(name) || !['yes', 'no'].includes(tax.compound)) throw new Error('Ambiguous configured tax label or compound flag')
-		names.add(name)
-		return { ...tax, name, key: `storeTax${index}`, rateBasisPoints: basisPoints(tax.rate) }
+	const configuration = configuredRates.map(tax => {
+		if (!normalize(tax.label) || typeof tax.compound !== 'boolean' || !Number.isSafeInteger(tax.priority) || tax.priority < 1 ||
+			typeof tax.country !== 'string' || typeof tax.state !== 'string') throw new Error('Invalid store tax configuration')
+		return { ...tax, country: tax.country.toLowerCase(), state: tax.state.toLowerCase(), rateBasisPoints: basisPoints(tax.rate) }
 	})
-	const observed = new Map()
-	for (const tax of taxLines) {
+	if (!taxLines.length && configuration.some(tax => tax.rateBasisPoints > 0)) {
+		throw new Error('Cart returned no tax metadata; cannot establish its taxable jurisdiction')
+	}
+	const priorities = new Set()
+	const labels = new Set()
+	const selected = taxLines.map(tax => {
+		const code = /^tax-rate-([a-z]{0,2})-([a-z]{0,2})-.+-(\d+)$/i.exec(tax.code || '')
+		if (!code) throw new Error(`Missing or invalid cart tax jurisdiction code for ${tax.name}`)
+		const [, country, state, priorityText] = code
+		const priority = Number(priorityText)
 		const name = normalize(tax.name)
-		if (observed.has(name) || !names.has(name) || typeof tax.rate !== 'string' || !tax.rate.endsWith('%')) {
-			throw new Error('Unrecognized or duplicate cart tax metadata')
-		}
-		observed.set(name, { label: tax.name.trim(), rateBasisPoints: basisPoints(tax.rate.slice(0, -1)) })
+		if (!name || labels.has(name) || priorities.has(priority)) throw new Error(`Duplicate cart tax label or priority: ${tax.name}`)
+		labels.add(name)
+		priorities.add(priority)
+		if (typeof tax.rate !== 'string' || !tax.rate.trim().endsWith('%')) throw new Error(`Invalid cart tax percentage: ${tax.name}`)
+		const rateBasisPoints = basisPoints(tax.rate.trim().slice(0, -1))
+		const candidates = configuration.filter(config => config.country === country.toLowerCase() && config.state === state.toLowerCase() &&
+			config.priority === priority && normalize(config.label) === name && config.rateBasisPoints === rateBasisPoints)
+		if (!candidates.length) throw new Error(`No store tax configuration matches ${tax.code} (${tax.name}, ${tax.rate})`)
+		return { key: `storeTax${priority}`, label: tax.name.trim(), rateBasisPoints, priority,
+			country: country.toLowerCase(), state: state.toLowerCase(), compounds: [...new Set(candidates.map(config => config.compound))] }
+	}).sort((a, b) => a.priority - b.priority)
+
+	// Never accept a missing nonzero tax priority in an observed jurisdiction.
+	// Different partner regions can use different labels/rates at the same priority.
+	for (const config of configuration.filter(config => config.rateBasisPoints > 0 && selected.some(tax =>
+		(!config.country || config.country === tax.country) && (!config.state || config.state === tax.state)))) {
+		if (!priorities.has(config.priority)) throw new Error(`Missing configured tax priority ${config.priority}: ${config.label}`)
 	}
-	for (const tax of configured) {
-		if (tax.rateBasisPoints > 0 && !observed.has(tax.name)) throw new Error(`Missing configured tax in cart: ${tax.label}`)
+	for (const [index, tax] of selected.entries()) {
+		if (tax.compounds.length === 1) tax.compound = tax.compounds[0]
+		else if (index === 0 && selected.slice(1).every(other => other.compounds.length === 1 && other.compounds[0])) {
+			// A first tax has the same base either way when all remaining taxes compound.
+			tax.compound = false
+		} else throw new Error(`Ambiguous compound configuration for ${tax.label} at priority ${tax.priority}`)
 	}
-	// WooCommerce calculates regular taxes first, then compound taxes in configured
-	// order. Only configuration is read; the oracle still computes every amount.
-	// https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/includes/class-wc-tax.php
-	const ordered = [...configured.filter(tax => tax.compound === 'no'), ...configured.filter(tax => tax.compound === 'yes')]
+	const ordered = [...selected.filter(tax => !tax.compound), ...selected.filter(tax => tax.compound)]
 	const result = structuredClone(rules)
 	result.taxes = []
 	for (const tax of ordered) {
-		if (!observed.has(tax.name)) continue // Absent zero-rate rows are valid.
-		result.taxes.push({ key: tax.key, ...observed.get(tax.name),
-			base: ['discountedSubtotal', ...(tax.compound === 'yes' ? result.taxes.map(previous => previous.key) : [])] })
+		result.taxes.push({ key: tax.key, label: tax.label, rateBasisPoints: tax.rateBasisPoints,
+			base: ['discountedSubtotal', ...(tax.compound ? result.taxes.map(previous => previous.key) : [])] })
 	}
 	return result
 }

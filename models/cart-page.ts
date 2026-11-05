@@ -45,14 +45,21 @@ export class CartPage {
 		})
 	}
 
-	async getTaxRateMetadata(): Promise<{ name: string; rate: string }[]> {
+	async getTaxRateMetadata(): Promise<{ name: string; rate: string; code?: string }[]> {
 		return test.step('Read configured tax rates for the selected store', async () => {
 			const origin = new URL(this.page.url()).origin
 			const response = await this.page.request.get(`${origin}/wp-json/wc/store/v1/cart`, { maxRedirects: 0 })
 			expect(response.ok(), 'Cart tax metadata request must succeed without redirecting').toBeTruthy()
 			const cart = await response.json()
 			expect(Array.isArray(cart.totals?.tax_lines), 'Cart must report tax-rate metadata').toBeTruthy()
-			return cart.totals.tax_lines.map(line => ({ name: line.name, rate: line.rate }))
+			const rows = await this.page.locator('.cart_totals tr.tax-rate').evaluateAll(rows => rows.map(row => ({
+				name: row.querySelector('th')?.textContent?.trim().toLowerCase(),
+				code: Array.from(row.classList).find(name => name.startsWith('tax-rate-')),
+			})))
+			return cart.totals.tax_lines.map(line => {
+				const matches = rows.filter(row => row.name === line.name.trim().toLowerCase())
+				return { name: line.name, rate: line.rate, ...(matches.length === 1 && matches[0].code ? { code: matches[0].code } : {}) }
+			})
 		})
 	}
 

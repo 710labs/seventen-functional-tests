@@ -19,13 +19,25 @@ export class AdminLogin {
 		this.logoutButton = page.locator('#wp-admin-bar-logout a.ab-item')
 	}
 
-	async login() {
+	async login({ privateCredentials = false }: { privateCredentials?: boolean } = {}) {
 		await test.step('Login Admin User', async () => {
 			await this.page.goto('/wp-admin/')
 			await expect(this.userNameField).toBeVisible()
 			await expect(this.passwordField).toBeVisible()
-			await this.userNameField.fill(`${process.env.ADMIN_USER}`)
-			await this.passwordField.fill(`${process.env.ADMIN_PW}`)
+			if (privateCredentials) {
+				// Avoid credential values in Playwright's generated "Fill ..." step titles.
+				// Callers must also use an isolated context with recording disabled.
+				for (const [field, value] of [[this.userNameField, process.env.ADMIN_USER], [this.passwordField, process.env.ADMIN_PW]] as const) {
+					await field.evaluate((input: HTMLInputElement, value) => {
+						input.value = value
+						input.dispatchEvent(new Event('input', { bubbles: true }))
+						input.dispatchEvent(new Event('change', { bubbles: true }))
+					}, value || '')
+				}
+			} else {
+				await this.userNameField.fill(`${process.env.ADMIN_USER}`)
+				await this.passwordField.fill(`${process.env.ADMIN_PW}`)
+			}
 			await Promise.all([
 				this.page.waitForNavigation({ waitUntil: 'networkidle' }),
 				this.loginButton.click(),

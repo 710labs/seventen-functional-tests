@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readStoreTaxConfiguration } from '../../support/bulk-discounts/store-tax-configuration'
 import { CartPage } from '../../models/cart-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { ShopPage } from '../../models/shop-page'
@@ -415,4 +416,91 @@ test('delivery fulfillment uses the scenario address and includes medical-only i
 		expect((await shop.getAddableStorefrontProducts('medical')).map(product => product.productId)).toEqual([101])
 		expect(await shop.getAddableStorefrontProducts('recreational')).toEqual([])
 	} finally { await context.close() }
+})
+
+for (const testState of ['MI', 'CO']) {
+	test(`${testState} bulk cart uses the selected MI store's tax jurisdiction and checks checkout`, async ({ browser }, info) => {
+		const context = await browser.newContext({ baseURL: 'https://store-tax.test' })
+		try {
+			const page = await context.newPage()
+			await page.route('https://store-tax.test/', route => route.fulfill({ contentType: 'text/html', body: '<main>Cart</main>' }))
+			await page.goto('/')
+			const observed = { ...expected, total: 11893 }
+			const rows = summaryRows(observed).replace(/<tr class="tax-rate">.*?<\/tr>/g, '') +
+				'<tr class="tax-rate tax-rate-us-mi-excise-tax-1"><th>Excise Tax</th><td><span class="amount">$10.20</span></td></tr>' +
+				'<tr class="tax-rate tax-rate-us-mi-sales-tax-2"><th>Sales Tax</th><td><span class="amount">$6.73</span></td></tr>'
+			await page.setContent(`<div class="cart_totals"><table>${rows}</table></div><table class="woocommerce-checkout-review-order-table">${rows}</table>`)
+			page.request.get = async () => ({ ok: () => true, json: async () => ({ totals: { tax_lines: [
+				{ name: 'Sales Tax', rate: '6%', price: '999999' }, { name: 'Excise Tax', rate: '10%', price: '999999' },
+			] } }) }) as any
+			const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+			const metadata = await cart.getTaxRateMetadata()
+			expect(metadata).toEqual([
+				{ name: 'Sales Tax', rate: '6%', code: 'tax-rate-us-mi-sales-tax-2' },
+				{ name: 'Excise Tax', rate: '10%', code: 'tax-rate-us-mi-excise-tax-1' },
+			])
+			const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+			const { rulesWithCartTaxRates } = require('../../support/bulk-discounts/cart-tax-rates.cjs')
+			const pricing = expectedCart([{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }], 'plain',
+				rulesWithCartTaxRates(rulesForEnvironment('https://thelist-stage.710labs.com'), metadata, [
+					{ country: 'US', state: 'CA', label: 'County Gross Tax', rate: '10.0000', priority: 1, compound: true },
+					{ country: 'US', state: 'MI', label: 'Excise Tax', rate: '10.0000', priority: 1, compound: true },
+					{ country: 'US', state: 'MI', label: 'Sales Tax', rate: '6.0000', priority: 2, compound: true },
+				]))
+			expect(pricing.total).toBe(11893)
+			await cart.verifyDiscountPricing(pricing)
+			await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
+		} finally { await context.close() }
+	})
+}
+
+test('store tax configuration reuses private admin login once and reads all configuration rows without saving', async ({ browser }) => {
+	const original = { user: process.env.ADMIN_USER, password: process.env.ADMIN_PW }
+	process.env.ADMIN_USER = 'tax-login-canary-user'
+	process.env.ADMIN_PW = 'tax-login-canary-password'
+	let contexts = 0
+	let logins = 0
+	let settingsReads = 0
+	const rates = [
+		{ tax_rate_country: 'US', tax_rate_state: 'MI', tax_rate_name: 'Excise Tax', tax_rate: '10.0000', tax_rate_priority: '1', tax_rate_compound: '1' },
+		{ tax_rate_country: 'US', tax_rate_state: 'MI', tax_rate_name: 'Sales Tax', tax_rate: '6.0000', tax_rate_priority: '2', tax_rate_compound: '1' },
+	]
+	const isolatedBrowser = { newContext: async options => {
+		contexts++
+		expect(options.recordVideo).toBeUndefined()
+		const context = await browser.newContext(options)
+		const newPage = context.newPage.bind(context)
+		context.newPage = async () => {
+			const page = await newPage()
+			await page.route('https://thelist-stage.710labs.com/**', async route => {
+				const request = route.request()
+				const url = new URL(request.url())
+				if (request.method() === 'POST') {
+					logins++
+					const form = new URLSearchParams(request.postData() || '')
+					expect(form.get('log') === process.env.ADMIN_USER && form.get('pwd') === process.env.ADMIN_PW).toBe(true)
+					await route.fulfill({ contentType: 'text/html', body: '<div id="wp-admin-bar-my-account">Admin</div>' })
+				} else if (url.searchParams.get('tab') === 'tax') {
+					settingsReads++
+					await route.fulfill({ contentType: 'text/html', body: `<table class="wc_tax_rates"><tr><td>First page only</td></tr></table><script>window.htmlSettingsTaxLocalizeScript=${JSON.stringify({ rates, wc_tax_nonce: 'excluded' })}</script>` })
+				} else {
+					await route.fulfill({ contentType: 'text/html', body: '<form method="post"><input name="log"><input name="pwd" type="password"><input name="wp-submit" type="submit"></form>' })
+				}
+			})
+			return page
+		}
+		return context
+	} } as typeof browser
+	try {
+		const config = await readStoreTaxConfiguration(isolatedBrowser, 'https://thelist-stage.710labs.com', undefined, 'standard')
+		expect(config).toEqual([
+			{ country: 'US', state: 'MI', label: 'Excise Tax', rate: '10.0000', priority: 1, compound: true },
+			{ country: 'US', state: 'MI', label: 'Sales Tax', rate: '6.0000', priority: 2, compound: true },
+		])
+		expect(await readStoreTaxConfiguration(isolatedBrowser, 'https://thelist-stage.710labs.com', undefined, 'standard')).toBe(config)
+		expect({ contexts, logins, settingsReads }).toEqual({ contexts: 1, logins: 1, settingsReads: 1 })
+	} finally {
+		if (original.user === undefined) delete process.env.ADMIN_USER; else process.env.ADMIN_USER = original.user
+		if (original.password === undefined) delete process.env.ADMIN_PW; else process.env.ADMIN_PW = original.password
+	}
 })

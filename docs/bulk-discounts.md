@@ -98,10 +98,17 @@ rates are used; reported tax amounts and totals are discarded. Missing or malfor
 rates fail explicitly rather than falling back to Dev or a different Stage store.
 
 `rulesWithCartTaxRates` captures those rates once per test. CA retains its verified
-compound tax structure. Other states use the existing QA `/rates` endpoint for
-configured labels and compound flags, selecting `standard` or `medical-rate` to
-match the account. Nonzero configured taxes must appear in cart metadata; a tax-free
-configuration can have no rows. Rates may have up to four decimal places. The oracle
+compound tax structure. Other states read WooCommerce's tax settings once per worker
+through the shared admin login page object, using an isolated context without video or
+trace recording. This uses the existing `ADMIN_USER` and `ADMIN_PW` credentials and
+only reads settings. The QA `/rates` endpoint is not used here because it currently
+hardcodes California, even for MI and CO postal codes.
+
+Cart tax row codes identify the actual fulfillment jurisdiction and priority. Each row
+must match its configured jurisdiction, priority, label and percentage in the account's
+`standard` or `medical-rate` tax class. This supports a store in a different jurisdiction
+from the test address. Missing tax priorities and ambiguous compounding fail explicitly;
+reported tax amounts never become expectations. Rates support four decimal places. The oracle
 calculates regular taxes before compound taxes in configuration order, following
 [WooCommerce's calculation](https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/includes/class-wc-tax.php). The existing oracle independently
 computes discounts, taxable bases, compound taxes, per-line rounding, and totals. Those

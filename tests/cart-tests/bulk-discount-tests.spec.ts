@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { bulkStateProfiles } from '../../support/bulk-discounts/state-profiles'
 import { getRatesBucketForUsage } from '../../utils/usage-types'
+import { readStoreTaxConfiguration } from '../../support/bulk-discounts/store-tax-configuration'
 import { test, expect } from '../../options'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
@@ -47,7 +48,7 @@ for (const profile of bulkStateProfiles) {
 		let cartTouched = false
 		let cleanupUser: { email: string; password: string; firstName: string; lastName: string; orderNote: string } | undefined
 
-		test.beforeEach(async ({ page, baseURL, browserName, qaClient }, testInfo) => {
+		test.beforeEach(async ({ page, baseURL, browser, storageState, browserName, qaClient }, testInfo) => {
 			signedIn = false
 			cartTouched = false
 			cleanupUser = undefined
@@ -99,7 +100,7 @@ for (const profile of bulkStateProfiles) {
 			captureTaxRules = async () => {
 				const metadata = await cart.getTaxRateMetadata()
 				const configuredRates = profile.state === 'CA' ? undefined
-					: (await qaClient.getRates({ post_code: profile.zip }))[getRatesBucketForUsage(profile.usage)]
+					: await readStoreTaxConfiguration(browser, targetOrigin, storageState, getRatesBucketForUsage(profile.usage))
 				if (profile.state !== 'CA' && !Array.isArray(configuredRates)) throw new Error(`Missing tax configuration for ${profile.state} ${profile.usage}`)
 				liveRules = rulesWithCartTaxRates(liveRules, metadata, configuredRates)
 			}
@@ -153,7 +154,7 @@ for (const profile of bulkStateProfiles) {
 				await captureTaxRules()
 				taxRatesCaptured = true
 				test.info().annotations.push({ type: 'tax-profile', description: 'Selected store: ' +
-					liveRules.taxes.map(tax => `${tax.key} ${tax.rateBasisPoints / 100}%`).join(', ') })
+					liveRules.taxes.map(tax => `${tax.label || tax.key} ${tax.rateBasisPoints / 100}%`).join(', ') })
 			}
 			const expected = expectedCart(lines, user)
 			await cart.verifyProductQuantities(lines)
