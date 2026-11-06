@@ -12,9 +12,10 @@ export type ExpectedOrderPricing = {
 	discountLines: ExpectedDiscountLine[]
 	bulkTotal: number
 	accountTotal: number
-	gross: number
-	excise: number
-	sales: number
+	gross?: number
+	excise?: number
+	sales?: number
+	taxLines?: { label: string; amount: number }[]
 	total: number
 }
 
@@ -50,11 +51,15 @@ export async function verifyOrderPricing(summary: Locator, expected: ExpectedOrd
 		await expect(row).toHaveClass(new RegExp(`(?:^|\\s)coupon-${discount.couponKey!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`))
 	}
 	await expect.poll(async () => moneyInCents(await summary.locator('tr.cart-subtotal .amount').first().innerText())).toBe(expected.subtotal)
-	await expect(summary.locator('tr.tax-rate')).toHaveCount(3)
-	for (const key of ['gross', 'excise', 'sales'] as const) {
-		const row = summary.locator('tr.tax-rate').filter({ hasText: new RegExp(key, 'i') })
-		await expect(row, `Exactly one ${key} tax line is expected`).toHaveCount(1)
-		await expect.poll(async () => moneyInCents(await row.locator('.amount').first().innerText()), { message: `${key} tax on discounted subtotal` }).toBe(expected[key])
+	const taxes = expected.taxLines ?? ['gross', 'excise', 'sales'].map(key => ({ label: key, amount: expected[key] }))
+	await expect(summary.locator('tr.tax-rate')).toHaveCount(taxes.length)
+	for (const tax of taxes) {
+		const label = tax.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+		const row = expected.taxLines
+			? summary.locator('tr.tax-rate').filter({ has: summary.page().locator('th').filter({ hasText: new RegExp(`^\\s*${label}(?:\\s*\\(estimated for [\\s\\S]*\\))?\\s*$`, 'i') }) })
+			: summary.locator('tr.tax-rate').filter({ hasText: new RegExp(label, 'i') })
+		await expect(row, `Exactly one ${tax.label} tax line is expected`).toHaveCount(1)
+		await expect.poll(async () => moneyInCents(await row.locator('.amount').first().innerText()), { message: `${tax.label} tax on discounted subtotal` }).toBe(tax.amount)
 	}
 	await expect.poll(async () => moneyInCents(await summary.locator('tr.order-total .amount').first().innerText()), { message: 'Discounted order total' }).toBe(expected.total)
 	// Coupon Remove controls are intentionally outside bulk-pricing coverage.

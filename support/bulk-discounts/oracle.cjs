@@ -23,6 +23,14 @@ function percentage(amount, basisPoints) {
 	return integer(rounded, 'percentage result')
 }
 
+// Store tax percentages may have four decimal places (for example 6.625%).
+function taxRateParts(basisPoints) {
+	const parts = Math.round(basisPoints * 100)
+	if (typeof basisPoints !== 'number' || !Number.isSafeInteger(parts) || parts < 0 || parts > 1000000 ||
+		Math.abs(parts - basisPoints * 100) > 0.000001) throw new Error('Invalid tax rate precision')
+	return parts
+}
+
 function validateRules(rules) {
 	if (rules.currency !== 'USD' || rules.minorUnit !== 2) throw new Error('Unsupported currency')
 	if (rules.taxRounding !== undefined && !['subtotal', 'line'].includes(rules.taxRounding)) throw new Error('Unsupported tax rounding')
@@ -53,23 +61,23 @@ function validateRules(rules) {
 	for (const tax of rules.taxes) {
 		if (knownBases.has(tax.key) || !tax.base.length || new Set(tax.base).size !== tax.base.length ||
 			tax.base.some(base => !knownBases.has(base))) throw new Error('Invalid tax dependency')
-		percentage(0, tax.rateBasisPoints)
+		taxRateParts(tax.rateBasisPoints)
 		knownBases.add(tax.key)
 	}
 }
 
 function lineTaxes(cart, discountLines, perCategoryQty, rules) {
 	const taxes = Object.fromEntries(rules.taxes.map(tax => [tax.key, 0]))
-	// Keep compound bases unrounded. Each basis-point multiplication can add
-	// four decimal places; BigInt preserves them without floating-point drift.
-	const precision = 10000n ** BigInt(rules.taxes.length)
+	// Keep compound bases unrounded. Each tax multiplication can add six
+	// decimal places; BigInt preserves them without floating-point drift.
+	const precision = 1000000n ** BigInt(rules.taxes.length)
 	for (const line of cart.filter(line => !line.isFreeBogoUnit)) {
 		const discount = discountLines.find(discount => line.categoryIds.includes(discount.categoryId))
 		const bulk = discount ? discount.amount / perCategoryQty[discount.categoryId] * line.qty : 0
 		const net = integer(cents(line.unitPrice) * line.qty - bulk, 'discounted line subtotal')
 		const bases = { discountedSubtotal: BigInt(net) * precision }
 		for (const tax of rules.taxes) {
-			const raw = tax.base.reduce((sum, key) => sum + bases[key], 0n) * BigInt(tax.rateBasisPoints) / 10000n
+			const raw = tax.base.reduce((sum, key) => sum + bases[key], 0n) * BigInt(taxRateParts(tax.rateBasisPoints)) / 1000000n
 			bases[tax.key] = raw
 			// WC_Tax computes with cents at 4DP, then WC_Cart_Totals rounds
 			// each line's tax to whole cents before summing the tax rows.
@@ -138,13 +146,17 @@ function expectedCart(cart, user = 'plain', rules = defaultRules) {
 		taxes = lineTaxes(cart, discountLines, perCategoryQty, rules)
 	} else {
 		for (const tax of rules.taxes) {
-			const amount = percentage(tax.base.reduce((sum, key) => sum + bases[key], 0), tax.rateBasisPoints)
+			const base = tax.base.reduce((sum, key) => sum + bases[key], 0)
+			const amount = Number((BigInt(base) * BigInt(taxRateParts(tax.rateBasisPoints)) + 500000n) / 1000000n)
 			taxes[tax.key] = amount
 			bases[tax.key] = amount
 		}
 	}
 	return {
 		subtotal, discountLines, bulkTotal, accountTotal, discountedSubtotal, ...taxes,
+		...(rules.taxes.every(tax => tax.label) ? {
+			taxLines: rules.taxes.map(tax => ({ label: tax.label, amount: taxes[tax.key] })),
+		} : {}),
 		total: integer(discountedSubtotal + Object.values(taxes).reduce((sum, amount) => sum + amount, 0), 'total'),
 		perCategoryQty,
 	}

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readStoreTaxConfiguration } from '../../support/bulk-discounts/store-tax-configuration'
 import { CartPage } from '../../models/cart-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { ShopPage } from '../../models/shop-page'
@@ -35,35 +36,38 @@ function summaryRows(pricing = expected, removeLink = false, cart = true) {
 		<tr class="order-total"><th>Total</th><td>${amount(pricing.total)}</td></tr>`
 }
 
-for (const available of [true, false]) {
-	test(`named pickup selection ${available ? 'persists the tax-profile store' : 'rejects a different address-resolved store'}`, async ({ browser }, info) => {
-		const context = await browser.newContext({ baseURL: 'https://pickup.test' })
+for (const [store, grossRate, observed] of [
+	['March and Ash Mill Valley', '8%', [816, 1652, 1203, 13871]],
+	['Spaceflyt Sandbox', '10%', [1020, 1683, 1226, 14129]],
+] as const) {
+	test(`bulk pricing accepts the selected store and independently checks its taxes: ${store}`, async ({ browser }, info) => {
+		const context = await browser.newContext({ baseURL: 'https://store-tax.test' })
 		try {
 			const page = await context.newPage()
-			const store = 'March and Ash Mill Valley'
-			await page.route('https://pickup.test/', route => route.fulfill({ contentType: 'text/html', body: `
-				<button class="wcse-nav" id="nav">Pickup | Spaceflyt Sandbox</button>
-				<button class="wcse-nav" hidden>Hidden duplicate</button>
-				<ul><li class="product">Fixture product</li></ul>
-				<div id="fulfillmentElement" hidden><h2>How do you want your order?</h2>
-				<h3 class="wcse-reactive--pickup-title">${available ? store : 'Different Store'}</h3>
-				<button id="pickup">Pickup</button><button id="fulfillerSubmit">Submit</button></div>
-				<script>
-				const nav=document.querySelector('#nav'); const modal=document.querySelector('#fulfillmentElement');
-				nav.onclick=()=>{ modal.hidden=false; };
-				document.querySelector('#pickup').onclick=()=>{ document.body.dataset.pickup='true'; };
-				document.querySelector('#fulfillerSubmit').onclick=()=>{
-				  if(document.body.dataset.pickup==='true'){ nav.textContent='Pickup | ${store}'; modal.hidden=true; document.body.dataset.submitted='true'; }
-				};</script>` }))
+			await page.route('https://store-tax.test/', route => route.fulfill({ contentType: 'text/html', body:
+				`<button class="wcse-nav">Pickup | ${store}</button><ul><li class="product">Product</li></ul>` }))
 			const shop = new ShopPage(page, 'chromium', info)
-			if (available) {
-				await shop.openStorefrontForFulfillment('Pickup', store)
-				await expect(page.locator('#nav')).toHaveText(`Pickup | ${store}`)
-				await expect(page.locator('body')).toHaveAttribute('data-submitted', 'true')
-			} else {
-				await expect(shop.openStorefrontForFulfillment('Pickup', store)).rejects.toThrow('Pickup store must match the tax profile')
-				await expect(page.locator('body')).not.toHaveAttribute('data-submitted', 'true')
+			await shop.openStorefrontForFulfillment('Pickup')
+			expect(await shop.getFulfillmentLabel()).toBe(`Pickup | ${store}`)
+			page.request.get = async (url, options) => {
+				expect(url).toBe('https://store-tax.test/wp-json/wc/store/v1/cart')
+				expect(options.maxRedirects).toBe(0)
+				return { ok: () => true, json: async () => ({ totals: { tax_lines: [
+					{ name: 'Gross', rate: grossRate, price: '99999' },
+					{ name: 'Excise', rate: '15%', price: '99999' },
+					{ name: 'Sales', rate: '9.5%', price: '99999' },
+				] } }) } as any
 			}
+			const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+			const metadata = await cart.getTaxRateMetadata()
+			expect(metadata.every(line => !('price' in line))).toBe(true)
+			const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+			const { rulesWithCartTaxRates } = require('../../support/bulk-discounts/cart-tax-rates.cjs')
+			const pricing = expectedCart([{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }], 'plain',
+				rulesWithCartTaxRates(rulesForEnvironment('https://thelist-stage.710labs.com'), metadata))
+			const [gross, excise, sales, total] = observed
+			await page.setContent(`<div class="cart_totals"><table>${summaryRows({ ...pricing, gross, excise, sales, total })}</table></div>`)
+			await cart.verifyDiscountPricing(pricing)
 		} finally { await context.close() }
 	})
 }
@@ -202,14 +206,14 @@ test('category discovery paginates and matches only addable menu products', asyn
 		const pageNumber = Number((options.params as any).page)
 		requests.push(pageNumber)
 		return { ok: () => true, headers: () => ({ 'x-wp-totalpages': '2' }), json: async () => pageNumber === 1 ? [] : [{
-			id: 101, sku: 'fixture', categories: [{ id: 331 }], prices: { currency_code: 'USD', currency_minor_unit: 2, price: '3900' },
+			id: 101, sku: 'fixture', is_in_stock: true, low_stock_remaining: 1, add_to_cart: { maximum: 1 }, categories: [{ id: 331 }], prices: { currency_code: 'USD', currency_minor_unit: 2, price: '3900' },
 		}] } as any
 	}
 	try {
 		const products = await new ShopPage(page, 'chromium', info).getCategoryProducts([331])
 		expect(requests).toEqual([1, 2])
 		expect(products).toHaveLength(1)
-		expect(products[0]).toMatchObject({ productId: 101, categoryIds: [331], unitPrice: '39.00' })
+		expect(products[0]).toMatchObject({ productId: 101, categoryIds: [331], unitPrice: '39.00', maxQuantity: 1 })
 	} finally { page.request.get = originalGet }
 })
 
@@ -370,4 +374,188 @@ test('cart tier badges replace 3+ with 5+ and disappear below threshold', async 
 	await expect(cart.verifyProductDiscountTags([line], expectedCart([line]).discountLines)).rejects.toThrow('only the active category tier')
 	await page.locator('[data-wdr-coupon="live-rosin"]').evaluate(tag => tag.remove())
 	await cart.verifyProductDiscountTags([line], expectedCart([line]).discountLines)
+})
+
+for (const taxLines of [[], [{ label: 'Sales (State)', amount: 676 }], [
+	{ label: 'Sales', amount: 612 }, { label: 'Sales Local', amount: 204 },
+]]) {
+	test(`cart and checkout verify state-specific tax rows: ${taxLines.map(line => line.label).join(', ') || 'tax free'}`, async ({ page }, info) => {
+		const pricing = { ...expected, taxLines, total: 10200 + taxLines.reduce((sum, line) => sum + line.amount, 0) }
+		const rows = summaryRows(pricing).replace(/<tr class="tax-rate">.*?<\/tr>/g, '') +
+			taxLines.map(line => `<tr class="tax-rate"><th>${line.label}</th><td>${amount(line.amount)}</td></tr>`).join('')
+		await page.setContent(`<div class="cart_totals"><table>${rows}</table></div><table class="woocommerce-checkout-review-order-table">${rows}</table>`)
+		await new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)
+		await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
+	})
+}
+
+test('state tax assertions reject an incorrect amount even if the total is correct', async ({ page }, info) => {
+	test.setTimeout(15000)
+	const pricing = { ...expected, taxLines: [{ label: 'Sales', amount: 676 }], total: 10876 }
+	const rows = summaryRows(pricing).replace(/<tr class="tax-rate">.*?<\/tr>/g, '') +
+		`<tr class="tax-rate"><th>Sales</th><td>${amount(675)}</td></tr>`
+	await page.setContent(`<div class="cart_totals"><table>${rows}</table></div>`)
+	await expect(new CartPage(page, null!, 'chromium', info, 'recreational').verifyDiscountPricing(pricing)).rejects.toThrow('Sales tax')
+})
+
+test('delivery fulfillment uses the scenario address and includes medical-only inventory', async ({ browser }, info) => {
+	const context = await browser.newContext({ baseURL: 'https://delivery.test' })
+	try {
+		const page = await context.newPage()
+		await page.route('https://delivery.test/', route => route.fulfill({ contentType: 'text/html', body: `
+			<div id="fulfillmentElement"><h2>How do you want your order?</h2><button>Delivery</button>
+			<input id="fasd_address"><button class="wpse-button-primary fasd-form-submit"
+				onclick="document.getElementById('fulfillmentElement').hidden = true">Confirm address</button></div>
+			<button class="wcse-nav">Delivery</button><ul><li class="product"><h2>Medical product</h2>
+			<span class="medOnly">Medical only</span><span class="price">$39.00</span>
+			<button class="add_to_cart_button" data-product_id="101">Add</button></li></ul>` }))
+		const address = '1845 Town Center Blvd, Fleming Island, FL 32003'
+		const shop = new ShopPage(page, 'chromium', info, { deliveryAddress: address })
+		await shop.openStorefrontForFulfillment('Delivery')
+		await expect(page.locator('#fasd_address')).toHaveValue(address)
+		expect((await shop.getAddableStorefrontProducts('medical')).map(product => product.productId)).toEqual([101])
+		expect(await shop.getAddableStorefrontProducts('recreational')).toEqual([])
+	} finally { await context.close() }
+})
+
+for (const testState of ['MI', 'CO']) {
+	test(`${testState} bulk cart uses the selected MI store's tax jurisdiction and checks checkout`, async ({ browser }, info) => {
+		const context = await browser.newContext({ baseURL: 'https://store-tax.test' })
+		try {
+			const page = await context.newPage()
+			await page.route('https://store-tax.test/', route => route.fulfill({ contentType: 'text/html', body: '<main>Cart</main>' }))
+			await page.goto('/')
+			const observed = { ...expected, total: 11893 }
+			const rows = summaryRows(observed).replace(/<tr class="tax-rate">.*?<\/tr>/g, '') +
+				'<tr class="tax-rate tax-rate-us-mi-excise-tax-1"><th>Excise Tax <small>(estimated for the United States (US))</small></th><td data-title="Excise Tax"><span class="amount">$10.20</span></td></tr>' +
+				'<tr class="tax-rate tax-rate-us-mi-sales-tax-2"><th>Sales Tax <small>(estimated for the United States (US))</small></th><td data-title="Sales Tax"><span class="amount">$6.73</span></td></tr>'
+			await page.setContent(`<div class="cart_totals"><table>${rows}</table></div><table class="woocommerce-checkout-review-order-table">${rows}</table>`)
+			page.request.get = async () => ({ ok: () => true, json: async () => ({ totals: { tax_lines: [
+				{ name: 'Sales Tax', rate: '6%', price: '999999' }, { name: 'Excise Tax', rate: '10%', price: '999999' },
+			] } }) }) as any
+			const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+			const metadata = await cart.getTaxRateMetadata()
+			expect(metadata).toEqual([
+				{ name: 'Sales Tax', rate: '6%', code: 'tax-rate-us-mi-sales-tax-2' },
+				{ name: 'Excise Tax', rate: '10%', code: 'tax-rate-us-mi-excise-tax-1' },
+			])
+			const { rulesForEnvironment } = require('../../support/bulk-discounts/tax-profiles.cjs')
+			const { rulesWithCartTaxRates } = require('../../support/bulk-discounts/cart-tax-rates.cjs')
+			const pricing = expectedCart([{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }], 'plain',
+				rulesWithCartTaxRates(rulesForEnvironment('https://thelist-stage.710labs.com'), metadata, [
+					{ country: 'US', state: 'CA', label: 'County Gross Tax', rate: '10.0000', priority: 1, compound: true },
+					{ country: 'US', state: 'MI', label: 'Excise Tax', rate: '10.0000', priority: 1, compound: true },
+					{ country: 'US', state: 'MI', label: 'Sales Tax', rate: '6.0000', priority: 2, compound: true },
+				]))
+			expect(pricing.total).toBe(11893)
+			await cart.verifyDiscountPricing(pricing)
+			await new CheckoutPage(page, null!).verifyDiscountPricing(pricing)
+		} finally { await context.close() }
+	})
+}
+
+test('store tax configuration reuses private admin login once and reads all configuration rows without saving', async ({ browser }) => {
+	const original = { user: process.env.ADMIN_USER, password: process.env.ADMIN_PW }
+	process.env.ADMIN_USER = 'tax-login-canary-user'
+	process.env.ADMIN_PW = 'tax-login-canary-password'
+	let contexts = 0
+	let logins = 0
+	let settingsReads = 0
+	const rates = [
+		{ tax_rate_country: 'US', tax_rate_state: 'MI', tax_rate_name: 'Excise Tax', tax_rate: '10.0000', tax_rate_priority: '1', tax_rate_compound: '1' },
+		{ tax_rate_country: 'US', tax_rate_state: 'MI', tax_rate_name: 'Sales Tax', tax_rate: '6.0000', tax_rate_priority: '2', tax_rate_compound: '1' },
+	]
+	const isolatedBrowser = { newContext: async options => {
+		contexts++
+		expect(options.recordVideo).toBeUndefined()
+		const context = await browser.newContext(options)
+		const newPage = context.newPage.bind(context)
+		context.newPage = async () => {
+			const page = await newPage()
+			await page.route('https://thelist-stage.710labs.com/**', async route => {
+				const request = route.request()
+				const url = new URL(request.url())
+				if (request.method() === 'POST') {
+					logins++
+					const form = new URLSearchParams(request.postData() || '')
+					expect(form.get('log') === process.env.ADMIN_USER && form.get('pwd') === process.env.ADMIN_PW).toBe(true)
+					await route.fulfill({ contentType: 'text/html', body: '<div id="wp-admin-bar-my-account">Admin</div>' })
+				} else if (url.searchParams.get('tab') === 'tax') {
+					settingsReads++
+					await route.fulfill({ contentType: 'text/html', body: `<table class="wc_tax_rates"><tr><td>First page only</td></tr></table><script>window.htmlSettingsTaxLocalizeScript=${JSON.stringify({ rates, wc_tax_nonce: 'excluded' })}</script>` })
+				} else {
+					await route.fulfill({ contentType: 'text/html', body: '<form method="post"><input name="log"><input name="pwd" type="password"><input name="wp-submit" type="submit"></form>' })
+				}
+			})
+			return page
+		}
+		return context
+	} } as typeof browser
+	try {
+		const config = await readStoreTaxConfiguration(isolatedBrowser, 'https://thelist-stage.710labs.com', undefined, 'standard')
+		expect(config).toEqual([
+			{ country: 'US', state: 'MI', label: 'Excise Tax', rate: '10.0000', priority: 1, compound: true },
+			{ country: 'US', state: 'MI', label: 'Sales Tax', rate: '6.0000', priority: 2, compound: true },
+		])
+		expect(await readStoreTaxConfiguration(isolatedBrowser, 'https://thelist-stage.710labs.com', undefined, 'standard')).toBe(config)
+		expect({ contexts, logins, settingsReads }).toEqual({ contexts: 1, logins: 1, settingsReads: 1 })
+	} finally {
+		if (original.user === undefined) delete process.env.ADMIN_USER; else process.env.ADMIN_USER = original.user
+		if (original.password === undefined) delete process.env.ADMIN_PW; else process.env.ADMIN_PW = original.password
+	}
+})
+
+for (const control of ['hidden', 'readonly', 'maximum', 'missing']) {
+	test(`quantity capacity rejects a ${control} control before filling`, async ({ page }, info) => {
+		const input = control === 'missing' ? '' : `<input class="qty" value="1" ${control === 'hidden' ? 'type="hidden" max="1"' : control === 'readonly' ? 'readonly' : 'max="2"'}>`
+		await page.setContent(`<form class="woocommerce-cart-form"><table><tr class="cart_item"><td><a data-product_id="101">Product</a>${input}</td></tr></table></form>`)
+		const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+		expect(await cart.quantityUnavailableReason(101, 6)).toBeTruthy()
+		await expect(cart.setProductQuantity(101, 6)).rejects.toThrow('cannot reach 6 units')
+	})
+}
+
+for (const missingInput of [false, true]) test(`bulk product selection replaces the restricted candidate: ${missingInput ? 'absent input' : 'last unit'}`, async ({ browser }, info) => {
+	const context = await browser.newContext({ baseURL: 'https://inventory.test' })
+	try {
+		const page = await context.newPage()
+		const quantities = new Map<number, number>()
+		const added: number[] = []
+		await page.route('https://inventory.test/**', async route => {
+			const url = new URL(route.request().url())
+			if (url.pathname === '/add') {
+				const id = Number(route.request().postDataJSON().id)
+				quantities.set(id, 1); added.push(id)
+				await route.fulfill({ json: { count: quantities.size } })
+			} else if (url.pathname === '/cart/') {
+				if (url.searchParams.has('remove')) quantities.delete(Number(url.searchParams.get('remove')))
+				await route.fulfill({ contentType: 'text/html', body: `<h1>Cart</h1><form class="woocommerce-cart-form"><table>${[...quantities].map(([id, qty]) =>
+					`<tr class="cart_item"><td class="product-remove"><a data-product_id="${id}" href="/cart/?remove=${id}">Remove</a></td><td><input class="qty" value="${qty}" ${id === 101 ? 'type="hidden" max="1"' : 'type="number" max="10"'}></td></tr>`.replace(id === 101 && missingInput ? /<input[^>]+>/ : /NEVER_MATCH/, '')).join('')}</table></form>` })
+			} else {
+				await route.fulfill({ contentType: 'text/html', body: `<a href="/cart/">My Bag (${quantities.size})</a><ul>${[101,202].map(id =>
+					`<li class="product"><h2>Product ${id}</h2><span class="price">$39</span><button class="add_to_cart_button" data-product_id="${id}">Add</button></li>`).join('')}</ul>
+					<script>document.querySelectorAll('button').forEach(button=>button.onclick=async()=>{ const data=await(await fetch('/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:button.dataset.product_id})})).json();document.querySelector('a').textContent='My Bag ('+data.count+')' })</script>` })
+			}
+		})
+		await page.goto('/')
+		const shop = new ShopPage(page, 'chromium', info)
+		const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
+		const candidates = (await shop.getAddableStorefrontProducts()).map(candidate => ({ ...candidate, productId: candidate.productId!, categoryIds: [331], unitPrice: '39.00' }))
+		const selected = await shop.addQuantityCapableProduct(candidates, cart, 6)
+		expect(selected.productId).toBe(202)
+		expect(added).toEqual([101,202])
+		expect(await cart.getProductQuantity(101)).toBe(0)
+		await cart.verifyProductQuantity(202, 1)
+		expect(info.annotations.some(a => a.type === 'inventory-candidate-rejected' && a.description?.includes('101'))).toBe(true)
+		await expect(shop.addQuantityCapableProduct([{ ...candidates[0], maxQuantity: 1 }], cart, 6)).rejects.toThrow('Inventory coverage gap')
+		expect(added).toEqual([101,202])
+	} finally { await context.close() }
+})
+
+for (const method of ['pickup','delivery']) test(`tax jurisdiction follows the selected ${method} address`, async ({ page }, info) => {
+	await page.setContent(`<div id="fulfillmentElement" data-toggle="${method}"><p class="wcse-reactive--origin">933 Alpine Ave, Boulder, CO 80304</p><p class="wcse-reactive--destination-link"><a>Fresh Cannabis, Eatontown, NJ 07724</a></p></div>`)
+	const shop = new ShopPage(page, 'chromium', info)
+	expect(await shop.getFulfillmentTaxLocation()).toEqual({ country: 'US', state: method === 'pickup' ? 'NJ' : 'CO' })
+	await page.locator('#fulfillmentElement').evaluate(element => element.setAttribute('data-toggle','unknown'))
+	await expect(shop.getFulfillmentTaxLocation()).rejects.toThrow('selected fulfillment method')
 })

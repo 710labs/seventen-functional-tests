@@ -6,12 +6,6 @@ const stageMetadata = require('./stage-rule-metadata.json')
 
 const profiles = new Map([dev, stage].map(profile => [profile.source.environment, profile]))
 
-function pickupStoreForEnvironment(baseUrl) {
-	const profile = profiles.get(assertBulkBaseUrl(baseUrl))
-	if (!profile?.source.store) throw new Error('Bulk tax profile requires a named pickup store')
-	return profile.source.store
-}
-
 function rulesForEnvironment(baseUrl) {
 	const origin = assertBulkBaseUrl(baseUrl)
 	const profile = profiles.get(origin)
@@ -28,4 +22,4 @@ function rulesForEnvironment(baseUrl) {
 	return result
 }
 
-module.exports = { rulesForEnvironment, pickupStoreForEnvironment }
+module.exports = { rulesForEnvironment }

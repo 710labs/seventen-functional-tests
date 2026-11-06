@@ -1,12 +1,13 @@
 # Bulk discounts in the existing E2E suite
 
-Latest Stage verification: all 18 scenarios have a passing result across focused
-reruns, with confirmed orders and retained videos. This includes the corrected
-four-category Stage policy and the final mobile first-order rerun with explicit
-pickup-store verification. Local validation also passed 107 Node tests and 26
-browser regression tests, including focused rechecks. The ignored local evidence
-index is `output/playwright/stage-bulk-verification.md`; source reports preserve
-intermediate failures rather than presenting these reruns as one uninterrupted run.
+Stage now includes the same nine scenarios for CA, FL, MI, CO, and NJ: 18 browser
+cases per state (desktop + mobile), 90 across all five state runs. This expansion
+passed 112 Node unit checks and 31 headless browser regression cases. State-filter
+discovery selects exactly 18 cases per state, and public-reporting validation passes.
+Full live orders in the four newly enabled states still need verification through
+the Stage state jobs. Repository-wide TypeScript checking remains blocked by
+existing errors outside the new state implementation, including loadtest Playwright
+type conflicts and fixture scope declarations.
 
 Bulk tests live in `tests/cart-tests/bulk-discount-tests.spec.ts`. They import `test`
 from `options.ts`, use the existing `qaClient`, and run with the existing dev and staging
@@ -16,25 +17,29 @@ superseding the handoff's private-evidence requirement. There is no separate liv
 
 ## Running
 
-The normal CA command includes bulk tests alongside existing tests:
+The normal state commands include bulk tests alongside existing E2E tests:
 
 ```bash
 npm run ci:test:dev:ca
 npm run ci:test:staging:ca
+npm run ci:test:staging:fl
+npm run ci:test:staging:mi
+npm run ci:test:staging:co
+npm run ci:test:staging:nj
 ```
 
 To focus on the new specs with the same runner/configuration:
 
 ```bash
-node scripts/run-public-playwright.js tests/cart-tests/bulk-discount-tests.spec.ts --config=configs/dev.config.ts --workers=1
+node scripts/run-public-playwright.js tests/cart-tests/bulk-discount-tests.spec.ts --config=configs/staging.config.ts --grep @CA --workers=1
 ```
 
 Use the existing `CHECKOUT_PASSWORD`, `API_KEY`, `QA_ENDPOINT`, `RECAPTCHA_BYPASS`,
 `NEXT_VERSION`, and `ADD_ADDRESS_BEFORE_CHECKOUT` setup. Every bulk test registers a new account in `beforeEach` through the shared
-`CreateAccountPage.create` UI flow, with a unique test email. Registration leaves the
+`CreateAccountPage.create` UI flow (or `createMichiganCustomer` for MI), with a unique test email. Registration leaves the
 account signed in, and the setup verifies that its cart is empty. Account names identify
-the case and project (for example, `Bulk Doinks Tiers / Desktop Chrome` or
-`Bulk J5 Relogin / Mobile Chrome`). Email addresses include the case, project, and
+the state, case and project (for example, `Bulk FL Doinks Tiers / Desktop Chrome`).
+Email addresses include the state, case, project, and
 a unique run identifier. Reports retain the full case/run reference; it is also
 filled into order notes when the checkout offers that field.
 No separate plain-user credentials are required.
@@ -43,15 +48,29 @@ The dev and staging configs enable bulk tests through metadata. Other configs sk
 login/account/cart actions. Enabled tests require the exact HTTPS dev or Stage origin.
 Top-level browser navigation is restricted to the configured origin (including blocking
 redirects between dev and Stage); catalogue API
-requests refuse redirects. Tags `@CA` and `@bulk` keep these CA rules out of MI/CO/NJ runs.
+requests refuse redirects. Each generated state group has its own `@CA`, `@FL`,
+`@MI`, `@CO`, or `@NJ` tag plus `@bulk`, so existing state filters select exactly
+18 bulk cases. Dev keeps its existing CA-only bulk coverage; production remains excluded.
 
-Stage CA runs all nine scenarios on desktop and mobile (18 tests), alongside the existing
-E2E tests. Missing bulk discounts are ordinary assertion failures, not skips or expected
-failures. Stage enablement was requested on November 2, 2026, superseding the original
-dev-only browser restriction; the standalone API probe remains dev-only. Tax assertions
-select a pinned pickup-store profile from the Playwright base URL: dev uses
-11% / 15% / 9.5%, while Stage uses 8% / 15% / 9.5% (gross / excise / sales).
-Stage smoke-only workflows do not run this full suite.
+The existing “List - Stage - All States” workflow runs CA, MI, CO, and NJ in sequence.
+FL runs through the existing “List - FL - Stage - Functional Tests” workflow. Both
+workflows share the Stage domain concurrency lock and select the backend state first.
+For local runs, configure the domain for the requested state first, use the matching
+`--grep @STATE`, and avoid concurrent runs that change Stage's domain state. Do not
+run all 90 cases together against a domain configured for just one state.
+
+| State | New account | Fulfillment |
+| --- | --- | --- |
+| CA | Recreational, California address | Pickup |
+| FL | Medical, Florida address | Delivery |
+| MI | Michigan registration, recreational, Michigan address | Pickup |
+| CO | Recreational, Colorado address | Pickup |
+| NJ | Recreational, New Jersey address | Pickup |
+
+All states currently expect the same four Stage discounts: Eighths, Gummis, Vapes,
+and Badder. Doinks remain full price on Stage and discounted on Dev. Missing bulk
+discounts or required inventory produce ordinary failures, not skips. Stage
+smoke-only workflows do not run this full suite.
 
 ## Shared code
 
@@ -70,14 +89,47 @@ The suite remaps both pricing rules and journey plans before selecting products;
 neither shop section order nor Dev's numeric category IDs determine Stage selection.
 Reports record the resolved mapping in a `category-map` annotation.
 
-Bulk storefront visits also pass the tax profile's pickup-store name to the shared
-`openStorefrontForFulfillment` method: Spaceflyt Sandbox on Dev and March and Ash Mill
-Valley on Stage. If the current header points to a different partner, the POM opens
-the fulfillment modal, verifies its address-resolved pickup store, and uses the existing
-Pickup/Submit flow to persist it. The store heading is informational and is not clicked.
-An unavailable/mismatched store fails explicitly. This prevents a stale Spaceflyt selection
-on Stage (observed at 10% gross) from being tested against March and Ash's 8% gross profile.
-Reports record the intended store in a `pickup-store` annotation.
+Bulk cart setup checks catalogue stock/maximum quantities and then the actual cart's
+quantity control before selecting a SKU. Hidden, read-only, missing or capped controls
+reject that candidate; any added unit is removed and the next SKU in the same bulk
+category is tried. Tier cases require capacity for six units; J1 reserves capacity for
+its later three-unit mutation. Replacements remain distinct across cart lines and their
+actual prices feed the oracle. Rejections appear as `inventory-candidate-rejected`
+annotations. Exhausted inventory remains an explicit coverage failure; an unexplained
+wrong product ID or server error is not converted into a pass.
+
+Bulk storefront visits use the existing state fulfillment flow and accept whichever store the
+site selects. `ShopPage.getFulfillmentLabel` records the actual store in a `fulfillment-store`
+annotation. There is no required store name and no attempt to force a different partner.
+After the cart contains the scenario products, `CartPage.getTaxRateMetadata` reads
+`totals.tax_lines` from the authenticated Store API. Only tax names and percentage
+rates are used; reported tax amounts and totals are discarded. Missing or malformed
+rates fail explicitly rather than falling back to Dev or a different Stage store.
+
+`rulesWithCartTaxRates` captures those rates once per test. CA retains its verified
+compound tax structure. Other states read WooCommerce's tax settings once per worker
+through the shared admin login page object, using an isolated context without video or
+trace recording. This uses the existing `ADMIN_USER` and `ADMIN_PW` credentials and
+only reads settings. The QA `/rates` endpoint is not used here because it currently
+hardcodes California, even for MI and CO postal codes.
+
+Cart tax row codes identify the actual fulfillment jurisdiction and priority. The cart's
+"estimated for" suffix is presentation text and is excluded when matching API tax names.
+When no tax rows are returned, the selected pickup/delivery address must independently
+identify a jurisdiction with no applicable nonzero configured rates (including wildcard
+rates). Otherwise missing taxes still fail. This supports Stage NJ's current tax-free
+configuration without making every empty tax response pass. Each row
+must match its configured jurisdiction, priority, label and percentage in the account's
+`standard` or `medical-rate` tax class. This supports a store in a different jurisdiction
+from the test address. Missing tax priorities and ambiguous compounding fail explicitly;
+reported tax amounts never become expectations. Rates support four decimal places. The oracle
+calculates regular taxes before compound taxes in configuration order, following
+[WooCommerce's calculation](https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/includes/class-wc-tax.php). The existing oracle independently
+computes discounts, taxable bases, compound taxes, per-line rounding, and totals. Those
+expectations remain fixed through quantity changes, logout/login, checkout, and order
+confirmation. Reports record the captured rates in `tax-profile`. This validates tax
+calculation after bulk discounts; verifying each store's configured tax percentages is
+outside this suite's scope.
 
 | Category | Slug | Dev ID | Stage ID (November 2, 2026) |
 | --- | --- | ---: | ---: |
@@ -93,7 +145,7 @@ Stage also uses different coupon identifiers: `live-rosin-vapes` and
 `stage-rule-metadata.json` records these observed differences. The selected environment
 profile supplies the coupon identifiers while retaining the shared business labels and tiers.
 The user confirmed Stage enables only Eighths, Gummis, Vapes, and Badder: its Doinks
-rule is explicitly disabled. All 18 tests remain present. Stage's Doinks quantity
+rule is explicitly disabled. All 18 tests per state remain present. Stage's Doinks quantity
 scenario verifies full-price lines with no discount badge or coupon; J2 and J5 keep
 Doinks in their carts and verify that only enabled categories receive discounts.
 Dev retains both Doinks tiers. Reports record this distinction in `bulk-rules` annotations.
@@ -105,7 +157,7 @@ added. A stale hint never triggers a duplicate click. CartPage owns quantity edi
 removal, product/quantity checks and cleanup
 verification. Cleanup waits for each product row to disappear and the cart loading
 overlay to clear before selecting the next Remove link. Cart and checkout share `models/components/order-pricing.ts` for coupon
-labels/amounts, subtotal, all three taxes and total. Coupon Remove controls are
+labels/amounts, subtotal, all configured tax rows and total. Coupon Remove controls are
 ignored: neither their presence nor their behavior is tested.
 OrderReceivedPage verifies the confirmed discounted total. The E2E specs have no UI selectors.
 
@@ -140,7 +192,7 @@ after a confirmation failure. These cases do not modify stock, menus, or global 
 - J5: newly registered user logout/login persistence and freshly registered user's first order,
   using the suite's existing desktop and mobile projects.
 
-Every one of the nine scenarios submits one order after its checks pass (18 orders
+Every one of the nine scenarios submits one order after its checks pass (18 orders per state
 across the two projects on a fully passing run). For under-minimum carts, the shared
 order helper uses the existing POM minimum banner and add/quantity methods to add a
 companion product outside the scenario categories, preserving the tested quantities.
@@ -179,8 +231,8 @@ by the exact configured environment URL. Each test records its selected rates in
 to dev. Both environments share tier definitions; Stage's enabled categories and
 coupon identifiers come from its explicit rule metadata.
 
-Dev overlays `support/bulk-discounts/dev-pickup-taxes.json` for the current
-default pickup store, Spaceflyt Sandbox: 11% gross, 15% excise on subtotal plus gross,
+The reference fixture `support/bulk-discounts/dev-pickup-taxes.json` describes the observed Dev
+pickup store, Spaceflyt Sandbox: 11% gross, 15% excise on subtotal plus gross,
 and 9.5% sales on subtotal plus gross plus excise. Taxes use each product line after
 its bulk discount, keep unrounded compound bases, round each line tax, then sum the
 tax rows. These rates were confirmed from a fresh-account dev cart on November 1, 2026:
@@ -192,12 +244,11 @@ subtotal instead would incorrectly expect $22.48. A second observed cart ($136
 and $33 after discounts) yields $236.21. The line calculation follows
 [WooCommerce tax compounding](https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/includes/class-wc-tax.php)
 and [line-tax rounding](https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/includes/traits/trait-wc-item-totals.php).
-This is a pinned store profile, not a statewide rate or a rate inferred anew from
-each assertion. If the default pickup store changes,
-verify and update this profile. Cart and checkout use the same oracle and live profile;
-offline workbook assertions retain their original 8% / 15% / 7.75% rates.
+These pinned fixtures remain offline regression examples. Live browser tests replace
+their rates with the selected store's metadata before making any pricing assertions.
+Offline workbook assertions retain their original 8% / 15% / 7.75% rates.
 
-Stage overlays `support/bulk-discounts/stage-pickup-taxes.json`. The observed Stage
+`support/bulk-discounts/stage-pickup-taxes.json` preserves the observed Stage
 cart on November 2, 2026 contained three $39 Rainbow Belts eighths: $117 subtotal,
 $15 bulk discount, $102 discounted subtotal, $8.16 County Gross Tax,
 $16.52 California Excise Tax, $12.03 Sales, and $138.71 total. These amounts are
@@ -206,8 +257,8 @@ browser diagnostic confirmed those exact rates through the authenticated Store A
 The selected pickup store was March and Ash Mill Valley. Two distinct $39 eighth SKUs
 at quantities 3+1 produced $10.88 gross, $22.03 excise, $16.04 sales and $184.95 total;
 at 3+2 they produced $12.80 gross, $25.92 excise, $18.88 sales and $217.60 total.
-Both carts passed the shared cart assertions, confirming per-line rounding. Rates are pinned
-independently of test output; tests continue to assert exact discounted taxes and totals.
+Both carts passed the shared cart assertions, confirming per-line rounding. These are
+reference examples, not required rates for every Stage store.
 
 The initial November 2 full Eighths scenario attempt stopped before tax assertions because
 its catalogue lookup used dev category 331, while Stage's Eighths category is 325.

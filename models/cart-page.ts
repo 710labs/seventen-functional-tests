@@ -4,6 +4,8 @@ import { QAClient } from '../support/qa/client'
 import { type TestUsageType } from '../utils/usage-types'
 import { moneyInCents, verifyOrderPricing, type ExpectedOrderPricing, type ExpectedDiscountLine } from './components/order-pricing'
 
+export class ProductQuantityUnavailableError extends Error {}
+
 export class CartPage {
 	page: Page
 	browserName: any
@@ -45,6 +47,24 @@ export class CartPage {
 		})
 	}
 
+	async getTaxRateMetadata(): Promise<{ name: string; rate: string; code?: string }[]> {
+		return test.step('Read configured tax rates for the selected store', async () => {
+			const origin = new URL(this.page.url()).origin
+			const response = await this.page.request.get(`${origin}/wp-json/wc/store/v1/cart`, { maxRedirects: 0 })
+			expect(response.ok(), 'Cart tax metadata request must succeed without redirecting').toBeTruthy()
+			const cart = await response.json()
+			expect(Array.isArray(cart.totals?.tax_lines), 'Cart must report tax-rate metadata').toBeTruthy()
+			const rows = await this.page.locator('.cart_totals tr.tax-rate').evaluateAll(rows => rows.map(row => ({
+				name: (row.querySelector('td')?.getAttribute('data-title') || row.querySelector('th')?.textContent?.replace(/\s*\(estimated for .*\)\s*$/i, ''))?.replace(/\s+/g, ' ').trim().toLowerCase(),
+				code: Array.from(row.classList).find(name => name.startsWith('tax-rate-')),
+			})))
+			return cart.totals.tax_lines.map(line => {
+				const matches = rows.filter(row => row.name === line.name.replace(/\s+/g, ' ').trim().toLowerCase())
+				return { name: line.name, rate: line.rate, ...(matches.length === 1 && matches[0].code ? { code: matches[0].code } : {}) }
+			})
+		})
+	}
+
 	productRow(productId: number) {
 		if (!Number.isSafeInteger(productId) || productId <= 0) throw new Error('Invalid product ID')
 		return this.page.locator('.woocommerce-cart-form .cart_item').filter({
@@ -65,8 +85,24 @@ export class CartPage {
 		await test.step(`Verify product ${productId} has ${quantity} units in the cart`, async () => {
 			const row = this.productRow(productId)
 			await expect(row, `Cart must contain product ID ${productId}`).toHaveCount(1)
+			if (await row.locator('input.qty').count() !== 1) throw new ProductQuantityUnavailableError(`Product ${productId}: quantity control is absent`)
 			await expect(row.locator('input.qty')).toHaveValue(String(quantity))
 		})
+	}
+
+	async quantityUnavailableReason(productId: number, quantity: number): Promise<string | null> {
+		const row = this.productRow(productId)
+		await expect(row, `Cart must contain product ID ${productId}`).toHaveCount(1)
+		const input = row.locator('input.qty')
+		if (await input.count() !== 1) return 'quantity control is absent'
+		const current = Number(await input.inputValue())
+		if (current === quantity) return null
+		if (!await input.isVisible() || !await input.isEditable()) return 'quantity control is hidden or not editable'
+		const maximum = await input.getAttribute('max')
+		if (maximum && Number.isFinite(Number(maximum)) && Number(maximum) >= 0 && quantity > Number(maximum)) {
+			return `only ${maximum} units are available`
+		}
+		return null
 	}
 
 	async setProductQuantity(productId: number, quantity: number) {
@@ -74,7 +110,10 @@ export class CartPage {
 		await test.step(`Set cart product ${productId} quantity to ${quantity}`, async () => {
 			const row = this.productRow(productId)
 			await expect(row).toHaveCount(1)
+			const reason = await this.quantityUnavailableReason(productId, quantity)
+			if (reason) throw new ProductQuantityUnavailableError(`Product ${productId} cannot reach ${quantity} units: ${reason}`)
 			const input = row.locator('input.qty')
+			if (Number(await input.inputValue()) === quantity) return
 			await input.fill(String(quantity))
 			await input.dispatchEvent('change')
 			const update = this.page.locator('[name="update_cart"]')
