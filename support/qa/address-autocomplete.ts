@@ -1,4 +1,4 @@
-import { expect, test, type ConsoleMessage, type Locator, type Page } from '@playwright/test'
+import { expect, test, type ConsoleMessage, type Locator, type Page, type Response } from '@playwright/test'
 
 // These codes are intentionally static: public reporters must never include an
 // address, Google response, API key, or browser console message.
@@ -13,11 +13,18 @@ export async function selectAutocompleteAddress(
 		let mapsFailure = ''
 		const onConsole = (message: ConsoleMessage) => {
 			if (message.text().includes('RefererNotAllowedMapError')) mapsFailure = 'ADDRESS_REFERRER_DENIED'
-			else if (/ApiNotActivatedMapError|InvalidKeyMapError|BillingNotEnabledMapError/.test(message.text())) {
+			else if (/ApiNotActivatedMapError|InvalidKeyMapError|BillingNotEnabledMapError|Places\.AutocompletePlaces are blocked/.test(message.text())) {
+				mapsFailure = 'ADDRESS_API_CONFIGURATION'
+			}
+		}
+		const onResponse = (response: Response) => {
+			if (!mapsFailure && response.status() === 403 &&
+				response.url().startsWith('https://places.googleapis.com/$rpc/google.maps.places.v1.Places/AutocompletePlaces')) {
 				mapsFailure = 'ADDRESS_API_CONFIGURATION'
 			}
 		}
 		page.on('console', onConsole)
+		page.on('response', onResponse)
 		let modern = false
 		try {
 			await field.waitFor({ state: 'visible', timeout })
@@ -37,15 +44,20 @@ export async function selectAutocompleteAddress(
 				.toBe(true)
 			await field.evaluate(element => {
 				const host = element as HTMLElement & { addressProbeCleanup?: () => void }
+				const form = host.closest('form')
 				host.addressProbeCleanup?.()
 				host.dataset.qaAddressSelection = 'pending'
 				const selected = () => { host.dataset.qaAddressSelection = 'selected' }
 				const failed = () => { host.dataset.qaAddressSelection = 'error' }
+				// Enter can submit the surrounding form if no prediction is highlighted.
+				const preventSubmit = (event: Event) => event.preventDefault()
 				host.addEventListener('gmp-select', selected)
 				host.addEventListener('gmp-error', failed)
+				form?.addEventListener('submit', preventSubmit)
 				host.addressProbeCleanup = () => {
 					host.removeEventListener('gmp-select', selected)
 					host.removeEventListener('gmp-error', failed)
+					form?.removeEventListener('submit', preventSubmit)
 					delete host.dataset.qaAddressSelection
 					delete host.addressProbeCleanup
 				}
@@ -89,6 +101,7 @@ export async function selectAutocompleteAddress(
 			throw new Error('ADDRESS_AUTOCOMPLETE_FAILED')
 		} finally {
 			page.off('console', onConsole)
+			page.off('response', onResponse)
 			if (modern) await field.evaluate(element => {
 				(element as HTMLElement & { addressProbeCleanup?: () => void }).addressProbeCleanup?.()
 			}).catch(() => {})

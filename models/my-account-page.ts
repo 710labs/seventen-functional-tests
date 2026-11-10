@@ -1,4 +1,5 @@
 import test, { expect, Locator, Page } from '@playwright/test'
+import { selectAutocompleteAddress } from '../support/qa/address-autocomplete'
 import { assertFooterLinks } from '../utils/footer-links'
 
 export class MyAccountPage {
@@ -53,19 +54,27 @@ export class MyAccountPage {
 	}
 
 	async addAddress(
-		address: string = '420 Dank Street',
+		address: string = '440 N Rodeo Dr',
 		city: string = 'Beverly Hills',
 		state: string = 'CA',
-		zipCode: string = '90212',
+		zipCode: string = '90210',
 	) {
 		await test.step('Update Customer Address', async () => {
 			await this.page.goto('/my-account/')
 			await this.addressesLink.click()
 			await this.editBillingAddressLink.click()
-			await this.addressLineOne.fill(address)
-			await this.city.fill(city)
-			await this.zipCode.fill(zipCode)
-			await this.selectBillingState(state)
+
+			const widget = this.page.locator('gmp-place-autocomplete#billing_address_1_place')
+			await expect(widget.or(this.addressLineOne.filter({ visible: true })).first()).toBeVisible()
+			if (await widget.isVisible()) {
+				await selectAutocompleteAddress(this.page, widget, `${address}, ${city}, ${state} ${zipCode}`)
+				await expect(this.zipCode).toHaveValue(zipCode)
+			} else {
+				await this.addressLineOne.fill(address)
+				await this.city.fill(city)
+				await this.zipCode.fill(zipCode)
+				await this.selectBillingState(state)
+			}
 			await this.page.click('button:has-text("Save address")')
 		})
 	}
@@ -87,15 +96,6 @@ export class MyAccountPage {
 		state: string = 'CO',
 		zipCode: string = '80304',
 	) {
-		await test.step('Update Customer Address', async () => {
-			await this.page.goto('/my-account/')
-			await this.addressesLink.click()
-			await this.editBillingAddressLink.click()
-			await this.addressLineOne.fill(address)
-			await this.city.fill(city)
-			await this.zipCode.fill(zipCode)
-			await this.selectBillingState(state)
-			await this.page.click('button:has-text("Save address")')
-		})
+		await this.addAddress(address, city, state, zipCode)
 	}
 }

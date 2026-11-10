@@ -2,6 +2,7 @@ import test, { expect, Locator, Page } from '@playwright/test'
 import { faker } from '@faker-js/faker'
 import path from 'path'
 import { fictionalAreacodes } from '../utils/data-generator'
+import { selectAutocompleteAddress } from '../support/qa/address-autocomplete'
 import { QAClient } from '../support/qa/client'
 import { getUsageLabel, isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
@@ -426,14 +427,9 @@ export class CreateAccountPage {
 		expectedZip?: string,
 	) {
 		await test.step('Enter Billing Address', async () => {
-			await this.address.click()
-			await this.address.fill('')
-			await this.address.pressSequentially(address, { delay: 25 })
-
-			const suggestion = this.page.locator('.pac-item').first()
-			await suggestion.waitFor({ state: 'visible', timeout: 10000 })
-			await suggestion.click()
-
+			const widget = this.page.locator('gmp-place-autocomplete#billing_address_1_place')
+			const addressControl = widget.or(this.address.filter({ visible: true })).first()
+			await selectAutocompleteAddress(this.page, addressControl, address)
 			await this.assertResolvedAddress(expectedState, expectedZip)
 		})
 	}
