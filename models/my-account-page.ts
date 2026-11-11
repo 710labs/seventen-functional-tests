@@ -63,12 +63,16 @@ export class MyAccountPage {
 			await this.page.goto('/my-account/')
 			await this.addressesLink.click()
 			await this.editBillingAddressLink.click()
-			// Give Places time to replace the initial billing input before selecting a control.
-			await this.page.waitForTimeout(2000)
 
 			const widget = this.page.locator('gmp-place-autocomplete#billing_address_1_place')
-			await expect(widget.or(this.addressLineOne.filter({ visible: true })).first()).toBeVisible()
-			if (await widget.isVisible()) {
+			const isListDev = new URL(this.page.url()).hostname === 'thelist-dev.710labs.com'
+			if (isListDev) {
+				await expect(widget, 'The List Dev billing address autocomplete should be visible').toBeVisible({ timeout: 30000 })
+			} else {
+				await this.page.waitForTimeout(2000)
+				await expect(widget.or(this.addressLineOne.filter({ visible: true })).first()).toBeVisible()
+			}
+			if (isListDev || await widget.isVisible()) {
 				await selectAutocompleteAddress(this.page, widget, `${address}, ${city}, ${state} ${zipCode}`)
 				await expect(this.zipCode).toHaveValue(zipCode)
 			} else {
