@@ -67,9 +67,11 @@ run all 90 cases together against a domain configured for just one state.
 | CO | Recreational, Colorado address | Pickup |
 | NJ | Recreational, New Jersey address | Pickup |
 
-All states currently expect the same four Stage discounts: Eighths, Gummis, Vapes,
-and Badder. Doinks remain full price on Stage and discounted on Dev. Missing bulk
-discounts or required inventory produce ordinary failures, not skips. Stage
+The Stage pricing expectations cover Eighths, Gummis, Vapes, and Badder when
+the selected store advertises them. Doinks remain full price on Stage and discounted
+on Dev. A Stage scenario passes with a `bulk-not-applicable` report annotation if
+the store does not advertise a required offer or lacks the eligible products, distinct
+SKUs, or stock needed for that scenario. It places no order in that case. Stage
 smoke-only workflows do not run this full suite.
 
 ## Shared code
@@ -84,7 +86,8 @@ smoke-only workflows do not run this full suite.
 New methods extend those same page objects. ShopPage matches paginated Store API category
 metadata to addable menu products and delegates selected-product additions to its existing
 add method. `getCategoryIdsBySlug` resolves the current environment's category IDs by
-exact slug, with pagination and explicit failures for missing/ambiguous categories.
+exact slug, with pagination. Stage permits an absent category; invalid or ambiguous
+category metadata still fails.
 The suite remaps both pricing rules and journey plans before selecting products;
 neither shop section order nor Dev's numeric category IDs determine Stage selection.
 Reports record the resolved mapping in a `category-map` annotation.
@@ -95,8 +98,9 @@ reject that candidate; any added unit is removed and the next SKU in the same bu
 category is tried. Tier cases require capacity for six units; J1 reserves capacity for
 its later three-unit mutation. Replacements remain distinct across cart lines and their
 actual prices feed the oracle. Rejections appear as `inventory-candidate-rejected`
-annotations. Exhausted inventory remains an explicit coverage failure; an unexplained
-wrong product ID or server error is not converted into a pass.
+annotations. On Stage, only confirmed stock limits or unavailable products qualify for
+an annotated pass when candidates run out. An unexplained missing quantity control,
+wrong product ID, or server error still fails. Dev requires the original inventory coverage.
 
 Bulk storefront visits use the existing state fulfillment flow and accept whichever store the
 site selects. `ShopPage.getFulfillmentLabel` records the actual store in a `fulfillment-store`
@@ -161,11 +165,11 @@ labels/amounts, subtotal, all configured tax rows and total. Coupon Remove contr
 ignored: neither their presence nor their behavior is tested.
 OrderReceivedPage verifies the confirmed discounted total. The E2E specs have no UI selectors.
 
-Shop offers are informational badges. Bulk E2E tests add eligible products normally
-through `ShopPage.addSelectedProducts` and the existing add-to-cart methods, then
-check the resulting discounts in the cart and checkout. They neither interact with
-nor wait for shop offer badges. The standalone visual-check helper is covered only
-by synthetic fixtures and is not part of the bulk purchase flow.
+Stage reads the selected menu's visible pricing badges to determine which offers are
+advertised before adding anything to the cart. It does not infer availability from a
+missing discount in the cart or use the badge's displayed amounts as expected values.
+Applicable cases still use the normal add-to-cart flow and check the resulting discounts
+against the independent pricing expectations.
 CartPage checks the `.svntn-wdr-section` heading and `.svntn-wdr-row` grouping, plus each
 product's `.svntn-wdr-tag` text and known `data-wdr-coupon` key. Checkout uses its ordinary
 `tfoot .cart-discount` rows without requiring the cart-only heading/classes. Tier changes
@@ -192,15 +196,15 @@ after a confirmation failure. These cases do not modify stock, menus, or global 
 - J5: newly registered user logout/login persistence and freshly registered user's first order,
   using the suite's existing desktop and mobile projects.
 
-Every one of the nine scenarios submits one order after its checks pass (18 orders per state
-across the two projects on a fully passing run). For under-minimum carts, the shared
+Each applicable scenario submits one order after its checks pass (up to 18 orders per
+state across the two projects). For under-minimum carts, the shared
 order helper uses the existing POM minimum banner and add/quantity methods to add a
 companion product outside the scenario categories, preserving the tested quantities.
 It verifies the complete expanded cart before checkout and annotates the report with
 the confirmed order number. Earlier failures still stop submission.
 
-Implementation is not evidence of a successful live run. Missing inventory and pricing
-mismatches fail normally. The complete handoff still needs PDP-specific rendering, pickup-store
+Implementation is not evidence of a successful live run. Pricing mismatches for advertised
+discounts fail normally. The complete handoff still needs PDP-specific rendering, pickup-store
 switching, J2 refund/admin-edit checks, J3 account-discount browser flow, J4 stock interruption,
 full J6 catalogue/variation sweep, J7 BOGO browser/order verification, Woo REST order checks,
 confirmation emails, and per-POS read-back. No placeholder specs claim those checks pass.

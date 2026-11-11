@@ -90,18 +90,18 @@ export class CartPage {
 		})
 	}
 
-	async quantityUnavailableReason(productId: number, quantity: number): Promise<string | null> {
+	async quantityUnavailability(productId: number, quantity: number): Promise<{ reason: string; stockLimited: boolean } | null> {
 		const row = this.productRow(productId)
 		await expect(row, `Cart must contain product ID ${productId}`).toHaveCount(1)
 		const input = row.locator('input.qty')
-		if (await input.count() !== 1) return 'quantity control is absent'
+		if (await input.count() !== 1) return { reason: 'quantity control is absent', stockLimited: false }
 		const current = Number(await input.inputValue())
 		if (current === quantity) return null
-		if (!await input.isVisible() || !await input.isEditable()) return 'quantity control is hidden or not editable'
 		const maximum = await input.getAttribute('max')
 		if (maximum && Number.isFinite(Number(maximum)) && Number(maximum) >= 0 && quantity > Number(maximum)) {
-			return `only ${maximum} units are available`
+			return { reason: `only ${maximum} units are available`, stockLimited: true }
 		}
+		if (!await input.isVisible() || !await input.isEditable()) return { reason: 'quantity control is hidden or not editable', stockLimited: false }
 		return null
 	}
 
@@ -110,8 +110,8 @@ export class CartPage {
 		await test.step(`Set cart product ${productId} quantity to ${quantity}`, async () => {
 			const row = this.productRow(productId)
 			await expect(row).toHaveCount(1)
-			const reason = await this.quantityUnavailableReason(productId, quantity)
-			if (reason) throw new ProductQuantityUnavailableError(`Product ${productId} cannot reach ${quantity} units: ${reason}`)
+			const unavailable = await this.quantityUnavailability(productId, quantity)
+			if (unavailable) throw new ProductQuantityUnavailableError(`Product ${productId} cannot reach ${quantity} units: ${unavailable.reason}`)
 			const input = row.locator('input.qty')
 			if (Number(await input.inputValue()) === quantity) return
 			await input.fill(String(quantity))

@@ -49,6 +49,7 @@ export type CategoryProductCandidate = StorefrontProductCandidate & {
 	categoryIds: number[]
 	unitPrice: string
 	maxQuantity?: number
+	hasBulkOffer?: boolean
 }
 
 export type MinimumOrderBannerState = {
@@ -1081,7 +1082,7 @@ export class ShopPage {
 		})
 	}
 
-	async getCategoryIdsBySlug(slugs: string[]): Promise<Record<string, number>> {
+	async getCategoryIdsBySlug(slugs: string[], { allowMissing = false } = {}): Promise<Record<string, number>> {
 		return test.step('Resolve product categories by slug in the current environment', async () => {
 			const origin = new URL(this.page.url()).origin
 			const categories: { id: number; slug: string }[] = []
@@ -1095,18 +1096,22 @@ export class ShopPage {
 				expect(Number.isSafeInteger(totalPages) && totalPages >= 0 && totalPages <= 100).toBeTruthy()
 				const data = await response.json()
 				expect(Array.isArray(data), 'Category metadata must be an array').toBeTruthy()
+				expect(data.every(category => typeof category?.slug === 'string' && category.slug.length &&
+					Number.isSafeInteger(category.id) && category.id > 0), 'Category metadata must contain valid slugs and IDs').toBeTruthy()
 				categories.push(...data)
 			}
-			return Object.fromEntries(slugs.map(slug => {
+			return Object.fromEntries(slugs.flatMap(slug => {
 				const matches = categories.filter(category => category.slug === slug)
+				if (allowMissing && matches.length === 0) return []
 				expect(matches, `Exactly one product category must match slug "${slug}"`).toHaveLength(1)
 				expect(Number.isSafeInteger(matches[0].id) && matches[0].id > 0).toBeTruthy()
-				return [slug, matches[0].id]
+				return [[slug, matches[0].id] as const]
 			}))
 		})
 	}
 
-	async getCategoryProducts(categoryIds: number[], usage: TestUsageType = 'recreational'): Promise<CategoryProductCandidate[]> {
+	async getCategoryProducts(categoryIds: number[], usage: TestUsageType = 'recreational',
+		{ readBulkOffers = false } = {}): Promise<CategoryProductCandidate[]> {
 		return test.step('Match storefront inventory to product categories', async () => {
 			const candidates = await this.getAddableStorefrontProducts(usage)
 			const origin = new URL(this.page.url()).origin
@@ -1123,10 +1128,12 @@ export class ShopPage {
 					expect(Number.isSafeInteger(totalPages) && totalPages >= 0 && totalPages <= 100).toBeTruthy()
 					const products = await response.json()
 					expect(Array.isArray(products), 'Category endpoint must return products').toBeTruthy()
+					expect(products.every(product => Number.isSafeInteger(product?.id) && product.id > 0 &&
+						Array.isArray(product.categories)), 'Catalogue entries must contain product IDs and categories').toBeTruthy()
 					for (const product of products) catalogue.set(product.id, product)
 				}
 			}
-			return candidates.flatMap(candidate => {
+			const products = candidates.flatMap(candidate => {
 				const matches = [...catalogue.values()].filter(product => candidate.productId
 					? product.id === candidate.productId
 					: candidate.sku && product.sku === candidate.sku)
@@ -1145,6 +1152,12 @@ export class ShopPage {
 					categoryIds: product.categories.map(category => category.id), unitPrice: (price / 100).toFixed(2),
 					...(limits.length ? { maxQuantity: Math.min(...limits) } : {}) }]
 			}).sort((a, b) => a.productId - b.productId)
+			if (!readBulkOffers) return products
+			const cards = this.getAddableProductCards(usage)
+			return Promise.all(products.map(async product => {
+				const offers = await this.storefrontProductOffers(cards.nth(product.menuIndex))
+				return { ...product, hasBulkOffer: await offers.locator('visible=true').first().isVisible() }
+			}))
 		})
 	}
 
@@ -1172,6 +1185,7 @@ export class ShopPage {
 		if (!Number.isSafeInteger(requiredQuantity) || requiredQuantity < 1) throw new Error('Required quantity must be a positive integer')
 		const storefrontUrl = new URL('/', this.page.url()).toString()
 		const rejected: string[] = []
+		let stockLimited = true
 		for (const product of candidates) {
 			let reason: string | null = product.maxQuantity !== undefined && product.maxQuantity < requiredQuantity
 				? `catalogue permits ${product.maxQuantity} units` : null
@@ -1179,11 +1193,14 @@ export class ShopPage {
 				await this.page.goto(storefrontUrl, { waitUntil: 'domcontentloaded' })
 				try {
 					await this.addSelectedProducts([product], cart, usage)
-					reason = await cart.quantityUnavailableReason(product.productId, requiredQuantity)
-					if (!reason) return product
+					const unavailable = await cart.quantityUnavailability(product.productId, requiredQuantity)
+					if (!unavailable) return product
+					reason = unavailable.reason
+					stockLimited &&= unavailable.stockLimited
 				} catch (error) {
 					// A wrong cart ID, pricing failure, or server error remains a failure.
 					if (!(error instanceof ProductInventoryUnavailableError || error instanceof ProductQuantityUnavailableError)) throw error
+					stockLimited &&= error instanceof ProductInventoryUnavailableError
 					reason = error.message
 					await this.goToCart()
 				}
@@ -1193,7 +1210,20 @@ export class ShopPage {
 			rejected.push(detail)
 			this.workerInfo.annotations.push({ type: 'inventory-candidate-rejected', description: detail })
 		}
-		throw new Error(`Inventory coverage gap: no product supports ${requiredQuantity} units. ${rejected.join('; ') || 'No eligible candidates.'}`)
+		const message = `Inventory coverage gap: no product supports ${requiredQuantity} units. ${rejected.join('; ') || 'No eligible candidates.'}`
+		if (stockLimited) throw new ProductInventoryUnavailableError(message)
+		throw new Error(message)
+	}
+
+	private async storefrontProductOffers(card: Locator): Promise<Locator> {
+		const cardOffers = card.locator('.svntn-wdr-offers')
+		if (await cardOffers.count()) return cardOffers
+		const productList = card.locator('xpath=ancestor::ul[1]')
+		// The rendered shop wraps ul.products; offers sit beside the wrapper.
+		const wrapper = productList.locator('xpath=parent::*[contains(concat(" ", normalize-space(@class), " "), " products-container ")]')
+		const categoryList = await wrapper.count() ? wrapper : productList
+		// Stay adjacent to this category; never borrow another category's offers.
+		return categoryList.locator('xpath=preceding-sibling::*[1][contains(concat(" ", normalize-space(@class), " "), " svntn-wdr-offers ")]')
 	}
 
 	async verifyProductPricingOffers(
@@ -1206,14 +1236,7 @@ export class ShopPage {
 				candidate.productId === product.productId || (product.sku && candidate.sku === product.sku))
 			if (!current) throw new ProductInventoryUnavailableError(`Selected product ${product.productId} is no longer addable`)
 			const card = this.getAddableProductCards(usage).nth(current.menuIndex)
-			const cardOffers = card.locator('.svntn-wdr-offers')
-			const productList = card.locator('xpath=ancestor::ul[1]')
-			// The rendered shop wraps ul.products; offers sit beside the wrapper.
-			const wrapper = productList.locator('xpath=parent::*[contains(concat(" ", normalize-space(@class), " "), " products-container ")]')
-			const categoryList = await wrapper.count() ? wrapper : productList
-			// Stay adjacent to this category; never borrow another category's offers.
-			const offers = await cardOffers.count() ? cardOffers : categoryList
-				.locator('xpath=preceding-sibling::*[1][contains(concat(" ", normalize-space(@class), " "), " svntn-wdr-offers ")]')
+			const offers = await this.storefrontProductOffers(card)
 			await expect(offers).toHaveCount(1)
 			await expect(offers).toBeVisible()
 			await expect(offers.locator('.svntn-wdr-offers__label')).toHaveText('List member pricing', { ignoreCase: true })

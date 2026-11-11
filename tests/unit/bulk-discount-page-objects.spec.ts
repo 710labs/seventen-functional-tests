@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { readStoreTaxConfiguration } from '../../support/bulk-discounts/store-tax-configuration'
 import { CartPage } from '../../models/cart-page'
 import { CheckoutPage } from '../../models/checkout-page'
-import { ShopPage } from '../../models/shop-page'
+import { ShopPage, ProductInventoryUnavailableError } from '../../models/shop-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { moneyInCents } from '../../models/components/order-pricing'
 import { shopOffersMarkup, suppliedSummaryMarkup, productTagsMarkup } from './fixtures/bulk-discount-markup'
@@ -237,6 +237,7 @@ test('category slugs resolve across reordered pages with different environment I
 			.toEqual({ 'live-rosin-vapes': 319, 'gummis-2': 323, eighths: 325 })
 		expect(requests).toEqual([1, 2])
 		await expect(shop.getCategoryIdsBySlug(['missing'])).rejects.toThrow('Exactly one product category')
+		expect(await shop.getCategoryIdsBySlug(['missing', 'eighths'], { allowMissing: true })).toEqual({ eighths: 325 })
 	} finally { page.request.get = originalGet }
 })
 
@@ -343,9 +344,19 @@ for (const wrapped of [false, true]) test(`category pricing offers belong to the
 		? `<div class="products-container standard-list"><ul class="products">${card(id)}</ul></div>`
 		: `<ul class="products">${card(id)}</ul>`
 	const cheaperOffers = shopOffersMarkup.replace('$</span>5', '$</span>3').replace('$</span>7', '$</span>5')
-	await page.setContent(`<h1>Gummis</h1>${cheaperOffers}${list(101)}<h1>Vapes</h1>${shopOffersMarkup}${list(202)}<h1>No offers</h1>${list(303)}`)
+	await page.route('https://offers.test/', route => route.fulfill({ contentType: 'text/html', body:
+		`<h1>Gummis</h1>${cheaperOffers}${list(101)}<h1>Vapes</h1>${shopOffersMarkup}${list(202)}<h1>No offers</h1>${list(303)}` }))
+	await page.goto('https://offers.test/')
 	const shop = new ShopPage(page, 'chromium', info)
-	const products = (await shop.getAddableStorefrontProducts()).map(candidate => ({ ...candidate, productId: candidate.productId!, categoryIds: [], unitPrice: '39.00' }))
+	const originalGet = page.request.get.bind(page.request)
+	page.request.get = async (_url, options) => {
+		const category = Number((options.params as Record<string, unknown>).category)
+		return { ok: () => true, headers: () => ({}), json: async () => [{ id: category, categories: [{ id: category }],
+			prices: { currency_code: 'USD', currency_minor_unit: 2, price: '3900' } }] } as any
+	}
+	const products = await shop.getCategoryProducts([101, 202, 303], 'recreational', { readBulkOffers: true })
+	page.request.get = originalGet
+	expect(products.map(product => [product.productId, product.hasBulkOffer])).toEqual([[101, true], [202, true], [303, false]])
 	const vapeTiers = [{ min: 3, amountPerUnit: '5.00' }, { min: 5, amountPerUnit: '7.00' }]
 	await shop.verifyProductPricingOffers(products[0], [{ min: 3, amountPerUnit: '3.00' }, { min: 5, amountPerUnit: '5.00' }])
 	await shop.verifyProductPricingOffers(products[1], vapeTiers)
@@ -510,7 +521,7 @@ for (const control of ['hidden', 'readonly', 'maximum', 'missing']) {
 		const input = control === 'missing' ? '' : `<input class="qty" value="1" ${control === 'hidden' ? 'type="hidden" max="1"' : control === 'readonly' ? 'readonly' : 'max="2"'}>`
 		await page.setContent(`<form class="woocommerce-cart-form"><table><tr class="cart_item"><td><a data-product_id="101">Product</a>${input}</td></tr></table></form>`)
 		const cart = new CartPage(page, null!, 'chromium', info, 'recreational')
-		expect(await cart.quantityUnavailableReason(101, 6)).toBeTruthy()
+	expect(await cart.quantityUnavailability(101, 6)).toMatchObject({ stockLimited: ['hidden', 'maximum'].includes(control) })
 		await expect(cart.setProductQuantity(101, 6)).rejects.toThrow('cannot reach 6 units')
 	})
 }
@@ -547,8 +558,14 @@ for (const missingInput of [false, true]) test(`bulk product selection replaces 
 		expect(await cart.getProductQuantity(101)).toBe(0)
 		await cart.verifyProductQuantity(202, 1)
 		expect(info.annotations.some(a => a.type === 'inventory-candidate-rejected' && a.description?.includes('101'))).toBe(true)
-		await expect(shop.addQuantityCapableProduct([{ ...candidates[0], maxQuantity: 1 }], cart, 6)).rejects.toThrow('Inventory coverage gap')
+		await expect(shop.addQuantityCapableProduct([{ ...candidates[0], maxQuantity: 1 }], cart, 6)).rejects.toBeInstanceOf(ProductInventoryUnavailableError)
 		expect(added).toEqual([101,202])
+		if (missingInput) {
+			const error = await shop.addQuantityCapableProduct([candidates[0]], cart, 6).catch(error => error)
+			expect(error).toBeInstanceOf(Error)
+			expect(error).not.toBeInstanceOf(ProductInventoryUnavailableError)
+			await cart.verifyProductQuantity(202, 1)
+		}
 	} finally { await context.close() }
 })
 
