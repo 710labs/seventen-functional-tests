@@ -59,6 +59,21 @@ test('does not accept typed text without a Google selection event', async ({ pag
 	await expect(page.locator('#fasd_address')).not.toHaveAttribute('data-selected')
 })
 
+test('closed widget selection cannot submit the surrounding form', async ({ page }) => {
+	await modernWidget(page, 'closed')
+	const widget = page.locator('#fasd_address')
+	await widget.evaluate(element => {
+		const form = element.closest('form')!
+		form.action = 'about:blank#submitted'
+		element.addEventListener('gmp-select', () => { form.requestSubmit() })
+	})
+	await selectAutocompleteAddress(page, widget, address)
+	await expect(widget).toHaveAttribute('data-selected', address)
+	expect(page.url()).toBe('about:blank')
+	await page.locator('form').evaluate(form => (form as HTMLFormElement).requestSubmit())
+	await expect(page).toHaveURL(/#submitted$/)
+})
+
 test('reports an uninitialized custom element without trying to fill its host', async ({ page }) => {
 	await page.setContent('<gmp-place-autocomplete id="fasd_address" style="display:block;width:300px;height:50px"></gmp-place-autocomplete>')
 	await expect(selectAutocompleteAddress(page, page.locator('#fasd_address'), address, 300))
@@ -77,6 +92,18 @@ test('reports the referrer denial without echoing the Google message or key', as
 	await expect(selectAutocompleteAddress(page, page.locator('#fasd_address'), address, 500))
 		.rejects.toThrow(/^ADDRESS_REFERRER_DENIED$/)
 	expect(emitter.listenerCount('console')).toBe(before)
+})
+
+test('reports blocked Places requests as an API configuration error', async ({ page }) => {
+	await modernWidget(page, 'open')
+	const placesUrl = 'https://places.googleapis.com/$rpc/google.maps.places.v1.Places/AutocompletePlaces'
+	await page.route(placesUrl, route => route.fulfill({ status: 403, headers: { 'access-control-allow-origin': '*' } }))
+	const widget = page.locator('#fasd_address')
+	await widget.evaluate((element, url) => {
+		element.shadowRoot!.querySelector('input')!.addEventListener('input', () => { void fetch(url) })
+	}, placesUrl)
+	await expect(selectAutocompleteAddress(page, widget, address))
+		.rejects.toThrow(/^ADDRESS_API_CONFIGURATION$/)
 })
 
 test('missing legacy suggestions fail instead of submitting an unresolved address', async ({ page }) => {
