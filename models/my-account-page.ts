@@ -63,6 +63,8 @@ export class MyAccountPage {
 			await this.page.goto('/my-account/')
 			await this.addressesLink.click()
 			await this.editBillingAddressLink.click()
+			// Give Places time to replace the initial billing input before selecting a control.
+			await this.page.waitForTimeout(2000)
 
 			const widget = this.page.locator('gmp-place-autocomplete#billing_address_1_place')
 			await expect(widget.or(this.addressLineOne.filter({ visible: true })).first()).toBeVisible()
