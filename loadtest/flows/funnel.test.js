@@ -6,6 +6,7 @@ const {
 	acceptPickupCommitment,
 	isCheckoutSubmissionUrl,
 	selectResolvedBillingAddress,
+	submitRegistrationForm,
 	waitForCheckoutReadyToSubmit,
 } = require('./funnel')
 
@@ -167,4 +168,49 @@ test('billing registration resolves both Google Places controls', async t => {
 		await selectResolvedBillingAddress(page, address, 'CA', '90016')
 		assert.equal(await page.locator('[name="billing_address_1"]').inputValue(), resolvedAddress)
 	})
+})
+
+test('registration waits on the shop for the eligibility form after Next', async t => {
+	const browser = await chromium.launch()
+	t.after(() => browser.close())
+	const page = await browser.newPage()
+	const requests = []
+
+	await page.route('https://registration.example/**', async route => {
+		const { pathname } = new URL(route.request().url())
+		const method = route.request().method()
+		requests.push(`${method} ${pathname}`)
+		if (method === 'POST' && pathname === '/register/') {
+			return route.fulfill({
+				contentType: 'text/html',
+				body: "<script>location.replace('/')</script>",
+			})
+		}
+		if (pathname === '/register/') {
+			return route.fulfill({
+				contentType: 'text/html',
+				body: `<form method="post">
+					<input name="billing_address_1" type="hidden" value="123 Synthetic St">
+					<input name="billing_state" type="hidden" value="CA">
+					<input name="billing_postcode" type="hidden" value="90016">
+					<button type="submit">Next</button>
+				</form>`,
+			})
+		}
+		return route.fulfill({
+			contentType: 'text/html',
+			body: `<main>Shop</main><script>
+				setTimeout(() => {
+					document.querySelector('main').innerHTML =
+						'<section id="eligibilityContext"><input type="submit" id="svntn_core_eligibility_post" value="Register" disabled></section>';
+				}, 700);
+			</script>`,
+		})
+	})
+
+	await page.goto('https://registration.example/register/')
+	await submitRegistrationForm(page, 'CA', '90016')
+
+	assert.equal(page.url(), 'https://registration.example/')
+	assert.deepEqual(requests, ['GET /register/', 'POST /register/', 'GET /'])
 })

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { CreateAccountPage } from '../../models/create-account-page'
+import { isRegistrationEligibilityVisible } from '../../support/qa/registration-eligibility.cjs'
 
 const eligibilityPanel = `
 	<section id="eligibilityContext">
@@ -58,12 +59,12 @@ test('does not accept account eligibility fields as the registration step', asyn
 	}))
 	await page.goto('https://registration.example/my-account/eligibility/')
 
-	expect(await new CreateAccountPage(page)['isEligibilityLicenseStepVisible']()).toBe(false)
+	expect(await isRegistrationEligibilityVisible(page)).toBe(false)
 })
 
 test('requires the registration button as well as eligibility fields', async ({ page }) => {
 	await page.setContent('<label>ID Upload <input name="svntn_core_personal_doc" type="file"></label>')
-	expect(await new CreateAccountPage(page)['isEligibilityLicenseStepVisible']()).toBe(false)
+	expect(await isRegistrationEligibilityVisible(page)).toBe(false)
 	await page.setContent('<button>Register</button>')
-	expect(await new CreateAccountPage(page)['isEligibilityLicenseStepVisible']()).toBe(false)
+	expect(await isRegistrationEligibilityVisible(page)).toBe(false)
 })

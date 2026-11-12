@@ -3,6 +3,7 @@ const path = require('path')
 const { randomBytes } = require('node:crypto')
 const { expect } = require('@playwright/test')
 const { selectAutocompleteAddress } = require('../../support/qa/address-autocomplete.cjs')
+const { waitForRegistrationEligibility } = require('../../support/qa/registration-eligibility.cjs')
 const { addCheckoutProducts } = require('./drop-cart')
 const { runWaitlist } = require('./waitlist')
 const { parseProductIds } = require('./waitlist-settings')
@@ -480,85 +481,21 @@ async function waitForRegistrationReadyToSubmit(page, expectedState, expectedZip
 	return nextButton
 }
 
-function isShopRouteBeforeEligibility(page) {
+async function submitRegistrationForm(page, expectedState, expectedZip) {
+	const nextButton = await waitForRegistrationReadyToSubmit(page, expectedState, expectedZip)
+	await nextButton.click()
+
 	try {
+		await waitForRegistrationEligibility(page, expect)
+	} catch {
 		const url = new URL(page.url())
-
-		return (
-			url.pathname === '/' &&
-			['', '#', '#pickup', '#pickup-deliver', '#deliver'].includes(url.hash)
+		throw new Error(
+			[
+				`Registration eligibility timed out at ${url.pathname}.`,
+				`Body preview: ${await getBodyPreview(page)}`,
+			].join('\n'),
 		)
-	} catch (error) {
-		return false
 	}
-}
-
-async function isEligibilityLicenseStepVisible(page) {
-	const eligibilityContextVisible = await page
-		.locator('#eligibilityContext')
-		.first()
-		.isVisible()
-		.catch(() => false)
-	const licenseInputVisible = await page
-		.locator(DL_INPUT_SELECTOR)
-		.first()
-		.isVisible()
-		.catch(() => false)
-	const usageTypeVisible = await page
-		.locator('input[name="svntn_last_usage_type"]')
-		.first()
-		.isVisible()
-		.catch(() => false)
-	const completeAccountVisible = await page
-		.getByText(/complete your account/i)
-		.first()
-		.isVisible()
-		.catch(() => false)
-	const idUploadVisible = await page
-		.getByText(/id upload/i)
-		.first()
-		.isVisible()
-		.catch(() => false)
-
-	return (
-		eligibilityContextVisible ||
-		licenseInputVisible ||
-		usageTypeVisible ||
-		completeAccountVisible ||
-		idUploadVisible
-	)
-}
-
-async function waitForEligibilityStep(page, target) {
-	const deadline = Date.now() + 20000
-	let attemptedEligibilityFallback = false
-
-	while (Date.now() < deadline) {
-		if (await isEligibilityLicenseStepVisible(page)) {
-			return
-		}
-
-		if (!attemptedEligibilityFallback && isShopRouteBeforeEligibility(page)) {
-			attemptedEligibilityFallback = true
-			console.warn(
-				'[registration] Redirected to the shop before eligibility appeared; navigating to /my-account/eligibility/.',
-			)
-			await page.goto(new URL('/my-account/eligibility/', target).toString(), {
-				waitUntil: 'domcontentloaded',
-			})
-			continue
-		}
-
-		await page.waitForTimeout(250)
-	}
-
-	throw new Error(
-		[
-			'Eligibility/license step did not load after submitting the registration form.',
-			`Current URL: ${page.url()}`,
-			`Body preview: ${await getBodyPreview(page)}`,
-		].join('\n'),
-	)
 }
 
 async function selectRegistrationUsageType(page, usageType) {
@@ -841,13 +778,11 @@ async function createAccount(page, target, user, step) {
 	})
 
 	await step('Submit Registration Form', async () => {
-		const nextButton = await waitForRegistrationReadyToSubmit(
+		await submitRegistrationForm(
 			page,
 			DEFAULT_REGISTRATION_STATE,
 			DEFAULT_REGISTRATION_ZIP,
 		)
-		await nextButton.click()
-		await waitForEligibilityStep(page, target)
 	})
 
 	await step('Enter Eligibility Info', async () => {
@@ -1206,5 +1141,6 @@ module.exports = {
 	storeFunnelBypass,
 	storeFunnelRealQueue,
 	storeFunnelWaitlist,
+	submitRegistrationForm,
 	waitForCheckoutReadyToSubmit,
 }
