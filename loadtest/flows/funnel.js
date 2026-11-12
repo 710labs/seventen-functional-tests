@@ -1,5 +1,9 @@
 const fs = require('fs')
 const path = require('path')
+const { randomBytes } = require('node:crypto')
+const { addCheckoutProducts } = require('./drop-cart')
+const { runWaitlist } = require('./waitlist')
+const { parseProductIds } = require('./waitlist-settings')
 
 const DEFAULT_TARGET = 'https://thelist-dev.710labs.com'
 const DEFAULT_CART_ITEM_COUNT = 1
@@ -183,10 +187,6 @@ function normalizeZip(value) {
 
 function pick(values) {
 	return values[Math.floor(Math.random() * values.length)]
-}
-
-function randomNumber() {
-	return Math.floor(Math.random() * 900000) + 100000
 }
 
 function randomDocumentNumber() {
@@ -733,6 +733,7 @@ async function waitForStorefrontReady(page, timeoutMs) {
 			page.getByText(/create an account/i).first().isVisible().catch(() => false),
 			page.locator('#fulfillmentElement').first().isVisible().catch(() => false),
 			page.locator(FALLBACK_ADD_TO_CART_SELECTOR).first().isVisible().catch(() => false),
+			page.locator('button.waitlist-button:visible').first().isVisible().catch(() => false),
 		])
 
 		if (ready.some(Boolean)) {
@@ -1099,7 +1100,7 @@ async function checkout(page, step) {
 function buildUser() {
 	const firstName = pick(FIRST_NAMES)
 	const lastName = pick(LAST_NAMES)
-	const email = `loadtest-${firstName.toLowerCase()}.${lastName.toLowerCase()}.${randomNumber()}@loadtest.com`
+	const email = `loadtest-${firstName.toLowerCase()}.${lastName.toLowerCase()}.${randomBytes(9).toString('hex')}@loadtest.com`
 
 	return {
 		firstName,
@@ -1118,6 +1119,8 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 	const target = getTarget(vuContext)
 	const user = buildUser()
 	const itemCount = getCartCount()
+	const checkoutIds = parseProductIds(process.env.ARTILLERY_CHECKOUT_PRODUCT_IDS)
+	const facility = process.env.ARTILLERY_WAITLIST_FACILITY_ID
 	const vip = Boolean(options.vip)
 	const readyWaitMs = parsePositiveInt(
 		options.readyWaitMs || process.env.ARTILLERY_READY_WAIT_MS,
@@ -1160,10 +1163,18 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 	})
 
 	await measuredStep(events, step, 'fulfillment', 'Select Fulfillment', async () => {
-		await selectFulfillment(page, user.fulfillmentType, step)
+		await selectFulfillment(page, options.waitlist || facility ? 'Pickup' : user.fulfillmentType, step)
 	})
+	if (options.waitlist) {
+		await measuredStep(events, step, 'waitlist', 'Join waitlist', () => runWaitlist(page, events))
+		return
+	}
 	await measuredStep(events, step, 'add_to_cart', 'Add To Cart', async () => {
-		await addItemsToCart(page, user.usageType, itemCount, step)
+		if (checkoutIds.length) {
+			await addCheckoutProducts(page, checkoutIds, itemCount, user.usageType, events, facility)
+		} else {
+			await addItemsToCart(page, user.usageType, itemCount, step)
+		}
 	})
 	await measuredStep(events, step, 'cart_checkout_nav', 'Cart To Checkout', async () => {
 		await reviewCartAndProceed(page, step)
@@ -1183,6 +1194,10 @@ async function storeFunnelRealQueue(page, vuContext, events, test) {
 	})
 }
 
+async function storeFunnelWaitlist(page, vuContext, events, test) {
+	return runFunnel(page, vuContext, events, test, { vip: true, waitlist: true })
+}
+
 module.exports = {
 	RECAPTCHA_BYPASS_COOKIE_NAME,
 	VIP_CHECKER_COOKIE_NAME,
@@ -1192,5 +1207,6 @@ module.exports = {
 	runFunnel,
 	storeFunnelBypass,
 	storeFunnelRealQueue,
+	storeFunnelWaitlist,
 	waitForCheckoutReadyToSubmit,
 }

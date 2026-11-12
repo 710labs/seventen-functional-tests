@@ -183,7 +183,81 @@ The workflow derives exact 10-browser Fargate workers for presets above 10, so t
 - `bypass-only`: runs only VIP-cookie browser users.
 - `realqueue-only`: runs only non-VIP browser users.
 - `http-funnel`: runs only the HTTP age/password/register endpoint funnel.
+- `waitlist-only`: runs waitlist browsers without checkout traffic.
+- `site-waitlist-only`: validates a storefront configured to offer waitlists for the entire catalog and runs consecutive waitlist signups.
 - `dry`: validates configs and renders smoke configs without launching Fargate.
+
+### Waitlist load and inventory transitions
+
+Set `waitlist_browsers` above zero in `bypass-only`, `realqueue-only`, or `flip` to
+run the waitlist alongside checkout. Waitlist jobs use VIP bypass and launch at
+`gate_iso`. Real-queue checkout traffic depends on Queue-It release. Use
+`waitlist-only` for the waitlist cohort by itself. Leave `waitlist_browsers` at
+zero for the standard Drop Simulation.
+
+- `waitlist_products`: comma-separated `productId:startingStock` pairs, such as
+  `181894:1,181895:3,181896:0`. Seed those quantities before dispatch. Zero tests
+  joining an already sold-out item. Positive stock tests depleting it via cart
+  holds without placing waitlist-product orders.
+- `waitlist_facility_id`: expected pickup facility ID. Set up the drop so the
+  existing test address and Pickup selection route users to that facility. The
+  waitlist modal must identify that pickup facility and the selected product.
+- `checkout_product_ids`: comma-separated allowlist for mixed checkout
+  traffic. Use a separate pool of high-inventory products available for the
+  same Pickup setup, including alternatives beyond `cart_item_count`.
+  Checkout tries alternatives from this pool after a stock rejection.
+- `waitlist_browsers`: total concurrency, up to 200, allocated across the
+  product jobs. Each product needs at least its starting stock plus one
+  browser, so the example above requires at least 7. Dry mode shows the
+  exact allocation and Fargate worker count before dispatching load. Uneven
+  allocations can run fewer browsers per worker to preserve the exact count.
+- `waitlist_duration_seconds`: 1–900, default 900. Use 1 for one wave of the
+  configured users. Longer runs sustain arrivals at the configured cap per
+  second and may skip arrivals while at the concurrency limit.
+
+For an initial mixed smoke, use `mode=bypass-only`, `bypass_browsers=1`,
+`waitlist_products=181894:1`, `waitlist_browsers=2`,
+`waitlist_duration_seconds=1`, `place_orders=false`, and your facility and
+checkout product IDs. This stops the checkout cohort before order submission.
+Choose a future gate when the job launches need to line up.
+
+The test samples the product card's numeric `data-gtm4wp_product_data.stocklevel`
+separately from its button. This signal must represent available units for the
+chosen pickup setup and reflect cart holds. Check that on a seeded dev or stage
+product before scaling. The run requires a seeded positive sample, enough
+confirmed cart holds, and at least one confirmed join for each positive-stock
+product. It fails if a sampled positive quantity shows a waitlist, or zero
+persists for 30 seconds without an enabled Join Waitlist button. Stock is
+sampled on storefront reloads, so the zero-to-button timing starts at the first
+observed zero. The test keeps cart holds in the test accounts until the site's
+normal expiration.
+
+Each product job publishes its own Artillery report. The GitHub summaries show
+confirmed joins, stock races and recoveries, inventory transition failures,
+and p95 latency for the observed zero-to-button and submit-to-confirmation steps.
+The checkout jobs show their own success totals and checkout p95.
+
+### Storefront in waitlist-only mode
+
+Enable the site's waitlist-only setting before dispatching
+`mode=site-waitlist-only`. Set `waitlist_browsers`, `waitlist_facility_id`, and
+`waitlist_duration_seconds`. Leave `waitlist_products` and
+`checkout_product_ids` blank. This mode discovers the products offered to the
+selected pickup facility, including subsequent WooCommerce catalog pages.
+
+Each browser checks every displayed card for an enabled **Join Waitlist**
+button and fails if the catalog shows any **Add to cart** control. It then joins
+each distinct product in succession and verifies **On waitlist** after every
+submission. The storefront setting governs this mode, so a product's inventory
+can still be positive. The test sends no cart additions or checkout traffic.
+
+For a smoke run, use one browser and a duration of one second. For sustained
+signup traffic, increase the browser count and duration. Reports include
+completed catalog journeys, confirmations, and submit-to-confirmation p95.
+
+Run the local browser fixture checks with
+`node --test loadtest/flows/waitlist.test.js` after installing loadtest
+dependencies and Playwright Chromium.
 
 ## Secrets
 
