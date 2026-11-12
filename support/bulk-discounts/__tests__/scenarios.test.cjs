@@ -1,7 +1,7 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const rules = require('../rules.json')
-const { goldenPlans, samplePlans, resolvePlan, coverageCarts, mutationPlans } = require('../scenarios.cjs')
+const { goldenPlans, samplePlans, resolvePlan, coverageCarts, mutationPlans, ScenarioInventoryUnavailableError } = require('../scenarios.cjs')
 const { expectedCart } = require('../oracle.cjs')
 
 const catalogue = rules.bulkRules.flatMap(rule => [0, 1, 2].map(index => ({
@@ -67,7 +67,7 @@ test('J2 pools two distinct $39 eighth SKUs into the five-unit tier', () => {
 	assert.equal(expected.discountLines.length, 5)
 	assert.equal(expected.discountLines.find(line => line.categoryId === 331).amount, 3500)
 	assert.throws(() => resolvePlan(plan, samePriceCatalogue.filter(product =>
-		!product.categoryIds.includes(331) || product.productId === eighths[0].productId)), /Inventory coverage gap/)
+		!product.categoryIds.includes(331) || product.productId === eighths[0].productId)), ScenarioInventoryUnavailableError)
 })
 
 test('missing stock, BOGO category, and duplicate category membership are visible gaps', () => {

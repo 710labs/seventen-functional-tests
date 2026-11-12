@@ -1,5 +1,6 @@
-function bindCategoryIds(rules, categoryIdsBySlug) {
+function bindCategoryIds(rules, categoryIdsBySlug, { allowMissing = false } = {}) {
 	const result = structuredClone(rules)
+	if (allowMissing) result.bulkRules = result.bulkRules.filter(rule => Object.hasOwn(categoryIdsBySlug, rule.categorySlug))
 	const used = new Set()
 	for (const rule of result.bulkRules) {
 		const id = categoryIdsBySlug[rule.categorySlug]

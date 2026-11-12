@@ -35,3 +35,11 @@ test('missing, duplicated, and unknown category mappings fail explicitly', () =>
 	assert.throws(() => remapPlanCategories({ lines: [{ categoryId: 999 }] }, rules, rules), /Unmapped/)
 	assert.equal(remapPlanCategories({ lines: [{ categoryId: null }] }, rules, rules).lines[0].categoryId, null)
 })
+
+test('optional Stage category discovery omits absent slugs without accepting invalid mappings', () => {
+	const { eighths, ...partial } = stageIds
+	const live = bindCategoryIds(rules, partial, { allowMissing: true })
+	assert.deepEqual(live.bulkRules.map(rule => rule.categoryId), [319, 312, 323, 320])
+	assert.throws(() => bindCategoryIds(rules, { ...partial, eighths: undefined }, { allowMissing: true }), /eighths/)
+	assert.throws(() => bindCategoryIds(rules, { ...partial, eighths: stageIds.doinks }, { allowMissing: true }), /doinks/)
+})

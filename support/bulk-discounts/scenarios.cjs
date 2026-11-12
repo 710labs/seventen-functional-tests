@@ -1,6 +1,8 @@
 const defaultRules = require('./rules.json')
 const { cents } = require('./oracle.cjs')
 
+class ScenarioInventoryUnavailableError extends Error {}
+
 const quantities = [0, 1, 2, 3, 4, 5, 6, 10]
 const line = (categoryId, skuIndex, qty, extra = {}) => ({ categoryId, skuIndex, qty, ...extra })
 
@@ -80,11 +82,12 @@ function resolvePlan(plan, catalogue, rules = defaultRules) {
 		const used = new Set([...chosen.values()].map(product => product.productId))
 		// Stable SKU slots preserve distinct products even when every price is equal.
 		const product = candidates[request.skuIndex]
-		if (!product || used.has(product.productId)) {
+		if (!product) {
 			const prices = [...new Set(candidates.map(candidate => cents(candidate.unitPrice)))].map(price => `$${(price / 100).toFixed(2)}`)
-			throw new Error(`Inventory coverage gap for category ${request.categoryId}, slot ${request.skuIndex} (${plan.id}): ` +
+			throw new ScenarioInventoryUnavailableError(`Inventory coverage gap for category ${request.categoryId}, slot ${request.skuIndex} (${plan.id}): ` +
 				`${candidates.length} eligible products; available unit prices: ${prices.join(', ') || 'none'}.`)
 		}
+		if (used.has(product.productId)) throw new Error('Scenario slots must resolve to distinct products')
 		chosen.set(key, product)
 		return { productId: product.productId, categoryIds: [...product.categoryIds], unitPrice: product.unitPrice, qty: request.qty, isFreeBogoUnit: false }
 	})
@@ -134,4 +137,4 @@ function mutationPlans() {
 	]
 }
 
-module.exports = { quantities, goldenPlans, samplePlans, validateCatalogue, resolvePlan, coverageCarts, mutationPlans }
+module.exports = { quantities, goldenPlans, samplePlans, validateCatalogue, resolvePlan, coverageCarts, mutationPlans, ScenarioInventoryUnavailableError }
