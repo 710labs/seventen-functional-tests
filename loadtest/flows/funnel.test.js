@@ -1,9 +1,11 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
+const { chromium } = require('@playwright/test')
 
 const {
 	acceptPickupCommitment,
 	isCheckoutSubmissionUrl,
+	selectResolvedBillingAddress,
 	waitForCheckoutReadyToSubmit,
 } = require('./funnel')
 
@@ -105,4 +107,64 @@ test('waitForCheckoutReadyToSubmit waits until checkout overlays clear', async (
 
 	await waitForCheckoutReadyToSubmit(page, placeOrderButton, 1500)
 	assert.ok(overlayChecks >= 2)
+})
+
+test('billing registration resolves both Google Places controls', async t => {
+	const browser = await chromium.launch()
+	t.after(() => browser.close())
+	const address = '123 Synthetic Street'
+	const resolvedAddress = '123 Synthetic St'
+	const billingFields = '<input name="billing_state" type="hidden"><input name="billing_postcode" type="hidden">'
+
+	await t.test('selects the visible legacy suggestion', async t => {
+		const page = await browser.newPage()
+		t.after(() => page.close())
+		await page.setContent(`
+			<input name="billing_address_1">
+			${billingFields}
+			<div class="pac-item" hidden>Old suggestion</div>
+			<div class="pac-item" id="prediction" hidden>${resolvedAddress}</div>
+			<script>
+				const field = document.querySelector('[name="billing_address_1"]');
+				const prediction = document.querySelector('#prediction');
+				field.addEventListener('input', () => { prediction.hidden = false; });
+				prediction.addEventListener('click', () => {
+					field.value = prediction.textContent;
+					document.querySelector('[name="billing_state"]').value = 'CA';
+					document.querySelector('[name="billing_postcode"]').value = '90016';
+				});
+			</script>`)
+		await selectResolvedBillingAddress(page, address, 'CA', '90016')
+		assert.equal(await page.locator('[name="billing_address_1"]').inputValue(), resolvedAddress)
+	})
+
+	await t.test('uses the modern widget and verifies the hidden submitted address', async t => {
+		const page = await browser.newPage()
+		t.after(() => page.close())
+		await page.setContent(`
+			<input name="billing_address_1" hidden>
+			${billingFields}
+			<gmp-place-autocomplete id="billing_address_1_place"></gmp-place-autocomplete>
+			<script>
+				customElements.define('gmp-place-autocomplete', class extends HTMLElement {
+					constructor() {
+						super();
+						const shadow = this.attachShadow({ mode: 'open' });
+						shadow.innerHTML = '<input><div role="option" hidden>${resolvedAddress}</div>';
+						const option = shadow.querySelector('[role="option"]');
+						shadow.querySelector('input').addEventListener('input', () => { option.hidden = false; });
+						option.addEventListener('click', () => {
+							this.dispatchEvent(new Event('gmp-select'));
+							setTimeout(() => {
+								document.querySelector('[name="billing_address_1"]').value = option.textContent;
+								document.querySelector('[name="billing_state"]').value = 'CA';
+								document.querySelector('[name="billing_postcode"]').value = '90016';
+							}, 100);
+						});
+					}
+				});
+			</script>`)
+		await selectResolvedBillingAddress(page, address, 'CA', '90016')
+		assert.equal(await page.locator('[name="billing_address_1"]').inputValue(), resolvedAddress)
+	})
 })

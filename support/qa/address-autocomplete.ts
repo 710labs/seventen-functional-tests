@@ -1,7 +1,5 @@
 import { expect, test, type ConsoleMessage, type Locator, type Page, type Response } from '@playwright/test'
 
-// These codes are intentionally static: public reporters must never include an
-// address, Google response, API key, or browser console message.
 export async function selectAutocompleteAddress(
 	page: Page,
 	field: Locator,
