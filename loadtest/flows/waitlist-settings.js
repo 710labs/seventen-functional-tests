@@ -1,3 +1,9 @@
+const WAITLIST_PRESETS = new Map([
+	['Off', 0],
+	['Smoke (1 user)', 1],
+	...[5, 25, 50, 100, 150, 200].map(browsers => [`${browsers} users`, browsers]),
+])
+
 function integer(value, label, minimum = 1) {
 	const parsed = Number(value)
 	if (!/^\d+$/.test(String(value)) || !Number.isSafeInteger(parsed) || parsed < minimum) {
@@ -22,24 +28,23 @@ function workerCount(browsers) {
 	return browsers / size
 }
 
-function planWaitlist({ mode, browsers, products, checkoutProducts, facility, duration, cartItems }) {
-	const count = integer(browsers, 'waitlist_browsers', 0)
+function planWaitlist({ mode, preset, products, checkoutProducts, facility, cartItems }) {
+	const count = WAITLIST_PRESETS.get(preset)
+	if (count === undefined) throw new Error('Select a supported waitlist preset.')
 	const siteWaitlistOnly = mode === 'site-waitlist-only'
 	const checkoutIds = siteWaitlistOnly ? [] : parseProductIds(checkoutProducts)
 	const mixed = ['flip', 'bypass-only', 'realqueue-only'].includes(mode)
 
 	if (count === 0) {
 		if (siteWaitlistOnly || mode === 'waitlist-only') {
-			throw new Error(`${mode} requires waitlist_browsers above zero.`)
+			throw new Error(`${mode} requires a waitlist preset with at least one user.`)
 		}
 		return { include: [], checkoutIds, facility: '', duration: 0 }
 	}
 	if (!mixed && !['waitlist-only', 'site-waitlist-only', 'dry'].includes(mode)) {
 		throw new Error('Waitlist traffic requires a browser mode, waitlist-only, site-waitlist-only, or dry.')
 	}
-	if (count > 200) throw new Error('waitlist_browsers must be at most 200.')
-	const seconds = integer(duration, 'waitlist_duration_seconds')
-	if (seconds > 900) throw new Error('waitlist_duration_seconds must be at most 900.')
+	const seconds = count === 1 ? 1 : 30
 	const facilityId = String(integer(facility, 'waitlist_facility_id'))
 	if (siteWaitlistOnly || (mode === 'dry' && !products.trim())) {
 		return {

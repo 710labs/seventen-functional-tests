@@ -189,41 +189,33 @@ The workflow derives exact 10-browser Fargate workers for presets above 10, so t
 
 ### Waitlist load and inventory transitions
 
-Set `waitlist_browsers` above zero in `bypass-only`, `realqueue-only`, or `flip` to
-run the waitlist alongside checkout. Waitlist jobs use VIP bypass and launch at
+Select a `waitlist_preset` in `bypass-only`, `realqueue-only`, or `flip` to run
+the waitlist alongside checkout. Waitlist jobs use VIP bypass and launch at
 `gate_iso`. Real-queue checkout traffic depends on Queue-It release. Use
-`waitlist-only` for the waitlist cohort by itself. Leave `waitlist_browsers` at
-zero for the standard Drop Simulation.
+`waitlist-only` for the waitlist cohort by itself. Select `Off` for the standard
+Drop Simulation.
 
-- `waitlist_products`: comma-separated `productId:startingStock` pairs, such as
+- `waitlist_preset` offers 5, 25, 50, 100, 150, or 200 users spread over 30 seconds.
+  `Smoke (1 user)` starts one browser over one second. Each product needs at
+  least its starting stock plus one browser. For example, products with stock
+  1, 3, and 0 need at least seven browsers, so select `25 users` or higher.
+  Dry mode shows the browser and Fargate worker allocation.
+- `waitlist_products` accepts comma-separated `productId:startingStock` pairs, such as
   `181894:1,181895:3,181896:0`. Seed those quantities before dispatch. Zero tests
   joining an already sold-out item. Positive stock tests depleting it via cart
   holds without placing waitlist-product orders.
-- `waitlist_facility_id`: expected pickup facility ID. Set up the drop so the
-  existing test address and Pickup selection route users to that facility. The
-  waitlist modal must identify that pickup facility and the selected product.
-- `checkout_product_ids`: comma-separated allowlist for mixed checkout
+- `waitlist_facility_id` sets the expected pickup facility. Stage defaults to
+  Amuse Downtown LA (`1`). Set up the drop so the existing test address and
+  Pickup selection route users to that facility. The waitlist modal must
+  identify that pickup facility and the selected product.
+- `checkout_product_ids` accepts a comma-separated allowlist for mixed checkout
   traffic. Use a separate pool of high-inventory products available for the
   same Pickup setup, including alternatives beyond `cart_item_count`.
   Checkout tries alternatives from this pool after a stock rejection.
-- `waitlist_browsers`: total concurrency, up to 200, allocated across the
-  product jobs. Each product needs at least its starting stock plus one
-  browser, so the example above requires at least 7. Dry mode shows the
-  exact allocation and Fargate worker count before dispatching load. Uneven
-  allocations can run fewer browsers per worker to preserve the exact count.
-- `waitlist_duration_seconds` sets the arrival window from 1 to 900 seconds
-  and defaults to 900. Use 1 for a single wave. By default, longer runs sustain
-  arrivals at the configured cap per second and may skip arrivals while at
-  the concurrency limit.
-- `waitlist_spread_arrivals` spreads a fixed number of starts across the
-  arrival window. For 50 browsers over 30 seconds, set it to true and set
-  `waitlist_duration_seconds` to 30. Each of the five workers starts ten
-  browsers, with one start per worker about every three seconds.
 
 For an initial mixed smoke, use `mode=bypass-only`, `bypass_browsers=1`,
-`waitlist_products=181894:1`, `waitlist_browsers=2`,
-`waitlist_duration_seconds=1`, `place_orders=false`, and your facility and
-checkout product IDs. This stops the checkout cohort before order submission.
+`waitlist_products=181894:1`, `waitlist_preset=5 users`, `place_orders=false`,
+and your checkout product IDs. This stops the checkout cohort before order submission.
 Choose a future gate when the job launches need to line up.
 
 The test samples the product card's numeric `data-gtm4wp_product_data.stocklevel`
@@ -245,8 +237,8 @@ The checkout jobs show their own success totals and checkout p95.
 ### Storefront in waitlist-only mode
 
 Enable the site's waitlist-only setting before dispatching
-`mode=site-waitlist-only`. Set `waitlist_browsers`, `waitlist_facility_id`, and
-`waitlist_duration_seconds`. Leave `waitlist_products` and
+`mode=site-waitlist-only`. Select the `waitlist_preset` and set the pickup
+facility if needed. Leave `waitlist_products` and
 `checkout_product_ids` blank. This mode discovers the products offered to the
 selected pickup facility, including subsequent WooCommerce catalog pages.
 
@@ -256,8 +248,8 @@ each distinct product in succession and verifies **On waitlist** after every
 submission. The storefront setting governs this mode, so a product's inventory
 can still be positive. The test sends no cart additions or checkout traffic.
 
-For a smoke run, use one browser and a duration of one second. For sustained
-signup traffic, increase the browser count and duration. Reports include
+Use `Smoke (1 user)` to check the whole flow with one browser. The numbered
+presets start the selected number of users over 30 seconds. Reports include
 completed catalog journeys, confirmations, and submit-to-confirmation p95.
 
 Run the local browser fixture checks with

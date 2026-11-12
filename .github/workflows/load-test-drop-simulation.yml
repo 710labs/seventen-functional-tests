@@ -138,24 +138,25 @@ on:
           - '9'
           - '10'
 
-      waitlist_browsers:
-        type: number
-        description: Total waitlist browser concurrency
-        default: 0
+      waitlist_preset:
+        type: choice
+        description: Waitlist user count. Numbered presets spread arrivals over 30 seconds.
+        default: 'Off'
+        options:
+          - 'Off'
+          - Smoke (1 user)
+          - 5 users
+          - 25 users
+          - 50 users
+          - 100 users
+          - 150 users
+          - 200 users
       waitlist_products:
         type: string
         description: Comma-separated productId:startingStock pairs for the pickup facility
       waitlist_facility_id:
         type: string
-        description: Expected pickup facility ID for the waitlist products
-      waitlist_duration_seconds:
-        type: number
-        description: Waitlist arrivals in seconds. Use 1 for a single wave.
-        default: 900
-      waitlist_spread_arrivals:
-        type: boolean
-        description: Spread the specified waitlist browsers evenly across the arrival duration
-        default: false
+        description: Expected pickup facility ID. Stage defaults to Amuse Downtown LA (1).
       checkout_product_ids:
         type: string
         description: Comma-separated high-inventory product IDs for checkout in mixed runs
@@ -450,10 +451,9 @@ jobs:
         env:
           INPUT_MODE: ${{ steps.resolve.outputs.mode }}
           INPUT_CART_ITEM_COUNT: ${{ steps.resolve.outputs.cart_item_count }}
-          INPUT_WAITLIST_BROWSERS: ${{ github.event.inputs.waitlist_browsers || '0' }}
+          INPUT_WAITLIST_PRESET: ${{ inputs.waitlist_preset || 'Off' }}
           INPUT_WAITLIST_PRODUCTS: ${{ github.event.inputs.waitlist_products }}
-          INPUT_WAITLIST_FACILITY_ID: ${{ github.event.inputs.waitlist_facility_id }}
-          INPUT_WAITLIST_DURATION_SECONDS: ${{ github.event.inputs.waitlist_duration_seconds || '900' }}
+          INPUT_WAITLIST_FACILITY_ID: ${{ inputs.waitlist_facility_id || (steps.resolve.outputs.env == 'stage' && '1') || '' }}
           INPUT_CHECKOUT_PRODUCT_IDS: ${{ github.event.inputs.checkout_product_ids }}
         run: node loadtest/scripts/plan-waitlist.js
 
@@ -1020,7 +1020,6 @@ jobs:
           BROWSERS: ${{ matrix.browsers }}
           WORKERS: ${{ matrix.workers }}
           DURATION: ${{ needs.plan.outputs.waitlist_duration_seconds }}
-          SPREAD_ARRIVALS: ${{ inputs.waitlist_spread_arrivals }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
@@ -1036,11 +1035,7 @@ jobs:
           done
 
           mkdir -p loadtest/generated loadtest/reports
-          arrival_option=--arrival-rate
-          if [ "$DURATION" = 1 ] || [ "$SPREAD_ARRIVALS" = true ]; then
-            arrival_option=--arrival-count
-          fi
-          node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.yml --workers "$WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration "$DURATION" "$arrival_option" "$BROWSERS" --max-vusers "$BROWSERS" --name "drop-waitlist-$PRODUCT_ID"
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.yml --workers "$WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration "$DURATION" --arrival-count "$BROWSERS" --max-vusers "$BROWSERS" --name "drop-waitlist-$PRODUCT_ID"
           node loadtest/scripts/validate-configs.js loadtest/generated/browser-waitlist.yml
 
           umask 077
