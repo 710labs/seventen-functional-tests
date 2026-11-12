@@ -1,6 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 const { randomBytes } = require('node:crypto')
+const { expect } = require('@playwright/test')
+const { selectAutocompleteAddress } = require('../../support/qa/address-autocomplete.cjs')
 const { addCheckoutProducts } = require('./drop-cart')
 const { runWaitlist } = require('./waitlist')
 const { parseProductIds } = require('./waitlist-settings')
@@ -18,6 +20,11 @@ const VIP_CHECKER_COOKIE_NAME = 'vipChecker'
 const RECAPTCHA_BYPASS_COOKIE_NAME = 'qa_wf_captcha_bypass'
 
 const REGISTRATION_ADDRESS_SELECTOR = 'input[name="billing_address_1"]'
+const REGISTRATION_ADDRESS_CONTROL_SELECTOR = [
+	'gmp-place-autocomplete[id$="billing_address_1_place"]',
+	'gmp-place-autocomplete#billing_address_1',
+	REGISTRATION_ADDRESS_SELECTOR,
+].join(', ')
 const BILLING_STATE_SELECTOR = 'select[name="billing_state"], input[name="billing_state"], #billing_state'
 const BILLING_ZIP_SELECTOR = 'input[name="billing_postcode"], #billing_postcode'
 const DL_INPUT_SELECTOR = 'input[name="svntn_core_personal_doc"]'
@@ -405,7 +412,8 @@ async function assertResolvedAddress(page, expectedState, expectedZip) {
 	const deadline = Date.now() + 5000
 	let lastAddress = ''
 
-	await address.waitFor({ state: 'visible', timeout: 10000 })
+	// The Places widget can hide the submitted billing input.
+	await address.waitFor({ state: 'attached', timeout: 10000 })
 
 	while (Date.now() < deadline) {
 		lastAddress = (await address.inputValue().catch(() => '')).trim()
@@ -439,25 +447,8 @@ async function assertResolvedAddress(page, expectedState, expectedZip) {
 }
 
 async function selectResolvedBillingAddress(page, addressValue, expectedState, expectedZip) {
-	const address = page.locator(REGISTRATION_ADDRESS_SELECTOR).first()
-
-	await address.click()
-	await address.fill('')
-	await address.pressSequentially(addressValue, { delay: 25 })
-
-	const suggestion = page.locator('.pac-item').first()
-	const suggestionVisible = await suggestion
-		.waitFor({ state: 'visible', timeout: 10000 })
-		.then(() => true)
-		.catch(() => false)
-
-	if (suggestionVisible) {
-		await suggestion.click()
-	} else {
-		await page.keyboard.press('ArrowDown')
-		await page.keyboard.press('Enter')
-	}
-
+	const field = page.locator(REGISTRATION_ADDRESS_CONTROL_SELECTOR).filter({ visible: true }).first()
+	await selectAutocompleteAddress(page, field, addressValue, 15000, expect)
 	await assertResolvedAddress(page, expectedState, expectedZip)
 }
 
@@ -834,12 +825,18 @@ async function createAccount(page, target, user, step) {
 		await page.locator('select[name="svntn_core_dob_month"]').selectOption('12')
 		await page.locator('select[name="svntn_core_dob_day"]').selectOption('16')
 		await page.locator('select[name="svntn_core_dob_year"]').selectOption('1988')
+	})
+
+	await step('Select Billing Address', async () => {
 		await selectResolvedBillingAddress(
 			page,
 			DEFAULT_REGISTRATION_ADDRESS,
 			DEFAULT_REGISTRATION_STATE,
 			DEFAULT_REGISTRATION_ZIP,
 		)
+	})
+
+	await step('Enter Phone Number', async () => {
 		await page.locator('input[name="billing_phone"]').fill(user.phone)
 	})
 
@@ -1205,6 +1202,7 @@ module.exports = {
 	buildCookies,
 	isCheckoutSubmissionUrl,
 	runFunnel,
+	selectResolvedBillingAddress,
 	storeFunnelBypass,
 	storeFunnelRealQueue,
 	storeFunnelWaitlist,
