@@ -152,6 +152,10 @@ on:
         type: number
         description: Waitlist arrivals in seconds. Use 1 for a single wave.
         default: 900
+      waitlist_spread_arrivals:
+        type: boolean
+        description: Spread the specified waitlist browsers evenly across the arrival duration
+        default: false
       checkout_product_ids:
         type: string
         description: Comma-separated high-inventory product IDs for checkout in mixed runs
@@ -985,6 +989,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.plan.outputs.env }}
     timeout-minutes: 240
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
     permissions:
       contents: read
       id-token: write
@@ -1013,6 +1020,7 @@ jobs:
           BROWSERS: ${{ matrix.browsers }}
           WORKERS: ${{ matrix.workers }}
           DURATION: ${{ needs.plan.outputs.waitlist_duration_seconds }}
+          SPREAD_ARRIVALS: ${{ inputs.waitlist_spread_arrivals }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
@@ -1029,7 +1037,7 @@ jobs:
 
           mkdir -p loadtest/generated loadtest/reports
           arrival_option=--arrival-rate
-          if [ "$DURATION" = 1 ]; then
+          if [ "$DURATION" = 1 ] || [ "$SPREAD_ARRIVALS" = true ]; then
             arrival_option=--arrival-count
           fi
           node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.yml --workers "$WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration "$DURATION" "$arrival_option" "$BROWSERS" --max-vusers "$BROWSERS" --name "drop-waitlist-$PRODUCT_ID"
@@ -1088,6 +1096,31 @@ jobs:
       - name: Remove worker dotenv
         if: always()
         run: rm -f loadtest/generated/browser-waitlist.fargate.env
+
+      - name: Slack notifications
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3.15.1
+        with:
+          status: custom
+          fields: workflow,job,commit,repo,ref,author,took
+          custom_payload: |
+            {
+              attachments: [{
+                color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+                title: 'Load Test- Drop Simulation / Waitlist / ${{ matrix.id }}',
+                text: [
+                  `Status: ${{ job.status }}`,
+                  `Environment: ${{ needs.plan.outputs.env }}`,
+                  `Mode: ${{ needs.plan.outputs.mode }}`,
+                  `Browsers: ${{ matrix.browsers }} across ${{ matrix.workers }} workers`,
+                  `Arrival duration: ${{ needs.plan.outputs.waitlist_duration_seconds }} seconds`,
+                  '',
+                  `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,
+                  '',
+                  `Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                ].join('\n'),
+              }]
+            }
 
   http-funnel:
     name: HTTP funnel

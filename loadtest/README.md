@@ -211,9 +211,14 @@ zero for the standard Drop Simulation.
   browser, so the example above requires at least 7. Dry mode shows the
   exact allocation and Fargate worker count before dispatching load. Uneven
   allocations can run fewer browsers per worker to preserve the exact count.
-- `waitlist_duration_seconds`: 1–900, default 900. Use 1 for one wave of the
-  configured users. Longer runs sustain arrivals at the configured cap per
-  second and may skip arrivals while at the concurrency limit.
+- `waitlist_duration_seconds` sets the arrival window from 1 to 900 seconds
+  and defaults to 900. Use 1 for a single wave. By default, longer runs sustain
+  arrivals at the configured cap per second and may skip arrivals while at
+  the concurrency limit.
+- `waitlist_spread_arrivals` spreads a fixed number of starts across the
+  arrival window. For 50 browsers over 30 seconds, set it to true and set
+  `waitlist_duration_seconds` to 30. Each of the five workers starts ten
+  browsers, with one start per worker about every three seconds.
 
 For an initial mixed smoke, use `mode=bypass-only`, `bypass_browsers=1`,
 `waitlist_products=181894:1`, `waitlist_browsers=2`,
