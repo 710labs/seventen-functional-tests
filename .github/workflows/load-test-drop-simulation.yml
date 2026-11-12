@@ -38,6 +38,7 @@ on:
           - bypass-only
           - realqueue-only
           - http-funnel
+          - waitlist-only
           - dry
       bypass_browsers:
         type: choice
@@ -136,6 +137,24 @@ on:
           - '9'
           - '10'
 
+      waitlist_browsers:
+        type: number
+        description: Total waitlist browser concurrency across all configured products
+        default: 0
+      waitlist_products:
+        type: string
+        description: Comma-separated productId:startingStock pairs for the pickup facility
+      waitlist_facility_id:
+        type: string
+        description: Expected pickup facility ID for the waitlist products
+      waitlist_duration_seconds:
+        type: number
+        description: Waitlist arrivals in seconds. Use 1 for a single wave.
+        default: 900
+      checkout_product_ids:
+        type: string
+        description: Comma-separated high-inventory product IDs for checkout in mixed runs
+
 concurrency:
   group: drop-simulation-${{ github.event.inputs.env || 'stage' }}
   cancel-in-progress: false
@@ -172,8 +191,16 @@ jobs:
       realqueue_workers: ${{ steps.resolve.outputs.realqueue_workers }}
       realqueue_per_worker: ${{ steps.resolve.outputs.realqueue_per_worker }}
       cart_item_count: ${{ steps.resolve.outputs.cart_item_count }}
+      run_waitlist: ${{ steps.waitlist.outputs.run_waitlist }}
+      waitlist_matrix: ${{ steps.waitlist.outputs.waitlist_matrix }}
+      waitlist_facility_id: ${{ steps.waitlist.outputs.waitlist_facility_id }}
+      waitlist_duration_seconds: ${{ steps.waitlist.outputs.waitlist_duration_seconds }}
+      checkout_product_ids: ${{ steps.waitlist.outputs.checkout_product_ids }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Resolve drop simulation plan
         id: resolve
         env:
@@ -285,7 +312,7 @@ jobs:
           fi
 
           case "$ARTILLERY_MODE" in
-            flip|entry-only|bypass-only|realqueue-only|http-funnel|dry) ;;
+            flip|entry-only|bypass-only|realqueue-only|http-funnel|waitlist-only|dry) ;;
             *) echo "Unsupported mode: $ARTILLERY_MODE" >&2; exit 1 ;;
           esac
 
@@ -413,6 +440,18 @@ jobs:
             echo "- Fargate capacity: $FARGATE_CAPACITY"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Resolve waitlist product plan
+        id: waitlist
+        env:
+          INPUT_MODE: ${{ steps.resolve.outputs.mode }}
+          INPUT_CART_ITEM_COUNT: ${{ steps.resolve.outputs.cart_item_count }}
+          INPUT_WAITLIST_BROWSERS: ${{ github.event.inputs.waitlist_browsers || '0' }}
+          INPUT_WAITLIST_PRODUCTS: ${{ github.event.inputs.waitlist_products }}
+          INPUT_WAITLIST_FACILITY_ID: ${{ github.event.inputs.waitlist_facility_id }}
+          INPUT_WAITLIST_DURATION_SECONDS: ${{ github.event.inputs.waitlist_duration_seconds || '900' }}
+          INPUT_CHECKOUT_PRODUCT_IDS: ${{ github.event.inputs.checkout_product_ids }}
+        run: node loadtest/scripts/plan-waitlist.js
+
   dry:
     name: Dry run
     needs: plan
@@ -451,6 +490,7 @@ jobs:
           node loadtest/scripts/render-config.js --config loadtest/config/browser-realqueue.yml --output loadtest/generated/browser-realqueue.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-realqueue-dry
           node loadtest/scripts/render-config.js --config loadtest/config/http-entry.yml --output loadtest/generated/http-entry.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-entry-dry
           node loadtest/scripts/render-config.js --config loadtest/config/http-funnel.yml --output loadtest/generated/http-funnel.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-rate 1 --max-vusers 1 --name drop-http-funnel-dry
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.dry.yml --workers 1 --worker-number 1 --target "$ARTILLERY_TARGET" --duration 1 --arrival-count 1 --max-vusers 1 --name drop-waitlist-dry
           node loadtest/scripts/validate-configs.js loadtest/generated
           node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --dry-run
 
@@ -555,6 +595,8 @@ jobs:
           PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
           SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
           CART_ITEM_COUNT: ${{ needs.plan.outputs.cart_item_count }}
+          CHECKOUT_PRODUCT_IDS: ${{ needs.plan.outputs.checkout_product_ids }}
+          WAITLIST_FACILITY_ID: ${{ needs.plan.outputs.waitlist_facility_id }}
           VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
@@ -576,6 +618,8 @@ jobs:
           SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_CART_ITEM_COUNT=$CART_ITEM_COUNT
+          ARTILLERY_CHECKOUT_PRODUCT_IDS=$CHECKOUT_PRODUCT_IDS
+          ARTILLERY_WAITLIST_FACILITY_ID=$WAITLIST_FACILITY_ID
           ARTILLERY_QUEUE_WAIT_MS=$QUEUE_WAIT_MS
           EOF
 
@@ -604,7 +648,16 @@ jobs:
 
       - name: Check thresholds
         if: always()
-        run: node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" --max-vusers-failed 0 --optional
+        env:
+          RUN_WAITLIST: ${{ needs.plan.outputs.run_waitlist }}
+        run: |
+          args=(--max-vusers-failed 0)
+          if [ "$RUN_WAITLIST" = true ]; then
+            args+=(--min-vusers-completed 1)
+          else
+            args+=(--optional)
+          fi
+          node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" "${args[@]}"
 
       - name: Upload Artillery reports
         if: always()
@@ -820,6 +873,8 @@ jobs:
           PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
           SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
           CART_ITEM_COUNT: ${{ needs.plan.outputs.cart_item_count }}
+          CHECKOUT_PRODUCT_IDS: ${{ needs.plan.outputs.checkout_product_ids }}
+          WAITLIST_FACILITY_ID: ${{ needs.plan.outputs.waitlist_facility_id }}
           VIP_COOKIE_VALUE_SECRET: ${{ secrets.VIP_COOKIE_VALUE }}
           ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
           RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
@@ -841,6 +896,8 @@ jobs:
           SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_CART_ITEM_COUNT=$CART_ITEM_COUNT
+          ARTILLERY_CHECKOUT_PRODUCT_IDS=$CHECKOUT_PRODUCT_IDS
+          ARTILLERY_WAITLIST_FACILITY_ID=$WAITLIST_FACILITY_ID
           EOF
 
           echo "config=loadtest/generated/browser-bypass.yml" >> "$GITHUB_OUTPUT"
@@ -868,7 +925,16 @@ jobs:
 
       - name: Check thresholds
         if: always()
-        run: node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" --max-vusers-failed 0 --optional
+        env:
+          RUN_WAITLIST: ${{ needs.plan.outputs.run_waitlist }}
+        run: |
+          args=(--max-vusers-failed 0)
+          if [ "$RUN_WAITLIST" = true ]; then
+            args+=(--min-vusers-completed 1)
+          else
+            args+=(--optional)
+          fi
+          node loadtest/scripts/check-thresholds.js --report "$ARTILLERY_REPORT_JSON" "${args[@]}"
 
       - name: Upload Artillery reports
         if: always()
@@ -907,6 +973,115 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  waitlist:
+    name: Waitlist product ${{ matrix.id }}
+    needs: plan
+    if: ${{ needs.plan.outputs.run_waitlist == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.waitlist_matrix) }}
+    runs-on: ubuntu-latest
+    environment: ${{ needs.plan.outputs.env }}
+    timeout-minutes: 240
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Install loadtest dependencies
+        run: npm ci --prefix loadtest --no-audit
+
+      - name: Prepare waitlist worker config
+        env:
+          ARTILLERY_TARGET: ${{ needs.plan.outputs.target }}
+          ARTILLERY_LIST_PASSWORD: ${{ secrets.ARTILLERY_LIST_PASSWORD }}
+          RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+          VIP_COOKIE_VALUE: ${{ secrets.VIP_COOKIE_VALUE }}
+          SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
+          PRODUCT_ID: ${{ matrix.id }}
+          STARTING_STOCK: ${{ matrix.stock }}
+          FACILITY_ID: ${{ needs.plan.outputs.waitlist_facility_id }}
+          BROWSERS: ${{ matrix.browsers }}
+          WORKERS: ${{ matrix.workers }}
+          DURATION: ${{ needs.plan.outputs.waitlist_duration_seconds }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          ARTILLERY_REPORT_APIKEY: ${{ secrets.ARTILLERY_REPORT_APIKEY }}
+        run: |
+          set -euo pipefail
+
+          for required in ARTILLERY_LIST_PASSWORD RECAPTCHA_BYPASS AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY S3_REGION ARTILLERY_REPORT_APIKEY; do
+            if [ -z "${!required}" ]; then
+              echo "Missing required secret: $required" >&2
+              exit 1
+            fi
+          done
+
+          mkdir -p loadtest/generated loadtest/reports
+          arrival_option=--arrival-rate
+          if [ "$DURATION" = 1 ]; then
+            arrival_option=--arrival-count
+          fi
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.yml --workers "$WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration "$DURATION" "$arrival_option" "$BROWSERS" --max-vusers "$BROWSERS" --name "drop-waitlist-$PRODUCT_ID"
+          node loadtest/scripts/validate-configs.js loadtest/generated/browser-waitlist.yml
+
+          umask 077
+          cat > loadtest/generated/browser-waitlist.fargate.env <<EOF
+          ARTILLERY_TARGET=$ARTILLERY_TARGET
+          ARTILLERY_LIST_PASSWORD=$ARTILLERY_LIST_PASSWORD
+          VIP_COOKIE_VALUE=${VIP_COOKIE_VALUE:-3}
+          RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
+          SCREENSHOTS=$SCREENSHOTS
+          ARTILLERY_WAITLIST_PRODUCT_ID=$PRODUCT_ID
+          ARTILLERY_WAITLIST_STARTING_STOCK=$STARTING_STOCK
+          ARTILLERY_WAITLIST_FACILITY_ID=$FACILITY_ID
+          EOF
+
+      - name: Wait until gate
+        env:
+          GATE_ISO: ${{ needs.plan.outputs.gate_iso }}
+        run: node loadtest/scripts/wait-until-gate.js --gate-time "$GATE_ISO" --max-wait-ms 86400000
+
+      - name: Execute waitlist browsers on AWS Fargate
+        uses: artilleryio/action-cli@v2.0.32
+        with:
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ matrix.workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv loadtest/generated/browser-waitlist.fargate.env --packages loadtest/package.json loadtest/generated/browser-waitlist.yml --output loadtest/reports/waitlist-${{ matrix.id }}.json --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/waitlist/${{ matrix.id }}/${{ matrix.browsers }}browsers/gate-${{ needs.plan.outputs.gate_tag }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Summarize and verify waitlist report
+        if: always()
+        env:
+          REPORT_PATH: loadtest/reports/waitlist-${{ matrix.id }}.json
+          STARTING_STOCK: ${{ matrix.stock }}
+        run: |
+          node scripts/summarize-artillery-report.js "$REPORT_PATH"
+          args=(--max-vusers-failed 0 --min-vusers-completed 1 --threshold 'waitlist.confirmed>=1')
+          if [ "$STARTING_STOCK" -gt 0 ]; then
+            args+=(--threshold 'waitlist.seed_observed>=1' --threshold "waitlist.cart_holds>=$STARTING_STOCK")
+          fi
+          node loadtest/scripts/check-thresholds.js --report "$REPORT_PATH" "${args[@]}"
+
+      - name: Upload Artillery reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop-simulation-waitlist-${{ matrix.id }}-report
+          path: loadtest/reports
+          if-no-files-found: ignore
+
+      - name: Remove worker dotenv
+        if: always()
+        run: rm -f loadtest/generated/browser-waitlist.fargate.env
 
   http-funnel:
     name: HTTP funnel

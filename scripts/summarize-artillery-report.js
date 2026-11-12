@@ -62,6 +62,16 @@ function summarizeReport(report) {
 		lines.push('Session length ms: unavailable')
 	}
 
+	for (const [metric, value] of Object.entries(counters)) {
+		if (metric.startsWith('waitlist.') || metric.startsWith('checkout.stock_')) {
+			lines.push(`${metric}: ${formatNumber(value)}`)
+		}
+	}
+	for (const metric of ['funnel.checkout_ms', 'waitlist.zero_to_button_ms', 'waitlist.submit_to_confirmation_ms']) {
+		const summary = aggregate.summaries?.[metric] || aggregate.histograms?.[metric]
+		if (summary) lines.push(`${metric} p95: ${formatNumber(summary.p95)}`)
+	}
+
 	if (errors.length > 0) {
 		lines.push('Errors:')
 		for (const [name, count] of errors) {
