@@ -1,8 +1,16 @@
-const { count, productAddButton, productCard, tryAddProduct } = require('./drop-cart')
+const { ADD_TO_CART_SELECTOR, count, productAddButton, productCard, tryAddProduct } = require('./drop-cart')
 const { integer } = require('./waitlist-settings')
 
 const INVENTORY_WAIT_MS = 180000
 const WAITLIST_UPDATE_MS = 30000
+const JOIN_WAITLIST = /^join waitlist$/i
+
+function joinButton(card, id) {
+	return card.locator(`button.waitlist-button[data-product_id="${id}"]`)
+		.and(card.getByRole('button', { name: JOIN_WAITLIST }))
+		.filter({ visible: true })
+		.first()
+}
 
 async function sampleProduct(card, id) {
 	const { raw, waitlistVisible, soldOut } = await card.evaluate((element, productId) => {
@@ -62,14 +70,86 @@ async function joinWaitlist(page, card, button, id, facility, events) {
 	events?.emit('histogram', 'waitlist.submit_to_confirmation_ms', Date.now() - startedAt)
 }
 
+async function catalogProductIds(page, events) {
+	const cards = page.locator('li.product:visible')
+	await cards.first().waitFor({ timeout: 30000 })
+	const cartControls = page.locator(`${ADD_TO_CART_SELECTOR}, .single_add_to_cart_button, form.cart [name="add-to-cart"]`)
+		.or(page.getByRole('button', { name: /add to cart/i }))
+		.or(page.getByRole('link', { name: /add to cart/i }))
+		.filter({ visible: true })
+	if (await cartControls.count()) {
+		count(events, 'waitlist.catalog_cart_controls_visible')
+		throw new Error('The waitlist-only storefront shows an Add to cart control.')
+	}
+
+	const entries = await cards.evaluateAll(elements => elements.map(card => ({
+		name: card.querySelector('.woocommerce-loop-product__title')?.textContent?.trim() || card.className,
+		id: Array.from(card.querySelectorAll('button.waitlist-button[data-product_id]')).find(button =>
+			button.getClientRects().length && getComputedStyle(button).visibility === 'visible' &&
+			!button.matches(':disabled') && !button.closest('[aria-disabled="true"]') &&
+			/^join waitlist$/i.test((button.getAttribute('aria-label') || button.textContent).trim()),
+		)?.getAttribute('data-product_id'),
+	})))
+	for (const { id, name } of entries) {
+		if (!id || !/^[1-9]\d*$/.test(id)) {
+			count(events, 'waitlist.catalog_join_missing')
+			throw new Error(`Catalog product "${name}" has no enabled Join Waitlist button.`)
+		}
+	}
+	return entries.map(({ id }) => id)
+}
+
+async function runWaitlistCatalog(page, events, facility) {
+	const fulfillmentModal = page.locator('#fulfillmentElement').filter({ hasText: /how do you want your order/i })
+	await fulfillmentModal.waitFor({ state: 'hidden', timeout: 15000 })
+	const origin = new URL(page.url()).origin
+	const pages = new Map()
+	const seen = new Set()
+
+	// Validate every catalog page before making the first signup.
+	while (true) {
+		const url = page.url()
+		if (pages.has(url)) throw new Error('Storefront catalog pagination returned to an already checked page.')
+		const ids = new Set(await catalogProductIds(page, events))
+		pages.set(url, [...ids].filter(id => !seen.has(id)))
+		for (const id of ids) seen.add(id)
+		const next = page.locator('.woocommerce-pagination a.next:visible, .woocommerce-pagination a[rel~="next"]:visible').first()
+		if (!(await next.isVisible())) break
+		const href = await next.evaluate(link => link.href)
+		if (new URL(href).origin !== origin) throw new Error('Storefront catalog pagination left the target site.')
+		await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 15000 })
+	}
+	events?.emit('counter', 'waitlist.catalog_products_checked', seen.size)
+
+	const modal = page.locator('#waitlistElement')
+	const close = modal.getByRole('button', { name: 'Close', exact: true })
+	for (const [url, ids] of pages) {
+		if (page.url() !== url) await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 })
+		for (const id of ids) {
+			const card = productCard(page, id)
+			await joinWaitlist(page, card, joinButton(card, id), id, facility, events)
+			if (await close.isVisible()) {
+				await close.click({ timeout: 3000 }).catch(async error => {
+					if (await modal.isVisible()) throw error
+				})
+			}
+			await modal.waitFor({ state: 'hidden', timeout: 10000 })
+		}
+	}
+	count(events, 'waitlist.catalog_completed')
+}
+
 async function runWaitlist(page, events, env = process.env) {
+	const facility = String(integer(env.ARTILLERY_WAITLIST_FACILITY_ID, 'Waitlist pickup facility ID'))
+	if (env.ARTILLERY_WAITLIST_CATALOG === 'true') {
+		return runWaitlistCatalog(page, events, facility)
+	}
+
 	const id = String(integer(env.ARTILLERY_WAITLIST_PRODUCT_ID, 'Waitlist product ID'))
 	const seed = integer(env.ARTILLERY_WAITLIST_STARTING_STOCK, 'Waitlist starting stock', 0)
-	const facility = String(integer(env.ARTILLERY_WAITLIST_FACILITY_ID, 'Waitlist pickup facility ID'))
 	const card = productCard(page, id)
 	await card.waitFor({ state: 'visible', timeout: 30000 })
-	const waitlist = card.locator(`button.waitlist-button[data-product_id="${id}"]`).first()
-	const join = waitlist.and(card.getByRole('button', { name: /^join waitlist$/i }))
+	const join = joinButton(card, id)
 	const deadline = Date.now() + INVENTORY_WAIT_MS
 	let firstZeroAt = null
 	let rejected = false

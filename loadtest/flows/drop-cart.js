@@ -138,4 +138,4 @@ async function addCheckoutProducts(page, ids, itemCount, usageType, events, faci
 	throw new Error(`Checkout added ${added}/${itemCount} items. The configured checkout pool has no eligible alternatives.`)
 }
 
-module.exports = { addCheckoutProducts, count, productAddButton, productCard, tryAddProduct }
+module.exports = { ADD_TO_CART_SELECTOR, addCheckoutProducts, count, productAddButton, productCard, tryAddProduct }

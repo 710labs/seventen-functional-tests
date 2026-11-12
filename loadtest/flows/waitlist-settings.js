@@ -13,22 +13,42 @@ function parseProductIds(raw = '') {
 	return ids
 }
 
+function workerCount(browsers) {
+	// Fargate runs the rendered per-worker phase on every worker.
+	// Use an exact divisor so the browser allocation is preserved.
+	const perWorker = Math.min(browsers, 10)
+	const size = Array.from({ length: perWorker }, (_, offset) => perWorker - offset)
+		.find(candidate => browsers % candidate === 0)
+	return browsers / size
+}
+
 function planWaitlist({ mode, browsers, products, checkoutProducts, facility, duration, cartItems }) {
 	const count = integer(browsers, 'waitlist_browsers', 0)
-	const checkoutIds = parseProductIds(checkoutProducts)
+	const siteWaitlistOnly = mode === 'site-waitlist-only'
+	const checkoutIds = siteWaitlistOnly ? [] : parseProductIds(checkoutProducts)
 	const mixed = ['flip', 'bypass-only', 'realqueue-only'].includes(mode)
 
 	if (count === 0) {
-		if (mode === 'waitlist-only') throw new Error('waitlist-only requires waitlist_browsers above zero.')
+		if (siteWaitlistOnly || mode === 'waitlist-only') {
+			throw new Error(`${mode} requires waitlist_browsers above zero.`)
+		}
 		return { include: [], checkoutIds, facility: '', duration: 0 }
 	}
-	if (!mixed && !['waitlist-only', 'dry'].includes(mode)) {
-		throw new Error('Waitlist traffic requires a browser mode, waitlist-only, or dry.')
+	if (!mixed && !['waitlist-only', 'site-waitlist-only', 'dry'].includes(mode)) {
+		throw new Error('Waitlist traffic requires a browser mode, waitlist-only, site-waitlist-only, or dry.')
 	}
 	if (count > 200) throw new Error('waitlist_browsers must be at most 200.')
 	const seconds = integer(duration, 'waitlist_duration_seconds')
 	if (seconds > 900) throw new Error('waitlist_duration_seconds must be at most 900.')
 	const facilityId = String(integer(facility, 'waitlist_facility_id'))
+	if (siteWaitlistOnly || (mode === 'dry' && !products.trim())) {
+		return {
+			include: [{ id: 'catalog', stock: 0, browsers: count, workers: workerCount(count) }],
+			checkoutIds: [],
+			facility: facilityId,
+			duration: seconds,
+		}
+	}
 	const entries = products.split(',').map(entry => entry.trim().split(':'))
 	if (entries.some(entry => entry.length !== 2)) {
 		throw new Error('waitlist_products must use productId:startingStock pairs.')
@@ -53,12 +73,7 @@ function planWaitlist({ mode, browsers, products, checkoutProducts, facility, du
 	const spare = count - minimum
 	const include = pool.map((product, index) => {
 		const browsers = product.stock + 1 + Math.floor(spare / pool.length) + Number(index < spare % pool.length)
-		// Fargate runs the rendered per-worker phase on every worker. Use an
-		// exact divisor to preserve the requested cap, even for uneven pools.
-		const perWorker = Math.min(browsers, 10)
-		const size = Array.from({ length: perWorker }, (_, offset) => perWorker - offset)
-			.find(candidate => browsers % candidate === 0)
-		return { ...product, browsers, workers: browsers / size }
+		return { ...product, browsers, workers: workerCount(browsers) }
 	})
 
 	return { include, checkoutIds, facility: facilityId, duration: seconds }

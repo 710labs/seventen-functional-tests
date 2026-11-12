@@ -1166,7 +1166,7 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 		await selectFulfillment(page, options.waitlist || facility ? 'Pickup' : user.fulfillmentType, step)
 	})
 	if (options.waitlist) {
-		await measuredStep(events, step, 'waitlist', 'Waitlist product', () => runWaitlist(page, events))
+		await measuredStep(events, step, 'waitlist', 'Join waitlist', () => runWaitlist(page, events))
 		return
 	}
 	await measuredStep(events, step, 'add_to_cart', 'Add To Cart', async () => {

@@ -184,6 +184,7 @@ The workflow derives exact 10-browser Fargate workers for presets above 10, so t
 - `realqueue-only`: runs only non-VIP browser users.
 - `http-funnel`: runs only the HTTP age/password/register endpoint funnel.
 - `waitlist-only`: runs waitlist browsers without checkout traffic.
+- `site-waitlist-only`: validates a storefront configured to offer waitlists for the entire catalog and runs consecutive waitlist signups.
 - `dry`: validates configs and renders smoke configs without launching Fargate.
 
 ### Waitlist load and inventory transitions
@@ -235,6 +236,24 @@ Each product job publishes its own Artillery report. The GitHub summaries show
 confirmed joins, stock races and recoveries, inventory transition failures,
 and p95 latency for the observed zero-to-button and submit-to-confirmation steps.
 The checkout jobs show their own success totals and checkout p95.
+
+### Storefront in waitlist-only mode
+
+Enable the site's waitlist-only setting before dispatching
+`mode=site-waitlist-only`. Set `waitlist_browsers`, `waitlist_facility_id`, and
+`waitlist_duration_seconds`. Leave `waitlist_products` and
+`checkout_product_ids` blank. This mode discovers the products offered to the
+selected pickup facility, including subsequent WooCommerce catalog pages.
+
+Each browser checks every displayed card for an enabled **Join Waitlist**
+button and fails if the catalog shows any **Add to cart** control. It then joins
+each distinct product in succession and verifies **On waitlist** after every
+submission. The storefront setting governs this mode, so a product's inventory
+can still be positive. The test sends no cart additions or checkout traffic.
+
+For a smoke run, use one browser and a duration of one second. For sustained
+signup traffic, increase the browser count and duration. Reports include
+completed catalog journeys, confirmations, and submit-to-confirmation p95.
 
 Run the local browser fixture checks with
 `node --test loadtest/flows/waitlist.test.js` after installing loadtest

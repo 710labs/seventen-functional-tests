@@ -39,6 +39,7 @@ on:
           - realqueue-only
           - http-funnel
           - waitlist-only
+          - site-waitlist-only
           - dry
       bypass_browsers:
         type: choice
@@ -139,7 +140,7 @@ on:
 
       waitlist_browsers:
         type: number
-        description: Total waitlist browser concurrency across all configured products
+        description: Total waitlist browser concurrency
         default: 0
       waitlist_products:
         type: string
@@ -312,7 +313,7 @@ jobs:
           fi
 
           case "$ARTILLERY_MODE" in
-            flip|entry-only|bypass-only|realqueue-only|http-funnel|waitlist-only|dry) ;;
+            flip|entry-only|bypass-only|realqueue-only|http-funnel|waitlist-only|site-waitlist-only|dry) ;;
             *) echo "Unsupported mode: $ARTILLERY_MODE" >&2; exit 1 ;;
           esac
 
@@ -975,7 +976,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   waitlist:
-    name: Waitlist product ${{ matrix.id }}
+    name: Waitlist / ${{ matrix.id }}
     needs: plan
     if: ${{ needs.plan.outputs.run_waitlist == 'true' }}
     strategy:
@@ -1006,6 +1007,7 @@ jobs:
           VIP_COOKIE_VALUE: ${{ secrets.VIP_COOKIE_VALUE }}
           SCREENSHOTS: ${{ needs.plan.outputs.screenshots }}
           PRODUCT_ID: ${{ matrix.id }}
+          WAITLIST_CATALOG: ${{ matrix.id == 'catalog' }}
           STARTING_STOCK: ${{ matrix.stock }}
           FACILITY_ID: ${{ needs.plan.outputs.waitlist_facility_id }}
           BROWSERS: ${{ matrix.browsers }}
@@ -1041,6 +1043,7 @@ jobs:
           RECAPTCHA_BYPASS=$RECAPTCHA_BYPASS
           SCREENSHOTS=$SCREENSHOTS
           ARTILLERY_WAITLIST_PRODUCT_ID=$PRODUCT_ID
+          ARTILLERY_WAITLIST_CATALOG=$WAITLIST_CATALOG
           ARTILLERY_WAITLIST_STARTING_STOCK=$STARTING_STOCK
           ARTILLERY_WAITLIST_FACILITY_ID=$FACILITY_ID
           EOF
@@ -1062,11 +1065,14 @@ jobs:
         if: always()
         env:
           REPORT_PATH: loadtest/reports/waitlist-${{ matrix.id }}.json
+          WAITLIST_CATALOG: ${{ matrix.id == 'catalog' }}
           STARTING_STOCK: ${{ matrix.stock }}
         run: |
           node scripts/summarize-artillery-report.js "$REPORT_PATH"
           args=(--max-vusers-failed 0 --min-vusers-completed 1 --threshold 'waitlist.confirmed>=1')
-          if [ "$STARTING_STOCK" -gt 0 ]; then
+          if [ "$WAITLIST_CATALOG" = true ]; then
+            args+=(--threshold 'waitlist.catalog_completed>=1')
+          elif [ "$STARTING_STOCK" -gt 0 ]; then
             args+=(--threshold 'waitlist.seed_observed>=1' --threshold "waitlist.cart_holds>=$STARTING_STOCK")
           fi
           node loadtest/scripts/check-thresholds.js --report "$REPORT_PATH" "${args[@]}"

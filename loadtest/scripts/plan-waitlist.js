@@ -20,12 +20,14 @@ try {
 		'',
 	].join('\n'))
 	if (plan.include.length) {
-		const rows = plan.include.map(product =>
-			`| ${product.id} | ${product.stock} | ${product.browsers} | ${product.workers} |`)
+		const rows = plan.include.map(product => {
+			const catalog = product.id === 'catalog'
+			return `| ${catalog ? 'Entire storefront' : product.id} | ${catalog ? '—' : product.stock} | ${product.browsers} | ${product.workers} |`
+		})
 		fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
 			'\n## Waitlist products\n',
 			`Pickup facility ${plan.facility}, ${plan.duration}s arrival phase.\n`,
-			'| Product ID | Starting stock | Browsers | Fargate workers |',
+			'| Scope | Starting stock | Browsers | Fargate workers |',
 			'| --- | ---: | ---: | ---: |',
 			...rows,
 			'',
