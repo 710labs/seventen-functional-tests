@@ -17,6 +17,7 @@ export class ProductInventoryUnavailableError extends Error {}
 type AddToCartResult = {
 	added: boolean
 	errorText: string | null
+	reservedStockRejected?: true
 }
 
 type CartLoadState = {
@@ -113,6 +114,7 @@ const storefrontAddToCartSelector = [
 	'[data-product_sku].add_to_cart_button',
 ].join(', ')
 
+const stockRejectionMessage = /out of stock|insufficient stock|only\s+\d+\s+left|not enough stock/i
 const defaultDeliveryAddress = '123 Rodeo Dr Beverly Hills'
 
 export class ShopPage {
@@ -899,6 +901,20 @@ export class ShopPage {
 		}
 	}
 
+	private async dismissReservedStockNoticeIfPresent(): Promise<string | null> {
+		const stockMessage = this.page
+			.locator('.notyf__message li[data-added_by_reserved_stock_pro="1"]:visible')
+			.filter({ hasText: stockRejectionMessage })
+		const notice = this.page.locator('.notyf__wrapper').filter({ has: stockMessage }).first()
+
+		if (!(await notice.isVisible())) return null
+
+		const errorText = (await notice.locator(stockMessage).first().innerText()).replace(/\s+/g, ' ').trim()
+		await notice.locator('button.notyf__dismiss-btn').click({ timeout: 5000 })
+		await notice.waitFor({ state: 'hidden', timeout: 5000 })
+		return errorText
+	}
+
 	private async waitForAddToCartResult(
 		productName: string,
 		previousCartCount: number,
@@ -911,6 +927,11 @@ export class ShopPage {
 		const deadline = Date.now() + 10000
 
 		while (Date.now() < deadline) {
+			const stockRejection = await this.dismissReservedStockNoticeIfPresent()
+			if (stockRejection) {
+				return { added: false, errorText: stockRejection, reservedStockRejected: true }
+			}
+
 			const noticeCount = await notices.count()
 
 			for (let index = 0; index < noticeCount; index += 1) {
@@ -978,6 +999,7 @@ export class ShopPage {
 			return { added: false, errorText: `Product "${candidate.name}" is no longer addable` }
 		}
 
+		await this.dismissReservedStockNoticeIfPresent()
 		const previousCartCount = await this.getStorefrontCartItemCount()
 		await addToCartButton.scrollIntoViewIfNeeded()
 		await addToCartButton.click()
@@ -989,7 +1011,7 @@ export class ShopPage {
 		} finally {
 			await this.closeCartDrawerIfPresent()
 		}
-		if (verifyInCart && !result.added && /out of stock|insufficient stock|only\s+\d+\s+left|not enough stock/i.test(result.errorText || '')) {
+		if (verifyInCart && !result.added && stockRejectionMessage.test(result.errorText || '')) {
 			throw new ProductInventoryUnavailableError(result.errorText!)
 		}
 		if (verifyInCart) {
@@ -1076,7 +1098,9 @@ export class ShopPage {
 			const result = await this.tryAddStorefrontProduct(candidate, usage, verifyInCart)
 
 			if (!result.added) {
-				if (/no longer (visible|addable)/i.test(result.errorText || '')) throw new ProductInventoryUnavailableError(result.errorText!)
+				if (result.reservedStockRejected || /no longer (visible|addable)/i.test(result.errorText || '')) {
+					throw new ProductInventoryUnavailableError(result.errorText!)
+				}
 				throw new Error(result.errorText || `Unable to add "${candidate.name}" to the cart`)
 			}
 		})
@@ -1640,6 +1664,8 @@ export class ShopPage {
 					}
 
 					rejectionReasons.push(`${candidate.name}: ${result.errorText || 'not added'}`)
+					if (result.reservedStockRejected) return
+
 					await this.page.goto('/')
 					await this.page.waitForTimeout(750)
 					await this.ensureFulfillmentSelected(fulfillment)
