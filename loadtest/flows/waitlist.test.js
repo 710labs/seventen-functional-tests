@@ -3,6 +3,7 @@ const { EventEmitter } = require('node:events')
 const { after, before, test } = require('node:test')
 const { chromium } = require('@playwright/test')
 const { addCheckoutProducts } = require('./drop-cart')
+const { storeFunnelMixed } = require('./funnel')
 const { runWaitlist } = require('./waitlist')
 const { planWaitlist } = require('./waitlist-settings')
 
@@ -39,6 +40,54 @@ test('site-wide waitlist uses one catalog job and requires no configured product
 	assert.deepEqual(plan.checkoutIds, [])
 	assert.deepEqual(planWaitlist({ ...inputs, mode: 'dry' }), plan)
 	assert.throws(() => planWaitlist({ ...inputs, preset: 'Off' }), /at least one user/)
+})
+
+test('mixed presets split exact browser arrivals between waitlist and checkout', () => {
+	const inputs = { ...planInput, mode: 'mixed' }
+	const singleProduct = planWaitlist({ ...inputs, preset: '50 users', products: '101:0' })
+	assert.deepEqual(singleProduct.include, [{ id: '101', stock: 0, browsers: 25, checkoutBrowsers: 25, workers: 5 }])
+	assert.equal(singleProduct.duration, 30)
+	const stageProducts = planWaitlist({ ...inputs, preset: '100 users', products: '225505:0,225498:0,225511:0' }).include
+	assert.deepEqual(stageProducts.map(product => product.browsers).sort((left, right) => left - right), [15, 15, 20])
+	assert.equal(stageProducts.reduce((sum, product) => sum + product.workers, 0), 10)
+	for (const total of [50, 100, 150, 200]) {
+		const { include } = planWaitlist({ ...inputs, preset: `${total} users` })
+		assert.equal(include.reduce((sum, { browsers }) => sum + browsers, 0), total / 2)
+		for (const { stock, browsers, checkoutBrowsers, workers } of include) {
+			assert.equal(checkoutBrowsers, browsers)
+			assert.equal(browsers % workers, 0)
+			assert.ok(2 * browsers / workers <= 10)
+			assert.ok(browsers > stock)
+		}
+	}
+	const lowSpare = planWaitlist({ ...inputs, preset: '50 users', products: '101:10,102:10,103:0' }).include
+	assert.equal(lowSpare.reduce((sum, product) => sum + product.browsers, 0), 25)
+	assert.ok(lowSpare.every(product => product.browsers > product.stock && product.browsers % product.workers === 0))
+	assert.throws(() => planWaitlist(inputs), /requires an even total/)
+	assert.throws(() => planWaitlist({ ...inputs, preset: '50 users', products: '101:25' }), /at least 26 waitlist browsers/)
+	assert.throws(() => planWaitlist({ ...inputs, preset: '50 users', checkoutProducts: '101,202' }), /disjoint/)
+})
+
+test('the mixed 15-minute preset schedules 380 shoppers on the opening workers', () => {
+	const input = {
+		...planInput,
+		mode: 'mixed',
+		preset: '15-minute drop (380 shoppers)',
+		products: '225505:0,225498:0,225511:0',
+	}
+	const plan = planWaitlist(input)
+	assert.equal(plan.duration + plan.followupDuration, 900)
+	assert.equal(plan.duration, 30)
+	assert.equal(plan.include.reduce((sum, product) => sum + product.workers, 0), 10)
+	assert.equal(plan.include.reduce((sum, product) => sum + product.browsers + product.checkoutBrowsers, 0), 100)
+	assert.equal(plan.include.reduce((sum, product) => sum + 2 * product.followupBrowsers, 0), 280)
+	for (const { browsers, checkoutBrowsers, followupBrowsers, workers } of plan.include) {
+		assert.equal(browsers / workers, 5)
+		assert.equal(checkoutBrowsers / workers, 5)
+		assert.equal(followupBrowsers / workers, 14)
+	}
+	assert.throws(() => planWaitlist({ ...input, mode: 'waitlist-only' }), /requires mixed mode/)
+	assert.throws(() => planWaitlist({ ...input, products: '101:21,102:21,103:0' }), /uses 10 workers/)
 })
 
 function metrics() {
@@ -153,6 +202,39 @@ function waitlistEnv(stock, facility = '1') {
 		ARTILLERY_WAITLIST_FACILITY_ID: facility,
 	}
 }
+
+test('the mixed browser flow sends equal numbers of shoppers to each product pool', async t => {
+	const env = {
+		...waitlistEnv(0),
+		ARTILLERY_WAITLIST_CATALOG: 'false',
+		ARTILLERY_CHECKOUT_PRODUCT_IDS: '201',
+		ARTILLERY_CART_ITEM_COUNT: '1',
+	}
+	for (const [name, value] of Object.entries(env)) {
+		const previous = process.env[name]
+		process.env[name] = value
+		t.after(() => {
+			if (previous === undefined) delete process.env[name]
+			else process.env[name] = previous
+		})
+	}
+	const products = new Map([['101', 0], ['201', 20]])
+	const calls = []
+	const pages = await Promise.all(Array.from({ length: 4 }, () => shopper(t, products, calls)))
+	const { events, counters } = metrics()
+	const test = {
+		// Start from the seeded storefront and exercise both cohorts' product actions.
+		step: (name, run) => ['Join waitlist', 'Add To Cart'].includes(name) ? run() : undefined,
+	}
+	await Promise.all(pages.map(page => storeFunnelMixed(page, {}, events, test)))
+	assert.equal(calls.filter(call => call === '/join/101').length, 2)
+	assert.equal(calls.filter(call => call === '/add/201').length, 2)
+	assert.equal(calls.length, 4)
+	assert.equal(counters['mixed.waitlist_started'], 2)
+	assert.equal(counters['mixed.checkout_started'], 2)
+	assert.equal(counters['mixed.waitlist_completed'], 2)
+	assert.equal(counters['mixed.checkout_completed'], 2)
+})
 
 test('concurrent stale buttons produce one hold and one confirmed join alongside checkout traffic', async t => {
 	const products = new Map([['101', 1], ['201', 20]])

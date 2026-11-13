@@ -16,18 +16,30 @@ try {
 		`checkout_product_ids=${plan.checkoutIds.join(',')}`,
 		`waitlist_facility_id=${plan.facility}`,
 		`waitlist_duration_seconds=${plan.duration}`,
+		`waitlist_followup_seconds=${plan.followupDuration || 0}`,
 		'',
 	].join('\n'))
 	if (plan.include.length) {
+		const mixed = process.env.INPUT_MODE === 'mixed'
+		const waitlistBrowsers = plan.include.reduce((total, product) => total + product.browsers, 0)
+		const followupBrowsers = plan.include.reduce((total, product) => total + (product.followupBrowsers || 0), 0)
+		const totalPerCohort = waitlistBrowsers + followupBrowsers
+		const workers = plan.include.reduce((total, product) => total + product.workers, 0)
 		const rows = plan.include.map(product => {
 			const catalog = product.id === 'catalog'
-			return `| ${catalog ? 'Entire storefront' : product.id} | ${catalog ? '—' : product.stock} | ${product.browsers} | ${product.workers} |`
+			const columns = [catalog ? 'Entire storefront' : product.id, catalog ? '—' : product.stock, product.browsers]
+			if (mixed) columns.push(product.checkoutBrowsers)
+			if (followupBrowsers) columns.push(`${product.followupBrowsers} + ${product.followupBrowsers}`)
+			columns.push(product.workers)
+			return `| ${columns.join(' | ')} |`
 		})
 		fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
-			'\n## Waitlist products\n',
-			`Pickup facility ${plan.facility}, ${plan.duration}s arrival phase.\n`,
-			'| Scope | Starting stock | Browsers | Fargate workers |',
-			'| --- | ---: | ---: | ---: |',
+			mixed ? '\n## Mixed browser plan\n' : '\n## Waitlist products\n',
+			...(mixed ? [`${totalPerCohort * 2} planned shoppers, ${totalPerCohort} waitlist and ${totalPerCohort} checkout, across ${workers} Fargate workers.\n`] : []),
+			`Pickup facility ${plan.facility}, ${plan.duration}s ${followupBrowsers ? 'opening' : 'arrival'} phase.\n`,
+			...(followupBrowsers ? [`${waitlistBrowsers * 2} arrivals in the opening phase, then ${followupBrowsers * 2} over ${plan.followupDuration}s.\n`] : []),
+			`| Scope | Starting stock | Waitlist browsers | ${mixed ? 'Checkout browsers | ' : ''}${followupBrowsers ? 'Follow-up waitlist + checkout | ' : ''}Fargate workers |`,
+			`| --- | ---: | ---: | ${mixed ? '---: | ' : ''}${followupBrowsers ? '---: | ' : ''}---: |`,
 			...rows,
 			'',
 		].join('\n'))

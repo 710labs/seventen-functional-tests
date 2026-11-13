@@ -188,6 +188,12 @@ node -e "process.stdout.write(require('fs').readFileSync('.auth/acuity-storage-s
 Paste that value into the `ACUITY_STORAGE_STATE_B64` GitHub Actions repository secret. Never
 commit or share files under `.auth/`; they contain authenticated session cookies.
 
+Start a new **Acuity Slot Automation** run in `auth_check` mode with `slot_file` blank. The run
+summary shows whether the saved session opened the appointment editor, a fresh login worked,
+or authentication failed. To confirm the secret you just updated works, look for the saved
+session result. `upload` runs the same check before reading or changing slots.
+`validate_only` checks the CSV without signing in to Acuity.
+
 ### Resuming an interrupted Acuity upload
 
 Use the original full CSV. The uploader matches each slot by appointment type, calendar,
@@ -208,9 +214,9 @@ After reviewing the preview, upload locally using the same file:
 ACUITY_SLOT_FILE=acuity-slots/10_29_26_loadtest_acuity.csv npm run helper:acuityslots
 ```
 
-In GitHub Actions, use **Acuity Slot Automation**, choose `preview`, and enter the committed
-CSV filename. Then choose `upload` with the same filename. Upload mode also runs the preview
-as a preflight check. After upload, run `preview` again; all rows should be already correct.
+In GitHub Actions, use **Acuity Slot Automation**, choose `upload`, and enter the committed
+CSV filename. The workflow previews slot changes before uploading. After upload, run the local
+preview command above with the same CSV to confirm all rows are correct.
 Do not run local and GitHub uploads concurrently. An interrupted save may already have succeeded;
 rerun reconciliation so it checks Acuity before submitting again.
 
