@@ -4,11 +4,10 @@ const { planWaitlist } = require('../flows/waitlist-settings')
 try {
 	const plan = planWaitlist({
 		mode: process.env.INPUT_MODE,
-		browsers: process.env.INPUT_WAITLIST_BROWSERS,
+		preset: process.env.INPUT_WAITLIST_PRESET,
 		products: process.env.INPUT_WAITLIST_PRODUCTS || '',
 		checkoutProducts: process.env.INPUT_CHECKOUT_PRODUCT_IDS || '',
 		facility: process.env.INPUT_WAITLIST_FACILITY_ID || '',
-		duration: process.env.INPUT_WAITLIST_DURATION_SECONDS,
 		cartItems: process.env.INPUT_CART_ITEM_COUNT,
 	})
 	fs.appendFileSync(process.env.GITHUB_OUTPUT, [

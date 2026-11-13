@@ -8,40 +8,37 @@ const { planWaitlist } = require('./waitlist-settings')
 
 const planInput = {
 	mode: 'bypass-only',
-	browsers: '20',
+	preset: '25 users',
 	products: '101:1,102:3,103:0',
 	checkoutProducts: '201,202',
 	facility: '1',
-	duration: '1',
 	cartItems: '2',
 }
 
 test('the planner budgets enough users for each product and retains exact worker caps', () => {
 	const { include } = planWaitlist(planInput)
 	assert.deepEqual(include.map(product => [product.id, product.browsers]), [
-		['101', 7], ['102', 8], ['103', 5],
+		['101', 8], ['102', 10], ['103', 7],
 	])
 	for (const { browsers, workers } of include) {
 		assert.equal(browsers % workers, 0)
 		assert.ok(browsers / workers <= 10)
 	}
-	const uneven = planWaitlist({ ...planInput, browsers: '23', products: '101:1' })
-	assert.equal(uneven.include[0].browsers, 23)
-	assert.equal(uneven.include[0].browsers % uneven.include[0].workers, 0)
-	assert.throws(() => planWaitlist({ ...planInput, browsers: '6' }), /at least 7/)
+	assert.throws(() => planWaitlist({ ...planInput, preset: '5 users' }), /at least 7/)
 	assert.throws(() => planWaitlist({ ...planInput, checkoutProducts: '101,202' }), /disjoint/)
 	assert.throws(() => planWaitlist({ ...planInput, checkoutProducts: '' }), /checkout products/)
 	assert.equal(planWaitlist({ ...planInput, mode: 'waitlist-only', checkoutProducts: '' }).include.length, 3)
-	assert.equal(planWaitlist({ ...planInput, browsers: '0', products: '', facility: '' }).include.length, 0)
+	assert.equal(planWaitlist({ ...planInput, preset: 'Off', products: '', facility: '' }).include.length, 0)
 })
 
 test('site-wide waitlist uses one catalog job and requires no configured product IDs', () => {
 	const inputs = { ...planInput, mode: 'site-waitlist-only', products: '', checkoutProducts: '' }
 	const plan = planWaitlist(inputs)
-	assert.deepEqual(plan.include, [{ id: 'catalog', stock: 0, browsers: 20, workers: 2 }])
+	assert.deepEqual(plan.include, [{ id: 'catalog', stock: 0, browsers: 25, workers: 5 }])
+	assert.equal(plan.duration, 30)
 	assert.deepEqual(plan.checkoutIds, [])
 	assert.deepEqual(planWaitlist({ ...inputs, mode: 'dry' }), plan)
-	assert.throws(() => planWaitlist({ ...inputs, browsers: '0' }), /above zero/)
+	assert.throws(() => planWaitlist({ ...inputs, preset: 'Off' }), /at least one user/)
 })
 
 function metrics() {

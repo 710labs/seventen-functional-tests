@@ -4,6 +4,7 @@ import path from 'path'
 import { fictionalAreacodes } from '../utils/data-generator'
 import { selectAutocompleteAddress } from '../support/qa/address-autocomplete'
 import { QAClient } from '../support/qa/client'
+import { waitForRegistrationEligibility } from '../support/qa/registration-eligibility.cjs'
 import { getUsageLabel, isMedicalUsage, type TestUsageType } from '../utils/usage-types'
 
 type RegistrationFieldSnapshot = {
@@ -469,11 +470,7 @@ export class CreateAccountPage {
 		submitSnapshot: RegistrationSubmitSnapshot,
 	) {
 		try {
-			// The shop can render the registration eligibility panel after navigation.
-			// Account settings share its fields but are not a registration step.
-			await expect
-				.poll(() => this.isEligibilityLicenseStepVisible(), { timeout: 20000 })
-				.toBe(true)
+			await waitForRegistrationEligibility(this.page, expect)
 			return
 		} catch {
 			// Preserve the original page and report registration diagnostics below.
@@ -495,52 +492,6 @@ export class CreateAccountPage {
 				`Current billing_postcode: "${await this.inputValue('input[name="billing_postcode"], #billing_postcode')}"`,
 				`Current body preview: ${await this.getBodyPreview()}`,
 			].join('\n'),
-		)
-	}
-
-	private async isEligibilityLicenseStepVisible() {
-		const onAccountPage = /^\/my-account(?:\/|$)/.test(new URL(this.page.url()).pathname)
-		const registerVisible = await this.page
-			.getByRole('button', { name: /^register$/i })
-			.isVisible()
-			.catch(() => false)
-
-		if (onAccountPage || !registerVisible) {
-			return false
-		}
-
-		const eligibilityContextVisible = await this.page
-			.locator('#eligibilityContext')
-			.first()
-			.isVisible()
-			.catch(() => false)
-		const licenseInputVisible = await this.page
-			.locator('input[name="svntn_core_personal_doc"]')
-			.first()
-			.isVisible()
-			.catch(() => false)
-		const usageTypeVisible = await this.page
-			.locator('input[name="svntn_last_usage_type"]')
-			.first()
-			.isVisible()
-			.catch(() => false)
-		const completeAccountVisible = await this.page
-			.getByText(/complete your account/i)
-			.first()
-			.isVisible()
-			.catch(() => false)
-		const idUploadVisible = await this.page
-			.getByText(/id upload/i)
-			.first()
-			.isVisible()
-			.catch(() => false)
-
-		return (
-			eligibilityContextVisible ||
-			licenseInputVisible ||
-			usageTypeVisible ||
-			completeAccountVisible ||
-			idUploadVisible
 		)
 	}
 
