@@ -5,7 +5,7 @@ on:
       cart_item_count:
         description: Number of items to add to cart
         required: true
-        default: '1'
+        default: '3'
         type: choice
         options:
           - '1'
@@ -28,7 +28,7 @@ jobs:
       ENV: prod-ca thelist.710labs.com
       ENV_ID: prod-ca
       EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
-      SMOKE_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '1' }}
+      SMOKE_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '3' }}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PW: ${{ secrets.ADMIN_PW }}
       CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}

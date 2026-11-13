@@ -166,7 +166,7 @@ jobs:
             woo_secret_secret: WOO_NJ_PROD_SECRET
     env:
       EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
-      SMOKE_CART_ITEM_COUNT: '1'
+      SMOKE_CART_ITEM_COUNT: '3'
       RUN_ID: ${{ github.run_number }}
       UNIQUE_RUN_ID: ${{ github.run_id }}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
