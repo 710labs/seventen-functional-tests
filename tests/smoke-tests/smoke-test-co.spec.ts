@@ -61,6 +61,7 @@ test.describe('Basic Acceptance Tests CO', () => {
 		await test.step('Add Products to Cart', async () => {
 			await shopPage.addProductsToCart(cartItemCount, mobile, 'Pickup', 'medical', {
 				exactItemCount: true,
+				cartButtonDestination: '/reservations',
 			})
 			cartTotals = await cartPage.verifyCart(address.zipcode)
 		})
