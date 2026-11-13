@@ -10,6 +10,7 @@ type GoToCartOptions = {
 
 type AddProductsToCartOptions = {
 	exactItemCount?: boolean
+	cartButtonDestination?: string
 }
 
 export class ProductInventoryUnavailableError extends Error {}
@@ -1597,7 +1598,7 @@ export class ShopPage {
 
 		throw new Error(
 			[
-				`Cart page did not load within 30000ms after navigating to ${this.getCartPath()}.`,
+				'Cart page did not load within 30000ms.',
 				`Current URL: ${lastState?.url || this.page.url()}`,
 				`Cart item visible: ${lastState?.hasCartItem ?? false}`,
 				`Checkout button visible: ${lastState?.hasCheckoutButton ?? false}`,
@@ -1700,10 +1701,25 @@ export class ShopPage {
 					)
 				}
 			}
-			await this.page.keyboard.press('PageUp')
-			await this.page.waitForTimeout(2000)
-			await this.goToCart({ requireItems: true })
 		})
+
+		const cartButtonDestination = options.cartButtonDestination
+		if (cartButtonDestination) {
+			await test.step(`Open cart with the storefront button and verify ${cartButtonDestination}`, async () => {
+				const storefrontOrigin = new URL(this.page.url()).origin
+				const expectedPath = cartButtonDestination.replace(/\/$/, '')
+				await this.page.locator('a.cart-contents:visible').first().click()
+				await expect(this.page).toHaveURL(
+					url => url.origin === storefrontOrigin && url.pathname.replace(/\/$/, '') === expectedPath,
+				)
+				await this.waitForCartLoaded({ requireItems: true })
+			})
+			return
+		}
+
+		await this.page.keyboard.press('PageUp')
+		await this.page.waitForTimeout(2000)
+		await this.goToCart({ requireItems: true })
 	}
 
 	async addProductsUntilCheckoutReady(
