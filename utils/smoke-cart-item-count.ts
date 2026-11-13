@@ -1,5 +1,5 @@
 const smokeCartItemCountEnv = 'SMOKE_CART_ITEM_COUNT'
-const defaultSmokeCartItemCount = 1
+const defaultSmokeCartItemCount = 3
 const minSmokeCartItemCount = 1
 const maxSmokeCartItemCount = 10
 
