@@ -141,7 +141,7 @@ on:
 
       waitlist_preset:
         type: choice
-        description: Total users in mixed mode (half waitlist, half checkout). Otherwise waitlist users. Numbered presets start over 30 seconds.
+        description: Total users in mixed mode (half waitlist, half checkout). Otherwise waitlist users. The 15-minute drop requires mixed mode.
         default: 'Off'
         options:
           - 'Off'
@@ -152,6 +152,7 @@ on:
           - 100 users
           - 150 users
           - 200 users
+          - 15-minute drop (380 shoppers)
       waitlist_products:
         type: string
         description: Comma-separated productId:startingStock pairs for the pickup facility
@@ -202,6 +203,7 @@ jobs:
       waitlist_matrix: ${{ steps.waitlist.outputs.waitlist_matrix }}
       waitlist_facility_id: ${{ steps.waitlist.outputs.waitlist_facility_id }}
       waitlist_duration_seconds: ${{ steps.waitlist.outputs.waitlist_duration_seconds }}
+      waitlist_followup_seconds: ${{ steps.waitlist.outputs.waitlist_followup_seconds }}
       checkout_product_ids: ${{ steps.waitlist.outputs.checkout_product_ids }}
 
     steps:
@@ -1025,11 +1027,13 @@ jobs:
           FACILITY_ID: ${{ needs.plan.outputs.waitlist_facility_id }}
           BROWSERS: ${{ matrix.browsers }}
           CHECKOUT_BROWSERS: ${{ matrix.checkoutBrowsers || '0' }}
+          FOLLOWUP_BROWSERS: ${{ matrix.followupBrowsers || '0' }}
           CHECKOUT_PRODUCT_IDS: ${{ needs.plan.outputs.checkout_product_ids }}
           CART_ITEM_COUNT: ${{ needs.plan.outputs.cart_item_count }}
           PLACE_ORDERS: ${{ needs.plan.outputs.place_orders }}
           WORKERS: ${{ matrix.workers }}
           DURATION: ${{ needs.plan.outputs.waitlist_duration_seconds }}
+          FOLLOWUP_DURATION: ${{ needs.plan.outputs.waitlist_followup_seconds }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
@@ -1045,12 +1049,18 @@ jobs:
           done
 
           mkdir -p loadtest/generated loadtest/reports
-          total=$((BROWSERS + CHECKOUT_BROWSERS))
+          opening=$((BROWSERS + CHECKOUT_BROWSERS))
           scenario=(--name "drop-waitlist-$PRODUCT_ID")
           if [ "$CHECKOUT_BROWSERS" -gt 0 ]; then
             scenario=(--name "drop-mixed-$PRODUCT_ID" --set 'scenarios[0].name=Mixed waitlist and checkout' --set 'scenarios[0].testFunction=storeFunnelMixed')
           fi
-          node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.yml --workers "$WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration "$DURATION" --arrival-count "$total" --max-vusers "$total" "${scenario[@]}"
+          phases=()
+          if [ "$FOLLOWUP_BROWSERS" -gt 0 ]; then
+            # The renderer applies --set after splitting the opening phase.
+            phases+=(--set 'config.phases[0].name=Drop opening')
+            phases+=(--set "config.phases[1]={\"name\":\"Follow-up shoppers\",\"duration\":$FOLLOWUP_DURATION,\"arrivalCount\":$((2 * FOLLOWUP_BROWSERS / WORKERS)),\"maxVusers\":$((opening / WORKERS))}")
+          fi
+          node loadtest/scripts/render-config.js --config loadtest/config/browser-waitlist.yml --output loadtest/generated/browser-waitlist.yml --workers "$WORKERS" --worker-number 1 --target "$ARTILLERY_TARGET" --duration "$DURATION" --arrival-count "$opening" --max-vusers "$opening" "${scenario[@]}" "${phases[@]}"
           node loadtest/scripts/validate-configs.js loadtest/generated/browser-waitlist.yml
 
           umask 077
@@ -1078,7 +1088,7 @@ jobs:
       - name: Execute browsers on AWS Fargate
         uses: artilleryio/action-cli@v2.0.32
         with:
-          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ matrix.workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv loadtest/generated/browser-waitlist.fargate.env --packages loadtest/package.json loadtest/generated/browser-waitlist.yml --output loadtest/reports/waitlist-${{ matrix.id }}.json --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/waitlist/${{ matrix.id }}/${{ matrix.checkoutBrowsers && format('{0}waitlist-{1}checkout', matrix.browsers, matrix.checkoutBrowsers) || format('{0}browsers', matrix.browsers) }}/gate-${{ needs.plan.outputs.gate_tag }}
+          command: run-fargate --region ${{ secrets.S3_REGION }} --count ${{ matrix.workers }} --cpu 4 --memory 8 ${{ needs.plan.outputs.fargate_spot_flag }} --dotenv loadtest/generated/browser-waitlist.fargate.env --packages loadtest/package.json loadtest/generated/browser-waitlist.yml --output loadtest/reports/waitlist-${{ matrix.id }}.json --record --key ${{ secrets.ARTILLERY_REPORT_APIKEY }} --tags name:${{ needs.plan.outputs.env }}/drop-simulation/${{ needs.plan.outputs.mode }}/waitlist/${{ matrix.id }}/${{ matrix.followupBrowsers && '15-minute-drop' || (matrix.checkoutBrowsers && format('{0}waitlist-{1}checkout', matrix.browsers, matrix.checkoutBrowsers) || format('{0}browsers', matrix.browsers)) }}/gate-${{ needs.plan.outputs.gate_tag }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -1091,6 +1101,7 @@ jobs:
           STARTING_STOCK: ${{ matrix.stock }}
           BROWSERS: ${{ matrix.browsers }}
           CHECKOUT_BROWSERS: ${{ matrix.checkoutBrowsers || '0' }}
+          FOLLOWUP_BROWSERS: ${{ matrix.followupBrowsers || '0' }}
         run: |
           node scripts/summarize-artillery-report.js "$REPORT_PATH"
           args=(--max-vusers-failed 0 --min-vusers-completed 1)
@@ -1100,9 +1111,16 @@ jobs:
             args+=(--threshold 'waitlist.seed_observed>=1' --threshold "waitlist.cart_holds>=$STARTING_STOCK")
           fi
           if [ "$CHECKOUT_BROWSERS" -gt 0 ]; then
-            args+=(--threshold "waitlist.confirmed=$((BROWSERS - STARTING_STOCK))")
-            args+=(--threshold "mixed.waitlist_started=$BROWSERS" --threshold "mixed.waitlist_completed=$BROWSERS")
-            args+=(--threshold "mixed.checkout_started=$CHECKOUT_BROWSERS" --threshold "mixed.checkout_completed=$CHECKOUT_BROWSERS")
+            waitlist_total=$((BROWSERS + FOLLOWUP_BROWSERS))
+            checkout_total=$((CHECKOUT_BROWSERS + FOLLOWUP_BROWSERS))
+            if [ "$FOLLOWUP_BROWSERS" -gt 0 ] && [ "$STARTING_STOCK" -gt 0 ]; then
+              # Cart holds can expire and be taken again during the longer run.
+              args+=(--threshold 'waitlist.confirmed>=1')
+            else
+              args+=(--threshold "waitlist.confirmed=$((waitlist_total - STARTING_STOCK))")
+            fi
+            args+=(--threshold "mixed.waitlist_started=$waitlist_total" --threshold "mixed.waitlist_completed=$waitlist_total")
+            args+=(--threshold "mixed.checkout_started=$checkout_total" --threshold "mixed.checkout_completed=$checkout_total")
           else
             args+=(--threshold 'waitlist.confirmed>=1')
           fi
@@ -1136,7 +1154,8 @@ jobs:
                   `Environment: ${{ needs.plan.outputs.env }}`,
                   `Mode: ${{ needs.plan.outputs.mode }}`,
                   `${{ matrix.checkoutBrowsers && format('Browsers: {0} waitlist + {1} checkout across {2} workers', matrix.browsers, matrix.checkoutBrowsers, matrix.workers) || format('Browsers: {0} across {1} workers', matrix.browsers, matrix.workers) }}`,
-                  `Arrival duration: ${{ needs.plan.outputs.waitlist_duration_seconds }} seconds`,
+                  `Arrival duration: ${{ needs.plan.outputs.waitlist_duration_seconds }} seconds${{ matrix.followupBrowsers && ' (opening)' || '' }}`,
+                  ...(${{ matrix.followupBrowsers || 0 }} > 0 ? [`Follow-up arrivals: ${{ matrix.followupBrowsers }} waitlist + ${{ matrix.followupBrowsers }} checkout over ${{ needs.plan.outputs.waitlist_followup_seconds }} seconds`] : []),
                   ...(${{ matrix.checkoutBrowsers || 0 }} > 0 ? [`Place orders: ${{ needs.plan.outputs.place_orders }}`] : []),
                   '',
                   `${process.env.ARTILLERY_SLACK_SUMMARY || 'Artillery stats unavailable'}`,

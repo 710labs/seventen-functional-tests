@@ -68,6 +68,28 @@ test('mixed presets split exact browser arrivals between waitlist and checkout',
 	assert.throws(() => planWaitlist({ ...inputs, preset: '50 users', checkoutProducts: '101,202' }), /disjoint/)
 })
 
+test('the mixed 15-minute preset schedules 380 shoppers on the opening workers', () => {
+	const input = {
+		...planInput,
+		mode: 'mixed',
+		preset: '15-minute drop (380 shoppers)',
+		products: '225505:0,225498:0,225511:0',
+	}
+	const plan = planWaitlist(input)
+	assert.equal(plan.duration + plan.followupDuration, 900)
+	assert.equal(plan.duration, 30)
+	assert.equal(plan.include.reduce((sum, product) => sum + product.workers, 0), 10)
+	assert.equal(plan.include.reduce((sum, product) => sum + product.browsers + product.checkoutBrowsers, 0), 100)
+	assert.equal(plan.include.reduce((sum, product) => sum + 2 * product.followupBrowsers, 0), 280)
+	for (const { browsers, checkoutBrowsers, followupBrowsers, workers } of plan.include) {
+		assert.equal(browsers / workers, 5)
+		assert.equal(checkoutBrowsers / workers, 5)
+		assert.equal(followupBrowsers / workers, 14)
+	}
+	assert.throws(() => planWaitlist({ ...input, mode: 'waitlist-only' }), /requires mixed mode/)
+	assert.throws(() => planWaitlist({ ...input, products: '101:21,102:21,103:0' }), /uses 10 workers/)
+})
+
 function metrics() {
 	const events = new EventEmitter()
 	const counters = {}

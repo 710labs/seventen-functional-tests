@@ -45,7 +45,7 @@ function summarizeReport(report) {
 
 	const lines = [
 		'Artillery stats:',
-		`VUsers: created ${formatNumber(counters['vusers.created'] || 0)} | completed ${formatNumber(counters['vusers.completed'] || 0)} | failed ${formatNumber(counters['vusers.failed'] || 0)}`,
+		`VUsers: created ${formatNumber(counters['vusers.created'] || 0)} | completed ${formatNumber(counters['vusers.completed'] || 0)} | failed ${formatNumber(counters['vusers.failed'] || 0)} | skipped ${formatNumber(counters['vusers.skipped'] || 0)}`,
 	]
 
 	if (sessionLength) {

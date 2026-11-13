@@ -183,7 +183,7 @@ The workflow derives exact 10-browser Fargate workers for presets above 10, so t
 - `bypass-only`: runs only VIP-cookie browser users.
 - `realqueue-only`: runs only non-VIP browser users.
 - `http-funnel`: runs only the HTTP age/password/register endpoint funnel.
-- `mixed`: splits the selected total evenly between waitlist and checkout, with both flows bypassing Queue-It and starting over the same 30-second window per product job.
+- `mixed`: splits the selected total evenly between waitlist and checkout, with both flows bypassing Queue-It. Numbered presets start over a 30-second window per product job.
 - `waitlist-only`: runs waitlist browsers without checkout traffic.
 - `site-waitlist-only`: validates a storefront configured to offer waitlists for the entire catalog and runs consecutive waitlist signups.
 - `dry`: validates configs and renders smoke configs without launching Fargate.
@@ -205,6 +205,27 @@ Mixed totals are 50, 100, 150, and 200. Each product job launches an exact
 With `:0` stock on all waitlist products, each waitlist shopper must confirm a
 join. With positive starting stock, some waitlist shoppers hold stock in their
 carts and the rest must confirm a join.
+
+For a longer drop, select `mode=mixed` and `waitlist_preset=15-minute drop
+(380 shoppers)`. Use the same waitlist products, checkout product pool and
+pickup facility inputs. The profile schedules 100 fresh shoppers in the first
+30 seconds and 280 more over the next 14½ minutes. Both phases are split evenly
+between waitlist and checkout. The same 10 Fargate workers run both phases,
+with up to 10 active browser sessions per worker. The opening stock and product
+allocation must fit those 10 workers.
+
+Sessions already in progress can finish after the 15-minute arrival window.
+If a worker is full when a shopper is scheduled, Artillery counts a skipped
+arrival. The GitHub and Slack summaries show skips, and the mixed checks still
+require all 190 waitlist and 190 checkout sessions to start and complete across
+the product jobs. For sold-out waitlist products, every waitlist session must
+confirm a join. For positive starting stock, the run still requires the seeded
+stock, enough cart holds and a confirmed join. Holds can expire and free up
+inventory during the longer run.
+
+With `place_orders=true`, allow up to 190 orders across the checkout pool and
+size inventory for `190 × cart_item_count` units. With `place_orders=false`,
+checkout shoppers still add items to their carts and reach checkout.
 
 Select a `waitlist_preset` in `bypass-only`, `realqueue-only`, or `flip` to run
 the waitlist alongside a separately sized checkout cohort. Waitlist jobs use VIP bypass and launch at

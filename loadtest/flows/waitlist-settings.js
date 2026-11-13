@@ -1,7 +1,14 @@
+const DROP_PRESET = '15-minute drop (380 shoppers)'
+const DROP_OPENING_BROWSERS = 100
+const DROP_WORKERS = 10
+const DROP_FOLLOWUP_BROWSERS_PER_COHORT = 14
+const DROP_FOLLOWUP_SECONDS = 870
+
 const WAITLIST_PRESETS = new Map([
 	['Off', 0],
 	['Smoke (1 user)', 1],
 	...[5, 25, 50, 100, 150, 200].map(browsers => [`${browsers} users`, browsers]),
+	[DROP_PRESET, DROP_OPENING_BROWSERS],
 ])
 
 function integer(value, label, minimum = 1) {
@@ -63,6 +70,8 @@ function allocateMixedProducts(pool, count, spare) {
 function planWaitlist({ mode, preset, products, checkoutProducts, facility, cartItems }) {
 	const total = WAITLIST_PRESETS.get(preset)
 	if (total === undefined) throw new Error('Select a supported waitlist preset.')
+	const drop = preset === DROP_PRESET
+	if (drop && mode !== 'mixed') throw new Error('The 15-minute drop preset requires mixed mode.')
 	const siteWaitlistOnly = mode === 'site-waitlist-only'
 	const checkoutIds = siteWaitlistOnly ? [] : parseProductIds(checkoutProducts)
 	const evenSplit = mode === 'mixed'
@@ -117,6 +126,23 @@ function planWaitlist({ mode, preset, products, checkoutProducts, facility, cart
 		const browsers = product.stock + 1 + Math.floor(spare / pool.length) + Number(index < spare % pool.length)
 		return { ...product, browsers, workers: workerCount(browsers) }
 	})
+
+	if (drop) {
+		const workers = include.reduce((sum, product) => sum + product.workers, 0)
+		if (workers !== DROP_WORKERS) {
+			throw new Error(`This product and stock allocation needs ${workers} workers for the opening phase. The 15-minute drop uses 10 workers. Reduce the starting stock or number of waitlist products.`)
+		}
+		return {
+			include: include.map(product => ({
+				...product,
+				followupBrowsers: product.workers * DROP_FOLLOWUP_BROWSERS_PER_COHORT,
+			})),
+			checkoutIds,
+			facility: facilityId,
+			duration: seconds,
+			followupDuration: DROP_FOLLOWUP_SECONDS,
+		}
+	}
 
 	return { include, checkoutIds, facility: facilityId, duration: seconds }
 }
