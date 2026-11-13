@@ -19,15 +19,21 @@ try {
 		'',
 	].join('\n'))
 	if (plan.include.length) {
+		const mixed = process.env.INPUT_MODE === 'mixed'
+		const waitlistBrowsers = plan.include.reduce((total, product) => total + product.browsers, 0)
 		const rows = plan.include.map(product => {
 			const catalog = product.id === 'catalog'
-			return `| ${catalog ? 'Entire storefront' : product.id} | ${catalog ? '—' : product.stock} | ${product.browsers} | ${product.workers} |`
+			const columns = [catalog ? 'Entire storefront' : product.id, catalog ? '—' : product.stock, product.browsers]
+			if (mixed) columns.push(product.checkoutBrowsers)
+			columns.push(product.workers)
+			return `| ${columns.join(' | ')} |`
 		})
 		fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
-			'\n## Waitlist products\n',
+			mixed ? '\n## Mixed browser plan\n' : '\n## Waitlist products\n',
+			...(mixed ? [`${waitlistBrowsers * 2} total browsers, ${waitlistBrowsers} waitlist and ${waitlistBrowsers} checkout.\n`] : []),
 			`Pickup facility ${plan.facility}, ${plan.duration}s arrival phase.\n`,
-			'| Scope | Starting stock | Browsers | Fargate workers |',
-			'| --- | ---: | ---: | ---: |',
+			`| Scope | Starting stock | Waitlist browsers | ${mixed ? 'Checkout browsers | ' : ''}Fargate workers |`,
+			`| --- | ---: | ---: | ${mixed ? '---: | ' : ''}---: |`,
 			...rows,
 			'',
 		].join('\n'))

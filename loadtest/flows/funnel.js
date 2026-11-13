@@ -5,6 +5,7 @@ const { expect } = require('@playwright/test')
 const { selectAutocompleteAddress } = require('../../support/qa/address-autocomplete.cjs')
 const { waitForRegistrationEligibility } = require('../../support/qa/registration-eligibility.cjs')
 const { addCheckoutProducts } = require('./drop-cart')
+const { observeRegistration, registrationValidation } = require('./registration-diagnostics')
 const { runWaitlist } = require('./waitlist')
 const { parseProductIds } = require('./waitlist-settings')
 
@@ -481,20 +482,25 @@ async function waitForRegistrationReadyToSubmit(page, expectedState, expectedZip
 	return nextButton
 }
 
-async function submitRegistrationForm(page, expectedState, expectedZip) {
+async function submitRegistrationForm(page, expectedState, expectedZip, events) {
 	const nextButton = await waitForRegistrationReadyToSubmit(page, expectedState, expectedZip)
-	await nextButton.click()
+	const observation = await observeRegistration(page, nextButton)
+	let clicked = false
+	let eligible = false
 
 	try {
+		await nextButton.click()
+		clicked = true
 		await waitForRegistrationEligibility(page, expect)
-	} catch {
-		const url = new URL(page.url())
-		throw new Error(
-			[
-				`Registration eligibility timed out at ${url.pathname}.`,
-				`Body preview: ${await getBodyPreview(page)}`,
-			].join('\n'),
-		)
+		eligible = true
+	} catch (error) {
+		const validation = await registrationValidation(page)
+		const request = observation.result()
+		const stage = clicked ? 'eligibility timed out' : 'Next click failed'
+		const pageState = /^\/register\/?$/.test(new URL(page.url()).pathname) ? ' at /register/' : ''
+		throw new Error(`Registration ${stage}${pageState} (${request}, validation ${validation}).`, { cause: error })
+	} finally {
+		observation.stop(events, eligible)
 	}
 }
 
@@ -748,7 +754,7 @@ async function passAgeGateIfPresent(page) {
 	}
 }
 
-async function createAccount(page, target, user, step) {
+async function createAccount(page, target, user, step, events) {
 	await step('Open Registration', async () => {
 		await page.getByText(/create an account/i).first().click({ timeout: 60000 })
 		await page.waitForLoadState('domcontentloaded').catch(() => {})
@@ -770,6 +776,7 @@ async function createAccount(page, target, user, step) {
 			DEFAULT_REGISTRATION_ADDRESS,
 			DEFAULT_REGISTRATION_STATE,
 			DEFAULT_REGISTRATION_ZIP,
+			events,
 		)
 	})
 
@@ -1091,7 +1098,7 @@ async function runFunnel(page, vuContext, events, test, options = {}) {
 	})
 
 	await measuredStep(events, step, 'create_account', 'Create Account', async () => {
-		await createAccount(page, target, user, step)
+		await createAccount(page, target, user, step, events)
 	})
 
 	await measuredStep(events, step, 'fulfillment', 'Select Fulfillment', async () => {
@@ -1130,6 +1137,18 @@ async function storeFunnelWaitlist(page, vuContext, events, test) {
 	return runFunnel(page, vuContext, events, test, { vip: true, waitlist: true })
 }
 
+let nextMixedUserIsWaitlist = true
+
+async function storeFunnelMixed(page, vuContext, events, test) {
+	// Each worker gets an even arrival count. Assign the flow before any async work.
+	const waitlist = nextMixedUserIsWaitlist
+	nextMixedUserIsWaitlist = !waitlist
+	const cohort = waitlist ? 'waitlist' : 'checkout'
+	events.emit('counter', `mixed.${cohort}_started`, 1)
+	await runFunnel(page, vuContext, events, test, { vip: true, waitlist })
+	events.emit('counter', `mixed.${cohort}_completed`, 1)
+}
+
 module.exports = {
 	RECAPTCHA_BYPASS_COOKIE_NAME,
 	VIP_CHECKER_COOKIE_NAME,
@@ -1139,6 +1158,7 @@ module.exports = {
 	runFunnel,
 	selectResolvedBillingAddress,
 	storeFunnelBypass,
+	storeFunnelMixed,
 	storeFunnelRealQueue,
 	storeFunnelWaitlist,
 	submitRegistrationForm,

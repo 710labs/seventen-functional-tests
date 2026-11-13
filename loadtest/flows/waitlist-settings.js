@@ -19,21 +19,26 @@ function parseProductIds(raw = '') {
 	return ids
 }
 
-function workerCount(browsers) {
+function workerCount(browsers, maxPerWorker = 10) {
 	// Fargate runs the rendered per-worker phase on every worker.
 	// Use an exact divisor so the browser allocation is preserved.
-	const perWorker = Math.min(browsers, 10)
+	const perWorker = Math.min(browsers, maxPerWorker)
 	const size = Array.from({ length: perWorker }, (_, offset) => perWorker - offset)
 		.find(candidate => browsers % candidate === 0)
 	return browsers / size
 }
 
 function planWaitlist({ mode, preset, products, checkoutProducts, facility, cartItems }) {
-	const count = WAITLIST_PRESETS.get(preset)
-	if (count === undefined) throw new Error('Select a supported waitlist preset.')
+	const total = WAITLIST_PRESETS.get(preset)
+	if (total === undefined) throw new Error('Select a supported waitlist preset.')
 	const siteWaitlistOnly = mode === 'site-waitlist-only'
 	const checkoutIds = siteWaitlistOnly ? [] : parseProductIds(checkoutProducts)
-	const mixed = ['flip', 'bypass-only', 'realqueue-only'].includes(mode)
+	const evenSplit = mode === 'mixed'
+	const mixed = evenSplit || ['flip', 'bypass-only', 'realqueue-only'].includes(mode)
+	if (evenSplit && (total < 2 || total % 2 !== 0)) {
+		throw new Error('Mixed mode requires an even total. Select 50, 100, 150, or 200 users.')
+	}
+	const count = evenSplit ? total / 2 : total
 
 	if (count === 0) {
 		if (siteWaitlistOnly || mode === 'waitlist-only') {
@@ -78,6 +83,7 @@ function planWaitlist({ mode, preset, products, checkoutProducts, facility, cart
 	const spare = count - minimum
 	const include = pool.map((product, index) => {
 		const browsers = product.stock + 1 + Math.floor(spare / pool.length) + Number(index < spare % pool.length)
+		if (evenSplit) return { ...product, browsers, checkoutBrowsers: browsers, workers: workerCount(browsers, 5) }
 		return { ...product, browsers, workers: workerCount(browsers) }
 	})
 

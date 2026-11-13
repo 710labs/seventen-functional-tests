@@ -163,7 +163,7 @@ Run **Load Test- Drop Simulation** manually from GitHub Actions.
 
 - `env`: `stage`, `dev`, `prod-ca`, `prod-co`, `prod-mi`, or `prod-nj`.
 - `target`: must match the selected environment URL.
-- `mode`: `flip`, `entry-only`, `bypass-only`, `realqueue-only`, `http-funnel`, or `dry`.
+- `mode`: `flip`, `entry-only`, `bypass-only`, `realqueue-only`, `http-funnel`, `mixed`, `waitlist-only`, `site-waitlist-only`, or `dry`.
 - `bypass_browsers`: total bypass browser concurrency; default `100`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `realqueue_browsers`: total real-queue browser concurrency; default `50`. Presets: `1`, `5`, `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, `100`, `150`, `200`.
 - `gate_iso`: Queue-It event start time. Empty means "now".
@@ -183,19 +183,36 @@ The workflow derives exact 10-browser Fargate workers for presets above 10, so t
 - `bypass-only`: runs only VIP-cookie browser users.
 - `realqueue-only`: runs only non-VIP browser users.
 - `http-funnel`: runs only the HTTP age/password/register endpoint funnel.
+- `mixed`: splits the selected total evenly between waitlist and checkout, with both flows bypassing Queue-It and starting over the same 30-second window per product job.
 - `waitlist-only`: runs waitlist browsers without checkout traffic.
 - `site-waitlist-only`: validates a storefront configured to offer waitlists for the entire catalog and runs consecutive waitlist signups.
 - `dry`: validates configs and renders smoke configs without launching Fargate.
 
 ### Waitlist load and inventory transitions
 
+For 25 waitlist shoppers and 25 checkout shoppers on Stage, use `mode=mixed`
+and `waitlist_preset=50 users`. Leave the storefront's site-wide waitlist-only
+setting disabled. Set `waitlist_products` to your Stage waitlist product IDs
+with `:0` for products already sold out at the pickup facility, and set
+`checkout_product_ids` to separate, in-stock products with enough inventory
+for the checkout cohort. The Stage pickup facility defaults to Amuse Downtown
+LA (`1`). Set `place_orders=false` to stop at checkout, or `true` to submit
+Stage orders. Mixed mode uses `waitlist_preset` for the total and ignores
+`bypass_browsers` and `realqueue_browsers`.
+
+Mixed totals are 50, 100, 150, and 200. Each product job launches an exact
+50/50 split and reports how many shoppers started and completed each flow.
+With `:0` stock on all waitlist products, each waitlist shopper must confirm a
+join. With positive starting stock, some waitlist shoppers hold stock in their
+carts and the rest must confirm a join.
+
 Select a `waitlist_preset` in `bypass-only`, `realqueue-only`, or `flip` to run
-the waitlist alongside checkout. Waitlist jobs use VIP bypass and launch at
+the waitlist alongside a separately sized checkout cohort. Waitlist jobs use VIP bypass and launch at
 `gate_iso`. Real-queue checkout traffic depends on Queue-It release. Use
 `waitlist-only` for the waitlist cohort by itself. Select `Off` for the standard
 Drop Simulation.
 
-- `waitlist_preset` offers 5, 25, 50, 100, 150, or 200 users spread over 30 seconds.
+- For standalone waitlist jobs, `waitlist_preset` offers 5, 25, 50, 100, 150, or 200 users spread over 30 seconds.
   `Smoke (1 user)` starts one browser over one second. Each product needs at
   least its starting stock plus one browser. For example, products with stock
   1, 3, and 0 need at least seven browsers, so select `25 users` or higher.
