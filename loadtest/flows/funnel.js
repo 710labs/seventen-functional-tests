@@ -776,7 +776,6 @@ async function createAccount(page, target, user, step, events) {
 			DEFAULT_REGISTRATION_ADDRESS,
 			DEFAULT_REGISTRATION_STATE,
 			DEFAULT_REGISTRATION_ZIP,
-			events,
 		)
 	})
 
@@ -789,6 +788,7 @@ async function createAccount(page, target, user, step, events) {
 			page,
 			DEFAULT_REGISTRATION_STATE,
 			DEFAULT_REGISTRATION_ZIP,
+			events,
 		)
 	})
 

@@ -47,6 +47,9 @@ test('mixed presets split exact browser arrivals between waitlist and checkout',
 	const singleProduct = planWaitlist({ ...inputs, preset: '50 users', products: '101:0' })
 	assert.deepEqual(singleProduct.include, [{ id: '101', stock: 0, browsers: 25, checkoutBrowsers: 25, workers: 5 }])
 	assert.equal(singleProduct.duration, 30)
+	const stageProducts = planWaitlist({ ...inputs, preset: '100 users', products: '225505:0,225498:0,225511:0' }).include
+	assert.deepEqual(stageProducts.map(product => product.browsers).sort((left, right) => left - right), [15, 15, 20])
+	assert.equal(stageProducts.reduce((sum, product) => sum + product.workers, 0), 10)
 	for (const total of [50, 100, 150, 200]) {
 		const { include } = planWaitlist({ ...inputs, preset: `${total} users` })
 		assert.equal(include.reduce((sum, { browsers }) => sum + browsers, 0), total / 2)
@@ -57,6 +60,9 @@ test('mixed presets split exact browser arrivals between waitlist and checkout',
 			assert.ok(browsers > stock)
 		}
 	}
+	const lowSpare = planWaitlist({ ...inputs, preset: '50 users', products: '101:10,102:10,103:0' }).include
+	assert.equal(lowSpare.reduce((sum, product) => sum + product.browsers, 0), 25)
+	assert.ok(lowSpare.every(product => product.browsers > product.stock && product.browsers % product.workers === 0))
 	assert.throws(() => planWaitlist(inputs), /requires an even total/)
 	assert.throws(() => planWaitlist({ ...inputs, preset: '50 users', products: '101:25' }), /at least 26 waitlist browsers/)
 	assert.throws(() => planWaitlist({ ...inputs, preset: '50 users', checkoutProducts: '101,202' }), /disjoint/)

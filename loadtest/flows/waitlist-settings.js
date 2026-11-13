@@ -28,6 +28,38 @@ function workerCount(browsers, maxPerWorker = 10) {
 	return browsers / size
 }
 
+function allocateMixedProducts(pool, count, spare) {
+	const workersFor = Array.from({ length: count }, (_, index) => workerCount(index + 1, 5))
+	let plans = new Map([[0, { workers: 0, imbalance: 0, include: [] }]])
+
+	// Every worker runs the same arrivals for its product. Choose product counts
+	// that minimize workers, then keep extra arrivals as even as possible.
+	for (const product of pool) {
+		const nextPlans = new Map()
+		const minimum = product.stock + 1
+		for (const [allocated, plan] of plans) {
+			const max = Math.min(minimum + spare, count - allocated)
+			for (let browsers = minimum; browsers <= max; browsers += 1) {
+				const workers = workersFor[browsers - 1]
+				const totalWorkers = plan.workers + workers
+				const imbalance = plan.imbalance + (browsers - minimum) ** 2
+				const total = allocated + browsers
+				const previous = nextPlans.get(total)
+				if (previous && (previous.workers < totalWorkers ||
+					(previous.workers === totalWorkers && previous.imbalance <= imbalance))) continue
+				nextPlans.set(total, {
+					workers: totalWorkers,
+					imbalance,
+					include: [...plan.include, { ...product, browsers, checkoutBrowsers: browsers, workers }],
+				})
+			}
+		}
+		plans = nextPlans
+	}
+
+	return plans.get(count).include
+}
+
 function planWaitlist({ mode, preset, products, checkoutProducts, facility, cartItems }) {
 	const total = WAITLIST_PRESETS.get(preset)
 	if (total === undefined) throw new Error('Select a supported waitlist preset.')
@@ -81,9 +113,8 @@ function planWaitlist({ mode, preset, products, checkoutProducts, facility, cart
 		throw new Error(`This pool requires at least ${minimum} waitlist browsers to hold stock and join each waitlist.`)
 	}
 	const spare = count - minimum
-	const include = pool.map((product, index) => {
+	const include = evenSplit ? allocateMixedProducts(pool, count, spare) : pool.map((product, index) => {
 		const browsers = product.stock + 1 + Math.floor(spare / pool.length) + Number(index < spare % pool.length)
-		if (evenSplit) return { ...product, browsers, checkoutBrowsers: browsers, workers: workerCount(browsers, 5) }
 		return { ...product, browsers, workers: workerCount(browsers) }
 	})
 

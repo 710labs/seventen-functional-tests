@@ -21,6 +21,7 @@ try {
 	if (plan.include.length) {
 		const mixed = process.env.INPUT_MODE === 'mixed'
 		const waitlistBrowsers = plan.include.reduce((total, product) => total + product.browsers, 0)
+		const workers = plan.include.reduce((total, product) => total + product.workers, 0)
 		const rows = plan.include.map(product => {
 			const catalog = product.id === 'catalog'
 			const columns = [catalog ? 'Entire storefront' : product.id, catalog ? '—' : product.stock, product.browsers]
@@ -30,7 +31,7 @@ try {
 		})
 		fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
 			mixed ? '\n## Mixed browser plan\n' : '\n## Waitlist products\n',
-			...(mixed ? [`${waitlistBrowsers * 2} total browsers, ${waitlistBrowsers} waitlist and ${waitlistBrowsers} checkout.\n`] : []),
+			...(mixed ? [`${waitlistBrowsers * 2} total browsers, ${waitlistBrowsers} waitlist and ${waitlistBrowsers} checkout, across ${workers} Fargate workers.\n`] : []),
 			`Pickup facility ${plan.facility}, ${plan.duration}s arrival phase.\n`,
 			`| Scope | Starting stock | Waitlist browsers | ${mixed ? 'Checkout browsers | ' : ''}Fargate workers |`,
 			`| --- | ---: | ---: | ${mixed ? '---: | ' : ''}---: |`,

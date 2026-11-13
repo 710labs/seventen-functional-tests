@@ -7,6 +7,7 @@ const {
 	acceptPickupCommitment,
 	isCheckoutSubmissionUrl,
 	selectResolvedBillingAddress,
+	storeFunnelMixed,
 	submitRegistrationForm,
 	waitForCheckoutReadyToSubmit,
 } = require('./funnel')
@@ -171,7 +172,7 @@ test('billing registration resolves both Google Places controls', async t => {
 	})
 })
 
-test('registration waits on the shop for the eligibility form after Next', async t => {
+test('the mixed flow waits for eligibility after Next and reports registration timing', async t => {
 	const browser = await chromium.launch()
 	t.after(() => browser.close())
 	const page = await browser.newPage()
@@ -211,13 +212,18 @@ test('registration waits on the shop for the eligibility form after Next', async
 	})
 
 	await page.goto('https://registration.example/register/')
-	await submitRegistrationForm(page, 'CA', '90016', { emit: (...args) => timings.push(args) })
+	const events = { emit: (...args) => timings.push(args) }
+	const registrationSteps = ['Create Account', 'Submit Registration Form']
+	await storeFunnelMixed(page, { vars: { target: 'https://registration.example' } }, events, {
+		step: (name, run) => registrationSteps.includes(name) ? run() : undefined,
+	})
 
 	assert.equal(page.url(), 'https://registration.example/')
 	assert.deepEqual(requests, ['GET /register/', 'POST /register/', 'GET /'])
-	assert.equal(timings.length, 1)
-	assert.deepEqual(timings[0].slice(0, 2), ['histogram', 'registration.eligible.response_ms'])
-	assert.ok(timings[0][2] >= 0)
+	const registrationTimings = timings.filter(([, metric]) => metric.startsWith('registration.'))
+	assert.equal(registrationTimings.length, 1)
+	assert.deepEqual(registrationTimings[0].slice(0, 2), ['histogram', 'registration.eligible.response_ms'])
+	assert.ok(registrationTimings[0][2] >= 0)
 })
 
 test('registration failures report request and validation outcomes without logging form data', { concurrency: true }, async t => {
