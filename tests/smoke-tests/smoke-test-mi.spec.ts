@@ -77,8 +77,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step(`Complete Order`, async () => {
-			await checkOutPage.placeOrderButton.waitFor({ state: 'visible' })
-			await checkOutPage.placeOrderButton.click()
+			await checkOutPage.submitOrder()
 			await orderReceived.orderNumber.waitFor({ state: 'visible' })
 		})
 
