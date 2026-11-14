@@ -18,6 +18,12 @@ on:
           - '8'
           - '9'
           - '10'
+  workflow_call:
+    inputs:
+      cart_item_count:
+        description: Number of items to add to cart
+        type: string
+        default: '3'
 jobs:
   smoke-test-prod-ca:
     timeout-minutes: 60
@@ -28,7 +34,7 @@ jobs:
       ENV: prod-ca thelist.710labs.com
       ENV_ID: prod-ca
       EXECUTION_TYPE: ${{ github.event_name == 'workflow_dispatch' && 'Manual Run' || 'Scheduled Run' }}
-      SMOKE_CART_ITEM_COUNT: ${{ github.event.inputs.cart_item_count || '3' }}
+      SMOKE_CART_ITEM_COUNT: ${{ inputs.cart_item_count || '3' }}
       RUN_ID: ${{github.run_number}}
       UNIQUE_RUN_ID: ${{github.run_id}}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
