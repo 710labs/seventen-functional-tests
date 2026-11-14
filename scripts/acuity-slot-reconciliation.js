@@ -105,9 +105,9 @@ function parseSession(record, appointmentId) {
 	if (!match || !months.includes(match[3]))
 		throw new Error('Unrecognized Acuity class label; refusing to infer a missing slot.')
 	const details = compact(record.details)
-	const calendar = /\bwith (.+?)(?: \(\d+\/\d+ attendees\))?$/.exec(details)
-	if (!calendar) throw new Error('Unable to identify the Acuity class calendar.')
-	const capacity = /\((\d+)\/(\d+) attendees\)$/.exec(details)
+	const classDetails = /\bwith (.+?)(?: \((\d+)\/(\d+) attendees?\))?$/.exec(details)
+	if (!classDetails) throw new Error('Unable to identify the Acuity class calendar.')
+	const [, calendar, booked, capacity] = classDetails
 	const url = new URL(record.href, origin)
 	if (
 		url.origin !== origin ||
@@ -120,9 +120,9 @@ function parseSession(record, appointmentId) {
 		appointmentId,
 		date: dateKey(`${months.indexOf(match[3]) + 1}/${match[4]}/${match[5].padStart(4, '0')}`),
 		time: timeKey(match[1]),
-		calendar: calendar[1],
-		capacity: capacity ? Number(capacity[2]) : null,
-		booked: capacity ? Number(capacity[1]) : null,
+		calendar,
+		capacity: capacity === undefined ? null : Number(capacity),
+		booked: booked === undefined ? null : Number(booked),
 		timezone: match[2],
 		label,
 		url: url.href,

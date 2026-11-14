@@ -46,6 +46,20 @@ test('matches standard time labels without relying on CSV timezone text', () => 
 	)
 })
 
+test('plans a capacity update when Acuity reports a single attendee', () => {
+	const parsed = parseSession(
+		{
+			label: '11:00am EST Tuesday, November 3, 2026',
+			details: 'with Test calendar (1/1 attendee)',
+			href: '/appointments.php?action=detailAvailableGroup&id=456',
+		},
+		'123',
+	)
+	assert.equal(parsed.booked, 1)
+	assert.equal(parsed.capacity, 1)
+	assert.equal(planSlot(slot, [parsed]).action, 'update_capacity')
+})
+
 test('reads ancient Acuity years literally without hiding current sessions or relaxing CSV dates', () => {
 	const record = {
 		label: '11:00am LMT Wednesday, July  3, 2',
