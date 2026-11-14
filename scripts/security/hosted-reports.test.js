@@ -38,6 +38,14 @@ async function zipContents(buffer) {
 	})
 }
 
+async function readReportData(reportDir) {
+	const html = fs.readFileSync(path.join(reportDir, 'index.html'), 'utf8')
+	const payload = html.match(/<template id="playwrightReportBase64">data:application\/zip;base64,([^<]+)<\/template>/)
+	assert.ok(payload, 'HTML report should embed the report data')
+	const data = await zipContents(Buffer.from(payload[1], 'base64'))
+	return Object.values(data).map(buffer => buffer.toString()).join('\n')
+}
+
 test('hosted storage requires explicit enablement, original settings, upload access and anonymous reads', async () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hosted-report-'))
 	try {
@@ -99,7 +107,7 @@ test('report upload preserves assets/content types, publishes index last, and wi
 	} finally {fs.rmSync(dir,{recursive:true,force:true})}
 })
 
-test('real hosted HTML contains test details and videos; Slack receives a working report button', {timeout:120000}, async()=>{
+test('hosted HTML includes videos for passes, failures and retries; Slack links to the report', {timeout:120000}, async()=>{
 	const dir=fs.mkdtempSync(path.join(root,'.hosted-report-fixture-'))
 	try {
 		const uploads=path.join(dir,'uploads'), health=path.join(dir,'health.json'), slack=path.join(dir,'slack.json'), summary=path.join(dir,'summary.json'), step=path.join(dir,'step.md')
@@ -147,15 +155,14 @@ for(const mode of ['pass','fail','retry'])test(mode+${JSON.stringify(canary)},as
 		assert.equal(output.hostedReport.status,'complete',result.stdout+result.stderr)
 		assert.equal(JSON.parse(fs.readFileSync(health)).reportUrl,output.hostedReport.url)
 		const reportDir=path.dirname(path.join(uploads,new URL(output.hostedReport.url).pathname))
-		const html=fs.readFileSync(path.join(reportDir,'index.html'),'utf8')
-		const data=await zipContents(Buffer.from(html.match(/window.playwrightReportBase64 = "data:application\/zip;base64,([^"]+)"/)[1],'base64'))
-		const reportData=Object.values(data).map(buffer=>buffer.toString()).join('\n')
+		const reportData=await readReportData(reportDir)
 		assert.ok(reportData.includes(canary))
 		assert.ok(reportData.includes('synthetic-step'))
 		assert.ok(reportData.includes('flaky'))
 		assert.ok(!reportData.includes('must-not-use.invalid'))
 		const videos=fs.readdirSync(path.join(reportDir,'data')).filter(file=>file.endsWith('.webm'))
-		assert.equal(videos.length,3)
+		// One pass, plus the initial attempt and retry for each of the other two tests.
+		assert.equal(videos.length,5)
 		for(const video of videos){assert.ok(reportData.includes('data/'+video));assert.equal(fs.readFileSync(path.join(reportDir,'data',video)).subarray(0,4).toString('hex'),'1a45dfa3')}
 		const message=JSON.parse(fs.readFileSync(slack))
 		assert.ok(message.blocks.some(block=>block.elements?.some(button=>button.text?.text==='Test Report'&&button.url===output.hostedReport.url)))
@@ -176,5 +183,11 @@ for(const mode of ['pass','fail','retry'])test(mode+${JSON.stringify(canary)},as
 		const green=JSON.parse(fs.readFileSync(summary))
 		assert.equal(green.status,'passed')
 		assert.equal(green.hostedReport.status,'complete')
+		const greenReportDir=path.dirname(path.join(uploads,new URL(green.hostedReport.url).pathname))
+		const greenData=await readReportData(greenReportDir)
+		const greenVideos=fs.readdirSync(path.join(greenReportDir,'data')).filter(file=>file.endsWith('.webm'))
+		assert.equal(greenVideos.length,1)
+		assert.ok(greenData.includes(`data/${greenVideos[0]}`))
+		assert.equal(fs.readFileSync(path.join(greenReportDir,'data',greenVideos[0])).subarray(0,4).toString('hex'),'1a45dfa3')
 	} finally {fs.rmSync(dir,{recursive:true,force:true})}
 })
