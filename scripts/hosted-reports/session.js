@@ -53,7 +53,7 @@ function readSession(env = process.env) {
 		|| session.reportDir !== path.join(path.dirname(env[sessionVariable]), 'playwright-report')) throw reportError('configuration')
 	return session
 }
-function hostedVideoMode() { return readSession() ? 'retain-on-failure' : 'off' }
+function hostedVideoMode() { return readSession() ? 'on' : 'off' }
 // Keep arbitrary or signed URLs out of public status metadata.
 function safeReportUrl(value) {
 	try {
