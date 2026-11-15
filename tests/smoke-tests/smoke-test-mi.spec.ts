@@ -34,7 +34,6 @@ test.describe('Basic Acceptance Tests MI', () => {
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 		const checkOutPage = new CheckoutPage(page, qaClient)
 		const orderReceived = new OrderReceivedPage(page)
-		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step(`Pass Age Gate`, async () => {
 			await ageGatePage.passAgeGate()
@@ -62,10 +61,7 @@ test.describe('Basic Acceptance Tests MI', () => {
 		})
 
 		await test.step('Fill cart and open reservations', async () => {
-			await shopPage.addProductsToCart(cartItemCount, false, 'Pickup', 'recreational', {
-				exactItemCount: true,
-				cartButtonDestination: '/reservations',
-			})
+			await shopPage.addProductsUntilCheckoutReady(cartPage, cartItemCount, 'Pickup', 'recreational', '/reservations')
 		})
 
 		await test.step(`Navigate to Checkout`, async () => {

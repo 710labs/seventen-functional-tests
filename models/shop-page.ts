@@ -67,13 +67,6 @@ export type StorefrontCheckoutState = {
 	url: string
 }
 
-export type CheckoutReadyCartBuildSummary = {
-	banner: MinimumOrderBannerState
-	checkoutState: StorefrontCheckoutState
-	productsAdded: number
-	subtotal: number
-}
-
 export type MinimumOrderCartBuildStep = {
 	banner: MinimumOrderBannerState
 	checkoutState: StorefrontCheckoutState
@@ -1536,6 +1529,7 @@ export class ShopPage {
 						'a:has-text("Continue to checkout")',
 					].join(', '),
 				)
+				.locator('visible=true')
 				.first()
 			const isVisible = await checkoutButton.isVisible().catch(() => false)
 			let isDisabledByDom = false
@@ -1550,7 +1544,8 @@ export class ShopPage {
 							htmlElement.getAttribute('aria-disabled') === 'true' ||
 							htmlElement.hasAttribute('disabled') ||
 							htmlElement.classList.contains('disabled') ||
-							htmlElement.classList.contains('is-disabled')
+							htmlElement.classList.contains('is-disabled') ||
+							htmlElement.classList.contains('wcse-warning-button')
 						)
 					})
 					.catch(() => false)
@@ -1703,136 +1698,171 @@ export class ShopPage {
 			}
 		})
 
-		const cartButtonDestination = options.cartButtonDestination
-		if (cartButtonDestination) {
-			await test.step(`Open cart with the storefront button and verify ${cartButtonDestination}`, async () => {
-				const storefrontOrigin = new URL(this.page.url()).origin
-				const expectedPath = cartButtonDestination.replace(/\/$/, '')
-				await this.page.locator('a.cart-contents:visible').first().click()
-				await expect(this.page).toHaveURL(
-					url => url.origin === storefrontOrigin && url.pathname.replace(/\/$/, '') === expectedPath,
-				)
-				await this.waitForCartLoaded({ requireItems: true })
-			})
+		if (!options.cartButtonDestination) {
+			await this.page.keyboard.press('PageUp')
+			await this.page.waitForTimeout(2000)
+		}
+		await this.openCartWithItems(options.cartButtonDestination)
+	}
+
+	private async openCartWithItems(cartButtonDestination?: string) {
+		if (!cartButtonDestination) {
+			await this.goToCart({ requireItems: true })
 			return
 		}
 
-		await this.page.keyboard.press('PageUp')
-		await this.page.waitForTimeout(2000)
-		await this.goToCart({ requireItems: true })
+		await test.step(`Open cart with the storefront button and verify ${cartButtonDestination}`, async () => {
+			const storefrontOrigin = new URL(this.page.url()).origin
+			const expectedPath = cartButtonDestination.replace(/\/$/, '')
+			await this.page.locator('a.cart-contents:visible').first().click()
+			await expect(this.page).toHaveURL(
+				url => url.origin === storefrontOrigin && url.pathname.replace(/\/$/, '') === expectedPath,
+			)
+			await this.waitForCartLoaded({ requireItems: true })
+		})
 	}
 
 	async addProductsUntilCheckoutReady(
+		cart: CartPage,
 		initialItemCount: number,
-		fulfillment: ShopFulfillment = 'Pickup',
-		usage: TestUsageType = 'medical',
-		maxProducts = 8,
-	): Promise<CheckoutReadyCartBuildSummary> {
-		return test.step('Build cart until checkout is enabled', async () => {
-			const initialTarget = Math.max(1, Math.ceil(initialItemCount))
-
-			if (initialTarget > maxProducts) {
-				throw new Error(
-					`Initial cart target ${initialTarget} exceeds the safety cap of ${maxProducts} products.`,
-				)
-			}
-
-			await this.page.goto('/')
-			await this.page.waitForTimeout(1000)
-			await this.ensureFulfillmentSelected(fulfillment)
-
+		fulfillment: ShopFulfillment,
+		usage: TestUsageType,
+		cartButtonDestination?: string,
+	): Promise<void> {
+		await test.step('Build a checkout-ready cart from the storefront', async () => {
 			const attemptedProducts = new Set<string>()
-			const rejectionReasons: string[] = []
-			let productsAdded = 0
-			let attempts = 0
-			const maxAttempts = Math.max(maxProducts * 4, 16)
-
-			const addNextProduct = async (preferHigherPrice: boolean) => {
-				const availableProducts = await this.getAddableStorefrontProducts(usage)
-				const candidates = preferHigherPrice
-					? availableProducts.sort((left, right) => right.price - left.price)
-					: availableProducts
-				const candidate = candidates.find(
-					product => !attemptedProducts.has(this.getProductCandidateKey(product)),
-				)
-
-				if (!candidate) {
-					attempts = maxAttempts
-					return false
+			const quantityExhausted = new Set<number>()
+			const rejections: string[] = []
+			const openShop = async () => {
+				await this.page.goto('/')
+				await this.ensureFulfillmentSelected(fulfillment)
+			}
+			const addNextProduct = async (preferHigherPrice = false) => {
+				if (!(await this.page.locator('li.product').count())) return false
+				const candidates = await this.getAddableStorefrontProducts(usage)
+				if (preferHigherPrice) candidates.sort((left, right) => right.price - left.price)
+				for (const candidate of candidates) {
+					const key = candidate.productId ? String(candidate.productId) : this.getProductCandidateKey(candidate)
+					if (attemptedProducts.has(key)) continue
+					attemptedProducts.add(key)
+					const result = await this.tryAddStorefrontProduct(candidate, usage)
+					if (result.added) return true
+					rejections.push(`${candidate.name}: ${result.errorText || 'not added'}`)
+					if (!result.reservedStockRejected) await openShop()
 				}
-
-				attempts += 1
-				attemptedProducts.add(this.getProductCandidateKey(candidate))
-				const result = await this.tryAddStorefrontProduct(candidate, usage)
-
-				if (result.added) {
-					productsAdded += 1
-					return true
-				}
-
-				rejectionReasons.push(`${candidate.name}: ${result.errorText || 'not added'}`)
 				return false
 			}
 
-			while (productsAdded < initialTarget && attempts < maxAttempts) {
-				if (await addNextProduct(false)) {
-					continue
+			await openShop()
+			const existingItems = await this.getStorefrontCartItemCount()
+			let itemsAdded = 0
+			let catalogExhausted = false
+			while (existingItems + itemsAdded < initialItemCount) {
+				if (!(await addNextProduct())) {
+					catalogExhausted = true
+					break
 				}
-
-				await this.page.goto('/')
-				await this.page.waitForTimeout(750)
-				await this.ensureFulfillmentSelected(fulfillment)
+				itemsAdded++
 			}
-
-			if (productsAdded < initialTarget) {
-				throw new Error(
-					[
-						`Only ${productsAdded} of ${initialTarget} initial cart product(s) could be added.`,
-						...rejectionReasons.slice(-5),
-					].join('\n'),
+			if (existingItems + itemsAdded === 0) {
+				throw new ProductInventoryUnavailableError(
+					`No available storefront products could be added. ${rejections.slice(-5).join(' | ')}`,
 				)
 			}
+			await this.openCartWithItems(cartButtonDestination)
 
-			while (productsAdded <= maxProducts) {
-				await this.goToCart({ requireItems: true })
-				const checkoutState = await this.getStorefrontCheckoutState()
-				const banner = await this.getMinimumOrderBannerState()
-				const subtotal = this.roundMoney(await this.getCartSubtotalAmount())
-
-				if (checkoutState.isReachable) {
-					return { banner, checkoutState, productsAdded, subtotal }
+			for (;;) {
+				let banner: MinimumOrderBannerState
+				await expect.poll(async () => {
+					banner = await this.getMinimumOrderBannerState()
+					return banner.isVisible || (await this.getStorefrontCheckoutState()).isReachable ||
+						(await cart.recLimitWarning.first().isVisible() && await cart.conditionalityToggle.isVisible())
+				}, { message: 'A populated cart must show the order minimum notice or offer checkout' }).toBe(true)
+				if (!banner.isVisible) {
+					await expect(this.page.locator('.cart_item:visible').first(), 'The cart must contain a product').toBeVisible()
+					return
 				}
 
-				if (productsAdded >= maxProducts || attempts >= maxAttempts) {
-					throw new Error(
-						[
-							`Checkout remained disabled after ${productsAdded} confirmed product(s).`,
-							`Subtotal: $${subtotal.toFixed(2)}.`,
-							`Minimum-order message: ${banner.text || 'none detected'}.`,
-							`Checkout URL: ${checkoutState.url}.`,
-							...rejectionReasons.slice(-5),
-						].join('\n'),
-					)
+				const shortfall = banner.remainingAmount || 0
+				if (shortfall > 0 && await this.increaseCartQuantity(cart, shortfall, quantityExhausted, rejections)) continue
+
+				if (!catalogExhausted) {
+					await openShop()
+					catalogExhausted = !(await addNextProduct(true))
+					await this.openCartWithItems(cartButtonDestination)
+					if (!catalogExhausted) continue
 				}
+				if (!shortfall && await this.increaseCartQuantity(cart, shortfall, quantityExhausted, rejections)) continue
 
-				await this.page.goto('/')
-				await this.page.waitForTimeout(750)
-				await this.ensureFulfillmentSelected(fulfillment)
-
-				while (attempts < maxAttempts) {
-					if (await addNextProduct(true)) {
-						break
-					}
-
-					await this.page.goto('/')
-					await this.page.waitForTimeout(750)
-					await this.ensureFulfillmentSelected(fulfillment)
-				}
+				const subtotal = await this.getCartSubtotalAmount()
+				throw new Error([
+					`Available inventory and quantity limits could not satisfy the order minimum at subtotal $${subtotal.toFixed(2)}.`,
+					`Minimum-order message: ${banner.text || 'none detected'}.`,
+					...rejections.slice(-5),
+				].join('\n'))
 			}
-
-			throw new Error('Unable to build a checkout-ready cart within the configured safety limits.')
 		})
 	}
+
+	private async increaseCartQuantity(
+		cart: CartPage,
+		shortfall: number,
+		quantityExhausted: Set<number>,
+		rejections: string[],
+	) {
+		const lines = await this.page.locator('.woocommerce-cart-form .cart_item:visible').evaluateAll(rows =>
+			rows.map(row => {
+				const input = row.querySelector<HTMLInputElement>('input.qty')
+				const price = row.querySelector('.product-price')
+				return {
+					productId: Number(row.querySelector('[data-product_id]')?.getAttribute('data-product_id')),
+					price: price?.querySelector('ins')?.textContent || price?.textContent || '',
+					maximum: input?.max ? Number(input.max) : Infinity,
+					quantity: Number(input?.value),
+				}
+			}),
+		)
+		const eligible = lines.flatMap(line => {
+			const unitPrice = this.parseMoney(line.price)
+			return unitPrice && unitPrice > 0 ? [{ ...line, unitPrice }] : []
+		}).sort((left, right) => right.unitPrice - left.unitPrice)
+
+		for (const { productId, unitPrice, quantity, maximum } of eligible) {
+			if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isSafeInteger(quantity) ||
+				quantity < 1 || quantityExhausted.has(productId)) continue
+			const unitsNeeded = shortfall
+				? Math.ceil(Math.round(shortfall * 100) / Math.round(unitPrice * 100))
+				: 1
+			const target = Math.min(quantity + unitsNeeded, Math.floor(maximum))
+			if (!Number.isSafeInteger(target) || target <= quantity) continue
+			const subtotal = shortfall ? null : await this.getCartSubtotalAmount()
+			try {
+				await cart.setProductQuantity(productId, target, { verify: false })
+			} catch (error) {
+				if (!(error instanceof ProductQuantityUnavailableError)) throw error
+				quantityExhausted.add(productId)
+				rejections.push(error.message)
+				continue
+			}
+
+			// Read the persisted quantity and minimum from a fresh cart response.
+			await this.page.reload({ waitUntil: 'domcontentloaded' })
+			await this.waitForCartLoaded()
+			const savedQuantity = await cart.getProductQuantity(productId)
+			const updated = await this.getMinimumOrderBannerState()
+			if (!updated.isVisible) return true
+			const madeProgress = subtotal === null
+				? updated.remainingAmount !== null && updated.remainingAmount < shortfall
+				: (await this.getCartSubtotalAmount()) > subtotal
+			if (savedQuantity < target || !madeProgress) {
+				quantityExhausted.add(productId)
+				rejections.push(`Product ${productId}: quantity ${savedQuantity} after requesting ${target}; ${updated.text}`)
+			}
+			if (savedQuantity !== quantity) return true
+		}
+		return false
+	}
+
 	async addSameProductToCart(itemCount: number) {
 		await test.step('Add Products to Cart', async () => {
 			await this.page.waitForSelector('[aria-label*="Add to cart:"]')
