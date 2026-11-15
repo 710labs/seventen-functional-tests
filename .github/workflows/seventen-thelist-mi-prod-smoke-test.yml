@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       cart_item_count:
-        description: Number of items to add to cart
+        description: Starting cart target (adjusted for stock and order minimum)
         required: true
         default: '3'
         type: choice

@@ -34,7 +34,6 @@ test.describe('Basic Acceptance Tests CO', () => {
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 		const checkOutPage = new CheckoutPage(page, qaClient)
 		const orderReceived = new OrderReceivedPage(page)
-		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
 			await ageGatePage.passAgeGate()
@@ -59,10 +58,7 @@ test.describe('Basic Acceptance Tests CO', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(cartItemCount, mobile, 'Pickup', 'medical', {
-				exactItemCount: true,
-				cartButtonDestination: '/reservations',
-			})
+			await shopPage.addProductsUntilCheckoutReady(cartPage, cartItemCount, 'Pickup', 'medical', '/reservations')
 			cartTotals = await cartPage.verifyCart(address.zipcode)
 		})
 

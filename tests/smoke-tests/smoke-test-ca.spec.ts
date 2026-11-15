@@ -30,7 +30,6 @@ test.describe('Basic Acceptance Tests CA', () => {
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 		const checkOutPage = new CheckoutPage(page, qaClient)
 		const orderReceived = new OrderReceivedPage(page)
-		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
 			await ageGatePage.passAgeGate()
@@ -55,9 +54,7 @@ test.describe('Basic Acceptance Tests CA', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(cartItemCount, mobile, 'Delivery', 'recreational', {
-				exactItemCount: true,
-			})
+			await shopPage.addProductsUntilCheckoutReady(cartPage, cartItemCount, 'Delivery', 'recreational')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 

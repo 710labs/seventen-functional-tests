@@ -14,7 +14,7 @@ import { writeFileSync } from 'fs'
 test.describe('Medical Customer Checkout Florida', () => {
 	var cartTotals: any
 	var orderNumber: any
-	const orderQuanity = 6
+	const initialItemCount = 6
 
 	test(`Basic Acceptance Test @smoke`, async ({ page, browserName, qaClient }, workerInfo) => withQueueItDetection(page, workerInfo, async () => {
 		test.skip(workerInfo.project.name === 'Mobile Chrome')
@@ -31,7 +31,6 @@ test.describe('Medical Customer Checkout Florida', () => {
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 		const checkOutPage = new CheckoutPage(page, qaClient)
 		const orderReceived = new OrderReceivedPage(page)
-		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await test.step('Pass Age Gate', async () => {
 			await ageGatePage.passAgeGate()
@@ -56,7 +55,7 @@ test.describe('Medical Customer Checkout Florida', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsToCart(orderQuanity, mobile, 'Delivery', 'medical')
+			await shopPage.addProductsUntilCheckoutReady(cartPage, initialItemCount, 'Delivery', 'medical')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 

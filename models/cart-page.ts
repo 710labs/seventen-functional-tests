@@ -105,7 +105,7 @@ export class CartPage {
 		return null
 	}
 
-	async setProductQuantity(productId: number, quantity: number) {
+	async setProductQuantity(productId: number, quantity: number, { verify = true } = {}) {
 		if (!Number.isSafeInteger(quantity) || quantity < 1) throw new Error('Quantity must be a positive integer')
 		await test.step(`Set cart product ${productId} quantity to ${quantity}`, async () => {
 			const row = this.productRow(productId)
@@ -119,7 +119,7 @@ export class CartPage {
 			const update = this.page.locator('[name="update_cart"]')
 			if (await update.isVisible() && await update.isEnabled()) await update.click()
 			await expect(this.page.locator('.woocommerce-cart-form .blockUI')).toHaveCount(0)
-			await expect(input).toHaveValue(String(quantity))
+			if (verify) await expect(input).toHaveValue(String(quantity))
 		})
 	}
 
@@ -202,7 +202,7 @@ export class CartPage {
 			return conditionalButton
 		}
 
-		const checkoutButton = this.checkoutButton.first()
+		const checkoutButton = this.checkoutButton.locator('visible=true').first()
 		const isVisible = await checkoutButton
 			.waitFor({ state: 'visible', timeout: 10_000 })
 			.then(() => true)

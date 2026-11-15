@@ -57,7 +57,7 @@ test.describe('Basic Acceptance Tests NJ @smoke', () => {
 		})
 
 		await test.step('Add Products to Cart', async () => {
-			await shopPage.addProductsUntilCheckoutReady(cartItemCount, 'Pickup', 'medical')
+			await shopPage.addProductsUntilCheckoutReady(cartPage, cartItemCount, 'Pickup', 'medical')
 			cartTotals = await cartPage.verifyCart(zipCode)
 		})
 
