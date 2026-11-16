@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { writeFileSync } from 'node:fs'
+import { AgeGatePage } from '../../models/age-gate-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { isRegistrationEligibilityVisible } from '../../support/qa/registration-eligibility.cjs'
+
+test.use({ baseURL: 'https://registration.example' })
 
 const eligibilityPanel = `
 	<section id="eligibilityContext">
@@ -67,4 +71,35 @@ test('requires the registration button as well as eligibility fields', async ({ 
 	expect(await isRegistrationEligibilityVisible(page)).toBe(false)
 	await page.setContent('<button>Register</button>')
 	expect(await isRegistrationEligibilityVisible(page)).toBe(false)
+})
+
+test('waits for the medical upload widget to accept the selected file', async ({ page }, info) => {
+	const syntheticCard = info.outputPath('synthetic-medical-card.txt')
+	writeFileSync(syntheticCard, 'Synthetic upload test fixture')
+	await page.setContent(`
+		<div class="eligibilityInput">
+			<input name="svntn_core_medical_doc" type="file">
+			<span class="unsealSuccess" hidden>On file</span>
+		</div>
+		<script>
+			const input = document.querySelector('input')
+			input.addEventListener('click', () => setTimeout(() => {
+				input.addEventListener('change', () => {
+					if (input.files[0]?.name === 'synthetic-medical-card.txt') document.querySelector('.unsealSuccess').hidden = false
+				})
+			}, 100))
+		</script>
+	`)
+	await new CreateAccountPage(page)['uploadMedicalCard'](syntheticCard)
+	await expect(page.getByText('On file')).toBeVisible()
+})
+
+test('uses direct registration when the storefront redirects to its unprotected sign-in page', async ({ page }) => {
+	await page.route('https://registration.example/', route => route.fulfill({
+		contentType: 'text/html',
+		body: '<a href="/register/">Create an account</a><script>history.replaceState(null, "", "/my-account/")</script>',
+	}))
+	const ageGate = new AgeGatePage(page)
+	expect(await ageGate.passAgeGate({ allowDirectRegistration: true })).toBe(false)
+	await expect(page).toHaveURL('https://registration.example/my-account/')
 })

@@ -14,6 +14,7 @@ type AddProductsToCartOptions = {
 }
 
 export class ProductInventoryUnavailableError extends Error {}
+export class RecreationalInventoryUnavailableError extends ProductInventoryUnavailableError {}
 
 type AddToCartResult = {
 	added: boolean
@@ -44,6 +45,7 @@ export type StorefrontProductCandidate = {
 	price: number
 	sku: string | null
 	productId?: number
+	medicalOnly: boolean
 }
 
 export type CategoryProductCandidate = StorefrontProductCandidate & {
@@ -109,6 +111,8 @@ const storefrontAddToCartSelector = [
 ].join(', ')
 
 const stockRejectionMessage = /out of stock|insufficient stock|only\s+\d+\s+left|not enough stock/i
+const medicalOnlyProductBadge = '.medOnly, .med-metabadge'
+const medicalOnlyProductText = /\bmed(?:ical)?(?:[\s-]+only|\s+card\s+required)\b/i
 const defaultDeliveryAddress = '123 Rodeo Dr Beverly Hills'
 
 export class ShopPage {
@@ -772,11 +776,9 @@ export class ShopPage {
 		let products = this.page.locator('li.product').filter({ hasNotText: /Sold Out/i })
 
 		if (!isMedicalUsage(usage)) {
-			products = products.filter({
-				hasNot: this.page.locator(
-					'span.medOnly, .medOnly, .med-metabadge, .wpse-metabadge.med-metabadge',
-				),
-			})
+			products = products
+				.filter({ hasNot: this.page.locator(medicalOnlyProductBadge) })
+				.filter({ hasNotText: medicalOnlyProductText })
 		}
 
 		return products
@@ -794,7 +796,8 @@ export class ShopPage {
 		}
 
 		const addToCartButton = productCard.locator(storefrontAddToCartSelector).first()
-		const hasAddButton = await addToCartButton.isVisible().catch(() => false)
+		const hasAddButton = await addToCartButton.isVisible().catch(() => false) &&
+			await addToCartButton.isEnabled()
 
 		if (!hasAddButton) {
 			return null
@@ -843,6 +846,8 @@ export class ShopPage {
 			name,
 			price: Math.min(...parsedPrices),
 			sku,
+			medicalOnly: (await productCard.locator(medicalOnlyProductBadge).count()) > 0 ||
+				medicalOnlyProductText.test(await productCard.textContent() || ''),
 			...(rawId && /^\d+$/.test(rawId) ? { productId: Number(rawId) } : {}),
 		}
 	}
@@ -1731,22 +1736,30 @@ export class ShopPage {
 	): Promise<void> {
 		await test.step('Build a checkout-ready cart from the storefront', async () => {
 			const attemptedProducts = new Set<string>()
+			const addedProductIds = new Set<number>()
 			const quantityExhausted = new Set<number>()
 			const rejections: string[] = []
 			const openShop = async () => {
 				await this.page.goto('/')
 				await this.ensureFulfillmentSelected(fulfillment)
 			}
-			const addNextProduct = async (preferHigherPrice = false) => {
+			const addNextProduct = async ({ preferHigherPrice = false, medicalOnly }: {
+				preferHigherPrice?: boolean
+				medicalOnly?: boolean
+			} = {}) => {
 				if (!(await this.page.locator('li.product').count())) return false
 				const candidates = await this.getAddableStorefrontProducts(usage)
 				if (preferHigherPrice) candidates.sort((left, right) => right.price - left.price)
 				for (const candidate of candidates) {
+					if (medicalOnly !== undefined && candidate.medicalOnly !== medicalOnly) continue
 					const key = candidate.productId ? String(candidate.productId) : this.getProductCandidateKey(candidate)
 					if (attemptedProducts.has(key)) continue
 					attemptedProducts.add(key)
 					const result = await this.tryAddStorefrontProduct(candidate, usage)
-					if (result.added) return true
+					if (result.added) {
+						if (candidate.productId) addedProductIds.add(candidate.productId)
+						return true
+					}
 					rejections.push(`${candidate.name}: ${result.errorText || 'not added'}`)
 					if (!result.reservedStockRejected) await openShop()
 				}
@@ -1756,6 +1769,12 @@ export class ShopPage {
 			await openShop()
 			const existingItems = await this.getStorefrontCartItemCount()
 			let itemsAdded = 0
+			if (isMedicalUsage(usage)) {
+				await test.step('Add a medical-only product and a regular product when available', async () => {
+					if (await addNextProduct({ medicalOnly: true })) itemsAdded++
+					if (await addNextProduct({ medicalOnly: false })) itemsAdded++
+				})
+			}
 			let catalogExhausted = false
 			while (existingItems + itemsAdded < initialItemCount) {
 				if (!(await addNextProduct())) {
@@ -1765,6 +1784,13 @@ export class ShopPage {
 				itemsAdded++
 			}
 			if (existingItems + itemsAdded === 0) {
+				if (!isMedicalUsage(usage) && !attemptedProducts.size) {
+					const listedProducts = this.getAddableProductCards('medical').locator('visible=true')
+					const regularProducts = this.getAddableProductCards('recreational').locator('visible=true')
+					if (await listedProducts.count() && !(await regularProducts.count())) {
+						throw new RecreationalInventoryUnavailableError('The storefront has medical-only products and no eligible recreational products.')
+					}
+				}
 				throw new ProductInventoryUnavailableError(
 					`No available storefront products could be added. ${rejections.slice(-5).join(' | ')}`,
 				)
@@ -1784,15 +1810,15 @@ export class ShopPage {
 				}
 
 				const shortfall = banner.remainingAmount || 0
-				if (shortfall > 0 && await this.increaseCartQuantity(cart, shortfall, quantityExhausted, rejections)) continue
+				if (shortfall > 0 && await this.increaseCartQuantity(cart, shortfall, addedProductIds, quantityExhausted, rejections)) continue
 
 				if (!catalogExhausted) {
 					await openShop()
-					catalogExhausted = !(await addNextProduct(true))
+					catalogExhausted = !(await addNextProduct({ preferHigherPrice: true }))
 					await this.openCartWithItems(cartButtonDestination)
 					if (!catalogExhausted) continue
 				}
-				if (!shortfall && await this.increaseCartQuantity(cart, shortfall, quantityExhausted, rejections)) continue
+				if (!shortfall && await this.increaseCartQuantity(cart, shortfall, addedProductIds, quantityExhausted, rejections)) continue
 
 				const subtotal = await this.getCartSubtotalAmount()
 				throw new Error([
@@ -1807,6 +1833,7 @@ export class ShopPage {
 	private async increaseCartQuantity(
 		cart: CartPage,
 		shortfall: number,
+		addedProductIds: Set<number>,
 		quantityExhausted: Set<number>,
 		rejections: string[],
 	) {
@@ -1828,7 +1855,7 @@ export class ShopPage {
 		}).sort((left, right) => right.unitPrice - left.unitPrice)
 
 		for (const { productId, unitPrice, quantity, maximum } of eligible) {
-			if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isSafeInteger(quantity) ||
+			if (!addedProductIds.has(productId) || !Number.isSafeInteger(quantity) ||
 				quantity < 1 || quantityExhausted.has(productId)) continue
 			const unitsNeeded = shortfall
 				? Math.ceil(Math.round(shortfall * 100) / Math.round(unitPrice * 100))

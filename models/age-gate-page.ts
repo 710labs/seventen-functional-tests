@@ -57,8 +57,8 @@ export class AgeGatePage {
 		return null
 	}
 
-	async passAgeGate() {
-		await test.step('Pass Age Gate', async () => {
+	async passAgeGate({ allowDirectRegistration = false } = {}) {
+		return test.step('Pass Age Gate', async () => {
 			await addListBypassCookies(this.page.context(), process.env.BASE_URL)
 			const response = await this.page.goto('/', { waitUntil: 'domcontentloaded' })
 			await skipIfQueueIt(this.page)
@@ -90,7 +90,15 @@ export class AgeGatePage {
 
 				await ageGateButton.click()
 				await expect(this.page.locator('.age-gate-wrapper')).toBeHidden()
-			} else if (!(await passwordField.isVisible({ timeout: 1000 }).catch(() => false))) {
+			}
+
+			if (allowDirectRegistration && !(await passwordField.isVisible()) &&
+				/^\/my-account\/?$/.test(new URL(this.page.url()).pathname) &&
+				await this.page.getByRole('link', { name: /create an account/i }).isVisible()) {
+				return false
+			}
+
+			if (!ageGateButton && !(await passwordField.isVisible())) {
 				throw new Error(
 					[
 						'Could not find an age gate confirmation button or password field.',
@@ -105,6 +113,7 @@ export class AgeGatePage {
 				'Could not find the The List password field. The list password page may be in the incorrect order workflow',
 			).toBeVisible()
 			await passwordField.click()
+			return true
 		})
 	}
 

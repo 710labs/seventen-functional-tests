@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import { CartPage } from '../../models/cart-page'
-import { ShopPage } from '../../models/shop-page'
+import { RecreationalInventoryUnavailableError, ShopPage } from '../../models/shop-page'
+import type { TestUsageType } from '../../utils/usage-types'
 
 const origin = 'https://list-smoke-cart.test'
 test.use({ baseURL: origin })
 
-type Product = { id: number; price: number; max?: number; stock?: number }
+type Product = { id: number; price: number; max?: number; stock?: number; medical?: 'badge' | 'title'; hideAdd?: boolean }
 
 async function mockStorefront(page: Page, products: Product[], minimum: number, cartPath = '/cart/', showShortfall = true) {
 	const quantities = new Map<number, number>()
@@ -23,8 +24,11 @@ async function mockStorefront(page: Page, products: Product[], minimum: number, 
 			await route.fulfill({ contentType: 'text/html', body: `
 				<button class="wcse-nav">Pickup</button>
 				<a class="cart-contents" href="${cartPath}">Cart (${[...quantities.values()].reduce((sum, value) => sum + value, 0)})</a>
-				<ul>${products.map(({ id, price }) => `<li class="product"><h2>Product ${id}</h2>
-					<span class="price">$${price}</span><button class="add_to_cart_button" data-product_id="${id}">Add</button></li>`).join('')}</ul>
+				<ul>${products.map(({ id, price, medical, hideAdd }) => `<li class="product">
+					<h2>Product ${id}${medical === 'title' ? ' (MED CARD REQUIRED)' : ''}</h2>
+					${medical === 'badge' ? '<span class="medOnly">MED ONLY</span>' : ''}
+					<span class="price">$${price}</span>
+					${hideAdd ? '' : `<button class="add_to_cart_button" data-product_id="${id}">Add</button>`}</li>`).join('')}</ul>
 				<script>
 					for (const button of document.querySelectorAll('.add_to_cart_button')) {
 						button.onclick = async () => {
@@ -112,4 +116,39 @@ test('increases quantity incrementally when the banner omits the shortfall', asy
 
 	expect([...quantities]).toEqual([[1, 4]])
 	await expect(page.locator('.checkout-button')).toBeVisible()
+})
+
+const regular: Product = { id: 1, price: 150 }
+const medicalByTitle: Product = { id: 2, price: 150, medical: 'title' }
+const medicalByBadge: Product = { id: 3, price: 150, medical: 'badge' }
+const eligibilityCases: { name: string; products: Product[]; usage: TestUsageType; target: number; expected: number[] }[] = [
+	{ name: 'recreational skips medical badges and card-required titles', products: [medicalByBadge, medicalByTitle, regular],
+		usage: 'recreational', target: 3, expected: [1] },
+	{ name: 'medical adds medical-only first and also adds regular with a target of one', products: [regular, medicalByTitle],
+		usage: 'medical', target: 1, expected: [2, 1] },
+	{ name: 'medical can check out with a regular-only menu', products: [regular],
+		usage: 'medical', target: 3, expected: [1] },
+	{ name: 'medical can check out with a medical-only menu', products: [medicalByBadge],
+		usage: 'medical', target: 3, expected: [3] },
+]
+
+for (const { name, products, usage, target, expected } of eligibilityCases) {
+	test(name, async ({ page, browserName }, info) => {
+		const quantities = await mockStorefront(page, products, 150)
+		const shop = new ShopPage(page, browserName, info)
+		const cart = new CartPage(page, null!, browserName, info, usage)
+		await shop.addProductsUntilCheckoutReady(cart, target, 'Pickup', usage)
+
+		expect([...quantities.keys()]).toEqual(expected)
+		await expect(page.locator('.checkout-button')).toBeVisible()
+	})
+}
+
+test('recreational reports ineligible inventory without attempting an add on a medical-only menu', async ({ page, browserName }, info) => {
+	const quantities = await mockStorefront(page, [{ ...medicalByTitle, hideAdd: true }], 150)
+	const shop = new ShopPage(page, browserName, info)
+	const cart = new CartPage(page, null!, browserName, info, 'recreational')
+	await expect(shop.addProductsUntilCheckoutReady(cart, 1, 'Pickup', 'recreational'))
+		.rejects.toBeInstanceOf(RecreationalInventoryUnavailableError)
+	expect(quantities.size).toBe(0)
 })
