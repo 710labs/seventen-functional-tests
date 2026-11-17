@@ -17,7 +17,8 @@ jobs:
     name: List Dev — all states
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    # Playwright 1.59.1 cannot install Chromium on Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     concurrency:
       group: thelist-dev-domain-state
@@ -77,7 +78,7 @@ jobs:
     name: List Stage — all states
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     concurrency:
       group: thelist-stage-domain-state
@@ -137,7 +138,7 @@ jobs:
     name: List Prod — ${{ matrix.state_label }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -199,6 +200,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
       - name: Clear previous production order IDs
+        id: clear_order_ids
         run: rm -f order_id.txt order_ids.txt
       - name: Run List Prod health check
         id: health
@@ -206,7 +208,7 @@ jobs:
         run: node scripts/health/run-playwright-check.js ${{ matrix.id }}
       - name: Cancel production test orders
         id: cleanup
-        if: always()
+        if: always() && steps.clear_order_ids.outcome == 'success'
         continue-on-error: true
         env:
           WC_CONSUMER_KEY: ${{ secrets[matrix.woo_key_secret] }}
@@ -228,7 +230,7 @@ jobs:
     name: Live Dev — storefront
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     outputs:
       order_ids_json: ${{ steps.orders.outputs.order_ids_json }}
@@ -330,7 +332,7 @@ jobs:
     name: Live Stage — storefront
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     outputs:
       order_ids_json: ${{ steps.orders.outputs.order_ids_json }}
@@ -432,7 +434,7 @@ jobs:
     name: ${{ matrix.label }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     strategy:
       fail-fast: false
