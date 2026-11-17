@@ -3,6 +3,7 @@ import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
 import { ShopPage } from '../../models/shop-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
@@ -28,7 +29,6 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('medical', 'current')
@@ -38,7 +38,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 				await myAccountPage.addAddress(address, city, state, zipCode)
 			}
 			await myAccountPage.addMedicalExp()
-			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'medical')
+			await buildListOrderCart(shopPage, cartPage, 'Pickup')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'medical')
 		},
@@ -56,7 +56,6 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
@@ -80,7 +79,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addColoradoAddress()
 			}
-			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'medical')
+			await buildListOrderCart(shopPage, cartPage, 'Pickup')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'medical')
 		},
@@ -101,7 +100,6 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('recreational', 'current')
@@ -111,7 +109,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 				await myAccountPage.addAddress(address, city, state, zipCode)
 			}
 
-			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'recreational')
+			await buildListOrderCart(shopPage, cartPage, 'Pickup')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'recreational')
 		},
@@ -128,7 +126,6 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
@@ -151,7 +148,7 @@ test.describe('CO Order Tests', { tag: ['@CO'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addColoradoAddress()
 			}
-			await shopPage.addProductsToCartPickup(6, mobile, 'Pickup', 'recreational')
+			await buildListOrderCart(shopPage, cartPage, 'Pickup')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckoutColorado(zipCode, cartTotals, 'recreational')
 		},

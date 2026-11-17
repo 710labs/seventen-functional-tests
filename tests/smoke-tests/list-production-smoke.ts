@@ -7,7 +7,8 @@ import { CheckoutPage } from '../../models/checkout-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
-import { RecreationalInventoryUnavailableError, ShopPage, type ShopFulfillment } from '../../models/shop-page'
+import { ShopPage, type ShopFulfillment } from '../../models/shop-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 import { withQueueItDetection } from '../../support/queueit'
 import { getSmokeCartItemCount } from '../../utils/smoke-cart-item-count'
 import { getUsageLabel, type TestUsageType } from '../../utils/usage-types'
@@ -57,12 +58,10 @@ export function runListProductionSmoke(profile: ProductionSmokeProfile) {
 						}
 					})
 
-					try {
-						await shop.addProductsUntilCheckoutReady(cart, itemCount, fulfillment, usage, cartDestination)
-					} catch (error) {
-						if (!(error instanceof RecreationalInventoryUnavailableError)) throw error
-						test.skip(true, `Recreational registration passed. Checkout skipped. ${error.message}`)
-					}
+					await buildListOrderCart(shop, cart, fulfillment, {
+						initialItemCount: itemCount,
+						cartButtonDestination: cartDestination,
+					})
 
 					if (state === 'MI') {
 						await cart.goToCheckout()

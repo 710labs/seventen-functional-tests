@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { CartPage } from '../../models/cart-page'
 import { RecreationalInventoryUnavailableError, ShopPage } from '../../models/shop-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 import type { TestUsageType } from '../../utils/usage-types'
 
 const origin = 'https://list-smoke-cart.test'
@@ -112,7 +113,7 @@ test('increases quantity incrementally when the banner omits the shortfall', asy
 	const quantities = await mockStorefront(page, [{ id: 1, price: 40, max: 5 }], 150, '/cart/', false)
 	const shop = new ShopPage(page, browserName, info)
 	const cart = new CartPage(page, null!, browserName, info, 'recreational')
-	await shop.addProductsUntilCheckoutReady(cart, 3, 'Pickup', 'recreational')
+	await buildListOrderCart(shop, cart, 'Pickup')
 
 	expect([...quantities]).toEqual([[1, 4]])
 	await expect(page.locator('.checkout-button')).toBeVisible()
@@ -121,6 +122,24 @@ test('increases quantity incrementally when the banner omits the shortfall', asy
 const regular: Product = { id: 1, price: 150 }
 const medicalByTitle: Product = { id: 2, price: 150, medical: 'title' }
 const medicalByBadge: Product = { id: 3, price: 150, medical: 'badge' }
+
+for (const usage of ['medical', 'recreational'] as const) {
+	test(`List order defaults to four distinct products for a ${usage} customer`, async ({ page, browserName }, info) => {
+		const regularProducts = Array.from({ length: 5 }, (_, index) => ({ id: index + 4, price: 50 }))
+		const products = [...regularProducts, medicalByBadge]
+		const quantities = await mockStorefront(page, products, 150)
+		const shop = new ShopPage(page, browserName, info)
+		const cart = new CartPage(page, null!, browserName, info, usage)
+
+		await buildListOrderCart(shop, cart, 'Pickup')
+
+		expect([...quantities]).toEqual(usage === 'medical'
+			? [[3, 1], [4, 1], [5, 1], [6, 1]]
+			: [[4, 1], [5, 1], [6, 1], [7, 1]])
+		await expect(page.locator('.checkout-button')).toBeVisible()
+	})
+}
+
 const eligibilityCases: { name: string; products: Product[]; usage: TestUsageType; target: number; expected: number[] }[] = [
 	{ name: 'recreational skips medical badges and card-required titles', products: [medicalByBadge, medicalByTitle, regular],
 		usage: 'recreational', target: 3, expected: [1] },

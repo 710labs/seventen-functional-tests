@@ -3,6 +3,7 @@ import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { LoginPage } from '../../models/login-page'
 import { ShopPage } from '../../models/shop-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
@@ -24,7 +25,6 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('medical', 'current')
@@ -35,7 +35,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			}
 			await myAccountPage.addMedicalExp()
 
-			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'medical')
+			await buildListOrderCart(shopPage, cartPage, 'Delivery')
 			var cartTotals = await cartPage.verifyCart(`94020`)
 			await checkOutPage.confirmCheckout('94020', cartTotals, 'medical')
 		},
@@ -53,7 +53,6 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
@@ -77,7 +76,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'medical')
+			await buildListOrderCart(shopPage, cartPage, 'Delivery')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 'medical')
 		},
@@ -94,7 +93,6 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			await ageGatePage.passAgeGate()
 			var user = await createAccountPage.createApi('recreational', 'current')
@@ -103,7 +101,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'recreational')
+			await buildListOrderCart(shopPage, cartPage, 'Delivery')
 			var cartTotals = await cartPage.verifyCart(`94020`)
 			await checkOutPage.confirmCheckout('94020', cartTotals, 'recreational')
 		},
@@ -119,7 +117,6 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			const shopPage = new ShopPage(page, browserName, workerInfo)
 			const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
 			const checkOutPage = new CheckoutPage(page, qaClient)
-			var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 			const zipCode = '90210'
 
@@ -145,7 +142,7 @@ test.describe('CA Order Tests', { tag: ['@CA'] }, () => {
 			if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 				await myAccountPage.addAddress()
 			}
-			await shopPage.addProductsToCart(4, mobile, 'Delivery', 'recreational')
+			await buildListOrderCart(shopPage, cartPage, 'Delivery')
 			var cartTotals = await cartPage.verifyCart(zipCode)
 			await checkOutPage.confirmCheckout(zipCode, cartTotals, 'recreational')
 		},

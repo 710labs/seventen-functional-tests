@@ -55,7 +55,6 @@ test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName, qaClie
 	const myAccountPage = new MyAccountPage(page)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
 	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
-	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
@@ -64,7 +63,7 @@ test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName, qaClie
 	await addCartTimerAddress(myAccountPage)
 
 	//Act
-	await shopPage.addProductsToCart(6, mobile, 'Pickup', 'recreational')
+	await shopPage.addProductsToCart(1, false, 'Pickup', 'recreational', { exactItemCount: true })
 
 	//Assert
 	await cartPage.cartCounter.waitFor()
