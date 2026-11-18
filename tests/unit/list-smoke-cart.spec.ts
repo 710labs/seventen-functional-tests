@@ -1,18 +1,47 @@
 import { expect, test, type Page } from '@playwright/test'
 import { CartPage } from '../../models/cart-page'
-import { RecreationalInventoryUnavailableError, ShopPage } from '../../models/shop-page'
+import {
+	ProductInventoryUnavailableError,
+	RecreationalInventoryUnavailableError,
+	ShopPage,
+	type ShopFulfillment,
+} from '../../models/shop-page'
 import { buildListOrderCart } from '../../support/list-order-cart'
 import type { TestUsageType } from '../../utils/usage-types'
 
 const origin = 'https://list-smoke-cart.test'
 test.use({ baseURL: origin })
 
-type Product = { id: number; price: number; max?: number; stock?: number; medical?: 'badge' | 'title'; hideAdd?: boolean }
+type Product = {
+	id: number
+	price: number
+	max?: number
+	stock?: number
+	medical?: 'badge' | 'title'
+	hideAdd?: boolean
+	waitlist?: boolean
+}
+type StorefrontOptions = {
+	showShortfall?: boolean
+	fulfillment?: ShopFulfillment
+	waitlistSubmissions?: number[]
+	rejectWaitlist?: boolean
+}
 
-async function mockStorefront(page: Page, products: Product[], minimum: number, cartPath = '/cart/', showShortfall = true) {
+async function mockStorefront(page: Page, products: Product[], minimum: number, cartPath = '/cart/', {
+	showShortfall = true,
+	fulfillment = 'Pickup',
+	waitlistSubmissions = [],
+	rejectWaitlist = false,
+}: StorefrontOptions = {}) {
 	const quantities = new Map<number, number>()
 	await page.route(`${origin}/**`, async route => {
 		const { pathname } = new URL(route.request().url())
+		if (pathname === '/waitlist') {
+			waitlistSubmissions.push(route.request().postDataJSON().id)
+			await route.fulfill({ status: rejectWaitlist ? 409 : 200 })
+			return
+		}
 		if (pathname === '/add' || pathname === '/quantity') {
 			const { id, quantity } = route.request().postDataJSON()
 			const product = products.find(product => product.id === id)!
@@ -23,19 +52,47 @@ async function mockStorefront(page: Page, products: Product[], minimum: number, 
 		}
 		if (pathname === '/') {
 			await route.fulfill({ contentType: 'text/html', body: `
-				<button class="wcse-nav">Pickup</button>
+				<button class="wcse-nav">${fulfillment}</button>
 				<a class="cart-contents" href="${cartPath}">Cart (${[...quantities.values()].reduce((sum, value) => sum + value, 0)})</a>
-				<ul>${products.map(({ id, price, medical, hideAdd }) => `<li class="product">
+				<ul>${products.map(({ id, price, medical, hideAdd, waitlist }) => `<li class="product">
 					<h2>Product ${id}${medical === 'title' ? ' (MED CARD REQUIRED)' : ''}</h2>
 					${medical === 'badge' ? '<span class="medOnly">MED ONLY</span>' : ''}
 					<span class="price">$${price}</span>
-					${hideAdd ? '' : `<button class="add_to_cart_button" data-product_id="${id}">Add</button>`}</li>`).join('')}</ul>
+					${waitlist ? `<span>Sold Out</span><button class="waitlist-button" data-product_id="${id}">Join Waitlist</button>` : ''}
+					${hideAdd || waitlist ? '' : `<button class="add_to_cart_button" data-product_id="${id}">Add</button>`}</li>`).join('')}</ul>
+				<div id="waitlistElement" hidden>
+					<input type="hidden" id="waitlist_product_id">
+					<input type="hidden" id="waitlist_method" value="${fulfillment.toLowerCase()}">
+					<div id="waitlist_error"></div>
+					<button id="waitlistSubmit">Join waitlist</button>
+				</div>
 				<script>
 					for (const button of document.querySelectorAll('.add_to_cart_button')) {
 						button.onclick = async () => {
 							const response = await fetch('/add', { method: 'POST', body: JSON.stringify({ id: +button.dataset.product_id, quantity: 1 }) })
 							document.querySelector('.cart-contents').textContent = 'Cart (' + (await response.json()).count + ')'
 						}
+					}
+					const modal = document.querySelector('#waitlistElement')
+					const productId = modal.querySelector('#waitlist_product_id')
+					for (const button of document.querySelectorAll('.waitlist-button')) {
+						button.onclick = () => {
+							productId.value = button.dataset.product_id
+							modal.hidden = false
+						}
+					}
+					modal.querySelector('#waitlistSubmit').onclick = async () => {
+						const id = Number(productId.value)
+						const response = await fetch('/waitlist', { method: 'POST', body: JSON.stringify({ id }) })
+						if (!response.ok) {
+							modal.querySelector('#waitlist_error').textContent = 'Waitlist submission failed'
+							return
+						}
+						const button = document.querySelector('.waitlist-button[data-product_id="' + id + '"]')
+						button.textContent = 'On waitlist'
+						button.classList.add('on-waitlist')
+						button.setAttribute('aria-disabled', 'true')
+						modal.hidden = true
 					}
 				</script>` })
 			return
@@ -89,7 +146,9 @@ for (const { name, products, target, cartPath, expected } of cases) {
 		const shop = new ShopPage(page, browserName, info)
 		const cart = new CartPage(page, null!, browserName, info, 'recreational')
 
-		await shop.addProductsUntilCheckoutReady(cart, target, 'Pickup', 'recreational', cartPath)
+		await shop.addProductsUntilCheckoutReady(cart, target, 'Pickup', 'recreational', {
+			cartButtonDestination: cartPath,
+		})
 
 		expect([...quantities]).toEqual(expected)
 		await expect(page.locator('.checkout-button')).toBeVisible()
@@ -99,18 +158,23 @@ for (const { name, products, target, cartPath, expected } of cases) {
 }
 
 test('fails with the remaining minimum when inventory cannot build a valid cart', async ({ page, browserName }, info) => {
-	const quantities = await mockStorefront(page, [{ id: 1, price: 40, max: 2 }], 150)
+	const waitlistSubmissions: number[] = []
+	const quantities = await mockStorefront(page, [
+		{ id: 1, price: 40, max: 2 },
+		{ id: 2, price: 150, waitlist: true },
+	], 150, '/cart/', { waitlistSubmissions })
 	const shop = new ShopPage(page, browserName, info)
 	const cart = new CartPage(page, null!, browserName, info, 'recreational')
 
-	await expect(shop.addProductsUntilCheckoutReady(cart, 3, 'Pickup', 'recreational', '/cart/'))
+	await expect(buildListOrderCart(shop, cart, 'Pickup', { allowWaitlist: true }))
 		.rejects.toThrow('Add $70 to check out')
 	expect([...quantities]).toEqual([[1, 2]])
+	expect(waitlistSubmissions).toEqual([])
 	await expect(page.locator('.checkout-button')).toBeHidden()
 })
 
 test('increases quantity incrementally when the banner omits the shortfall', async ({ page, browserName }, info) => {
-	const quantities = await mockStorefront(page, [{ id: 1, price: 40, max: 5 }], 150, '/cart/', false)
+	const quantities = await mockStorefront(page, [{ id: 1, price: 40, max: 5 }], 150, '/cart/', { showShortfall: false })
 	const shop = new ShopPage(page, browserName, info)
 	const cart = new CartPage(page, null!, browserName, info, 'recreational')
 	await buildListOrderCart(shop, cart, 'Pickup')
@@ -170,4 +234,72 @@ test('recreational reports ineligible inventory without attempting an add on a m
 	await expect(shop.addProductsUntilCheckoutReady(cart, 1, 'Pickup', 'recreational'))
 		.rejects.toBeInstanceOf(RecreationalInventoryUnavailableError)
 	expect(quantities.size).toBe(0)
+})
+
+for (const { usage, fulfillment, expectedId } of [
+	{ usage: 'recreational', fulfillment: 'Pickup', expectedId: 1 },
+	{ usage: 'medical', fulfillment: 'Delivery', expectedId: 3 },
+] as const) {
+	test(`production smoke joins the eligible ${fulfillment.toLowerCase()} waitlist for a ${usage} customer`, async ({ page, browserName }, info) => {
+		const waitlistSubmissions: number[] = []
+		const products = [regular, medicalByBadge].map(product => ({ ...product, waitlist: true }))
+		const quantities = await mockStorefront(page, products, 150, '/cart/', { fulfillment, waitlistSubmissions })
+		const shop = new ShopPage(page, browserName, info)
+		const cart = new CartPage(page, null!, browserName, info, usage)
+
+		await expect(buildListOrderCart(shop, cart, fulfillment, { allowWaitlist: true })).resolves.toBe('waitlist')
+
+		expect(waitlistSubmissions).toEqual([expectedId])
+		expect(quantities.size).toBe(0)
+		await expect(page).toHaveURL(`${origin}/`)
+		await expect(page.getByRole('button', { name: 'On waitlist' })).toBeDisabled()
+	})
+}
+
+test('production smoke checks out if products are available alongside a waitlist', async ({ page, browserName }, info) => {
+	const waitlistSubmissions: number[] = []
+	const quantities = await mockStorefront(page, [
+		regular, { id: 4, price: 150, waitlist: true },
+	], 150, '/cart/', { waitlistSubmissions })
+	const shop = new ShopPage(page, browserName, info)
+	const cart = new CartPage(page, null!, browserName, info, 'recreational')
+
+	await expect(buildListOrderCart(shop, cart, 'Pickup', { allowWaitlist: true })).resolves.toBe('checkout')
+
+	expect([...quantities.keys()]).toEqual([regular.id])
+	expect(waitlistSubmissions).toEqual([])
+	await expect(page.locator('.checkout-button')).toBeVisible()
+})
+
+test('production smoke fails when inventory is unavailable and the waitlist is missing', async ({ page, browserName }, info) => {
+	await mockStorefront(page, [{ ...regular, hideAdd: true }], 150)
+	const shop = new ShopPage(page, browserName, info)
+	const cart = new CartPage(page, null!, browserName, info, 'recreational')
+
+	await expect(buildListOrderCart(shop, cart, 'Pickup', { allowWaitlist: true }))
+		.rejects.toBeInstanceOf(ProductInventoryUnavailableError)
+})
+
+test('production smoke fails if the storefront rejects the waitlist signup', async ({ page, browserName }, info) => {
+	const waitlistSubmissions: number[] = []
+	await mockStorefront(page, [{ ...regular, waitlist: true }], 150, '/cart/', {
+		waitlistSubmissions,
+		rejectWaitlist: true,
+	})
+	const shop = new ShopPage(page, browserName, info)
+	const cart = new CartPage(page, null!, browserName, info, 'recreational')
+
+	await expect(buildListOrderCart(shop, cart, 'Pickup', { allowWaitlist: true }))
+		.rejects.toThrow('Waitlist submission was rejected')
+	expect(waitlistSubmissions).toEqual([regular.id])
+})
+
+test('checkout-only tests do not join a waitlist', async ({ page, browserName }, info) => {
+	const waitlistSubmissions: number[] = []
+	await mockStorefront(page, [{ ...regular, waitlist: true }], 150, '/cart/', { waitlistSubmissions })
+	const shop = new ShopPage(page, browserName, info)
+	const cart = new CartPage(page, null!, browserName, info, 'recreational')
+
+	await expect(buildListOrderCart(shop, cart, 'Pickup')).rejects.toBeInstanceOf(ProductInventoryUnavailableError)
+	expect(waitlistSubmissions).toEqual([])
 })

@@ -58,10 +58,15 @@ export function runListProductionSmoke(profile: ProductionSmokeProfile) {
 						}
 					})
 
-					await buildListOrderCart(shop, cart, fulfillment, {
+					const outcome = await buildListOrderCart(shop, cart, fulfillment, {
 						initialItemCount: itemCount,
 						cartButtonDestination: cartDestination,
+						allowWaitlist: !/^(?:dev|stage|staging)-/i.test(process.env.ENV_ID || ''),
 					})
+					if (outcome === 'waitlist') {
+						info.annotations.push({ type: 'waitlist', description: 'Joined an eligible product waitlist.' })
+						return
+					}
 
 					if (state === 'MI') {
 						await cart.goToCheckout()

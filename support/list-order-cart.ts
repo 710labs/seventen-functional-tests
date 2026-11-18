@@ -10,21 +10,24 @@ export async function buildListOrderCart(
 	shop: ShopPage,
 	cart: CartPage,
 	fulfillment: ShopFulfillment,
-	{ initialItemCount = 4, cartButtonDestination }: {
+	{ initialItemCount = 4, cartButtonDestination, allowWaitlist = false }: {
 		initialItemCount?: number
 		cartButtonDestination?: string
+		allowWaitlist?: boolean
 	} = {},
-) {
+): Promise<'checkout' | 'waitlist'> {
 	try {
-		await shop.addProductsUntilCheckoutReady(
+		return await shop.addProductsUntilCheckoutReady(
 			cart,
 			initialItemCount,
 			fulfillment,
 			cart.usageType,
-			cartButtonDestination,
+			{ cartButtonDestination, allowWaitlist },
 		)
 	} catch (error) {
-		if (!(error instanceof RecreationalInventoryUnavailableError)) throw error
-		test.skip(true, `Recreational registration passed. Checkout skipped. ${error.message}`)
+		if (error instanceof RecreationalInventoryUnavailableError) {
+			test.skip(true, `Recreational registration passed. Checkout skipped. ${error.message}`)
+		}
+		throw error
 	}
 }
