@@ -6,7 +6,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: employee-prod employee-store.710labs.com
       ENV_ID: employee-prod
