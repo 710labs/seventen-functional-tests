@@ -48,7 +48,11 @@ export class MyAccountPage {
 		})
 		await test.step('Logout User', async () => {
 			await this.page.goto('/my-account/')
-			await this.logoutLink.click()
+			await expect(this.logoutLink).toHaveAttribute('href', /.+/)
+			const logoutUrl = new URL(await this.logoutLink.getAttribute('href'), this.page.url())
+			expect(logoutUrl.origin, 'Sign Out must stay on the current storefront').toBe(new URL(this.page.url()).origin)
+			expect(logoutUrl.pathname, 'Sign Out must use the customer logout route').toMatch(/^\/my-account\/customer-logout\/?$/)
+			await this.page.goto(logoutUrl.href)
 			await expect(this.page.locator('h2:has-text("Sign In")')).toBeVisible()
 		})
 	}

@@ -1116,6 +1116,8 @@ export class ShopPage {
 			for (let pass = 0; pass < 20; pass += 1) {
 				// Re-read rows after each cart update; an overlay can outlive a removed row.
 				await expect(this.page.locator('.blockUI.blockOverlay:visible')).toHaveCount(0, { timeout: 30000 })
+				const dismissNotice = this.page.locator('button.notyf__dismiss-btn:visible').first()
+				if (await dismissNotice.isVisible()) await dismissNotice.click()
 				const rows = this.page.locator('.cart_item')
 				if (await rows.count() === 0) return
 				const removeLink = rows.first().locator('.product-remove a, a.remove').first()

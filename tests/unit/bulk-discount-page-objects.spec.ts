@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { readStoreTaxConfiguration } from '../../support/bulk-discounts/store-tax-configuration'
 import { CartPage } from '../../models/cart-page'
 import { CheckoutPage } from '../../models/checkout-page'
+import { MyAccountPage } from '../../models/my-account-page'
 import { ShopPage, ProductInventoryUnavailableError } from '../../models/shop-page'
 import { OrderReceivedPage } from '../../models/order-recieved-page'
 import { moneyInCents } from '../../models/components/order-pricing'
@@ -11,6 +12,31 @@ const { expectedCart } = require('../../support/bulk-discounts/oracle.cjs')
 const expected = expectedCart([{ productId: 101, categoryIds: [331], qty: 3, unitPrice: '39.00', isFreeBogoUnit: false }])
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`
 const amount = (cents: number) => `<span class="amount">${dollars(cents)}</span>`
+
+test('logout follows the account link when the reservation bar covers Sign Out', async ({ browser }) => {
+	const origin = 'https://account.test'
+	const context = await browser.newContext({ baseURL: origin })
+	const page = await context.newPage()
+	const logoutPath = '/my-account/customer-logout/?_wpnonce=fixture-nonce'
+	const navigations: string[] = []
+	try {
+		await page.route(`${origin}/**`, route => {
+			const url = new URL(route.request().url())
+			navigations.push(url.pathname + url.search)
+			return route.fulfill({ contentType: 'text/html', body: url.pathname === '/my-account/customer-logout/'
+				? '<h2>Sign In</h2>'
+				: `<a href="${logoutPath}">Sign Out</a>
+					<div class="rsp-zone__inner" style="position:fixed;inset:0;z-index:999">Items held for 9:00</div>
+					<div class="site-info"><span><a href="/terms-of-use/">Terms of Service</a></span><a href="/privacy-policy/">Privacy Policy</a></div>` })
+		})
+		await page.goto('/my-account/')
+		await new MyAccountPage(page).logout()
+		await expect(page).toHaveURL(origin + logoutPath)
+		expect(navigations).toEqual(['/my-account/', '/my-account/', logoutPath])
+	} finally {
+		await context.close()
+	}
+})
 
 test('storefront becomes usable while a background request remains pending', async ({ browser }, info) => {
 	test.setTimeout(10000)
@@ -142,6 +168,34 @@ test('quantity edits submit the shared cart form and product removal targets one
 	await cart.verifyEmpty()
 })
 
+test('quantity edits wait for a delayed save before leaving the cart', async ({ page }, info) => {
+	const origin = 'https://quantity-save.test'
+	let savedQuantity = 1
+	const markup = () => `<form class="woocommerce-cart-form">
+		<table><tr class="cart_item"><td><a data-product_id="101">Product</a>
+		<input class="qty" name="cart[fixture][qty]" value="${savedQuantity}"></td></tr></table>
+		<button type="button" name="update_cart">Update</button></form>
+		<script>
+		document.querySelector('button').onclick = async () => {
+			const quantity = document.querySelector('input').value
+			await new Promise(resolve => setTimeout(resolve, 300))
+			const response = await fetch('/cart/', { method: 'POST', body: new URLSearchParams({ 'cart[fixture][qty]': quantity }) })
+			document.open(); document.write(await response.text()); document.close()
+		}
+		</script>`
+	await page.route(`${origin}/cart/`, route => {
+		if (route.request().method() === 'POST') {
+			savedQuantity = Number(new URLSearchParams(route.request().postData()!).get('cart[fixture][qty]'))
+		}
+		return route.fulfill({ contentType: 'text/html', body: markup() })
+	})
+	await page.goto(`${origin}/cart/`)
+	await new CartPage(page, null!, 'chromium', info, 'recreational').setProductQuantity(101, 3)
+	expect(savedQuantity).toBe(3)
+	await page.reload()
+	await expect(page.locator('input.qty')).toHaveValue('3')
+})
+
 for (const mode of ['stale-header', 'wrong-product', 'unchanged-quantity'] as const) {
 	test(`selected products require the actual cart ID and quantity: ${mode}`, async ({ browser }, info) => {
 		const context = await browser.newContext({ baseURL: 'https://cart-confirm.test' })
@@ -241,7 +295,7 @@ test('category slugs resolve across reordered pages with different environment I
 	} finally { page.request.get = originalGet }
 })
 
-test('cart cleanup waits for asynchronous removal before targeting the next product', async ({ browser }, info) => {
+test('cart cleanup waits for removal and dismisses coupon notices before the next product', async ({ browser }, info) => {
 	const context = await browser.newContext({ baseURL: 'https://cleanup.test' })
 	try {
 		const page = await context.newPage()
@@ -254,7 +308,14 @@ test('cart cleanup waits for asynchronous removal before targeting the next prod
 				const overlay = document.createElement('div'); overlay.className='blockUI blockOverlay';
 				overlay.style='position:fixed;inset:0;background:#fff8;z-index:9999'; document.body.append(overlay);
 				setTimeout(() => { link.closest('tr').remove(); }, 700);
-				setTimeout(() => { overlay.remove(); }, 1100);
+				setTimeout(() => {
+					overlay.remove()
+					const notice = document.createElement('div')
+					notice.style = 'position:fixed;inset:0;z-index:10000;background:#fff8'
+					notice.innerHTML = 'Coupon removed<button class="notyf__dismiss-btn">Dismiss</button>'
+					notice.querySelector('button').onclick = () => notice.remove()
+					document.body.append(notice)
+				}, 1100);
 			});</script>` }))
 		await page.goto('https://cleanup.test/cart/')
 		await new ShopPage(page, 'chromium', info).clearStorefrontCart()
