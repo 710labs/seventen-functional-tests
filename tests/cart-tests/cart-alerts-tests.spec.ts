@@ -6,6 +6,7 @@ import { ShopPage } from '../../models/shop-page'
 import { CartPage } from '../../models/cart-page'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { MyAccountPage } from '../../models/my-account-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 
 type CartTimerState = 'ca' | 'co' | 'mi' | 'nj'
 
@@ -45,9 +46,6 @@ async function addCartTimerAddress(myAccountPage: MyAccountPage) {
 }
 
 test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName, qaClient }, workerInfo) => {
-	//Arrange
-
-	//Setup Pages
 	const ageGatePage = new AgeGatePage(page)
 	const listPassword = new ListPasswordPage(page)
 	const createAccountPage = new CreateAccountPage(page, qaClient)
@@ -55,7 +53,6 @@ test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName, qaClie
 	const myAccountPage = new MyAccountPage(page)
 	const shopPage = new ShopPage(page, browserName, workerInfo)
 	const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'recreational')
-	var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 	await ageGatePage.passAgeGate()
 	await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
@@ -63,10 +60,44 @@ test('Cart Timer Is Visible @MI @CA @CO @NJ', async ({ page, browserName, qaClie
 	await loginPage.login(user.email, user.password)
 	await addCartTimerAddress(myAccountPage)
 
-	//Act
-	await shopPage.addProductsToCart(6, mobile, 'Pickup', 'recreational')
+	if (new URL(page.url()).hostname !== 'thelist-dev.710labs.com') {
+		await shopPage.addProductsToCart(1, false, 'Pickup', 'recreational', { exactItemCount: true })
+		await expect(cartPage.cartCounter).toContainText('Your cart is reserved for')
+		return
+	}
 
-	//Assert
-	await cartPage.cartCounter.waitFor()
-	await expect(cartPage.cartCounter).toContainText('Your cart is reserved for')
+	try {
+		await buildListOrderCart(shopPage, cartPage, 'Pickup', { initialItemCount: 1 })
+		await page.goto('/')
+		const shopUrl = new URL(page.url())
+		const checkoutUrl = new URL('/checkout/', shopUrl)
+		const isCheckout = (url: URL) => url.origin === shopUrl.origin && /^\/checkout\/?$/.test(url.pathname)
+		const timerBar = page.locator('.rsp-zone__inner:visible')
+		const countdown = timerBar.locator('.rsp-zone__time')
+
+		await test.step('Verify the reservation timer and open checkout from its bar', async () => {
+			const label = timerBar.locator('.rsp-zone__label--held')
+			await expect(label).toBeVisible()
+			await expect(label).toHaveText('Items held for')
+			await expect(countdown).toBeVisible()
+			await expect(countdown).toHaveText(/^\d{1,2}:[0-5]\d$/)
+
+			const shortcut = timerBar.getByRole('link', { name: 'Checkout', exact: true })
+			await expect(shortcut).toHaveJSProperty('href', checkoutUrl.href)
+			await shortcut.click()
+			await expect(page).toHaveURL(isCheckout)
+			await expect(page.locator('.woocommerce-checkout-review-order-table')).toBeVisible()
+		})
+
+		await test.step('Return to the shop and proceed to checkout through the cart', async () => {
+			await page.goBack()
+			await expect(page).toHaveURL(shopUrl.href)
+			await expect(countdown).toBeVisible()
+			await shopPage.goToCart({ requireItems: true })
+			await cartPage.goToCheckout()
+			await expect(page).toHaveURL(isCheckout)
+		})
+	} finally {
+		await shopPage.clearStorefrontCart()
+	}
 })

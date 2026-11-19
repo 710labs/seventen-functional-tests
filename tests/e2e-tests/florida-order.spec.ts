@@ -2,6 +2,7 @@ import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { v4 as uuidv4 } from 'uuid'
 import { CheckoutPage } from '../../models/checkout-page'
@@ -25,7 +26,6 @@ test(
 		const shopPage = new ShopPage(page, browserName, workerInfo)
 		const cartPage = new CartPage(page, qaClient, browserName, workerInfo, 'medical')
 		const checkOutPage = new CheckoutPage(page, qaClient)
-		var mobile = workerInfo.project.name === 'Mobile Chrome' ? true : false
 
 		await ageGatePage.passAgeGate()
 		await listPassword.submitPassword(process.env.CHECKOUT_PASSWORD || '')
@@ -49,7 +49,7 @@ test(
 		if (process.env.ADD_ADDRESS_BEFORE_CHECKOUT === 'true') {
 			await myAccountPage.addAddress(streetAddress, city, 'FL', zipCode)
 		}
-		await shopPage.addProductsToCart(6, mobile, 'Delivery', 'medical')
+		await buildListOrderCart(shopPage, cartPage, 'Delivery')
 		var cartTotals = await cartPage.verifyCart(zipCode)
 		await checkOutPage.confirmCheckout(zipCode, cartTotals, 'medical', true, address)
 	},

@@ -114,12 +114,34 @@ export class CartPage {
 			if (unavailable) throw new ProductQuantityUnavailableError(`Product ${productId} cannot reach ${quantity} units: ${unavailable.reason}`)
 			const input = row.locator('input.qty')
 			if (Number(await input.inputValue()) === quantity) return
-			await input.fill(String(quantity))
-			await input.dispatchEvent('change')
-			const update = this.page.locator('[name="update_cart"]')
-			if (await update.isVisible() && await update.isEnabled()) await update.click()
+			const inputName = await input.getAttribute('name')
+			const cartOrigin = new URL(this.page.url()).origin
+			const savedResponse = inputName?.startsWith('cart[')
+				? this.page.waitForResponse(response => {
+					const request = response.request()
+					return request.method() === 'POST' && new URL(response.url()).origin === cartOrigin &&
+						new URLSearchParams(request.postData() || '').get(inputName) === String(quantity)
+				})
+				: Promise.resolve(null)
+			const [, response] = await Promise.all([
+				(async () => {
+					await input.fill(String(quantity))
+					await input.dispatchEvent('change')
+					const update = this.page.locator('[name="update_cart"]')
+					if (await update.isVisible() && await update.isEnabled()) await update.click()
+				})(),
+				savedResponse,
+			])
+			if (response) {
+				expect(response.status(), 'Saving the cart quantity must succeed').toBeLessThan(400)
+				expect(await response.finished(), 'The cart update response must finish').toBeNull()
+			}
 			await expect(this.page.locator('.woocommerce-cart-form .blockUI')).toHaveCount(0)
-			if (verify) await expect(input).toHaveValue(String(quantity))
+			if (verify) {
+				await expect(input).toHaveValue(String(quantity))
+				if (response) await expect(input, 'The saved cart must retain the requested quantity')
+					.toHaveAttribute('value', String(quantity))
+			}
 		})
 	}
 

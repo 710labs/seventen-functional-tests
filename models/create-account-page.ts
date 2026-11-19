@@ -127,12 +127,13 @@ export class CreateAccountPage {
 		})
 	}
 
-	private async uploadMedicalCard(fileName: string = 'CA-DL.jpg') {
+	private async uploadMedicalCard(fileName: string = 'Medical-Card.png') {
 		await test.step('Upload Medical Card', async () => {
-			const medicalCardInput = this.page.locator('input[name="svntn_core_medical_doc"]')
-			await medicalCardInput.waitFor({ state: 'attached' })
-			await medicalCardInput.setInputFiles(fileName)
-			await this.page.waitForTimeout(5000)
+			const selector = 'input[name="svntn_core_medical_doc"]'
+			const input = this.page.locator(selector)
+			const upload = this.page.locator('.eligibilityInput').filter({ has: input })
+			await this.selectDocumentWithFileChooser(input, fileName, selector)
+			await expect(upload.locator('.unsealSuccess'), 'The medical card must be accepted').toBeVisible({ timeout: 20000 })
 		})
 	}
 
@@ -149,21 +150,22 @@ export class CreateAccountPage {
 		}, personalDocInputSelector)
 	}
 
-	private async selectPersonalDocumentWithFileChooser(
-		driversLicenseInput: Locator,
+	private async selectDocumentWithFileChooser(
+		input: Locator,
 		fileName: string,
+		selector: string,
 	) {
 		const expectedFilename = path.basename(fileName)
-		const [driversLicenseChooser] = await Promise.all([
+		const [chooser] = await Promise.all([
 			this.page.waitForEvent('filechooser'),
-			driversLicenseInput.click(),
+			input.click(),
 		])
 
 		// The upload widget initializes asynchronously after the chooser opens.
 		// Matching the older e2e cadence avoids selecting the file before its
 		// reactive upload handlers are ready.
 		await this.page.waitForTimeout(5000)
-		await driversLicenseChooser.setFiles(fileName)
+		await chooser.setFiles(fileName)
 		await this.page.waitForFunction(
 			({ selector, filename }) => {
 				const input = document.querySelector(selector)
@@ -173,7 +175,7 @@ export class CreateAccountPage {
 					Array.from(input.files || []).some(file => file.name === filename)
 				)
 			},
-			{ selector: personalDocInputSelector, filename: expectedFilename },
+			{ selector, filename: expectedFilename },
 		)
 	}
 
@@ -218,7 +220,7 @@ export class CreateAccountPage {
 				}
 
 				try {
-					await this.selectPersonalDocumentWithFileChooser(driversLicenseInput, fileName)
+					await this.selectDocumentWithFileChooser(driversLicenseInput, fileName, personalDocInputSelector)
 
 					if (await this.waitForPersonalDocumentAccepted(uploadSuccess)) {
 						return
@@ -672,7 +674,10 @@ export class CreateAccountPage {
 		} else {
 			if (isMedicalUsage(usage)) {
 				await this.uploadMedicalCard()
-				await this.enterMedicalCardExpiration()
+				// Colorado can accept the uploaded card without asking for expiration fields.
+				if (state !== 'CO' || await this.medCardExpMonth.count()) {
+					await this.enterMedicalCardExpiration()
+				}
 
 				if (state === 'NJ') {
 					await test.step('Enter Med Card Number', async () => {
@@ -783,19 +788,18 @@ export class CreateAccountPage {
 				await this.driversLicenseNumber.fill(`${driversLicenseNumber}`)
 			})
 
-			await test.step('Upload Medical Card', async () => {
-				await this.page.getByLabel('Medical Card Upload *').click()
-				await this.page.getByLabel('Medical Card Upload *').setInputFiles('Medical-Card.png')
-			})
+			await this.uploadMedicalCard()
 
 			await test.step('Enter Med Card Exp', async () => {
 				await this.medCardExpMonth.selectOption('12')
 				await this.medCardExpDay.selectOption('16')
 				await this.medCardExpYear.selectOption(`${new Date().getFullYear() + 1}`)
 			})
-			await test.step('Enter Med Card Number', async () => {
-				await this.medCardNumber.fill(medCardNumber)
-			})
+			if (await this.medCardNumber.isVisible()) {
+				await test.step('Enter Med Card Number', async () => {
+					await this.medCardNumber.fill(medCardNumber)
+				})
+			}
 		}
 
 		if (!isMedicalUsage(type)) {

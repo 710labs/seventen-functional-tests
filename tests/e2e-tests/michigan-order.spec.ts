@@ -2,6 +2,7 @@ import { test } from '../../options'
 import { ListPasswordPage } from '../../models/list-password-protect-page'
 import { AgeGatePage } from '../../models/age-gate-page'
 import { ShopPage } from '../../models/shop-page'
+import { buildListOrderCart } from '../../support/list-order-cart'
 import { CreateAccountPage } from '../../models/create-account-page'
 import { CheckoutPage } from '../../models/checkout-page'
 import { CartPage } from '../../models/cart-page'
@@ -54,7 +55,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 			})
 
 			await test.step(`Load Shopping Cart`, async () => {
-				await shopPage.addProductsToCart(6, false, 'Pickup', 'recreational')
+				await buildListOrderCart(shopPage, cartPage, 'Pickup')
 			})
 
 			await test.step(`Navigate to Checkout`, async () => {
@@ -113,7 +114,7 @@ test.describe('MI Order Tests', { tag: ['@MI'] }, () => {
 				)
 			})
 			await test.step(`Load Shopping Cart`, async () => {
-				await shopPage.addProductsToCart(6, false, 'Pickup', 'recreational')
+				await buildListOrderCart(shopPage, cartPage, 'Pickup')
 			})
 
 			await test.step(`Navigate to Checkout`, async () => {

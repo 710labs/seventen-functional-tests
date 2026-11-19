@@ -14,6 +14,7 @@ type AddProductsToCartOptions = {
 }
 
 export class ProductInventoryUnavailableError extends Error {}
+export class RecreationalInventoryUnavailableError extends ProductInventoryUnavailableError {}
 
 type AddToCartResult = {
 	added: boolean
@@ -31,6 +32,7 @@ type CartLoadState = {
 
 type FulfillmentReadyState = {
 	hasAddToCartButton: boolean
+	hasWaitlistButton: boolean
 	hasFulfillmentNav: boolean
 	hasOpenFulfillmentModal: boolean
 	url: string
@@ -44,6 +46,7 @@ export type StorefrontProductCandidate = {
 	price: number
 	sku: string | null
 	productId?: number
+	medicalOnly: boolean
 }
 
 export type CategoryProductCandidate = StorefrontProductCandidate & {
@@ -107,8 +110,11 @@ const storefrontAddToCartSelector = [
 	'[data-product_sku].fasd_to_cart',
 	'[data-product_sku].add_to_cart_button',
 ].join(', ')
+const storefrontWaitlistButtonSelector = 'button.waitlist-button[data-product_id]'
 
 const stockRejectionMessage = /out of stock|insufficient stock|only\s+\d+\s+left|not enough stock/i
+const medicalOnlyProductBadge = '.medOnly, .med-metabadge'
+const medicalOnlyProductText = /\bmed(?:ical)?(?:[\s-]+only|\s+card\s+required)\b/i
 const defaultDeliveryAddress = '123 Rodeo Dr Beverly Hills'
 
 export class ShopPage {
@@ -617,6 +623,10 @@ export class ShopPage {
 				.first()
 				.isVisible()
 				.catch(() => false),
+			hasWaitlistButton: await this.getJoinWaitlistButtons(this.page.locator('li.product'))
+				.first()
+				.isVisible()
+				.catch(() => false),
 			hasFulfillmentNav: await this.page
 				.locator('button.wcse-nav')
 				.first()
@@ -636,7 +646,7 @@ export class ShopPage {
 
 			if (
 				!lastState.hasOpenFulfillmentModal &&
-				(lastState.hasFulfillmentNav || lastState.hasAddToCartButton)
+				(lastState.hasFulfillmentNav || lastState.hasAddToCartButton || lastState.hasWaitlistButton)
 			) {
 				return
 			}
@@ -651,6 +661,7 @@ export class ShopPage {
 				`Fulfillment nav visible: ${lastState?.hasFulfillmentNav ?? false}`,
 				`Fulfillment modal open: ${lastState?.hasOpenFulfillmentModal ?? false}`,
 				`Add-to-cart button visible: ${lastState?.hasAddToCartButton ?? false}`,
+				`Join Waitlist button visible: ${lastState?.hasWaitlistButton ?? false}`,
 				`Body preview: ${await this.getBodyPreview()}`,
 			].join('\n'),
 		)
@@ -768,18 +779,72 @@ export class ShopPage {
 		await this.waitForFulfillmentReady(fulfillment)
 	}
 
-	private getAddableProductCards(usage: TestUsageType = 'recreational') {
-		let products = this.page.locator('li.product').filter({ hasNotText: /Sold Out/i })
+	private getProductCardsForUsage(usage: TestUsageType) {
+		let products = this.page.locator('li.product')
 
 		if (!isMedicalUsage(usage)) {
-			products = products.filter({
-				hasNot: this.page.locator(
-					'span.medOnly, .medOnly, .med-metabadge, .wpse-metabadge.med-metabadge',
-				),
-			})
+			products = products
+				.filter({ hasNot: this.page.locator(medicalOnlyProductBadge) })
+				.filter({ hasNotText: medicalOnlyProductText })
 		}
 
 		return products
+	}
+
+	private getAddableProductCards(usage: TestUsageType = 'recreational') {
+		return this.getProductCardsForUsage(usage).filter({ hasNotText: /Sold Out/i })
+	}
+
+	private getJoinWaitlistButtons(products: Locator) {
+		return products.locator(storefrontWaitlistButtonSelector)
+			.and(this.page.getByRole('button', { name: /^join (?:the )?wait\s*list$/i }))
+			.filter({ visible: true })
+	}
+
+	private async tryJoinProductWaitlist(fulfillment: ShopFulfillment, usage: TestUsageType): Promise<boolean> {
+		const products = this.getProductCardsForUsage(usage).filter({ visible: true })
+		const joinButtons = this.getJoinWaitlistButtons(products)
+		if (!await joinButtons.first().isVisible()) return false
+
+		const cartButtons = this.getAddableProductCards(usage)
+			.locator(storefrontAddToCartSelector)
+			.filter({ visible: true })
+		for (const button of await cartButtons.all()) {
+			if (await button.isEnabled()) return false
+		}
+
+		const medicalProducts = products.filter({ has: this.page.locator(medicalOnlyProductBadge) })
+			.or(products.filter({ hasText: medicalOnlyProductText }))
+		const enabled = this.page.locator(':enabled:not([aria-disabled="true"])')
+		const medicalButton = this.getJoinWaitlistButtons(medicalProducts).and(enabled).first()
+		const enabledButton = joinButtons.and(enabled).first()
+		let button = await enabledButton.isVisible() ? enabledButton : joinButtons.first()
+		if (isMedicalUsage(usage) && await medicalButton.isVisible()) button = medicalButton
+
+		await test.step('Join and confirm the product waitlist', async () => {
+			const productId = await button.getAttribute('data-product_id')
+			if (!productId || !/^[1-9]\d*$/.test(productId)) {
+				throw new Error('The Join Waitlist button must identify a product')
+			}
+			await button.click({ timeout: 10000 })
+
+			const modal = this.page.locator('#waitlistElement')
+			const submit = modal.locator('#waitlistSubmit')
+			await expect(submit).toBeVisible()
+			await expect(modal.locator('#waitlist_product_id')).toHaveValue(productId)
+			await expect(modal.locator('#waitlist_method')).toHaveValue(fulfillment.toLowerCase())
+			await submit.click()
+
+			const confirmation = products.locator(
+				`button.waitlist-button.on-waitlist[data-product_id="${productId}"][aria-disabled="true"]`,
+			).filter({ hasText: /^\s*on wait\s*list\s*$/i, visible: true })
+			const error = modal.locator('#waitlist_error').filter({ hasText: /\S/, visible: true })
+			await expect(confirmation.or(error).first(), 'Expected a waitlist confirmation or submission error')
+				.toBeVisible({ timeout: 30000 })
+			await expect(error, 'Waitlist submission was rejected').toBeHidden()
+			await expect(confirmation.first(), 'Expected the selected product to show On waitlist').toBeVisible()
+		})
+		return true
 	}
 
 	private async readProductCandidate(
@@ -794,7 +859,8 @@ export class ShopPage {
 		}
 
 		const addToCartButton = productCard.locator(storefrontAddToCartSelector).first()
-		const hasAddButton = await addToCartButton.isVisible().catch(() => false)
+		const hasAddButton = await addToCartButton.isVisible().catch(() => false) &&
+			await addToCartButton.isEnabled()
 
 		if (!hasAddButton) {
 			return null
@@ -843,6 +909,8 @@ export class ShopPage {
 			name,
 			price: Math.min(...parsedPrices),
 			sku,
+			medicalOnly: (await productCard.locator(medicalOnlyProductBadge).count()) > 0 ||
+				medicalOnlyProductText.test(await productCard.textContent() || ''),
 			...(rawId && /^\d+$/.test(rawId) ? { productId: Number(rawId) } : {}),
 		}
 	}
@@ -1048,6 +1116,8 @@ export class ShopPage {
 			for (let pass = 0; pass < 20; pass += 1) {
 				// Re-read rows after each cart update; an overlay can outlive a removed row.
 				await expect(this.page.locator('.blockUI.blockOverlay:visible')).toHaveCount(0, { timeout: 30000 })
+				const dismissNotice = this.page.locator('button.notyf__dismiss-btn:visible').first()
+				if (await dismissNotice.isVisible()) await dismissNotice.click()
 				const rows = this.page.locator('.cart_item')
 				if (await rows.count() === 0) return
 				const removeLink = rows.first().locator('.product-remove a, a.remove').first()
@@ -1727,26 +1797,38 @@ export class ShopPage {
 		initialItemCount: number,
 		fulfillment: ShopFulfillment,
 		usage: TestUsageType,
-		cartButtonDestination?: string,
-	): Promise<void> {
-		await test.step('Build a checkout-ready cart from the storefront', async () => {
+		{ cartButtonDestination, allowWaitlist = false }: {
+			cartButtonDestination?: string
+			allowWaitlist?: boolean
+		} = {},
+	): Promise<'checkout' | 'waitlist'> {
+		const step = allowWaitlist ? 'Prepare checkout or join a product waitlist' : 'Build a checkout-ready cart from the storefront'
+		return test.step(step, async () => {
 			const attemptedProducts = new Set<string>()
+			const addedProductIds = new Set<number>()
 			const quantityExhausted = new Set<number>()
 			const rejections: string[] = []
 			const openShop = async () => {
 				await this.page.goto('/')
 				await this.ensureFulfillmentSelected(fulfillment)
 			}
-			const addNextProduct = async (preferHigherPrice = false) => {
+			const addNextProduct = async ({ preferHigherPrice = false, medicalOnly }: {
+				preferHigherPrice?: boolean
+				medicalOnly?: boolean
+			} = {}) => {
 				if (!(await this.page.locator('li.product').count())) return false
 				const candidates = await this.getAddableStorefrontProducts(usage)
 				if (preferHigherPrice) candidates.sort((left, right) => right.price - left.price)
 				for (const candidate of candidates) {
+					if (medicalOnly !== undefined && candidate.medicalOnly !== medicalOnly) continue
 					const key = candidate.productId ? String(candidate.productId) : this.getProductCandidateKey(candidate)
 					if (attemptedProducts.has(key)) continue
 					attemptedProducts.add(key)
 					const result = await this.tryAddStorefrontProduct(candidate, usage)
-					if (result.added) return true
+					if (result.added) {
+						if (candidate.productId) addedProductIds.add(candidate.productId)
+						return true
+					}
 					rejections.push(`${candidate.name}: ${result.errorText || 'not added'}`)
 					if (!result.reservedStockRejected) await openShop()
 				}
@@ -1756,6 +1838,12 @@ export class ShopPage {
 			await openShop()
 			const existingItems = await this.getStorefrontCartItemCount()
 			let itemsAdded = 0
+			if (isMedicalUsage(usage)) {
+				await test.step('Add a medical-only product and a regular product when available', async () => {
+					if (await addNextProduct({ medicalOnly: true })) itemsAdded++
+					if (await addNextProduct({ medicalOnly: false })) itemsAdded++
+				})
+			}
 			let catalogExhausted = false
 			while (existingItems + itemsAdded < initialItemCount) {
 				if (!(await addNextProduct())) {
@@ -1765,6 +1853,15 @@ export class ShopPage {
 				itemsAdded++
 			}
 			if (existingItems + itemsAdded === 0) {
+				if (allowWaitlist && await this.tryJoinProductWaitlist(fulfillment, usage)) return 'waitlist'
+
+				if (!isMedicalUsage(usage) && !attemptedProducts.size) {
+					const listedProducts = this.getAddableProductCards('medical').locator('visible=true')
+					const regularProducts = this.getAddableProductCards('recreational').locator('visible=true')
+					if (await listedProducts.count() && !(await regularProducts.count())) {
+						throw new RecreationalInventoryUnavailableError('The storefront has medical-only products and no eligible recreational products.')
+					}
+				}
 				throw new ProductInventoryUnavailableError(
 					`No available storefront products could be added. ${rejections.slice(-5).join(' | ')}`,
 				)
@@ -1780,19 +1877,19 @@ export class ShopPage {
 				}, { message: 'A populated cart must show the order minimum notice or offer checkout' }).toBe(true)
 				if (!banner.isVisible) {
 					await expect(this.page.locator('.cart_item:visible').first(), 'The cart must contain a product').toBeVisible()
-					return
+					return 'checkout'
 				}
 
 				const shortfall = banner.remainingAmount || 0
-				if (shortfall > 0 && await this.increaseCartQuantity(cart, shortfall, quantityExhausted, rejections)) continue
+				if (shortfall > 0 && await this.increaseCartQuantity(cart, shortfall, addedProductIds, quantityExhausted, rejections)) continue
 
 				if (!catalogExhausted) {
 					await openShop()
-					catalogExhausted = !(await addNextProduct(true))
+					catalogExhausted = !(await addNextProduct({ preferHigherPrice: true }))
 					await this.openCartWithItems(cartButtonDestination)
 					if (!catalogExhausted) continue
 				}
-				if (!shortfall && await this.increaseCartQuantity(cart, shortfall, quantityExhausted, rejections)) continue
+				if (!shortfall && await this.increaseCartQuantity(cart, shortfall, addedProductIds, quantityExhausted, rejections)) continue
 
 				const subtotal = await this.getCartSubtotalAmount()
 				throw new Error([
@@ -1807,6 +1904,7 @@ export class ShopPage {
 	private async increaseCartQuantity(
 		cart: CartPage,
 		shortfall: number,
+		addedProductIds: Set<number>,
 		quantityExhausted: Set<number>,
 		rejections: string[],
 	) {
@@ -1828,7 +1926,7 @@ export class ShopPage {
 		}).sort((left, right) => right.unitPrice - left.unitPrice)
 
 		for (const { productId, unitPrice, quantity, maximum } of eligible) {
-			if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isSafeInteger(quantity) ||
+			if (!addedProductIds.has(productId) || !Number.isSafeInteger(quantity) ||
 				quantity < 1 || quantityExhausted.has(productId)) continue
 			const unitsNeeded = shortfall
 				? Math.ceil(Math.round(shortfall * 100) / Math.round(unitPrice * 100))

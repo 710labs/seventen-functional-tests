@@ -9,7 +9,7 @@ jobs:
     name: Smoke Tests (Stage CA)
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       ENV: stage-ca thelist-stage.710labs.com

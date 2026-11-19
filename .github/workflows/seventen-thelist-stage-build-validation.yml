@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: staging-ca thelist-710labs.com
       ENV_ID: staging-ca
@@ -83,7 +83,7 @@ jobs:
       (github.event_name == 'schedule' || github.event.inputs.mi == 'true')
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: staging-mi thelist-710labs.com
       ENV_ID: staging-mi
@@ -135,7 +135,7 @@ jobs:
       (github.event_name == 'schedule' || github.event.inputs.co == 'true')
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: staging-co thelist-710labs.com
       ENV_ID: staging-co
@@ -188,7 +188,7 @@ jobs:
       (github.event_name == 'schedule' || github.event.inputs.nj == 'true')
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: staging-nj thelist-710labs.com
       ENV_ID: staging-nj

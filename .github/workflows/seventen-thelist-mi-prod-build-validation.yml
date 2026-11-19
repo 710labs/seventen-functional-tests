@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: prod-mi thelist-mi.710labs.com
       ENV_ID: prod-mi
@@ -49,7 +49,7 @@ jobs:
       SLACK_BOT_USER_OAUTH_TOKEN: ${{ secrets.PW_TESTS_SLACKBOT_TOKEN}}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     outputs:
-      order-id: ${{ steps.extract.outputs.orderID }}
+      order_ids_json: ${{ steps.extract.outputs.order_ids_json }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -73,37 +73,30 @@ jobs:
       - name: Run Playwright tests
         id: smoke_test
         run: npm run smoke:test:prod:mi
-      - name: Read order_id.txt
+      - name: Read recorded order IDs
         if: always()
         id: extract
-        run: |
-          if [[ -f order_id.txt ]]; then
-            ORDER_ID=$(<order_id.txt)
-            echo "✅ Found Order ID: $ORDER_ID"
-            echo "orderID=$ORDER_ID" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️  order_id.txt not found; setting empty orderID"
-            # still emit the output key, just blank
-            echo "orderID=" >> $GITHUB_OUTPUT
-          fi
+        run: node scripts/health/collect-order-ids.js order_ids.txt
   cleanup:
     name: Cleanup Cancel Test Order
     needs: build-validation-prod-mi
     runs-on: ubuntu-latest
-    # always run this job, even if `smoke` failed
-    if: always()
+    if: ${{ always() && needs.build-validation-prod-mi.outputs.order_ids_json != '' && needs.build-validation-prod-mi.outputs.order_ids_json != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        order_id: ${{ fromJson(needs.build-validation-prod-mi.outputs.order_ids_json) }}
     env:
       WC_CONSUMER_KEY: ${{ secrets.WOO_MI_PROD_KEY }}
       WC_CONSUMER_SECRET: ${{ secrets.WOO_MI_PROD_SECRET }}
       BASE_URL: ${{ secrets.BASE_URL_PROD_MI }}
-
     steps:
       - name: Cancel test order via WooCommerce API
-        # only call if we actually got an ID
-        if: ${{ needs.build-validation-prod-mi.outputs.order-id != '' }}
+        env:
+          ORDER_ID: ${{ matrix.order_id }}
         run: |
-          echo "🛠 Cancelling order ${{ needs.build-validation-prod-mi.outputs.order-id }}…"
-          curl -X PUT "${BASE_URL}/wp-json/wc/v3/orders/${{ needs.build-validation-prod-mi.outputs.order-id }}" \
+          echo "Cancelling order $ORDER_ID..."
+          curl --fail --silent --show-error --output /dev/null -X PUT "${BASE_URL}/wp-json/wc/v3/orders/$ORDER_ID" \
             -u "${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{"status":"cancelled"}'

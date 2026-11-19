@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: ${{ github.event.inputs.target_env == 'stage' && 'stage-ca thelist-stage.710labs.com' || 'dev-ca thelist-dev.710labs.com' }}
       ENV_ID: ${{ github.event.inputs.target_env == 'stage' && 'stage-ca' || 'dev-ca' }}

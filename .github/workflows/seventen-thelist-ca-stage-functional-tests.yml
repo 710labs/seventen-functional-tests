@@ -9,7 +9,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: stage-ca thelist-stage.710labs.com
       ENV_ID: stage-ca

@@ -51,6 +51,22 @@ test('a cleanup error changes an otherwise passing health result to failed', () 
 	assert.match(result.failureSummary.at(-1), /HTTP 500/)
 })
 
+test('production cleanup attempts the remaining orders after a failed cancellation', async () => {
+	const attempted = []
+	await assert.rejects(cancelOrders({
+		ids: ['123', '456'],
+		baseUrl: 'https://example.com',
+		consumerKey: 'key',
+		consumerSecret: 'secret',
+		fetchImpl: async url => {
+			const id = url.pathname.split('/').at(-1)
+			attempted.push(id)
+			return { ok: id === '456', status: id === '456' ? 200 : 503 }
+		},
+	}), /order 123 returned HTTP 503/)
+	assert.deepEqual(attempted, ['123', '456'])
+})
+
 test('a cleanup error still fails a QueueIt-deferred health check', () => {
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'prod-order-result-'))
 	try {

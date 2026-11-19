@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: dev-ca thelist-710labs.com
       ENV_ID: dev-ca
@@ -85,7 +85,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: dev-mi thelist-710labs.com
       ENV_ID: dev-mi
@@ -137,7 +137,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: dev-co thelist-710labs.com
       ENV_ID: dev-co
@@ -189,7 +189,7 @@ jobs:
       (github.event_name == 'schedule' || github.event.inputs.nj == 'true')
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ENV: dev-nj thelist-710labs.com
       ENV_ID: dev-nj
