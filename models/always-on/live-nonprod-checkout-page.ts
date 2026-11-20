@@ -31,7 +31,7 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 
 		await this.editDeliveryAddress(address, newAddress, isPickup)
 		await this.selectAndVerifyAppointment(isPickup)
-		await this.completePersonalInformation(page, isPickup)
+		await this.completePersonalInformation(page)
 		await this.completeDocuments(isPickup, requiresMedicalDocument)
 		await this.completePayment(isPickup)
 	}
@@ -181,9 +181,8 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 		return `555-${Math.floor(1000000 + Math.random() * 9000000)}`
 	}
 
-	private async completePersonalInformation(page: Page, isPickup: boolean) {
+	private async completePersonalInformation(page: Page) {
 		await test.step('Complete required Live personal information', async () => {
-			const saveButtonIndex = isPickup ? 0 : 1
 			const birthdayValue = '1990-01-01'
 			const displayedBirthday = '01/01/1990'
 			let acceptedPhone = ''
@@ -194,15 +193,23 @@ export class LiveNonProdCheckoutPage extends CheckoutPage {
 				await this.phoneInputField.fill(acceptedPhone)
 				await this.birthdayInputField.fill(birthdayValue)
 				await page.locator('body').click({ position: { x: 1, y: 1 } })
-				await this.saveContinueButton.nth(saveButtonIndex).click()
-				await page.waitForTimeout(1000)
+				await this.yourInfoSection.locator('a.wpse-button-primary.fasd-form-submit').click()
+				let outcome = 'pending'
+				await expect.poll(async () => {
+					const displayed = (await this.displayedPhoneNumber.textContent().catch(() => '')) || ''
+					outcome = displayed.replace(/\D/g, '') === acceptedPhone.replace(/\D/g, '')
+						? 'saved'
+						: await page.locator('#fasd_phone_error').isVisible().catch(() => false)
+							? 'phone-error' : 'pending'
+					return outcome
+				}, { timeout: 10000 }).not.toBe('pending').catch(() => {})
 
-				if (!(await page.locator('#fasd_phone_error').isVisible().catch(() => false))) {
+				if (outcome === 'saved') {
 					break
 				}
 
 				if (attempt === 5) {
-					throw new Error('Unable to generate an unused phone number after five attempts.')
+					throw new Error('Live personal information did not persist after five save attempts.')
 				}
 			}
 

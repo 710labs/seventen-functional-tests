@@ -79,6 +79,7 @@ for (const target of selectedTargets) {
 					startWithEmptyCart: true,
 					medicalCardPath: 'Medical-Card.png',
 					medicalCardState: target.pos === 'dutchie' ? 'MI' : 'CA',
+					medicalProfileVerified: record.medicalProfileVerified,
 					target: { storefrontUrl, instanceId: target.instanceId, facilityId: target.facilityId, method: 'pickup' },
 				})
 				await cart.addProductsUntilCheckout(userType)
@@ -88,6 +89,8 @@ for (const target of selectedTargets) {
 				await checkout.verifyCheckoutPageLoads(page)
 				// This initial generator uses pickup to avoid delivery coverage and scheduling dependencies.
 				await expect(checkout.pickUpLocationTitle).toBeVisible()
+				await checkout.firstNameField.fill(customerName)
+				await checkout.lastNameField.fill(customerName)
 				if (userType === 'med') {
 					await checkout.completeMedCheckout(page, '', '', true)
 				} else {

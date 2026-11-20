@@ -53,13 +53,17 @@ test('Slack and artifact summaries include all eight Woo IDs and POS IDs without
 		assert.ok(message.text.includes(`<${order.adminUrl}|Woo #${order.orderId}>`))
 		assert.ok(message.text.includes(order.externalId))
 		assert.ok(markdown(result).includes(order.externalId))
-		assert.ok(message.text.includes(order.customerName))
+		assert.equal(message.text.includes(order.customerName), false)
+		assert.ok(markdown(result).includes(order.customerName))
 		assert.ok(markdown(result).includes(order.customerType))
 	}
-	assert.match(message.text, /\*Recreational\*/)
-	assert.match(message.text, /\*Medical\*/)
-	assert.equal(message.blocks.filter(block => block.type === 'section').length, 9)
-	assert.ok(message.text.includes('direct link unavailable'))
+	assert.match(message.text, /✅ \*Dutchie Rec\*/)
+	assert.match(message.text, /✅ \*Dutchie Med\*/)
+	assert.equal(message.blocks.filter(block => block.type === 'section').length, 2)
+	assert.equal(message.blocks[2].text.text.split('\n').length, 8)
+	assert.equal(message.text.includes('direct link unavailable'), false)
+	assert.equal(message.text.includes('Phase:'), false)
+	assert.equal(message.blocks.some(block => block.type === 'context'), false)
 	assert.equal(message.blocks.at(-1).elements[0].url, runUrl)
 	assert.equal(JSON.stringify(message).includes('must-not-be-published'), false)
 	assert.equal(message.unfurl_links, false)
@@ -83,7 +87,8 @@ test('partial failures, corrupt evidence, and setup failures still account for e
 	assert.equal(result.orders[3].posOrderUrl, 'https://app.blaze.me/confirmed-order/1')
 	const message = buildSlackMessage(result)
 	assert.match(message.text, /FAILED/)
-	assert.ok(message.text.includes(`<${result.orders[3].posOrderUrl}|Open POS order>`))
+	assert.ok(message.text.includes(`<${result.orders[3].posOrderUrl}|${result.orders[3].externalId}>`))
+	assert.ok(message.text.includes('created (verification)'))
 	assert.ok(message.text.includes('not-started'))
 	assert.ok(message.text.includes('invalid-evidence'))
 	assert.ok(markdown(result).includes('Open POS order'))
@@ -91,6 +96,30 @@ test('partial failures, corrupt evidence, and setup failures still account for e
 	assert.match(buildSlackMessage(allMissing).text, /8 requested • 0 created • 0 POS verified/)
 	assert.match(buildSlackMessage(result, { jobStatus: 'cancelled' }).text, /CANCELLED/)
 	assert.match(buildSlackMessage({ ...result, status: 'passed' }, { jobStatus: 'failure' }).text, /FAILED/)
+	const ambiguous = { ...result, orders: [{ ...result.orders[0], status: 'submitting', phase: 'submission', orderId: null }] }
+	assert.match(buildSlackMessage(ambiguous).text, /Inspect Stage before rerunning/)
+	assert.equal(buildSlackMessage(ambiguous).blocks.filter(block => block.type === 'context').length, 1)
+})
+
+test('long POS IDs and links stay intact while compact rows respect section size limits', t => {
+	const directory = fixture(t)
+	const domains = { dutchie: 'dutchie.com', blaze: 'blaze.me', treez: 'treez.io', meadow: 'getmeadow.com' }
+	for (const file of fs.readdirSync(directory)) {
+		const record = JSON.parse(fs.readFileSync(path.join(directory, file)))
+		record.externalId = 'id-' + 'x'.repeat(180)
+		record.posOrderUrl = `https://${domains[record.pos]}/confirmed-order/${'x'.repeat(850)}`
+		fs.writeFileSync(path.join(directory, file), JSON.stringify(record))
+	}
+	const result = summarize(directory)
+	const message = buildSlackMessage(result)
+	const sections = message.blocks.filter(block => block.type === 'section').slice(1)
+	assert.ok(sections.length > 1)
+	assert.equal(sections.flatMap(block => block.text.text.split('\n')).length, 8)
+	assert.ok(sections.every(block => block.text.text.length <= 3000))
+	for (const order of result.orders) {
+		assert.ok(message.text.includes(`<${order.adminUrl}|Woo #${order.orderId}>`))
+		assert.ok(message.text.includes(`<${order.posOrderUrl}|${order.externalId}>`))
+	}
 })
 
 test('sender posts one complete payload, checks acknowledgement, and does not retry failed deliveries', async () => {

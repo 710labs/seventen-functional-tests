@@ -55,13 +55,17 @@ orders. No production URL secret is used.
 
 ## Results and reruns
 
-Slack and the GitHub run summary list **every requested order**, grouped by its
-POS and store, with its Rec/Med type, customer name, WooCommerce ID and admin
-link, external POS order ID, status, and phase. Missing orders are shown as
-`not-started`; an unreadable
-evidence file is shown as `invalid-evidence`. A failed setup or incomplete run
-does not hide the remaining order attempts. The Slack message links back to the
-GitHub run, and Slack delivery failure fails the workflow.
+Slack lists **every requested order in one compact line**: status icon, POS,
+Rec/Med, linked WooCommerce ID, and external POS ID (linked when available).
+Verified rows omit repeated status/phase text. Incomplete rows include their
+status and phase; a rerun warning appears only for an ambiguous submission.
+The lines share one message section where possible to avoid extra spacing.
+
+The **Full report** button opens the GitHub run summary, which retains store
+names, customer names, Rec/Med types, WooCommerce and POS IDs/links, statuses,
+and phases. Missing orders are shown as `not-started`; an unreadable evidence
+file is shown as `invalid-evidence`. A failed setup or incomplete run does not
+hide the remaining order attempts. Slack delivery failure fails the workflow.
 
 Download `live-stage-generated-orders-<run>-<attempt>` for `orders.json` and
 `summary.md`. The workflow fails unless every requested order is verified and
@@ -83,7 +87,7 @@ direct order URL. When the response includes `posOrderUrl`, `posOrderURL`,
 `externalUrl`, or `externalURL`, the generator can preserve a valid provider link
 for the matching POS instance. These optional fields are supported for future
 responses; their presence on Stage has not been verified. Without a URL, Slack
-still shows the external ID and says `direct link unavailable`.
+still shows the external ID without repeating an unavailable-link notice.
 
 Alternatively, set a GitHub Actions **repository variable** with a confirmed
 order URL template for the relevant sandbox:

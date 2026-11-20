@@ -10,6 +10,7 @@ type CartFlowOptions = {
 	step?: <T>(name: string, action: () => Promise<T>) => Promise<T>
 	medicalCardPath?: string
 	medicalCardState?: 'CA' | 'MI'
+	medicalProfileVerified?: boolean
 	requireMedicalProduct?: boolean
 	// Explicit targets are used by the Stage order generator; ordinary smoke tests
 	// continue to discover their storefront from the registration cart.
@@ -263,12 +264,20 @@ export class LiveNonProdCartFlow {
 			await this.closeCartDrawer()
 			return false
 		}
+		if (this.options.target) {
+			// Reopen the saved cart without the add-to-cart response drawer, which
+			// can cover the Checkout control for customers with medical documents.
+			await this.closeCartDrawer()
+			if (!(await this.openCartDrawer())) {
+				throw new Error('Unable to reopen the target store cart before checkout.')
+			}
+		}
 
 		if (await this.minimumOrderIsNotMet()) {
 			return false
 		}
 
-		if (userType === 'med') {
+		if (userType === 'med' && !this.options.medicalProfileVerified) {
 			await this.provideMedicalCardIfRequired()
 		}
 
