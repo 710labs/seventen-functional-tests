@@ -530,3 +530,9 @@ Use the following GH Actions API requests to view workflows and create dispatch 
 
 
 [710Labs Github Actions API Triggers](https://documenter.getpostman.com/view/11482169/UVeDuTqj#c3365b2e-43d5-4c4f-adc6-5fd463c523e6)
+
+## Live Stage order generator
+
+Use **Live - Stage - Order Generator** in GitHub Actions to manually create two
+pickup orders per POS (Dutchie, Blaze, Treez, and Meadow; eight orders total).
+See [setup, store mappings, and result handling](docs/live-stage-order-generator.md).
