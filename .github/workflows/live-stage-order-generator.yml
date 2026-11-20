@@ -1,0 +1,96 @@
+name: Live - Stage - Order Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      pos:
+        description: 'POS to receive two new pickup orders (all = eight orders)'
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - dutchie
+          - blaze
+          - treez
+          - meadow
+
+permissions:
+  contents: read
+
+# Serialize across branches as well as runs so sandbox inventory is shared safely.
+concurrency:
+  group: live-stage-order-generator
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate two orders per POS on Live Stage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      ENV_ID: live-stage
+      ENV: live-stage live-stage.710labs.com
+      LIVE_ORDER_POS: ${{ inputs.pos }}
+      ALWAYS_ON_PASSWORD: ${{ secrets.ALWAYS_ON_PASSWORD }}
+      CHECKOUT_PASSWORD: ${{ secrets.CHECKOUT_PASSWORD }}
+      RECAPTCHA_BYPASS: ${{ secrets.RECAPTCHA_BYPASS }}
+      LIVE_STAGE_QA_AUTH: ${{ secrets.LIVE_STAGE_QA_AUTH }}
+      LIVE_STAGE_DUTCHIE_ORDER_URL_TEMPLATE: ${{ vars.LIVE_STAGE_DUTCHIE_ORDER_URL_TEMPLATE }}
+      LIVE_STAGE_BLAZE_ORDER_URL_TEMPLATE: ${{ vars.LIVE_STAGE_BLAZE_ORDER_URL_TEMPLATE }}
+      LIVE_STAGE_TREEZ_ORDER_URL_TEMPLATE: ${{ vars.LIVE_STAGE_TREEZ_ORDER_URL_TEMPLATE }}
+      LIVE_STAGE_MEADOW_ORDER_URL_TEMPLATE: ${{ vars.LIVE_STAGE_MEADOW_ORDER_URL_TEMPLATE }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Validate required secrets
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          node - <<'NODE'
+          for (const key of ['ALWAYS_ON_PASSWORD', 'CHECKOUT_PASSWORD', 'LIVE_STAGE_QA_AUTH', 'SLACK_WEBHOOK_URL']) {
+            if (!process.env[key]?.trim()) {
+              console.error(`Missing required Stage generator secret: ${key}`)
+              process.exitCode = 1
+            }
+          }
+          NODE
+      - name: Install dependencies
+        timeout-minutes: 15
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund --fetch-timeout=600000 --fetch-retries=5
+      - name: Configure hosted Playwright reports
+        uses: ./.github/actions/hosted-playwright-reports
+        with:
+          bucket: ${{ secrets.S3_BUCKET }}
+          region: ${{ secrets.S3_REGION }}
+          access-key: ${{ secrets.S3_ACCESS_KEY }}
+          secret-key: ${{ secrets.S3_SECRET }}
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Place and verify Stage orders
+        run: npm run live:stage:generate-orders
+      - name: Summarize orders and require complete POS coverage
+        if: always()
+        run: node scripts/live-order-generator/summarize.cjs
+      - name: Upload order summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-stage-generated-orders-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            output/live-order-generator/orders.json
+            output/live-order-generator/summary.md
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Send all order results to Slack
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GENERATOR_JOB_STATUS: ${{ job.status }}
+        run: node scripts/live-order-generator/send-slack.cjs

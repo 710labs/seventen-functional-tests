@@ -10,6 +10,10 @@ type CartFlowOptions = {
 	step?: <T>(name: string, action: () => Promise<T>) => Promise<T>
 	medicalCardPath?: string
 	requireMedicalProduct?: boolean
+	// Explicit targets are used by the Stage order generator; ordinary smoke tests
+	// continue to discover their storefront from the registration cart.
+	target?: { storefrontUrl: string; instanceId: string; facilityId: string; method: string }
+	startWithEmptyCart?: boolean
 }
 
 export type ProductCandidate = {
@@ -24,6 +28,7 @@ export type ProductCandidate = {
 }
 
 type AddControlContext = {
+	instanceId: string | null
 	facility: string | null
 	fulfillmentMethod: string | null
 	storefrontUrl: string | null
@@ -117,6 +122,11 @@ export class LiveNonProdCartFlow {
 
 	constructor(page: Page, private readonly options: CartFlowOptions = {}) {
 		this.page = page
+		if (options.target) {
+			this.storefrontUrl = options.target.storefrontUrl
+			this.lockedFacility = options.target.facilityId
+			this.lockedFulfillmentMethod = options.target.method
+		}
 		this.cartButton = page.locator('a.wpse-cart-openerize').first()
 		this.cartDrawer = page.locator('#cartDrawer')
 		this.viewCartButton = page
@@ -133,7 +143,9 @@ export class LiveNonProdCartFlow {
 	async addProductsUntilCheckout(userType: LiveUserType) {
 		const step = this.options.step || ((name, action) => test.step(name, action))
 		return step(`Build a checkout-ready Live ${userType.toUpperCase()} cart`, async () => {
-			const registrationProductNames = await this.retainRegistrationCart()
+			const registrationProductNames = this.options.startWithEmptyCart
+				? []
+				: await this.retainRegistrationCart()
 			await this.returnToStorefront()
 
 			const productAttemptCounts = new Map<string, number>()
@@ -168,6 +180,7 @@ export class LiveNonProdCartFlow {
 			}
 
 			if (
+				!this.options.startWithEmptyCart &&
 				!medicalCandidateIsAvailable &&
 				(await this.checkoutIfMinimumIsMet(userType, medicalProductAdded))
 			) {
@@ -686,6 +699,13 @@ export class LiveNonProdCartFlow {
 		if (!activeCartDrawer) {
 			return
 		}
+		if (this.options.target) {
+			// Stage can leave the response drawer and full cart open together.
+			// Reload the exact target storefront to close both while retaining the cart.
+			await this.page.goto(this.storefrontUrl!, { waitUntil: 'domcontentloaded' })
+			await this.waitForProducts()
+			return
+		}
 
 		const drawerCloseButton = activeCartDrawer
 			.locator('button.wpse-button-mobsaf.wpse-button-close.wpse-closerizer')
@@ -852,6 +872,11 @@ export class LiveNonProdCartFlow {
 
 			return true
 		})
+		if (this.options.target) {
+			// Prefer inventory with a direct add control. Weight-based products remain
+			// available when they are the store's only inventory (for example Treez).
+			eligibleCandidates.sort((a, b) => Number(Boolean(b.facility)) - Number(Boolean(a.facility)))
+		}
 		const candidate = selectNextLiveProductCandidate(
 			eligibleCandidates,
 			userType,
@@ -882,6 +907,7 @@ export class LiveNonProdCartFlow {
 					?.querySelector<HTMLAnchorElement>('a[href*="/shop/"]')
 
 			return {
+				instanceId: element.getAttribute('data-instance'),
 				facility: element.getAttribute('data-facility'),
 				fulfillmentMethod: element.getAttribute('data-method'),
 				storefrontUrl: storeLink?.href || null,
@@ -890,6 +916,9 @@ export class LiveNonProdCartFlow {
 	}
 
 	private contextMismatchReason(context: AddControlContext) {
+		if (this.options.target && context.instanceId !== this.options.target.instanceId) {
+			return `POS instance ${context.instanceId} does not match target ${this.options.target.instanceId}`
+		}
 		const controlStorefrontUrl = this.normalizeExactStorefrontUrl(context.storefrontUrl)
 
 		if (controlStorefrontUrl && controlStorefrontUrl !== this.storefrontUrl) {
@@ -981,6 +1010,9 @@ export class LiveNonProdCartFlow {
 		}
 
 		await productLink.click()
+		if (this.options.target) {
+			await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+		}
 		await this.page
 			.locator(productPageAddToCartSelector)
 			.first()
