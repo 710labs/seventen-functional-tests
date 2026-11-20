@@ -18,11 +18,14 @@ one Slack summary at the end of the workflow, including failed or incomplete run
 Each order registers a new synthetic customer, adds available inventory from
 the target store until its checkout minimum is met, completes
 pickup checkout with cash and the existing test document, then submits once.
-First and last names are identical and include a timestamp:
-`Test_710Labs_{POS Name}_{Rec|Med}_YYYYMMDD_HHMMSS_mmm`, for example
-`Test_710Labs_Dutchie_Rec_20261120_160530_123`. Timestamps use America/New_York
-time with millisecond precision. The name is generated once per account and
-preserved in the order evidence and full report.
+First and last names are identical and use a compact format:
+`710_{POS code}_{Rec|Med}_{six-character ID}`, for example `710_DUT_Med_A7K2Q9`.
+POS codes are `DUT` (Dutchie), `BLZ` (Blaze), `TRZ` (Treez), and `MDW` (Meadow);
+`Rec` means recreational and `Med` means medical. Names are 18 characters.
+The suffix is a cryptographically random six-character ID, independent of the
+clock, with duplicates regenerated within the running process.
+The name is generated once per account and preserved in the order evidence and
+full report. Reports also recognize timestamped names from earlier runs.
 Each account still receives a unique email address on every run.
 
 The medical case saves the `Medical-Card.png` test fixture to the customer's

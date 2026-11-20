@@ -60,9 +60,8 @@ test('medical coverage requires a saved medical profile and cannot be satisfied 
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-med-profile-'))
 	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
 	assert.equal(orderProfiles.length, 2)
-	const timestamp = new Date('2026-11-20T21:05:30.123Z')
-	assert.equal(customerName('dutchie', orderProfiles[0], timestamp), 'Test_710Labs_Dutchie_Rec_20261120_160530_123')
-	assert.equal(customerName('dutchie', orderProfiles[1], timestamp), 'Test_710Labs_Dutchie_Med_20261120_160530_123')
+	assert.match(customerName('dutchie', orderProfiles[0]), /^710_DUT_Rec_[0-9A-Z]{6}$/)
+	assert.match(customerName('dutchie', orderProfiles[1]), /^710_DUT_Med_[0-9A-Z]{6}$/)
 	const target = targets[0]
 	for (const profile of orderProfiles) {
 		fs.writeFileSync(path.join(directory, `dutchie-${profile.sequence}.json`), JSON.stringify({
@@ -80,17 +79,30 @@ test('medical coverage requires a saved medical profile and cannot be satisfied 
 	assert.equal(summarize(directory, 'dutchie').status, 'failed')
 })
 
-test('timestamps distinguish names even within the same millisecond and reports retain the recorded name', t => {
+test('short IDs distinguish names at the same instant and reports retain the recorded name', t => {
 	t.mock.method(Date, 'now', () => new Date('2026-11-20T21:05:30.123Z').getTime())
 	assert.notEqual(customerName('dutchie', orderProfiles[0]), customerName('dutchie', orderProfiles[0]))
-	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-timestamped-names-'))
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-short-names-'))
 	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
 	const profile = orderProfiles[0]
-	const recordedName = customerName('dutchie', profile, new Date('2026-01-15T05:00:00.007Z'))
-	assert.equal(recordedName, 'Test_710Labs_Dutchie_Rec_20260115_000000_007')
+	const recordedName = customerName('dutchie', profile)
+	assert.match(recordedName, /^710_DUT_Rec_[0-9A-Z]{6}$/)
+	assert.equal(recordedName.length, 18)
 	assert.equal(isCustomerName(recordedName, 'dutchie', profile), true)
 	assert.equal(isCustomerName(recordedName, 'dutchie', orderProfiles[1]), false)
 	assert.equal(isCustomerName('Test_710Labs_Dutchie_Rec', 'dutchie', profile), false)
+	assert.equal(isCustomerName('Test_710Labs_Dutchie_Rec_20261120_160530_123', 'dutchie', profile), true)
+	assert.equal(isCustomerName('710_DUT_R_MWPHEEVG', 'dutchie', profile), true)
+	assert.equal(isCustomerName('710_DUT_Rec_TOOLOOOONG', 'dutchie', profile), false)
+	assert.equal(isCustomerName('710_DUT_R_bad-suffix', 'dutchie', profile), false)
+	for (const [pos, code] of Object.entries({ dutchie: 'DUT', blaze: 'BLZ', treez: 'TRZ', meadow: 'MDW' })) {
+		for (const kind of orderProfiles) {
+			const name = customerName(pos, kind)
+			assert.ok(name.startsWith(`710_${code}_${kind.label}_`))
+			assert.equal(isCustomerName(name, pos, kind), true)
+			assert.ok(name.length <= 20)
+		}
+	}
 	fs.writeFileSync(path.join(directory, 'dutchie-1.json'), JSON.stringify({
 		...targets[0], sequence: 1, userType: 'rec', customerName: recordedName,
 		medicalProfileVerified: false, status: 'verified', orderId: '123', externalId: 'pos-123',
@@ -99,4 +111,15 @@ test('timestamps distinguish names even within the same millisecond and reports 
 	assert.equal(report.orders[0].status, 'verified')
 	assert.equal(report.orders[0].customerName, recordedName)
 	assert.equal(report.orders[1].customerName, null)
+})
+
+test('a repeated short ID is regenerated before returning a duplicate customer name', t => {
+	const crypto = require('node:crypto')
+	const first = customerName('meadow', orderProfiles[1])
+	const suffix = parseInt(first.split('_').at(-1), 36)
+	let calls = 0
+	t.mock.method(crypto, 'randomInt', () => (suffix + calls++) % (36 ** 6))
+	const second = customerName('meadow', orderProfiles[1])
+	assert.notEqual(first, second)
+	assert.ok(calls >= 2)
 })

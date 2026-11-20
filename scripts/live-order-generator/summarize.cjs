@@ -19,7 +19,7 @@ function summarize(directory, selection = 'all') {
 					if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('Invalid evidence')
 				}
 			} catch { record = {}; invalidEvidence = true }
-			// Preserve the actual account name; do not regenerate its timestamp at reporting time.
+			// Preserve the actual account name; do not generate a new ID at reporting time.
 			const customerName = isCustomerName(record.customerName, target.pos, profile) ? record.customerName : null
 			const orderId = /^\d+$/.test(String(record.orderId || '')) ? String(record.orderId) : null
 			const statuses = ['started', 'submitting', 'created', 'verified', 'failed-before-submit']

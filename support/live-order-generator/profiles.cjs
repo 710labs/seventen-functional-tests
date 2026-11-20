@@ -1,32 +1,45 @@
+const crypto = require('node:crypto')
+
 const orderProfiles = [
 	{ sequence: 1, userType: 'rec', label: 'Rec', customerType: 'recreational' },
 	{ sequence: 2, userType: 'med', label: 'Med', customerType: 'medical' },
 ]
 
-const nameClock = new Intl.DateTimeFormat('en-US', {
-	timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
-	hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
-})
-let lastNameTime = 0
+const posCodes = { dutchie: 'DUT', blaze: 'BLZ', treez: 'TRZ', meadow: 'MDW' }
+const generatedNames = new Set()
 
 function namePrefix(pos, profile) {
-	const posName = pos.charAt(0).toUpperCase() + pos.slice(1)
-	return `Test_710Labs_${posName}_${profile.label}`
+	if (!posCodes[pos] || !['rec', 'med'].includes(profile.userType)) throw new Error('Unknown customer profile')
+	return `710_${posCodes[pos]}_${profile.label}`
 }
 
-function customerName(pos, profile, date) {
-	if (date === undefined) {
-		lastNameTime = Math.max(Date.now(), lastNameTime + 1)
-		date = new Date(lastNameTime)
-	}
-	const parts = Object.fromEntries(nameClock.formatToParts(date).map(part => [part.type, part.value]))
-	const timestamp = `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}_${String(date.getMilliseconds()).padStart(3, '0')}`
-	return `${namePrefix(pos, profile)}_${timestamp}`
+function customerName(pos, profile) {
+	const prefix = namePrefix(pos, profile)
+	let name
+	do {
+		const suffix = crypto.randomInt(36 ** 6).toString(36).toUpperCase().padStart(6, '0')
+		name = `${prefix}_${suffix}`
+	} while (generatedNames.has(name))
+	generatedNames.add(name)
+	return name
 }
 
 function isCustomerName(name, pos, profile) {
 	const prefix = `${namePrefix(pos, profile)}_`
-	return typeof name === 'string' && name.startsWith(prefix) && /^\d{8}_\d{6}_\d{3}$/.test(name.slice(prefix.length))
+	if (typeof name !== 'string') return false
+	if (name.startsWith(prefix)) {
+		const suffix = name.slice(prefix.length)
+		return /^[0-9A-Z]{6}$/.test(suffix)
+	}
+	// Reports must still recognize customer names recorded by earlier runs.
+	const compactLegacyPrefix = `710_${posCodes[pos]}_${profile.userType === 'med' ? 'M' : 'R'}_`
+	if (name.startsWith(compactLegacyPrefix)) {
+		const suffix = name.slice(compactLegacyPrefix.length)
+		return /^[0-9A-Z]{1,10}$/.test(suffix) && parseInt(suffix, 36).toString(36).toUpperCase() === suffix
+	}
+	const posName = pos.charAt(0).toUpperCase() + pos.slice(1)
+	const legacyPrefix = `Test_710Labs_${posName}_${profile.label}_`
+	return name.startsWith(legacyPrefix) && /^\d{8}_\d{6}_\d{3}$/.test(name.slice(legacyPrefix.length))
 }
 
 module.exports = { orderProfiles, customerName, isCustomerName }
