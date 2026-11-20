@@ -2,7 +2,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { STAGE_URL, ORDERS_PER_POS, selectTargets } = require('../../support/live-order-generator/targets.cjs')
 const { externalOrderId, safePosOrderUrl, configuredPosOrderUrl } = require('../../support/live-order-generator/pos-links.cjs')
-const { orderProfiles, customerName: buildCustomerName } = require('../../support/live-order-generator/profiles.cjs')
+const { orderProfiles, isCustomerName } = require('../../support/live-order-generator/profiles.cjs')
 
 function summarize(directory, selection = 'all') {
 	const orders = []
@@ -10,7 +10,6 @@ function summarize(directory, selection = 'all') {
 	for (const target of selectTargets(selection)) {
 		for (const profile of orderProfiles) {
 			const { sequence, userType } = profile
-			const customerName = buildCustomerName(target.pos, profile)
 			const file = path.join(directory, `${target.pos}-${sequence}.json`)
 			let record = {}
 			let invalidEvidence = false
@@ -20,11 +19,13 @@ function summarize(directory, selection = 'all') {
 					if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('Invalid evidence')
 				}
 			} catch { record = {}; invalidEvidence = true }
+			// Preserve the actual account name; do not regenerate its timestamp at reporting time.
+			const customerName = isCustomerName(record.customerName, target.pos, profile) ? record.customerName : null
 			const orderId = /^\d+$/.test(String(record.orderId || '')) ? String(record.orderId) : null
 			const statuses = ['started', 'submitting', 'created', 'verified', 'failed-before-submit']
 			let status = statuses.includes(record.status) ? record.status : 'not-started'
 			const matchesTarget = record.instanceId === target.instanceId && record.pos === target.pos && record.sequence === sequence
-			const matchesProfile = record.userType === userType && record.customerName === customerName &&
+			const matchesProfile = record.userType === userType && customerName !== null &&
 				record.medicalProfileVerified === (userType === 'med')
 			const externalId = matchesTarget ? externalOrderId(record.externalId) : null
 			const posOrderUrl = externalId ? safePosOrderUrl(record.posOrderUrl, target.pos) || configuredPosOrderUrl(externalId, target.pos) : null
@@ -51,7 +52,7 @@ function markdown(result) {
 		'### Live Stage order generator', '',
 		`Result: **${result.status}**. Requested ${result.orders.length} pickup orders (one recreational and one medical per POS).`, '',
 		'| POS | Store | Customer type | First & last name | Woo order | POS order ID | POS link | Status | Phase |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
-		...result.orders.map(order => `| ${order.pos} | ${order.store} | ${order.customerType} | ${order.customerName} | ${order.orderId ? `[${order.orderId}](${order.adminUrl})` : '—'} | ${order.externalId ? tableText(order.externalId) : '—'} | ${order.posOrderUrl ? `[Open POS order](<${order.posOrderUrl}>)` : 'Unavailable'} | ${order.status} | ${order.phase} |`),
+		...result.orders.map(order => `| ${order.pos} | ${order.store} | ${order.customerType} | ${order.customerName || '—'} | ${order.orderId ? `[${order.orderId}](${order.adminUrl})` : '—'} | ${order.externalId ? tableText(order.externalId) : '—'} | ${order.posOrderUrl ? `[Open POS order](<${order.posOrderUrl}>)` : 'Unavailable'} | ${order.status} | ${order.phase} |`),
 		'', 'A submitting result may have created an order. Inspect Stage before rerunning; each new run creates two new orders per selected POS.', '',
 	].join('\n')
 }

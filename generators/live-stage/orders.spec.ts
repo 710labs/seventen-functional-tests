@@ -27,8 +27,8 @@ test.beforeAll(async ({}, info) => {
 for (const target of selectedTargets) {
 	for (const profile of orderProfiles) {
 		const { sequence, userType } = profile
-		const customerName = buildCustomerName(target.pos, profile)
 		test(`${target.pos} — ${target.store} — ${profile.label} order`, async ({ page }) => {
+			const customerName = buildCustomerName(target.pos, profile)
 			const recordFile = path.join(resultDirectory, `${target.pos}-${sequence}.json`)
 			mkdirSync(resultDirectory, { recursive: true })
 			// Do not overwrite evidence from a prior invocation or partial run.

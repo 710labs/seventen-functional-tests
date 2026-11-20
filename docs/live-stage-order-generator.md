@@ -18,9 +18,11 @@ one Slack summary at the end of the workflow, including failed or incomplete run
 Each order registers a new synthetic customer, adds available inventory from
 the target store until its checkout minimum is met, completes
 pickup checkout with cash and the existing test document, then submits once.
-First and last names are identical: `Test_710Labs_{POS Name}_Rec` or
-`Test_710Labs_{POS Name}_Med`, for example `Test_710Labs_Dutchie_Rec` and
-`Test_710Labs_Dutchie_Med`.
+First and last names are identical and include a timestamp:
+`Test_710Labs_{POS Name}_{Rec|Med}_YYYYMMDD_HHMMSS_mmm`, for example
+`Test_710Labs_Dutchie_Rec_20261120_160530_123`. Timestamps use America/New_York
+time with millisecond precision. The name is generated once per account and
+preserved in the order evidence and full report.
 Each account still receives a unique email address on every run.
 
 The medical case saves the `Medical-Card.png` test fixture to the customer's
@@ -29,7 +31,7 @@ the other sandboxes. It reloads the account and checks the saved card details,
 then uses the medical cart and checkout flow and requires medical document
 details at checkout. Medical-only inventory is preferred when available;
 otherwise the medical customer can use the store's regular inventory. A name
-ending in `_Med` alone cannot satisfy medical coverage.
+containing `_Med_` alone cannot satisfy medical coverage.
 
 Add-to-cart controls must match the store's facility, pickup method, and POS
 instance. The generator fails instead of substituting a different store.
