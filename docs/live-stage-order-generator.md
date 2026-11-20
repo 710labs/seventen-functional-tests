@@ -18,6 +18,9 @@ one Slack summary at the end of the workflow, including failed or incomplete run
 Each order registers a new synthetic customer, adds available recreational
 inventory from the target store until its checkout minimum is met, completes
 pickup checkout with cash and the existing test document, then submits once.
+First and last names are identical: `Test_710Labs_{POS Name}_{order number}`,
+for example `Test_710Labs_Dutchie_1` and `Test_710Labs_Dutchie_2`.
+Each account still receives a unique email address on every run.
 Add-to-cart controls must match the store's facility, pickup method, and POS
 instance. The generator fails instead of substituting a different store.
 

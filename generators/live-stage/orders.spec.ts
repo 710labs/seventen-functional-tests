@@ -48,8 +48,10 @@ for (const target of selectedTargets) {
 				await page.goto(`${STAGE_URL}/register/`)
 				const registration = page.locator('form.woocommerce-form-register')
 				const email = `livegen-${Date.now()}-${randomBytes(3).toString('hex')}@example.com`
-				await registration.locator('#reg_firstname').fill('Test_710')
-				await registration.locator('#reg_lastname').fill(`POS_${target.pos}_${sequence}`)
+				const posName = target.pos.charAt(0).toUpperCase() + target.pos.slice(1)
+				const customerName = `Test_710Labs_${posName}_${sequence}`
+				await registration.locator('#reg_firstname').fill(customerName)
+				await registration.locator('#reg_lastname').fill(customerName)
 				await registration.locator('#reg_email').fill(email)
 				await registration.locator('#reg_password').fill(process.env.ALWAYS_ON_PASSWORD!)
 				await registration.locator('#reg_postalcode').fill('90232')
