@@ -9,6 +9,7 @@ type LiveUserType = 'rec' | 'med'
 type CartFlowOptions = {
 	step?: <T>(name: string, action: () => Promise<T>) => Promise<T>
 	medicalCardPath?: string
+	medicalCardState?: 'CA' | 'MI'
 	requireMedicalProduct?: boolean
 	// Explicit targets are used by the Stage order generator; ordinary smoke tests
 	// continue to discover their storefront from the registration cart.
@@ -1343,6 +1344,7 @@ export class LiveNonProdCartFlow {
 
 		const newYear = new Date().getFullYear() + 1
 		const medicalCardValues = {
+			state: this.options.medicalCardState || 'CA',
 			expiration: `${newYear}-01-01`,
 			cardNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
 		}
@@ -1368,7 +1370,7 @@ export class LiveNonProdCartFlow {
 						checkbox.checked = true
 					}
 
-					setValue('#medcard_state', 'CA')
+					setValue('#medcard_state', values.state)
 					setValue('#medcard_exp', values.expiration)
 					setValue('#medcard_no', values.cardNumber)
 					setValue('#fasd_dob', '1990-01-01')

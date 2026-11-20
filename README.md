@@ -534,5 +534,6 @@ Use the following GH Actions API requests to view workflows and create dispatch 
 ## Live Stage order generator
 
 Use **Live - Stage - Order Generator** in GitHub Actions to manually create two
-pickup orders per POS (Dutchie, Blaze, Treez, and Meadow; eight orders total).
+pickup orders per POS: one Rec and one Med (Dutchie, Blaze, Treez, and Meadow;
+eight orders total).
 See [setup, store mappings, and result handling](docs/live-stage-order-generator.md).

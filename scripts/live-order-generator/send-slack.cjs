@@ -18,7 +18,7 @@ function buildSlackMessage(result, { jobStatus = 'success', runUrl = null } = {}
 		const woo = order.orderId ? `<${order.adminUrl}|Woo #${order.orderId}>` : 'No Woo order ID captured'
 		const id = order.externalId ? escapeSlack(order.externalId) : 'Not available'
 		const pos = order.posOrderUrl ? `<${order.posOrderUrl}|Open POS order> (ID: ${id})` : `${id}${order.externalId ? ' — direct link unavailable' : ''}`
-		return `*${order.pos.toUpperCase()} — ${escapeSlack(order.store)}*\nOrder ${order.sequence}/${result.ordersPerPos}: ${woo}\nPOS order: ${pos}\nStatus: *${order.status}* • Phase: ${order.phase}`
+		return `*${order.pos.toUpperCase()} — ${escapeSlack(order.store)}*\n*${order.customerType === 'medical' ? 'Medical' : 'Recreational'}* • ${escapeSlack(order.customerName)}\nOrder ${order.sequence}/${result.ordersPerPos}: ${woo}\nPOS order: ${pos}\nStatus: *${order.status}* • Phase: ${order.phase}`
 	})
 	const note = 'Each order uses a new test account. A submitting result may have created an order; inspect Stage before rerunning.'
 	return {

@@ -1,8 +1,8 @@
 # Live Stage order generator
 
 Run **Actions → Live - Stage - Order Generator → Run workflow**. Leave `pos` as
-`all` to create **eight new recreational pickup orders: two per POS**. Select an
-individual POS to create two new orders for that integration only.
+`all` to create **eight new pickup orders: one recreational and one medical per
+POS**. Select an individual POS to create that Rec/Med pair for one integration.
 
 The workflow is manual only and always targets `https://live-stage.710labs.com`.
 It has its own Playwright config and a single desktop Chromium project. It sends
@@ -15,12 +15,22 @@ one Slack summary at the end of the workflow, including failed or incomplete run
 | Treez | Sticky Thumb - South SF | 15 | 10 |
 | Meadow | The Artist Tree - Beverly Hills | 19 | 6 |
 
-Each order registers a new synthetic customer, adds available recreational
-inventory from the target store until its checkout minimum is met, completes
+Each order registers a new synthetic customer, adds available inventory from
+the target store until its checkout minimum is met, completes
 pickup checkout with cash and the existing test document, then submits once.
-First and last names are identical: `Test_710Labs_{POS Name}_{order number}`,
-for example `Test_710Labs_Dutchie_1` and `Test_710Labs_Dutchie_2`.
+First and last names are identical: `Test_710Labs_{POS Name}_Rec` or
+`Test_710Labs_{POS Name}_Med`, for example `Test_710Labs_Dutchie_Rec` and
+`Test_710Labs_Dutchie_Med`.
 Each account still receives a unique email address on every run.
+
+The medical case saves the `Medical-Card.png` test fixture to the customer's
+account before building the cart, with issuing state MI for Dutchie and CA for
+the other sandboxes. It reloads the account and checks the saved card details,
+then uses the medical cart and checkout flow and requires medical document
+details at checkout. Medical-only inventory is preferred when available;
+otherwise the medical customer can use the store's regular inventory. A name
+ending in `_Med` alone cannot satisfy medical coverage.
+
 Add-to-cart controls must match the store's facility, pickup method, and POS
 instance. The generator fails instead of substituting a different store.
 
@@ -46,15 +56,18 @@ orders. No production URL secret is used.
 ## Results and reruns
 
 Slack and the GitHub run summary list **every requested order**, grouped by its
-POS and store, with its WooCommerce ID and admin link, external POS order ID,
-status, and phase. Missing orders are shown as `not-started`; an unreadable
+POS and store, with its Rec/Med type, customer name, WooCommerce ID and admin
+link, external POS order ID, status, and phase. Missing orders are shown as
+`not-started`; an unreadable
 evidence file is shown as `invalid-evidence`. A failed setup or incomplete run
 does not hide the remaining order attempts. The Slack message links back to the
 GitHub run, and Slack delivery failure fails the workflow.
 
 Download `live-stage-generated-orders-<run>-<attempt>` for `orders.json` and
 `summary.md`. The workflow fails unless every requested order is verified and
-has a distinct order ID. Earlier failures do not stop later order attempts.
+has a distinct order ID and matches its expected Rec/Med profile. A medical
+order also requires evidence that its medical card was persisted. Earlier
+failures do not stop later order attempts.
 
 Automatic test retries are disabled. A `created` status means checkout returned
 an order ID but POS verification did not complete. A `submitting` status means

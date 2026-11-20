@@ -5,10 +5,12 @@ import { randomBytes } from 'node:crypto'
 import { LiveNonProdCartFlow } from '../../models/always-on/live-nonprod-cart-flow'
 import { LiveNonProdCheckoutPage } from '../../models/always-on/live-nonprod-checkout-page'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation'
+import { configureMedicalProfile } from '../../support/live-order-generator/medical-profile'
 
-const { STAGE_URL, ORDERS_PER_POS, selectTargets, assertStageUrl, transmissionProblem } =
+const { STAGE_URL, selectTargets, assertStageUrl, transmissionProblem } =
 	require('../../support/live-order-generator/targets.cjs')
 const { posOrderDetails } = require('../../support/live-order-generator/pos-links.cjs')
+const { orderProfiles, customerName: buildCustomerName } = require('../../support/live-order-generator/profiles.cjs')
 const selectedTargets = selectTargets(process.env.LIVE_ORDER_POS || 'all')
 const resultDirectory = path.resolve('output/live-order-generator')
 
@@ -23,13 +25,16 @@ test.beforeAll(async ({}, info) => {
 })
 
 for (const target of selectedTargets) {
-	for (let sequence = 1; sequence <= ORDERS_PER_POS; sequence += 1) {
-		test(`${target.pos} — ${target.store} — order ${sequence} of ${ORDERS_PER_POS}`, async ({ page }) => {
+	for (const profile of orderProfiles) {
+		const { sequence, userType } = profile
+		const customerName = buildCustomerName(target.pos, profile)
+		test(`${target.pos} — ${target.store} — ${profile.label} order`, async ({ page }) => {
 			const recordFile = path.join(resultDirectory, `${target.pos}-${sequence}.json`)
 			mkdirSync(resultDirectory, { recursive: true })
 			// Do not overwrite evidence from a prior invocation or partial run.
 			if (existsSync(recordFile)) throw new Error('Existing order evidence found; archive it before starting a new run')
 			const record = { pos: target.pos, store: target.store, instanceId: target.instanceId,
+				userType, customerName, medicalProfileVerified: false,
 				sequence, orderId: null as string | null, status: 'started', phase: 'registration',
 				externalId: null as string | null, posOrderUrl: null as string | null }
 			const save = () => writeFileSync(recordFile, JSON.stringify(record, null, 2) + '\n')
@@ -48,8 +53,6 @@ for (const target of selectedTargets) {
 				await page.goto(`${STAGE_URL}/register/`)
 				const registration = page.locator('form.woocommerce-form-register')
 				const email = `livegen-${Date.now()}-${randomBytes(3).toString('hex')}@example.com`
-				const posName = target.pos.charAt(0).toUpperCase() + target.pos.slice(1)
-				const customerName = `Test_710Labs_${posName}_${sequence}`
 				await registration.locator('#reg_firstname').fill(customerName)
 				await registration.locator('#reg_lastname').fill(customerName)
 				await registration.locator('#reg_email').fill(email)
@@ -61,22 +64,37 @@ for (const target of selectedTargets) {
 				await registration.getByRole('button', { name: 'Create account', exact: true }).click()
 				await expect(registration).toBeHidden({ timeout: 30000 })
 				await expect(page.locator('body')).toHaveClass(/\blogged-in\b/, { timeout: 30000 })
+				if (userType === 'med') {
+					record.phase = 'medical-profile'
+					save()
+					await configureMedicalProfile(page, target.pos === 'dutchie' ? 'MI' : 'CA')
+					record.medicalProfileVerified = true
+					save()
+				}
 				record.phase = 'cart'
 				save()
 				await page.goto(storefrontUrl)
 				await expect(page.locator('body')).toHaveClass(/\blogged-in\b/)
 				const cart = new LiveNonProdCartFlow(page, {
 					startWithEmptyCart: true,
+					medicalCardPath: 'Medical-Card.png',
+					medicalCardState: target.pos === 'dutchie' ? 'MI' : 'CA',
 					target: { storefrontUrl, instanceId: target.instanceId, facilityId: target.facilityId, method: 'pickup' },
 				})
-				await cart.addProductsUntilCheckout('rec')
+				await cart.addProductsUntilCheckout(userType)
 				record.phase = 'checkout'
 				save()
 				const checkout = new LiveNonProdCheckoutPage(page)
 				await checkout.verifyCheckoutPageLoads(page)
 				// This initial generator uses pickup to avoid delivery coverage and scheduling dependencies.
 				await expect(checkout.pickUpLocationTitle).toBeVisible()
-				await checkout.completeRecCheckout(page, '', '')
+				if (userType === 'med') {
+					await checkout.completeMedCheckout(page, '', '', true)
+				} else {
+					await checkout.completeRecCheckout(page, '', '')
+				}
+				await expect(checkout.displayedFirstName).toHaveText(customerName)
+				await expect(checkout.displayedLastName).toHaveText(customerName)
 				assertStageUrl(page.url())
 				await expect(checkout.orderReviewSection).toBeVisible()
 				await checkout.passwordCheckoutField.fill(process.env.CHECKOUT_PASSWORD!)

@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 const { targets } = require('../../support/live-order-generator/targets.cjs')
+const { orderProfiles, customerName } = require('../../support/live-order-generator/profiles.cjs')
 const { posOrderDetails, safePosOrderUrl, configuredPosOrderUrl } = require('../../support/live-order-generator/pos-links.cjs')
 const { summarize, markdown } = require('./summarize.cjs')
 const { buildSlackMessage, workflowRunUrl, sendSlack } = require('./send-slack.cjs')
@@ -12,9 +13,11 @@ function fixture(t) {
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-slack-'))
 	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
 	let id = 100
-	for (const target of targets) for (const sequence of [1, 2]) {
+	for (const target of targets) for (const profile of orderProfiles) {
+		const { sequence, userType } = profile
 		fs.writeFileSync(path.join(directory, `${target.pos}-${sequence}.json`), JSON.stringify({
 			...target, sequence, orderId: String(id++), externalId: `pos-${target.pos}-${sequence}`,
+			userType, customerName: customerName(target.pos, profile), medicalProfileVerified: userType === 'med',
 			status: 'verified', phase: 'verification', password: 'must-not-be-published',
 		}))
 	}
@@ -50,7 +53,11 @@ test('Slack and artifact summaries include all eight Woo IDs and POS IDs without
 		assert.ok(message.text.includes(`<${order.adminUrl}|Woo #${order.orderId}>`))
 		assert.ok(message.text.includes(order.externalId))
 		assert.ok(markdown(result).includes(order.externalId))
+		assert.ok(message.text.includes(order.customerName))
+		assert.ok(markdown(result).includes(order.customerType))
 	}
+	assert.match(message.text, /\*Recreational\*/)
+	assert.match(message.text, /\*Medical\*/)
 	assert.equal(message.blocks.filter(block => block.type === 'section').length, 9)
 	assert.ok(message.text.includes('direct link unavailable'))
 	assert.equal(message.blocks.at(-1).elements[0].url, runUrl)
