@@ -84,6 +84,7 @@ jobs:
         with:
           name: live-stage-generated-orders-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            output/live-order-generator/batch.json
             output/live-order-generator/orders.json
             output/live-order-generator/summary.md
           if-no-files-found: warn

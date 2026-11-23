@@ -19,13 +19,24 @@ Each order registers a new synthetic customer, adds available inventory from
 the target store until its checkout minimum is met, completes
 pickup checkout with cash and the existing test document, then submits once.
 First and last names are identical and use a compact format:
-`710_{POS code}_{Rec|Med}_{six-character ID}`, for example `710_DUT_Med_A7K2Q9`.
+`710_{POS code}_{Rec|Med}_{batch ID}`, for example `710_DUT_Med_A7K2Q9`.
 POS codes are `DUT` (Dutchie), `BLZ` (Blaze), `TRZ` (Treez), and `MDW` (Meadow);
 `Rec` means recreational and `Med` means medical. Names are 18 characters.
-The suffix is a cryptographically random six-character ID, independent of the
-clock, with duplicates regenerated within the running process.
-The name is generated once per account and preserved in the order evidence and
-full report. Reports also recognize timestamped names from earlier runs.
+The suffix is one cryptographically random six-character **batch ID shared by
+every order in that run**, across all POSs and both customer types. For example:
+
+```text
+710_DUT_Rec_A7K2Q9
+710_DUT_Med_A7K2Q9
+710_TRZ_Rec_A7K2Q9
+710_TRZ_Med_A7K2Q9
+```
+
+The launcher creates `output/live-order-generator/batch.json` before starting
+Playwright and passes the ID to all workers, including replacement workers.
+Every new invocation (including a GitHub rerun) starts a fresh batch. First and
+last names still match. Batch IDs and names are preserved in the order evidence
+and full report. Reports also recognize names from earlier, pre-batch runs.
 Each account still receives a unique email address on every run.
 
 The medical case saves the `Medical-Card.png` test fixture to the customer's
@@ -60,7 +71,7 @@ orders. No production URL secret is used.
 
 ## Results and reruns
 
-Slack lists **every requested order in one compact line**: status icon, POS,
+Slack shows the shared batch ID once above **every requested order in one compact line**: status icon, POS,
 Rec/Med, linked WooCommerce ID, and external POS ID (linked when available).
 Verified rows omit repeated status/phase text. Incomplete rows include their
 status and phase; a rerun warning appears only for an ambiguous submission.
@@ -73,8 +84,9 @@ file is shown as `invalid-evidence`. A failed setup or incomplete run does not
 hide the remaining order attempts. Slack delivery failure fails the workflow.
 
 Download `live-stage-generated-orders-<run>-<attempt>` for `orders.json` and
-`summary.md`. The workflow fails unless every requested order is verified and
-has a distinct order ID and matches its expected Rec/Med profile. A medical
+`summary.md` plus the `batch.json` manifest. The workflow fails unless every
+requested order is verified, has a distinct order ID, belongs to the same batch,
+and matches its expected Rec/Med profile and name. A medical
 order also requires evidence that its medical card was persisted. Earlier
 failures do not stop later order attempts.
 
@@ -123,8 +135,10 @@ node scripts/live-order-generator/summarize.cjs
 
 Set `LIVE_ORDER_POS=meadow` (or `dutchie`, `blaze`, `treez`) to target one POS.
 Local evidence is stored under `output/live-order-generator/`. Archive that
-directory before starting another local run: the generator refuses to overwrite
-records from a previous invocation. GitHub runners start with a fresh checkout.
+directory before starting another local run: the launcher refuses to overwrite
+a prior batch or its evidence. Use the npm command to initialize the batch;
+invoking Playwright directly does not create a batch. GitHub runners start with
+a fresh checkout.
 
 Offline checks:
 

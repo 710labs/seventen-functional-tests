@@ -5,6 +5,7 @@ const os = require('node:os')
 const path = require('node:path')
 const { targets } = require('../../support/live-order-generator/targets.cjs')
 const { orderProfiles, customerName } = require('../../support/live-order-generator/profiles.cjs')
+const { createBatch } = require('../../support/live-order-generator/batch.cjs')
 const { posOrderDetails, safePosOrderUrl, configuredPosOrderUrl } = require('../../support/live-order-generator/pos-links.cjs')
 const { summarize, markdown } = require('./summarize.cjs')
 const { buildSlackMessage, workflowRunUrl, sendSlack } = require('./send-slack.cjs')
@@ -12,12 +13,13 @@ const { buildSlackMessage, workflowRunUrl, sendSlack } = require('./send-slack.c
 function fixture(t) {
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-slack-'))
 	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	const { batchId } = createBatch(directory)
 	let id = 100
 	for (const target of targets) for (const profile of orderProfiles) {
 		const { sequence, userType } = profile
 		fs.writeFileSync(path.join(directory, `${target.pos}-${sequence}.json`), JSON.stringify({
 			...target, sequence, orderId: String(id++), externalId: `pos-${target.pos}-${sequence}`,
-			userType, customerName: customerName(target.pos, profile), medicalProfileVerified: userType === 'med',
+			batchId, userType, customerName: customerName(target.pos, profile, batchId), medicalProfileVerified: userType === 'med',
 			status: 'verified', phase: 'verification', password: 'must-not-be-published',
 		}))
 	}
@@ -49,6 +51,8 @@ test('Slack and artifact summaries include all eight Woo IDs and POS IDs without
 	const message = buildSlackMessage(result, { runUrl })
 	assert.match(message.text, /PASSED/)
 	assert.match(message.text, /8 requested • 8 created • 8 POS verified/)
+	assert.ok(message.text.includes(`Batch \`${result.batchId}\``))
+	assert.ok(markdown(result).includes(`Batch: **${result.batchId}**`))
 	for (const order of result.orders) {
 		assert.ok(message.text.includes(`<${order.adminUrl}|Woo #${order.orderId}>`))
 		assert.ok(message.text.includes(order.externalId))
@@ -104,7 +108,7 @@ test('partial failures, corrupt evidence, and setup failures still account for e
 test('long POS IDs and links stay intact while compact rows respect section size limits', t => {
 	const directory = fixture(t)
 	const domains = { dutchie: 'dutchie.com', blaze: 'blaze.me', treez: 'treez.io', meadow: 'getmeadow.com' }
-	for (const file of fs.readdirSync(directory)) {
+	for (const file of fs.readdirSync(directory).filter(file => file !== 'batch.json')) {
 		const record = JSON.parse(fs.readFileSync(path.join(directory, file)))
 		record.externalId = 'id-' + 'x'.repeat(180)
 		record.posOrderUrl = `https://${domains[record.pos]}/confirmed-order/${'x'.repeat(850)}`

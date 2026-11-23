@@ -14,6 +14,7 @@ function buildSlackMessage(result, { jobStatus = 'success', runUrl = null } = {}
 	const verified = result.orders.filter(order => order.status === 'verified').length
 	const heading = `Live Stage — Order Generator — ${status}`
 	const counts = `${result.orders.length} requested • ${created} created • ${verified} POS verified`
+	const overview = result.batchId ? `Batch \`${result.batchId}\` · ${counts}` : counts
 	const rows = result.orders.map(order => {
 		const woo = order.orderId ? `<${order.adminUrl}|Woo #${order.orderId}>` : 'Woo —'
 		const id = order.externalId ? escapeSlack(order.externalId) : null
@@ -34,12 +35,12 @@ function buildSlackMessage(result, { jobStatus = 'success', runUrl = null } = {}
 	const note = result.orders.some(order => order.status === 'submitting')
 		? '⚠️ An order may have been submitted without a captured ID. Inspect Stage before rerunning.' : null
 	return {
-		text: [heading, counts, ...rows, ...(note ? [note] : []), ...(runUrl ? [`Full report: ${runUrl}`] : [])].join('\n'),
+		text: [heading, overview, ...rows, ...(note ? [note] : []), ...(runUrl ? [`Full report: ${runUrl}`] : [])].join('\n'),
 		unfurl_links: false,
 		unfurl_media: false,
 		blocks: [
 			{ type: 'header', text: { type: 'plain_text', text: heading } },
-			{ type: 'section', text: { type: 'mrkdwn', text: counts } },
+			{ type: 'section', text: { type: 'mrkdwn', text: overview } },
 			...rowSections.map(text => ({ type: 'section', text: { type: 'mrkdwn', text } })),
 			...(note ? [{ type: 'context', elements: [{ type: 'plain_text', text: note }] }] : []),
 			...(runUrl ? [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Full report' }, url: runUrl }] }] : []),

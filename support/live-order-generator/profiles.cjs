@@ -1,4 +1,4 @@
-const crypto = require('node:crypto')
+const { assertBatchId } = require('./batch.cjs')
 
 const orderProfiles = [
 	{ sequence: 1, userType: 'rec', label: 'Rec', customerType: 'recreational' },
@@ -6,25 +6,18 @@ const orderProfiles = [
 ]
 
 const posCodes = { dutchie: 'DUT', blaze: 'BLZ', treez: 'TRZ', meadow: 'MDW' }
-const generatedNames = new Set()
 
 function namePrefix(pos, profile) {
 	if (!posCodes[pos] || !['rec', 'med'].includes(profile.userType)) throw new Error('Unknown customer profile')
 	return `710_${posCodes[pos]}_${profile.label}`
 }
 
-function customerName(pos, profile) {
-	const prefix = namePrefix(pos, profile)
-	let name
-	do {
-		const suffix = crypto.randomInt(36 ** 6).toString(36).toUpperCase().padStart(6, '0')
-		name = `${prefix}_${suffix}`
-	} while (generatedNames.has(name))
-	generatedNames.add(name)
-	return name
+function customerName(pos, profile, batchId) {
+	return `${namePrefix(pos, profile)}_${assertBatchId(batchId)}`
 }
 
-function isCustomerName(name, pos, profile) {
+function isCustomerName(name, pos, profile, batchId) {
+	if (batchId !== undefined) return name === customerName(pos, profile, batchId)
 	const prefix = `${namePrefix(pos, profile)}_`
 	if (typeof name !== 'string') return false
 	if (name.startsWith(prefix)) {

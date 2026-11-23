@@ -11,10 +11,14 @@ const { STAGE_URL, selectTargets, assertStageUrl, transmissionProblem } =
 	require('../../support/live-order-generator/targets.cjs')
 const { posOrderDetails } = require('../../support/live-order-generator/pos-links.cjs')
 const { orderProfiles, customerName: buildCustomerName } = require('../../support/live-order-generator/profiles.cjs')
+const { assertBatchId, readBatch } = require('../../support/live-order-generator/batch.cjs')
 const selectedTargets = selectTargets(process.env.LIVE_ORDER_POS || 'all')
 const resultDirectory = path.resolve('output/live-order-generator')
+const batchId = process.env.LIVE_ORDER_BATCH_ID
 
 test.beforeAll(async ({}, info) => {
+	assertBatchId(batchId)
+	expect(readBatch(resultDirectory)?.batchId, 'Batch metadata must match the launcher').toBe(batchId)
 	if (info.config.projects.length !== 1 || info.project.repeatEach !== 1 || info.project.retries !== 0) {
 		throw new Error('The generator requires one project, one repetition, and no retries')
 	}
@@ -28,12 +32,12 @@ for (const target of selectedTargets) {
 	for (const profile of orderProfiles) {
 		const { sequence, userType } = profile
 		test(`${target.pos} — ${target.store} — ${profile.label} order`, async ({ page }) => {
-			const customerName = buildCustomerName(target.pos, profile)
+			const customerName = buildCustomerName(target.pos, profile, batchId)
 			const recordFile = path.join(resultDirectory, `${target.pos}-${sequence}.json`)
 			mkdirSync(resultDirectory, { recursive: true })
 			// Do not overwrite evidence from a prior invocation or partial run.
 			if (existsSync(recordFile)) throw new Error('Existing order evidence found; archive it before starting a new run')
-			const record = { pos: target.pos, store: target.store, instanceId: target.instanceId,
+			const record = { batchId, pos: target.pos, store: target.store, instanceId: target.instanceId,
 				userType, customerName, medicalProfileVerified: false,
 				sequence, orderId: null as string | null, status: 'started', phase: 'registration',
 				externalId: null as string | null, posOrderUrl: null as string | null }
