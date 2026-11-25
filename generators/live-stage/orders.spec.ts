@@ -5,14 +5,20 @@ import { randomBytes } from 'node:crypto'
 import { LiveNonProdCartFlow } from '../../models/always-on/live-nonprod-cart-flow'
 import { LiveNonProdCheckoutPage } from '../../models/always-on/live-nonprod-checkout-page'
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation'
+import { configureMedicalProfile } from '../../support/live-order-generator/medical-profile'
 
-const { STAGE_URL, ORDERS_PER_POS, selectTargets, assertStageUrl, transmissionProblem } =
+const { STAGE_URL, selectTargets, assertStageUrl, transmissionProblem } =
 	require('../../support/live-order-generator/targets.cjs')
 const { posOrderDetails } = require('../../support/live-order-generator/pos-links.cjs')
+const { orderProfiles, customerName: buildCustomerName } = require('../../support/live-order-generator/profiles.cjs')
+const { assertBatchId, readBatch } = require('../../support/live-order-generator/batch.cjs')
 const selectedTargets = selectTargets(process.env.LIVE_ORDER_POS || 'all')
 const resultDirectory = path.resolve('output/live-order-generator')
+const batchId = process.env.LIVE_ORDER_BATCH_ID
 
 test.beforeAll(async ({}, info) => {
+	assertBatchId(batchId)
+	expect(readBatch(resultDirectory)?.batchId, 'Batch metadata must match the launcher').toBe(batchId)
 	if (info.config.projects.length !== 1 || info.project.repeatEach !== 1 || info.project.retries !== 0) {
 		throw new Error('The generator requires one project, one repetition, and no retries')
 	}
@@ -23,13 +29,16 @@ test.beforeAll(async ({}, info) => {
 })
 
 for (const target of selectedTargets) {
-	for (let sequence = 1; sequence <= ORDERS_PER_POS; sequence += 1) {
-		test(`${target.pos} — ${target.store} — order ${sequence} of ${ORDERS_PER_POS}`, async ({ page }) => {
+	for (const profile of orderProfiles) {
+		const { sequence, userType } = profile
+		test(`${target.pos} — ${target.store} — ${profile.label} order`, async ({ page }) => {
+			const customerName = buildCustomerName(target.pos, profile, batchId)
 			const recordFile = path.join(resultDirectory, `${target.pos}-${sequence}.json`)
 			mkdirSync(resultDirectory, { recursive: true })
 			// Do not overwrite evidence from a prior invocation or partial run.
 			if (existsSync(recordFile)) throw new Error('Existing order evidence found; archive it before starting a new run')
-			const record = { pos: target.pos, store: target.store, instanceId: target.instanceId,
+			const record = { batchId, pos: target.pos, store: target.store, instanceId: target.instanceId,
+				userType, customerName, medicalProfileVerified: false,
 				sequence, orderId: null as string | null, status: 'started', phase: 'registration',
 				externalId: null as string | null, posOrderUrl: null as string | null }
 			const save = () => writeFileSync(recordFile, JSON.stringify(record, null, 2) + '\n')
@@ -48,8 +57,8 @@ for (const target of selectedTargets) {
 				await page.goto(`${STAGE_URL}/register/`)
 				const registration = page.locator('form.woocommerce-form-register')
 				const email = `livegen-${Date.now()}-${randomBytes(3).toString('hex')}@example.com`
-				await registration.locator('#reg_firstname').fill('Test_710')
-				await registration.locator('#reg_lastname').fill(`POS_${target.pos}_${sequence}`)
+				await registration.locator('#reg_firstname').fill(customerName)
+				await registration.locator('#reg_lastname').fill(customerName)
 				await registration.locator('#reg_email').fill(email)
 				await registration.locator('#reg_password').fill(process.env.ALWAYS_ON_PASSWORD!)
 				await registration.locator('#reg_postalcode').fill('90232')
@@ -59,22 +68,40 @@ for (const target of selectedTargets) {
 				await registration.getByRole('button', { name: 'Create account', exact: true }).click()
 				await expect(registration).toBeHidden({ timeout: 30000 })
 				await expect(page.locator('body')).toHaveClass(/\blogged-in\b/, { timeout: 30000 })
+				if (userType === 'med') {
+					record.phase = 'medical-profile'
+					save()
+					await configureMedicalProfile(page, target.pos === 'dutchie' ? 'MI' : 'CA')
+					record.medicalProfileVerified = true
+					save()
+				}
 				record.phase = 'cart'
 				save()
 				await page.goto(storefrontUrl)
 				await expect(page.locator('body')).toHaveClass(/\blogged-in\b/)
 				const cart = new LiveNonProdCartFlow(page, {
 					startWithEmptyCart: true,
+					medicalCardPath: 'Medical-Card.png',
+					medicalCardState: target.pos === 'dutchie' ? 'MI' : 'CA',
+					medicalProfileVerified: record.medicalProfileVerified,
 					target: { storefrontUrl, instanceId: target.instanceId, facilityId: target.facilityId, method: 'pickup' },
 				})
-				await cart.addProductsUntilCheckout('rec')
+				await cart.addProductsUntilCheckout(userType)
 				record.phase = 'checkout'
 				save()
 				const checkout = new LiveNonProdCheckoutPage(page)
 				await checkout.verifyCheckoutPageLoads(page)
 				// This initial generator uses pickup to avoid delivery coverage and scheduling dependencies.
 				await expect(checkout.pickUpLocationTitle).toBeVisible()
-				await checkout.completeRecCheckout(page, '', '')
+				await checkout.firstNameField.fill(customerName)
+				await checkout.lastNameField.fill(customerName)
+				if (userType === 'med') {
+					await checkout.completeMedCheckout(page, '', '', true)
+				} else {
+					await checkout.completeRecCheckout(page, '', '')
+				}
+				await expect(checkout.displayedFirstName).toHaveText(customerName)
+				await expect(checkout.displayedLastName).toHaveText(customerName)
 				assertStageUrl(page.url())
 				await expect(checkout.orderReviewSection).toBeVisible()
 				await checkout.passwordCheckoutField.fill(process.env.CHECKOUT_PASSWORD!)

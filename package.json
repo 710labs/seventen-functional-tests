@@ -58,7 +58,7 @@
 		"load:thelist:url-hit": "cross-env ARTILLERY_TARGET=https://thelist-dev.710labs.com npx artillery run artillery/artillery-thelist-url-hit.yml",
 		"test:security": "node --test scripts/security/*.test.js",
 		"validate:security": "node scripts/security/validate-public-reporting.js",
-		"live:stage:generate-orders": "node scripts/run-public-playwright.js --config=configs/live-order-generator.config.ts",
+		"live:stage:generate-orders": "node scripts/live-order-generator/run.cjs",
 		"test:live-order-generator": "node --test scripts/live-order-generator/*.test.cjs"
 	},
 	"repository": {

@@ -1,8 +1,8 @@
 # Live Stage order generator
 
 Run **Actions → Live - Stage - Order Generator → Run workflow**. Leave `pos` as
-`all` to create **eight new recreational pickup orders: two per POS**. Select an
-individual POS to create two new orders for that integration only.
+`all` to create **eight new pickup orders: one recreational and one medical per
+POS**. Select an individual POS to create that Rec/Med pair for one integration.
 
 The workflow is manual only and always targets `https://live-stage.710labs.com`.
 It has its own Playwright config and a single desktop Chromium project. It sends
@@ -15,9 +15,38 @@ one Slack summary at the end of the workflow, including failed or incomplete run
 | Treez | Sticky Thumb - South SF | 15 | 10 |
 | Meadow | The Artist Tree - Beverly Hills | 19 | 6 |
 
-Each order registers a new synthetic customer, adds available recreational
-inventory from the target store until its checkout minimum is met, completes
+Each order registers a new synthetic customer, adds available inventory from
+the target store until its checkout minimum is met, completes
 pickup checkout with cash and the existing test document, then submits once.
+First and last names are identical and use a compact format:
+`710_{POS code}_{Rec|Med}_{batch ID}`, for example `710_DUT_Med_A7K2Q9`.
+POS codes are `DUT` (Dutchie), `BLZ` (Blaze), `TRZ` (Treez), and `MDW` (Meadow);
+`Rec` means recreational and `Med` means medical. Names are 18 characters.
+The suffix is one cryptographically random six-character **batch ID shared by
+every order in that run**, across all POSs and both customer types. For example:
+
+```text
+710_DUT_Rec_A7K2Q9
+710_DUT_Med_A7K2Q9
+710_TRZ_Rec_A7K2Q9
+710_TRZ_Med_A7K2Q9
+```
+
+The launcher creates `output/live-order-generator/batch.json` before starting
+Playwright and passes the ID to all workers, including replacement workers.
+Every new invocation (including a GitHub rerun) starts a fresh batch. First and
+last names still match. Batch IDs and names are preserved in the order evidence
+and full report. Reports also recognize names from earlier, pre-batch runs.
+Each account still receives a unique email address on every run.
+
+The medical case saves the `Medical-Card.png` test fixture to the customer's
+account before building the cart, with issuing state MI for Dutchie and CA for
+the other sandboxes. It reloads the account and checks the saved card details,
+then uses the medical cart and checkout flow and requires medical document
+details at checkout. Medical-only inventory is preferred when available;
+otherwise the medical customer can use the store's regular inventory. A name
+containing `_Med_` alone cannot satisfy medical coverage.
+
 Add-to-cart controls must match the store's facility, pickup method, and POS
 instance. The generator fails instead of substituting a different store.
 
@@ -42,16 +71,24 @@ orders. No production URL secret is used.
 
 ## Results and reruns
 
-Slack and the GitHub run summary list **every requested order**, grouped by its
-POS and store, with its WooCommerce ID and admin link, external POS order ID,
-status, and phase. Missing orders are shown as `not-started`; an unreadable
-evidence file is shown as `invalid-evidence`. A failed setup or incomplete run
-does not hide the remaining order attempts. The Slack message links back to the
-GitHub run, and Slack delivery failure fails the workflow.
+Slack shows the shared batch ID once above **every requested order in one compact line**: status icon, POS,
+Rec/Med, linked WooCommerce ID, and external POS ID (linked when available).
+Verified rows omit repeated status/phase text. Incomplete rows include their
+status and phase; a rerun warning appears only for an ambiguous submission.
+The lines share one message section where possible to avoid extra spacing.
+
+The **Full report** button opens the GitHub run summary, which retains store
+names, customer names, Rec/Med types, WooCommerce and POS IDs/links, statuses,
+and phases. Missing orders are shown as `not-started`; an unreadable evidence
+file is shown as `invalid-evidence`. A failed setup or incomplete run does not
+hide the remaining order attempts. Slack delivery failure fails the workflow.
 
 Download `live-stage-generated-orders-<run>-<attempt>` for `orders.json` and
-`summary.md`. The workflow fails unless every requested order is verified and
-has a distinct order ID. Earlier failures do not stop later order attempts.
+`summary.md` plus the `batch.json` manifest. The workflow fails unless every
+requested order is verified, has a distinct order ID, belongs to the same batch,
+and matches its expected Rec/Med profile and name. A medical
+order also requires evidence that its medical card was persisted. Earlier
+failures do not stop later order attempts.
 
 Automatic test retries are disabled. A `created` status means checkout returned
 an order ID but POS verification did not complete. A `submitting` status means
@@ -67,7 +104,7 @@ direct order URL. When the response includes `posOrderUrl`, `posOrderURL`,
 `externalUrl`, or `externalURL`, the generator can preserve a valid provider link
 for the matching POS instance. These optional fields are supported for future
 responses; their presence on Stage has not been verified. Without a URL, Slack
-still shows the external ID and says `direct link unavailable`.
+still shows the external ID without repeating an unavailable-link notice.
 
 Alternatively, set a GitHub Actions **repository variable** with a confirmed
 order URL template for the relevant sandbox:
@@ -98,8 +135,10 @@ node scripts/live-order-generator/summarize.cjs
 
 Set `LIVE_ORDER_POS=meadow` (or `dutchie`, `blaze`, `treez`) to target one POS.
 Local evidence is stored under `output/live-order-generator/`. Archive that
-directory before starting another local run: the generator refuses to overwrite
-records from a previous invocation. GitHub runners start with a fresh checkout.
+directory before starting another local run: the launcher refuses to overwrite
+a prior batch or its evidence. Use the npm command to initialize the batch;
+invoking Playwright directly does not create a batch. GitHub runners start with
+a fresh checkout.
 
 Offline checks:
 

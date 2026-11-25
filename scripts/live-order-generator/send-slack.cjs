@@ -14,23 +14,36 @@ function buildSlackMessage(result, { jobStatus = 'success', runUrl = null } = {}
 	const verified = result.orders.filter(order => order.status === 'verified').length
 	const heading = `Live Stage — Order Generator — ${status}`
 	const counts = `${result.orders.length} requested • ${created} created • ${verified} POS verified`
+	const overview = result.batchId ? `Batch \`${result.batchId}\` · ${counts}` : counts
 	const rows = result.orders.map(order => {
-		const woo = order.orderId ? `<${order.adminUrl}|Woo #${order.orderId}>` : 'No Woo order ID captured'
-		const id = order.externalId ? escapeSlack(order.externalId) : 'Not available'
-		const pos = order.posOrderUrl ? `<${order.posOrderUrl}|Open POS order> (ID: ${id})` : `${id}${order.externalId ? ' — direct link unavailable' : ''}`
-		return `*${order.pos.toUpperCase()} — ${escapeSlack(order.store)}*\nOrder ${order.sequence}/${result.ordersPerPos}: ${woo}\nPOS order: ${pos}\nStatus: *${order.status}* • Phase: ${order.phase}`
+		const woo = order.orderId ? `<${order.adminUrl}|Woo #${order.orderId}>` : 'Woo —'
+		const id = order.externalId ? escapeSlack(order.externalId) : null
+		const pos = id ? `POS ${order.posOrderUrl ? `<${order.posOrderUrl}|${id}>` : `\`${id.replace(/`/g, "'")}\``}` : 'POS —'
+		const posName = order.pos.charAt(0).toUpperCase() + order.pos.slice(1)
+		const icon = order.status === 'verified' ? '✅' : ['started', 'created', 'submitting'].includes(order.status) ? '⚠️' : '❌'
+		const details = order.status === 'verified' ? '' : ` · ${order.status} (${order.phase})`
+		return `${icon} *${posName} ${order.customerType === 'medical' ? 'Med' : 'Rec'}* · ${woo} · ${pos}${details}`
 	})
-	const note = 'Each order uses a new test account. A submitting result may have created an order; inspect Stage before rerunning.'
+	// Keep rows together instead of adding Block Kit spacing around every order.
+	// Split only when needed to stay below Slack's 3,000-character section limit.
+	const rowSections = []
+	for (const row of rows) {
+		const last = rowSections.length - 1
+		if (last < 0 || rowSections[last].length + row.length + 1 > 3000) rowSections.push(row)
+		else rowSections[last] += `\n${row}`
+	}
+	const note = result.orders.some(order => order.status === 'submitting')
+		? '⚠️ An order may have been submitted without a captured ID. Inspect Stage before rerunning.' : null
 	return {
-		text: [heading, counts, ...rows, note, ...(runUrl ? [`Workflow: ${runUrl}`] : [])].join('\n\n'),
+		text: [heading, overview, ...rows, ...(note ? [note] : []), ...(runUrl ? [`Full report: ${runUrl}`] : [])].join('\n'),
 		unfurl_links: false,
 		unfurl_media: false,
 		blocks: [
 			{ type: 'header', text: { type: 'plain_text', text: heading } },
-			{ type: 'section', text: { type: 'mrkdwn', text: counts } },
-			...rows.map(text => ({ type: 'section', text: { type: 'mrkdwn', text } })),
-			{ type: 'context', elements: [{ type: 'plain_text', text: note }] },
-			...(runUrl ? [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'GitHub run & all orders' }, url: runUrl }] }] : []),
+			{ type: 'section', text: { type: 'mrkdwn', text: overview } },
+			...rowSections.map(text => ({ type: 'section', text: { type: 'mrkdwn', text } })),
+			...(note ? [{ type: 'context', elements: [{ type: 'plain_text', text: note }] }] : []),
+			...(runUrl ? [{ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Full report' }, url: runUrl }] }] : []),
 		],
 	}
 }

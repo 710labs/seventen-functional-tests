@@ -251,6 +251,22 @@ These will run in headless mode and will execute in a variety of browsers and vi
 - npm run [smoke:test:prod:fl](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-ca-prod-smoke-test.yml)
 - npm run [helper:acuityslots:dev](https://github.com/710labs/seventen-functional-tests/actions/workflows/seventen-thelist-dev-acuity-slot-helper.yml)
 
+## List Dev cart timer
+
+`tests/cart-tests/cart-alerts-tests.spec.ts` runs in the CA, MI, CO, and NJ dev suites on
+desktop and mobile Chrome. On `thelist-dev.710labs.com`, it reads the selected pickup
+location's stated minimum from the fulfillment dialog, then verifies that:
+
+- Adding a product updates the shop timer to a disabled `Add $X to check out` message.
+- The amount equals the selected pickup minimum minus the cart subtotal, in cents,
+  and matches the separate minimum-order notice in the actual cart.
+- A second below-minimum addition reduces the shortfall when the menu permits it.
+- Reaching the minimum replaces the shortfall with a Checkout link that opens checkout directly.
+
+The check requires a positive pickup minimum and at least one addable recreational product
+priced below that minimum. It clears its synthetic customer's cart in cleanup. Other hosts
+keep the existing timer visibility check.
+
 ## Daily System Health
 
 All previously scheduled end-to-end and POS checks run from
@@ -534,5 +550,6 @@ Use the following GH Actions API requests to view workflows and create dispatch 
 ## Live Stage order generator
 
 Use **Live - Stage - Order Generator** in GitHub Actions to manually create two
-pickup orders per POS (Dutchie, Blaze, Treez, and Meadow; eight orders total).
+pickup orders per POS: one Rec and one Med (Dutchie, Blaze, Treez, and Meadow;
+eight orders total).
 See [setup, store mappings, and result handling](docs/live-stage-order-generator.md).

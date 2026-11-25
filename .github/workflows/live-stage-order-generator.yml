@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pos:
-        description: 'POS to receive two new pickup orders (all = eight orders)'
+        description: 'POS to receive one Rec and one Med pickup order (all = eight orders)'
         type: choice
         required: true
         default: all
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   generate:
-    name: Generate two orders per POS on Live Stage
+    name: Generate one Rec and one Med order per POS on Live Stage
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -84,6 +84,7 @@ jobs:
         with:
           name: live-stage-generated-orders-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            output/live-order-generator/batch.json
             output/live-order-generator/orders.json
             output/live-order-generator/summary.md
           if-no-files-found: warn

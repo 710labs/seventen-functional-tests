@@ -5,6 +5,8 @@ const os = require('node:os')
 const path = require('node:path')
 const { targets, assertStageUrl, selectTargets, transmissionProblem } = require('../../support/live-order-generator/targets.cjs')
 const { summarize } = require('./summarize.cjs')
+const { orderProfiles, customerName, isCustomerName } = require('../../support/live-order-generator/profiles.cjs')
+const { createBatch } = require('../../support/live-order-generator/batch.cjs')
 
 test('rejects production, lookalike hosts, HTTP, and URL credentials', () => {
 	assert.doesNotThrow(() => assertStageUrl('https://live-stage.710labs.com/checkout/'))
@@ -28,16 +30,21 @@ test('requires two distinct verified orders for every selected POS and preserves
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-generator-'))
 	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
 	assert.equal(summarize(directory).status, 'failed')
+	const { batchId } = createBatch(directory)
 	let order = 100
 	for (const target of targets) {
-		for (const sequence of [1, 2]) {
+		for (const profile of orderProfiles) {
+			const { sequence, userType } = profile
 			fs.writeFileSync(path.join(directory, `${target.pos}-${sequence}.json`), JSON.stringify({
 				...target, sequence, orderId: String(order++), status: 'verified', externalId: 'external-order',
+				batchId, userType, customerName: customerName(target.pos, profile, batchId), medicalProfileVerified: userType === 'med',
 			}))
 		}
 	}
 	assert.equal(summarize(directory).status, 'passed')
+	assert.equal(summarize(directory).batchId, batchId)
 	assert.equal(summarize(directory).orders.length, 8)
+	assert.deepEqual(summarize(directory).orders.map(order => order.userType), ['rec', 'med', 'rec', 'med', 'rec', 'med', 'rec', 'med'])
 	assert.equal(summarize(directory, 'meadow').orders.length, 2)
 	const file = path.join(directory, 'meadow-2.json')
 	const record = JSON.parse(fs.readFileSync(file))
@@ -50,4 +57,90 @@ test('requires two distinct verified orders for every selected POS and preserves
 	assert.equal(partial.orders[7].status, 'created')
 	fs.unlinkSync(file)
 	assert.equal(summarize(directory).orders[7].status, 'not-started')
+})
+
+test('medical coverage requires a saved medical profile and cannot be satisfied by a second Rec order', t => {
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-med-profile-'))
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	const { batchId } = createBatch(directory)
+	assert.equal(orderProfiles.length, 2)
+	assert.equal(customerName('dutchie', orderProfiles[0], batchId), `710_DUT_Rec_${batchId}`)
+	assert.equal(customerName('dutchie', orderProfiles[1], batchId), `710_DUT_Med_${batchId}`)
+	const target = targets[0]
+	for (const profile of orderProfiles) {
+		fs.writeFileSync(path.join(directory, `dutchie-${profile.sequence}.json`), JSON.stringify({
+			...target, sequence: profile.sequence, userType: profile.userType,
+			batchId, customerName: customerName(target.pos, profile, batchId), medicalProfileVerified: profile.userType === 'med',
+			status: 'verified', orderId: String(100 + profile.sequence), externalId: 'external-order',
+		}))
+	}
+	assert.equal(summarize(directory, 'dutchie').status, 'passed')
+	const file = path.join(directory, 'dutchie-2.json')
+	const medical = JSON.parse(fs.readFileSync(file))
+	fs.writeFileSync(file, JSON.stringify({ ...medical, medicalProfileVerified: false }))
+	assert.equal(summarize(directory, 'dutchie').orders[1].status, 'invalid-evidence')
+	fs.writeFileSync(file, JSON.stringify({ ...medical, userType: 'rec', customerName: 'Test_710Labs_Dutchie_Rec' }))
+	assert.equal(summarize(directory, 'dutchie').status, 'failed')
+})
+
+test('one batch suffix is shared by every POS and profile and reports retain earlier names', t => {
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-short-names-'))
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	const profile = orderProfiles[0]
+	const batchId = 'A7K2Q9'
+	const recordedName = customerName('dutchie', profile, batchId)
+	assert.equal(recordedName, customerName('dutchie', profile, batchId))
+	assert.match(recordedName, /^710_DUT_Rec_[0-9A-Z]{6}$/)
+	assert.equal(recordedName.length, 18)
+	assert.equal(isCustomerName(recordedName, 'dutchie', profile), true)
+	assert.equal(isCustomerName(recordedName, 'dutchie', orderProfiles[1]), false)
+	assert.equal(isCustomerName(recordedName, 'dutchie', profile, 'OTHER1'), false)
+	assert.throws(() => customerName('dutchie', profile), /LIVE_ORDER_BATCH_ID/)
+	assert.equal(isCustomerName('Test_710Labs_Dutchie_Rec', 'dutchie', profile), false)
+	assert.equal(isCustomerName('Test_710Labs_Dutchie_Rec_20261120_160530_123', 'dutchie', profile), true)
+	assert.equal(isCustomerName('710_DUT_R_MWPHEEVG', 'dutchie', profile), true)
+	assert.equal(isCustomerName('710_DUT_Rec_TOOLOOOONG', 'dutchie', profile), false)
+	assert.equal(isCustomerName('710_DUT_R_bad-suffix', 'dutchie', profile), false)
+	const names = []
+	for (const [pos, code] of Object.entries({ dutchie: 'DUT', blaze: 'BLZ', treez: 'TRZ', meadow: 'MDW' })) {
+		for (const kind of orderProfiles) {
+			const name = customerName(pos, kind, batchId)
+			names.push(name)
+			assert.ok(name.startsWith(`710_${code}_${kind.label}_`))
+			assert.ok(name.endsWith(`_${batchId}`))
+			assert.equal(isCustomerName(name, pos, kind), true)
+			assert.ok(name.length <= 20)
+		}
+	}
+	assert.equal(new Set(names).size, 8)
+	fs.writeFileSync(path.join(directory, 'dutchie-1.json'), JSON.stringify({
+		...targets[0], sequence: 1, userType: 'rec', customerName: recordedName,
+		medicalProfileVerified: false, status: 'verified', orderId: '123', externalId: 'pos-123',
+	}))
+	const report = summarize(directory, 'dutchie')
+	assert.equal(report.orders[0].status, 'verified')
+	assert.equal(report.orders[0].customerName, recordedName)
+	assert.equal(report.orders[1].customerName, null)
+	// Pre-batch evidence remains readable even though those names had individual IDs.
+	fs.writeFileSync(path.join(directory, 'dutchie-1.json'), JSON.stringify({
+		...targets[0], sequence: 1, userType: 'rec', customerName: 'Test_710Labs_Dutchie_Rec_20261120_160530_123',
+		medicalProfileVerified: false, status: 'verified', orderId: '123', externalId: 'pos-123',
+	}))
+	assert.equal(summarize(directory, 'dutchie').orders[0].status, 'verified')
+})
+
+test('new runs receive different batch IDs and existing batch evidence cannot be overwritten', t => {
+	const crypto = require('node:crypto')
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-batches-'))
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	const firstDirectory = path.join(directory, 'first')
+	const first = createBatch(firstDirectory)
+	const suffix = parseInt(first.batchId, 36)
+	let calls = 0
+	t.mock.method(crypto, 'randomInt', () => (suffix + calls++) % (36 ** 6))
+	const second = createBatch(path.join(directory, 'second'))
+	assert.notEqual(first.batchId, second.batchId)
+	assert.ok(calls >= 2)
+	assert.throws(() => createBatch(firstDirectory), /Existing batch/)
+	assert.deepEqual(JSON.parse(fs.readFileSync(path.join(firstDirectory, 'batch.json'))), first)
 })

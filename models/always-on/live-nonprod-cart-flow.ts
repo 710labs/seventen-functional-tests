@@ -9,6 +9,8 @@ type LiveUserType = 'rec' | 'med'
 type CartFlowOptions = {
 	step?: <T>(name: string, action: () => Promise<T>) => Promise<T>
 	medicalCardPath?: string
+	medicalCardState?: 'CA' | 'MI'
+	medicalProfileVerified?: boolean
 	requireMedicalProduct?: boolean
 	// Explicit targets are used by the Stage order generator; ordinary smoke tests
 	// continue to discover their storefront from the registration cart.
@@ -262,12 +264,20 @@ export class LiveNonProdCartFlow {
 			await this.closeCartDrawer()
 			return false
 		}
+		if (this.options.target) {
+			// Reopen the saved cart without the add-to-cart response drawer, which
+			// can cover the Checkout control for customers with medical documents.
+			await this.closeCartDrawer()
+			if (!(await this.openCartDrawer())) {
+				throw new Error('Unable to reopen the target store cart before checkout.')
+			}
+		}
 
 		if (await this.minimumOrderIsNotMet()) {
 			return false
 		}
 
-		if (userType === 'med') {
+		if (userType === 'med' && !this.options.medicalProfileVerified) {
 			await this.provideMedicalCardIfRequired()
 		}
 
@@ -1343,6 +1353,7 @@ export class LiveNonProdCartFlow {
 
 		const newYear = new Date().getFullYear() + 1
 		const medicalCardValues = {
+			state: this.options.medicalCardState || 'CA',
 			expiration: `${newYear}-01-01`,
 			cardNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
 		}
@@ -1368,7 +1379,7 @@ export class LiveNonProdCartFlow {
 						checkbox.checked = true
 					}
 
-					setValue('#medcard_state', 'CA')
+					setValue('#medcard_state', values.state)
 					setValue('#medcard_exp', values.expiration)
 					setValue('#medcard_no', values.cardNumber)
 					setValue('#fasd_dob', '1990-01-01')
