@@ -4,6 +4,8 @@ const path = require('node:path')
 const { manifest, runUrl } = require('./result-utils')
 const { sanitizeFailure } = require('../security/failure-diagnostics')
 const { safeReportUrl } = require('../hosted-reports/session')
+const { buildSlackMessage } = require('../live-order-generator/send-slack.cjs')
+const { markdown: orderBatchMarkdown } = require('../live-order-generator/summarize.cjs')
 
 const failureStatuses = new Set(['failed', 'missing', 'cancelled', 'blocked', 'unknown'])
 const validStatuses = new Set(['passed', 'queued', ...failureStatuses])
@@ -112,6 +114,8 @@ function toMarkdown(summary) {
 		const renderedDetail = url ? `[${markdownCell(detail)}](${url})` : markdownCell(detail)
 		lines.push(`| ${emoji[result.status] || '❓'} | ${markdownCell(result.label)} | ${renderedDetail} |`)
 	}
+	const batch = summary.results.find(result => result.id === 'live-stage-order-generator')?.details?.orderBatch
+	if (batch) lines.push('', orderBatchMarkdown(batch))
 	return `${lines.join('\n')}\n`
 }
 
@@ -218,6 +222,18 @@ function toSlack(summary) {
 			text: { type: 'mrkdwn', text: formatMarkdownTable(['Application', 'Environment', 'Status'], conciergeRows) },
 		},
 	]
+	const batchResult = resultsById.get('live-stage-order-generator')
+	if (batchResult?.details?.orderBatch) {
+		const batchBlocks = buildSlackMessage(batchResult.details.orderBatch, {
+			jobStatus: batchResult.status === 'passed' ? 'success' : 'failure',
+		}).blocks.filter(block => block.type !== 'header')
+		const insertAt = blocks.findIndex(block => block.text?.text === '*CONCIERGE STORES*') - 1
+		blocks.splice(insertAt, 0,
+			{ type: 'divider' },
+			{ type: 'section', text: { type: 'mrkdwn', text: '*LIVE STAGE POS ORDER BATCH*' } },
+			...batchBlocks,
+		)
+	}
 	if (queued) blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: '⏳ QueueIt active — checks deferred. Storefront validation will resume on the next run after the queue clears.' }] })
 	// Only fixed diagnostic codes enter Slack; never forward failureSummary,
 	// which may contain business-result data from non-Playwright checks.
@@ -242,7 +258,7 @@ function toSlack(summary) {
 		})
 	}
 	if (actions.length) blocks.push({ type: 'divider' }, { type: 'actions', elements: actions })
-	return { blocks }
+	return { blocks, unfurl_links: false, unfurl_media: false }
 }
 
 function main() {

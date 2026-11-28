@@ -26,9 +26,9 @@ function writeCheck(directory, check, status = 'passed') {
 	)
 }
 
-test('manifest defines the 22 required checks with unique IDs', () => {
-	assert.equal(manifest.checks.length, 22)
-	assert.equal(new Set(manifest.checks.map(check => check.id)).size, 22)
+test('manifest defines the 23 required checks with unique IDs', () => {
+	assert.equal(manifest.checks.length, 23)
+	assert.equal(new Set(manifest.checks.map(check => check.id)).size, 23)
 })
 
 test('aggregate passes only when every expected check reports passed', () => {
@@ -36,9 +36,9 @@ test('aggregate passes only when every expected check reports passed', () => {
 	manifest.checks.forEach(check => writeCheck(directory, check))
 	const summary = aggregate(directory)
 	assert.equal(summary.status, 'passed')
-	assert.equal(summary.totals.passed, 22)
-	assert.match(toMarkdown(summary), /22\/22 passed/)
-	assert.match(toSlack(summary).blocks[0].text.text, /22\/22 passed/)
+	assert.equal(summary.totals.passed, 23)
+	assert.match(toMarkdown(summary), /23\/23 passed/)
+	assert.match(toSlack(summary).blocks[0].text.text, /23\/23 passed/)
 })
 
 test('aggregate treats a missing result as a failure', () => {
@@ -50,6 +50,52 @@ test('aggregate treats a missing result as a failure', () => {
 	assert.match(summary.results.at(-1).failureSummary[0], /did not produce/)
 })
 
+test('daily health includes all eight batch rows in one digest and fails an unsuccessful or missing generator', t => {
+	const { createBatch } = require('../../support/live-order-generator/batch.cjs')
+	const { targets } = require('../../support/live-order-generator/targets.cjs')
+	const { orderProfiles, customerName } = require('../../support/live-order-generator/profiles.cjs')
+	const { summarize } = require('../live-order-generator/summarize.cjs')
+	const { buildResult } = require('./write-order-generator-result')
+	const { writeResult, getCheck } = require('./result-utils')
+	const directory = createDirectory()
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	const ordersDirectory = path.join(directory, 'orders')
+	const healthDirectory = path.join(directory, 'health')
+	fs.mkdirSync(healthDirectory)
+	const { batchId } = createBatch(ordersDirectory)
+	let id = 78041
+	for (const target of targets) for (const profile of orderProfiles) {
+		fs.writeFileSync(path.join(ordersDirectory, `${target.pos}-${profile.sequence}.json`), JSON.stringify({
+			...target, batchId, sequence: profile.sequence, userType: profile.userType,
+			customerName: customerName(target.pos, profile, batchId), medicalProfileVerified: profile.userType === 'med',
+			status: 'verified', phase: 'verification', orderId: String(id++), externalId: `pos-${id}`,
+		}))
+	}
+	manifest.checks.forEach(check => writeCheck(healthDirectory, check))
+	const check = getCheck('live-stage-order-generator')
+	const file = path.join(healthDirectory, `${check.id}.json`)
+	writeResult(check, buildResult(summarize(ordersDirectory)), file)
+	const summary = aggregate(healthDirectory)
+	assert.equal(summary.status, 'passed')
+	const slack = toSlack(summary)
+	const serialized = JSON.stringify(slack)
+	assert.equal(slack.blocks.filter(block => block.type === 'header').length, 1)
+	assert.match(slack.blocks.find(block => block.type === 'header').text.text, /Daily System Health/)
+	assert.equal(slack.blocks.filter(block => block.text?.text === '*LIVE STAGE POS ORDER BATCH*').length, 1)
+	assert.match(serialized, new RegExp(`Batch .${batchId}.`))
+	assert.match(serialized, /8 requested • 8 created • 8 POS verified/)
+	for (let orderId = 78041; orderId < 78049; orderId++) {
+		assert.match(serialized, new RegExp(`post=${orderId}&action=edit`))
+		assert.match(toMarkdown(summary), new RegExp(`post=${orderId}&action=edit`))
+	}
+	assert.equal(slack.unfurl_links, false)
+	writeResult(check, buildResult(summarize(ordersDirectory), 'failure'), file)
+	assert.equal(aggregate(healthDirectory).status, 'failed')
+	fs.unlinkSync(file)
+	assert.equal(aggregate(healthDirectory).status, 'failed')
+	assert.equal(aggregate(healthDirectory).results.find(result => result.id === check.id).status, 'missing')
+})
+
 test('QueueIt is visible as deferred, excluded from failures, and never hides a real failure', () => {
 	const directory = createDirectory()
 	try {
@@ -57,7 +103,7 @@ test('QueueIt is visible as deferred, excluded from failures, and never hides a 
 		const summary = aggregate(directory)
 		assert.equal(summary.status, 'queued')
 		assert.equal(summary.totals.queued, 4)
-		assert.equal(summary.totals.passed, 18)
+		assert.equal(summary.totals.passed, 19)
 		assert.match(toMarkdown(summary), /0 failed\/missing · 4 QueueIt deferred/)
 		const slack = JSON.stringify(toSlack(summary))
 		assert.match(slack, /⏳ Daily System Health/)
@@ -77,7 +123,7 @@ test('aggregate treats a retry-recovered flaky result as passed', () => {
 	manifest.checks.forEach((check, index) => writeCheck(directory, check, index === 0 ? 'flaky' : 'passed'))
 	const summary = aggregate(directory)
 	assert.equal(summary.status, 'passed')
-	assert.equal(summary.totals.passed, 22)
+	assert.equal(summary.totals.passed, 23)
 	assert.equal(summary.totals.flaky, undefined)
 	assert.equal(summary.results[0].status, 'passed')
 	assert.equal(summary.results[0].counts.passed, 1)
@@ -146,7 +192,7 @@ test('Slack lays out linked failures in two-column fields without duplicate repo
 		// Larger failure sets must retain every link and respect Slack's field limit.
 		summary.results.forEach(result => { result.status = 'failed' })
 		const expanded = toSlack(summary).blocks
-		assert.deepEqual(expanded.filter(block => block.fields).map(block => block.fields.length), [10, 10, 2])
+		assert.deepEqual(expanded.filter(block => block.fields).map(block => block.fields.length), [10, 10, 3])
 		assert.equal(expanded.filter(block => block.text?.text === '*Failure categories*').length, 1)
 		summary.results.forEach(result => { result.status = 'passed' })
 		assert.equal(toSlack(summary).blocks.filter(block => block.fields).length, 0)
@@ -186,7 +232,7 @@ test('Slack uses standard blocks with manifest-driven status tables and no indiv
 	assert.match(listTable, /\| State \| Dev \| Stage \| Prod \|/)
 	assert.match(listTable, /\| CA\s+\| ❌\s+\| ✅\s+\| ✅\s+\|/)
 	assert.match(listTable, /\| MI\s+\| ❌\s+\| ✅\s+\| ❌\s+\|/)
-	assert.match(liveTable, /\| Environment \| Storefront \| POS Verification \| POS Last 10 Orders \|/)
+	assert.match(liveTable, /\| Environment \| Storefront \| POS Verification \| POS Last 10 Orders \| POS Order Generator \|/)
 	assert.match(liveTable, /\| Dev\s+\| ❌\s+\| ✅\s+\| ❌\s+\|/)
 	assert.match(liveTable, /\| Stage\s+\| ❌\s+\| ✅\s+\| ✅\s+\|/)
 	assert.match(liveTable, /\| Prod\s+\| ❌\s+\| —\s+\| —\s+\|/)

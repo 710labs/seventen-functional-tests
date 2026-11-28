@@ -271,7 +271,7 @@ keep the existing timer visibility check.
 
 All previously scheduled end-to-end and POS checks run from
 `.github/workflows/daily-system-health.yml` at 10:17 UTC each day. The workflow accounts for
-22 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
+23 required checks, publishes one GitHub summary, and sends one Slack digest. A missing result is
 treated as a failure so a cancelled runner or broken setup cannot appear healthy. A test that
 succeeds on retry is counted as passed and appears green. The question mark is reserved for a
 configured check whose result is missing or unrecognized; a dash means no check is configured for
@@ -292,6 +292,13 @@ Slack webhook during this workflow; only the final aggregate job can post to Sla
 
 The legacy workflows remain available through `workflow_dispatch` for focused reruns and rollback,
 but no longer contain active schedules.
+
+Daily health also runs the Live Stage order generator after the existing Stage smoke/POS checks:
+one new Rec and one new Med order for each of Dutchie, Blaze, Treez, and Meadow. After Playwright
+finishes, it polls the Persy QA orders API using each captured Woo order ID and requires the
+expected POS instance/type and an external order ID with `outcome: success`. Missing orders or
+unconfirmed transmissions fail the batch and daily health. The single daily Slack digest includes
+the shared batch ID and eight compact Woo/POS order rows.
 
 Health aggregation tests:
 
@@ -552,4 +559,5 @@ Use the following GH Actions API requests to view workflows and create dispatch 
 Use **Live - Stage - Order Generator** in GitHub Actions to manually create two
 pickup orders per POS: one Rec and one Med (Dutchie, Blaze, Treez, and Meadow;
 eight orders total).
+The same generator runs each day through **Daily System Health**.
 See [setup, store mappings, and result handling](docs/live-stage-order-generator.md).

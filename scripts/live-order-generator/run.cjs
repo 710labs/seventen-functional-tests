@@ -5,12 +5,17 @@ const { createBatch } = require('../../support/live-order-generator/batch.cjs')
 function runGenerator({ directory = path.resolve('output/live-order-generator'), args = [], spawn = spawnSync } = {}) {
 	const batch = createBatch(directory)
 	console.log(`Live Stage order batch: ${batch.batchId}`)
+	const options = { stdio: 'inherit', env: { ...process.env, LIVE_ORDER_BATCH_ID: batch.batchId,
+		LIVE_ORDER_RESULT_DIRECTORY: directory } }
 	const child = spawn(process.execPath, [
 		path.resolve(__dirname, '../run-public-playwright.js'),
 		`--config=${path.resolve(__dirname, '../../configs/live-order-generator.config.ts')}`,
 		...args,
-	], { stdio: 'inherit', env: { ...process.env, LIVE_ORDER_BATCH_ID: batch.batchId } })
-	return child.status === 0 && !child.signal && !child.error ? 0 : child.status || 1
+	], options)
+	// Always check captured IDs, including when a later Playwright checkout failed.
+	const verification = spawn(process.execPath, [path.resolve(__dirname, 'verify-orders.cjs')], options)
+	const exitStatus = result => result.status === 0 && !result.signal && !result.error ? 0 : result.status || 1
+	return exitStatus(child) || exitStatus(verification)
 }
 
 if (require.main === module) {

@@ -1,8 +1,23 @@
 name: Live - Stage - Order Generator
 
 on:
+  workflow_call:
+    inputs:
+      pos:
+        type: string
+        default: all
+      publish_health:
+        type: boolean
+        default: false
+      notify_slack:
+        type: boolean
+        default: true
   workflow_dispatch:
     inputs:
+      notify_slack:
+        description: Send the order batch summary to Slack
+        type: boolean
+        default: true
       pos:
         description: 'POS to receive one Rec and one Med pickup order (all = eight orders)'
         type: choice
@@ -50,9 +65,12 @@ jobs:
       - name: Validate required secrets
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SEND_ORDER_SLACK: ${{ inputs.notify_slack }}
         run: |
           node - <<'NODE'
-          for (const key of ['ALWAYS_ON_PASSWORD', 'CHECKOUT_PASSWORD', 'LIVE_STAGE_QA_AUTH', 'SLACK_WEBHOOK_URL']) {
+          const required = ['ALWAYS_ON_PASSWORD', 'CHECKOUT_PASSWORD', 'LIVE_STAGE_QA_AUTH']
+          if (process.env.SEND_ORDER_SLACK === 'true') required.push('SLACK_WEBHOOK_URL')
+          for (const key of required) {
             if (!process.env[key]?.trim()) {
               console.error(`Missing required Stage generator secret: ${key}`)
               process.exitCode = 1
@@ -89,8 +107,21 @@ jobs:
             output/live-order-generator/summary.md
           if-no-files-found: warn
           retention-days: 14
+      - name: Write Daily System Health batch result
+        if: always() && inputs.publish_health
+        env:
+          GENERATOR_JOB_STATUS: ${{ job.status }}
+        run: node scripts/health/write-order-generator-result.js
+      - name: Upload Daily System Health batch result
+        if: always() && inputs.publish_health
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-result-live-stage-order-generator
+          path: health-results/live-stage-order-generator.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Send all order results to Slack
-        if: always()
+        if: always() && inputs.notify_slack
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           GENERATOR_JOB_STATUS: ${{ job.status }}

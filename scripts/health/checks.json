@@ -166,6 +166,12 @@
 			"type": "generated-order-pos"
 		},
 		{
+			"id": "live-stage-order-generator",
+			"label": "Live / Stage / POS Order Generator",
+			"group": "Live",
+			"type": "order-generator"
+		},
+		{
 			"id": "live-prod-storefront",
 			"label": "Live / Prod / Storefront",
 			"group": "Live",

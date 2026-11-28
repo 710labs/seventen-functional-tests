@@ -17,6 +17,12 @@ test('launcher supplies one persisted batch ID to independently loaded worker pr
 	const status = runGenerator({ directory, args: ['--grep', 'Rec order'], spawn(command, args, options) {
 		invocations++
 		assert.equal(command, process.execPath)
+		if (invocations === 2) {
+			assert.ok(args[0].endsWith('/scripts/live-order-generator/verify-orders.cjs'))
+			assert.equal(options.env.LIVE_ORDER_RESULT_DIRECTORY, directory)
+			assert.equal(options.env.LIVE_ORDER_BATCH_ID, readBatch(directory).batchId)
+			return { status: 0 }
+		}
 		assert.ok(args[0].endsWith('/scripts/run-public-playwright.js'))
 		assert.ok(args[1].endsWith('/configs/live-order-generator.config.ts'))
 		assert.deepEqual(args.slice(2), ['--grep', 'Rec order'])
@@ -35,17 +41,26 @@ test('launcher supplies one persisted batch ID to independently loaded worker pr
 		return { status: 0 }
 	} })
 	assert.equal(status, 0)
-	assert.equal(invocations, 1)
+	assert.equal(invocations, 2)
 	assert.throws(() => runGenerator({ directory, spawn() { invocations++ } }), /Existing batch/)
-	assert.equal(invocations, 1)
+	assert.equal(invocations, 2)
 })
 
 test('launcher preserves test failures without replacing batch metadata', t => {
 	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-batch-failure-'))
 	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
-	assert.equal(runGenerator({ directory, spawn() { return { status: 7 } } }), 7)
+	let invocations = 0
+	assert.equal(runGenerator({ directory, spawn() { return { status: ++invocations === 1 ? 7 : 0 } } }), 7)
+	assert.equal(invocations, 2, 'API verification still runs after a checkout failure')
 	assert.match(readBatch(directory).batchId, /^[A-Z0-9]{6}$/)
 	for (const value of [undefined, '', 'lower1', 'TOO-LONG', 'BAD|ID']) assert.throws(() => assertBatchId(value))
+})
+
+test('launcher fails when checkout passes but API verification fails', t => {
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'live-batch-api-failure-'))
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	let invocations = 0
+	assert.equal(runGenerator({ directory, spawn() { return { status: ++invocations === 1 ? 0 : 1 } } }), 1)
 })
 
 test('reports reject mixed batches, wrong name suffixes, and missing or corrupt batch metadata while retaining order IDs', t => {

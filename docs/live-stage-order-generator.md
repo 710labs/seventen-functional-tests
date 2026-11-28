@@ -4,9 +4,14 @@ Run **Actions → Live - Stage - Order Generator → Run workflow**. Leave `pos`
 `all` to create **eight new pickup orders: one recreational and one medical per
 POS**. Select an individual POS to create that Rec/Med pair for one integration.
 
-The workflow is manual only and always targets `https://live-stage.710labs.com`.
-It has its own Playwright config and a single desktop Chromium project. It sends
-one Slack summary at the end of the workflow, including failed or incomplete runs.
+The workflow always targets `https://live-stage.710labs.com`. It can run manually
+and is reused by **Daily System Health**, which is scheduled at **10:17 UTC daily**.
+The daily job creates all eight orders after the existing Stage storefront/POS
+checks. It adds one required check to the daily health result and includes the
+batch and compact order rows in the single daily Slack digest. Manual runs keep
+their standalone Slack summary (unless `notify_slack` is disabled).
+The generator has its own Playwright config and a single desktop Chromium project.
+Manual and daily batches share a concurrency group so they cannot overlap.
 
 | POS | Store | POS instance | Facility |
 | --- | --- | --- | --- |
@@ -50,10 +55,26 @@ containing `_Med_` alone cannot satisfy medical coverage.
 Add-to-cart controls must match the store's facility, pickup method, and POS
 instance. The generator fails instead of substituting a different store.
 
-After checkout it polls the existing Persy QA orders endpoint for up to 90
-seconds. Success requires `outcome: success`, the expected instance ID and POS
-type, an instance name, and a nonempty external order ID. This checks the
-reported integration result; it does not log in to the POS provider directly.
+After the Playwright suite exits, the launcher polls the existing Persy QA orders
+endpoint (`/wp-content/plugins/persy/interface/qa/orders/`) by each captured Woo
+order ID for up to 90 seconds per order, concurrently, at five-second intervals.
+This runs even if a later checkout fails. It queries this batch's IDs rather than
+the latest orders. Success requires `outcome: success`, the expected instance ID
+and POS type, an instance name, and a nonempty external order ID. Pending results,
+API errors, and missing/mismatched identifiers cannot pass. Response redirects
+are rejected and requests time out after at most 15 seconds.
+
+These are the confirmed fields for the transmission check, matching the existing
+health tests. `instanceId` identifies the specific configured POS connection and
+must exactly match the target in the store mapping above; `instanceType` must
+also match its provider. A different instance of the same provider fails. The
+instance name must be present but is not used as the identity check. The instance
+ID is distinct from the facility ID used to select the storefront cart; this API
+check does not independently verify facility identity within a shared connection.
+It checks the reported integration result without logging into the POS provider.
+Per-order evidence records the verification source, attempt
+count, last check timestamp, and confirmation flag without storing raw API bodies
+or credentials. `orders.json` retains that verification evidence.
 
 ## Repository secrets
 
@@ -66,8 +87,10 @@ Uses existing secret names from the Live Stage workflows:
 - `RECAPTCHA_BYPASS`: existing QA bypass cookie, when required by Stage.
 - `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET`: existing hosted report setup.
 
-The workflow checks required customer, checkout, QA, and Slack secrets before creating
-orders. No production URL secret is used.
+The workflow checks required customer, checkout, and QA secrets before creating
+orders. It also requires Slack when standalone notifications are enabled. Daily
+health uses the final digest job's Slack configuration. No production URL secret
+is used.
 
 ## Results and reruns
 
@@ -139,6 +162,14 @@ directory before starting another local run: the launcher refuses to overwrite
 a prior batch or its evidence. Use the npm command to initialize the batch;
 invoking Playwright directly does not create a batch. GitHub runners start with
 a fresh checkout.
+
+To repeat only the API checks against the existing local batch, without creating
+accounts or orders:
+
+```bash
+node scripts/live-order-generator/verify-orders.cjs
+node scripts/live-order-generator/summarize.cjs
+```
 
 Offline checks:
 

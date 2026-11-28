@@ -5,6 +5,14 @@ const { externalOrderId, safePosOrderUrl, configuredPosOrderUrl } = require('../
 const { orderProfiles, isCustomerName } = require('../../support/live-order-generator/profiles.cjs')
 const { readBatch, isBatchId } = require('../../support/live-order-generator/batch.cjs')
 
+// Only fixed verifier messages belong in downloadable reports, never API bodies.
+const verificationProblems = new Set([
+	'POS transmission is not successful yet', 'POS instance mismatch', 'POS type mismatch',
+	'Missing POS instance name', 'Missing POS external order ID', 'POS API verification timed out',
+	'Missing Stage QA authentication', 'POS API returned an unsuccessful HTTP response',
+	'POS API unavailable or invalid response',
+])
+
 function summarize(directory, selection = 'all') {
 	const orders = []
 	const seen = new Set()
@@ -36,7 +44,8 @@ function summarize(directory, selection = 'all') {
 				record.medicalProfileVerified === (userType === 'med')
 			const externalId = matchesTarget ? externalOrderId(record.externalId) : null
 			const posOrderUrl = externalId ? safePosOrderUrl(record.posOrderUrl, target.pos) || configuredPosOrderUrl(externalId, target.pos) : null
-			if (invalidEvidence || (status === 'verified' && (!orderId || !externalId || !matchesTarget || !matchesProfile || !matchesBatch))) {
+			if (invalidEvidence || (['created', 'verified'].includes(status) && (!orderId || !matchesTarget || !matchesProfile || !matchesBatch)) ||
+				(status === 'verified' && !externalId)) {
 				status = 'invalid-evidence'
 			}
 			if (orderId && seen.has(orderId)) status = 'duplicate-order-id'
@@ -46,6 +55,13 @@ function summarize(directory, selection = 'all') {
 				batchId: isBatchId(record.batchId) ? record.batchId : null,
 				userType, customerType: profile.customerType, customerName,
 				medicalProfileVerified: record.medicalProfileVerified === true,
+				verification: record.verification ? {
+					source: record.verification.source === 'persy-qa-orders' ? 'persy-qa-orders' : null,
+					confirmed: record.verification.confirmed === true,
+					checkedAt: Number.isFinite(Date.parse(record.verification.checkedAt)) ? record.verification.checkedAt : null,
+					attempts: Number.isInteger(record.verification.attempts) ? record.verification.attempts : 0,
+					reason: verificationProblems.has(record.verification.reason) ? record.verification.reason : null,
+				} : null,
 				orderId, externalId, posOrderUrl, status, phase,
 				adminUrl: orderId ? `${STAGE_URL}/wp-admin/post.php?post=${orderId}&action=edit` : null })
 		}
@@ -60,8 +76,8 @@ function markdown(result) {
 		'### Live Stage order generator', '',
 		...(result.batchId ? [`Batch: **${result.batchId}**`, ''] : []),
 		`Result: **${result.status}**. Requested ${result.orders.length} pickup orders (one recreational and one medical per POS).`, '',
-		'| POS | Store | Customer type | First & last name | Woo order | POS order ID | POS link | Status | Phase |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
-		...result.orders.map(order => `| ${order.pos} | ${order.store} | ${order.customerType} | ${order.customerName || '—'} | ${order.orderId ? `[${order.orderId}](${order.adminUrl})` : '—'} | ${order.externalId ? tableText(order.externalId) : '—'} | ${order.posOrderUrl ? `[Open POS order](<${order.posOrderUrl}>)` : 'Unavailable'} | ${order.status} | ${order.phase} |`),
+		'| POS | Store | Customer type | First & last name | Woo order | POS order ID | POS link | Status | Phase | API check |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+		...result.orders.map(order => `| ${order.pos} | ${order.store} | ${order.customerType} | ${order.customerName || '—'} | ${order.orderId ? `[${order.orderId}](${order.adminUrl})` : '—'} | ${order.externalId ? tableText(order.externalId) : '—'} | ${order.posOrderUrl ? `[Open POS order](<${order.posOrderUrl}>)` : 'Unavailable'} | ${order.status} | ${order.phase} | ${order.verification?.confirmed ? 'Confirmed' : order.verification?.reason || '—'} |`),
 		'', 'A submitting result may have created an order. Inspect Stage before rerunning; each new run creates two new orders per selected POS.', '',
 	].join('\n')
 }

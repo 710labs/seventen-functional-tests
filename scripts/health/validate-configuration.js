@@ -13,7 +13,7 @@ function assert(condition, message) {
 	if (!condition) throw new Error(message)
 }
 
-assert(manifest.checks.length === 22, `Expected 22 health checks, found ${manifest.checks.length}`)
+assert(manifest.checks.length === 23, `Expected 23 health checks, found ${manifest.checks.length}`)
 assert(new Set(manifest.checks.map(check => check.id)).size === manifest.checks.length, 'Health check IDs must be unique')
 
 for (const check of manifest.checks.filter(check => check.type === 'playwright')) {
@@ -44,5 +44,13 @@ assert(
 
 const slackWebhookReferences = workflow.match(/SLACK_WEBHOOK_URL/g) || []
 assert(slackWebhookReferences.length === 2, 'Slack webhook must only be passed to the final digest step')
+
+const orderWorkflow = fs.readFileSync(path.join(workflowDirectory, 'live-stage-order-generator.yml'), 'utf8')
+assert(/^  workflow_call:/m.test(orderWorkflow), 'Order generator must support the daily reusable call')
+assert(workflow.includes('uses: ./.github/workflows/live-stage-order-generator.yml'), 'Daily health must reuse the Stage generator')
+assert(workflow.includes('publish_health: true') && workflow.includes('notify_slack: false'), 'Daily order batch must publish health results without a second Slack message')
+assert(orderWorkflow.includes('if: always() && inputs.notify_slack'), 'Generator Slack must respect the caller input, including manually dispatched daily runs')
+assert(orderWorkflow.includes('name: health-result-live-stage-order-generator'), 'Order generator must upload its health result')
+assert(workflow.slice(workflow.indexOf('  aggregate:')).includes('- live-stage-order-generator'), 'Daily aggregation must wait for order verification')
 
 console.log('Daily System Health configuration is internally consistent.')

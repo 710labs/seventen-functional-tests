@@ -7,9 +7,8 @@ import { LiveNonProdCheckoutPage } from '../../models/always-on/live-nonprod-che
 import { OrderConfirmationPage } from '../../models/always-on/order-confirmation'
 import { configureMedicalProfile } from '../../support/live-order-generator/medical-profile'
 
-const { STAGE_URL, selectTargets, assertStageUrl, transmissionProblem } =
+const { STAGE_URL, selectTargets, assertStageUrl } =
 	require('../../support/live-order-generator/targets.cjs')
-const { posOrderDetails } = require('../../support/live-order-generator/pos-links.cjs')
 const { orderProfiles, customerName: buildCustomerName } = require('../../support/live-order-generator/profiles.cjs')
 const { assertBatchId, readBatch } = require('../../support/live-order-generator/batch.cjs')
 const selectedTargets = selectTargets(process.env.LIVE_ORDER_POS || 'all')
@@ -120,26 +119,8 @@ for (const target of selectedTargets) {
 				record.status = 'created'
 				record.phase = 'verification'
 				save()
-				await expect.poll(async () => {
-					const url = new URL('/wp-content/plugins/persy/interface/qa/orders/', STAGE_URL)
-					url.searchParams.set('auth', process.env.LIVE_STAGE_QA_AUTH!)
-					url.searchParams.set('id', record.orderId!)
-					try {
-						const response = await page.request.get(url.href, { timeout: 15000, maxRedirects: 0 })
-						if (!response.ok()) return `POS API HTTP ${response.status()}`
-						const body = await response.json()
-						const details = posOrderDetails(body, target)
-						if (details.externalId) {
-							record.posOrderUrl = details.posOrderUrl || (record.externalId === details.externalId ? record.posOrderUrl : null)
-							record.externalId = details.externalId
-							save()
-						}
-						const problem = transmissionProblem(body, target)
-						return problem
-					} catch { return 'POS API unavailable or invalid response' }
-				}, { timeout: 90000, intervals: [1000, 5000, 10000], message: 'Order must reach the intended POS instance' }).toBeNull()
-				record.status = 'verified'
-				save()
+				// The launcher verifies all captured IDs through the API after Playwright
+				// exits, including IDs from a partially failed checkout suite.
 			} catch (error) {
 				// Keep submitting/created states: a checkout timeout can still have created
 				// an order. Never resubmit automatically when the outcome is ambiguous.

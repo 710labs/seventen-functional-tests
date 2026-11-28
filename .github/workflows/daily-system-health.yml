@@ -430,6 +430,17 @@ jobs:
         if: always() && steps.health.outcome != 'success'
         run: exit 1
 
+  live-stage-order-generator:
+    name: Live Stage — Rec/Med orders and POS transmission
+    needs: live-stage-pos
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/live-stage-order-generator.yml
+    with:
+      pos: all
+      publish_health: true
+      notify_slack: false
+    secrets: inherit
+
   standalone-smokes:
     name: ${{ matrix.label }}
     permissions:
@@ -593,6 +604,7 @@ jobs:
       - live-dev-pos
       - live-stage
       - live-stage-pos
+      - live-stage-order-generator
       - standalone-smokes
       - pos-last-ten
     if: always()
